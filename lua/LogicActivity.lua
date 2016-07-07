@@ -5,21 +5,23 @@ local LogicUser		= LogicUser
 local LogicChat 	= LogicChat
 local LogicZombieDB = LogicZombieDB
 
-local TIME_ACT = {19, 50}			-- 活动开始时间(时:分)
-local TIME_STATE = {10, 5}			-- 活动每阶段的时间(分钟)
-InitThisValue(this,'STATE_NOW',0)
-InitThisValue(this,'STATE_NOW_END_TIME',0)
-local StateEndFuns 			= {}
+local TIME_ACT = {19, 50}		-- 活动开始时间(时:分)
+local TIME_STATE = {10, 5}		-- 各个状态的持续时间(分钟)
+local StateEndFuns = {} 		-- 各个状态的结束回调
 
+InitThisValue(this,'STATE_NOW',0)			-- 活动当前状态，0表示不在活动期
+InitThisValue(this,'STATE_NOW_END_TIME',0)	-- 当前状态的结束时间点
+
+local Combat_State = 2			-- 哪个状态用于战斗
 
 ----------------------------------------------------------------------
 -- 框架区
 ----------------------------------------------------------------------
 function this.initLocal() -- 起服、重载脚本时调用
 	-- 状态函数绑定
-	StateEndFuns[0] = this.OnNoneStateEnd
-	StateEndFuns[1] = this.OnPreStartStateEnd
-	StateEndFuns[2] = this.OnOver
+	StateEndFuns[0] = this.OnNoneStateEnd		-- 非活动期结束，进入活动预备期(TIME_STATE配置的第一项)
+	StateEndFuns[1] = this.OnPreStartStateEnd	-- 预备期结束，进入正式战斗期
+	StateEndFuns[2] = this.OnOver				-- 活动期结束，重新进入非活动期
 end
 function this.onReady()
 	local list = Logic.getServerIdList()
