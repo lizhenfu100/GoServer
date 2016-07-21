@@ -123,7 +123,7 @@ func GetActivityEndTime(activityID int) (beginTime int64, endTime int64) {
 		endDate := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 59, now.Location())
 		endDate = endDate.AddDate(0, 0, csv.BeginTime-openDay)
 		endTime = endDate.Unix()
-	} else if csv.TimeType == 4 {
+	} else if csv.TimeType == 4 { //! 按照 月*100+日格式写 比如 310 = 3月10日
 		day := csv.BeginTime % 100
 		month := (csv.BeginTime - day) / 100
 		if day < 1 || day > 31 || month < 1 || month > 12 {
@@ -143,6 +143,15 @@ func GetActivityEndTime(activityID int) (beginTime int64, endTime int64) {
 
 		endData := time.Date(now.Year(), time.Month(month), day, 23, 59, 59, 59, now.Location())
 		endTime = endData.Unix()
+
+		//! 若今年活动时间已过,则时间变更为明年
+		if endTime < now.Unix() {
+			beginData.AddDate(1, 0, 0)
+			beginTime = beginData.Unix()
+
+			endData.AddDate(1, 0, 0)
+			endTime = endData.Unix()
+		}
 	}
 
 	return beginTime, endTime
