@@ -15,7 +15,7 @@ type TActivityData struct {
 	RunDayCnt  uint //! 本轮持续天数  【二者类型不一致，传参颠倒会编译报错】
 	Status     int8 //! 状态: 0->关闭 1->开启 2->异常
 
-	// 一下这些不必存库，初始化时读表取得
+	// 以下这些不必存库，初始化时读表取得
 	actType   int
 	beginTime int64
 	endTime   int64 //! 结束时间为0的为永久运行活动
