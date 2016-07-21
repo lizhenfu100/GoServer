@@ -84,6 +84,11 @@ func GetActivityNextBeginTime(activityID int) (beginTime int64, endTime int64) {
 }
 func GetActivityEndTime(activityID int) (beginTime int64, endTime int64) {
 	csv := GetActivityCsvInfo(activityID)
+
+	if csv.EndTime == 0 {
+		return 0, 0
+	}
+
 	now := time.Now()
 	if csv.TimeType == 1 { //! 按照月计算
 		beginDate := time.Date(now.Year(), now.Month(), csv.BeginTime, 0, 0, 0, 0, now.Location())
