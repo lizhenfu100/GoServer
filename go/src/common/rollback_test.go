@@ -38,8 +38,7 @@ func NewDatabase() *Database {
 	}
 }
 func (self *Database) Transaction(trans func() int) {
-	ret := trans()
-	defer func() {
+	defer func(ret int) {
 		if ret < 0 {
 			for i := len(self.transLogs) - 1; i >= 0; i-- {
 				self.transLogs[i].Rollback(self)
@@ -50,22 +49,7 @@ func (self *Database) Transaction(trans func() int) {
 			}
 		}
 		self.transLogs = self.transLogs[0:0] //每次事务过后清空记录
-	}()
-
-	// defer func() {
-	// 	if err := recover(); err != nil {
-	// 		for i := len(self.transLogs) - 1; i >= 0; i-- {
-	// 			self.transLogs[i].Rollback(self)
-	// 		}
-	// 		// panic(err)
-	// 	} else {
-	// 		for i := 0; i < len(self.transLogs); i++ {
-	// 			self.transLogs[i].Commit(self)
-	// 		}
-	// 	}
-	// 	self.transLogs = self.transLogs[0:0]
-	// }()
-	// trans()
+	}(trans())
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -159,21 +143,5 @@ func Test_main(t *testing.T) {
 		})
 		return -1
 	})
-
-	// func() {
-	// 	defer func() {
-	// 		recover()
-	// 		fmt.Println("rollback")
-	// 	}()
-
-	// 	db.Transaction(func() {
-	// 		db.UpdatePlayerItem(&PlayerItem{
-	// 			Id:     1,
-	// 			ItemId: 111,
-	// 			Num:    111,
-	// 		})
-	// 		panic("error")
-	// 	})
-	// }()
 	fmt.Println(*db.playerItem[1], "\n")
 }
