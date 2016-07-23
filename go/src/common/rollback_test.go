@@ -38,18 +38,16 @@ func NewDatabase() *Database {
 	}
 }
 func (self *Database) Transaction(trans func() int) {
-	defer func(ret int) {
-		if ret < 0 {
-			for i := len(self.transLogs) - 1; i >= 0; i-- {
-				self.transLogs[i].Rollback(self)
-			}
-		} else {
-			for i := 0; i < len(self.transLogs); i++ {
-				self.transLogs[i].Commit(self)
-			}
+	if trans() < 0 {
+		for i := len(self.transLogs) - 1; i >= 0; i-- {
+			self.transLogs[i].Rollback(self)
 		}
-		self.transLogs = self.transLogs[0:0] //每次事务过后清空记录
-	}(trans())
+	} else {
+		for i := 0; i < len(self.transLogs); i++ {
+			self.transLogs[i].Commit(self)
+		}
+	}
+	self.transLogs = self.transLogs[0:0] //每次事务过后清空记录
 }
 
 //////////////////////////////////////////////////////////////////////
