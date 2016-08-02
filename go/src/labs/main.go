@@ -16,13 +16,14 @@ func main() {
 	client.ConnectToSvr("127.0.0.1:9001")
 
 	// msgdata := []byte{1, 2, 3}
-	// for {
-	// 	if client.TcpConn != nil {
-	// 		client.TcpConn.WriteMsg(2, msgdata)
-	// 		break
-	// 	}
-	// 	time.Sleep(1 * time.Second)
-	// }
+	msgdata := make([]byte, 100)
+	for {
+		if client.TcpConn != nil {
+			client.TcpConn.WriteMsg(2, msgdata)
+			// break
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
 
 	//主线程可以干别的去了
 	fmt.Println("--- WriteMsg Over")
