@@ -11,18 +11,15 @@ import (
 )
 
 var (
-	G_MSG_BEGIN      int16 = 0
-	G_MSG_END        int16 = 1000
 	G_MSG_DISCONNECT int16 = 111
 )
 
 type TCPConn struct { //登录时将TCPConn指针写入player中
-	conn             net.Conn
-	writeChan        chan []byte
-	isClose          bool
-	isCleaned        bool
-	Data             interface{}
-	onReadRoutineEnd func()
+	conn       net.Conn
+	writeChan  chan []byte
+	isClose    bool
+	Data       interface{}
+	OnNetClose func()
 }
 
 func newTCPConn(conn net.Conn, pendingWriteNum int) *TCPConn {
@@ -31,12 +28,17 @@ func newTCPConn(conn net.Conn, pendingWriteNum int) *TCPConn {
 	tcpConn.writeChan = make(chan []byte, pendingWriteNum)
 	return tcpConn
 }
-func (tcpConn *TCPConn) close() {
+func (tcpConn *TCPConn) Close() {
 	if tcpConn.isClose {
 		return
 	}
 	tcpConn.conn.Close()
-	tcpConn.doWrite(nil)
+	tcpConn.doWrite(nil) //触发writeRoutine结束
+	tcpConn.isClose = true
+
+	if tcpConn.OnNetClose != nil {
+		tcpConn.OnNetClose()
+	}
 }
 
 // msgdata must not be modified by other goroutines
@@ -58,14 +60,16 @@ func (tcpConn *TCPConn) WriteMsg(msgID int16, msgdata []byte) {
 func (tcpConn *TCPConn) doWrite(buf []byte) {
 	if len(tcpConn.writeChan) == cap(tcpConn.writeChan) {
 		gamelog.Error("doWrite: channel full")
-		tcpConn.doDestroy()
+		tcpConn.conn.(*net.TCPConn).SetLinger(0)
+		tcpConn.Close()
+		// close(tcpConn.writeChan) //重连后chan里的数据得保留
 		return
 	}
 	tcpConn.writeChan <- buf
 }
 func (tcpConn *TCPConn) writeRoutine() {
 	for buf := range tcpConn.writeChan {
-		if buf == nil || tcpConn.isClose {
+		if buf == nil {
 			break
 		}
 		_, err := tcpConn.conn.Write(buf)
@@ -74,33 +78,16 @@ func (tcpConn *TCPConn) writeRoutine() {
 			break
 		}
 	}
-	gamelog.Info("WriteRoutine Over !!!")
-	tcpConn.conn.Close()
-	tcpConn.isClose = true
+	tcpConn.Close()
 }
-func (tcpConn *TCPConn) doDestroy() {
-	tcpConn.conn.(*net.TCPConn).SetLinger(0)
-	tcpConn.conn.Close()
-	close(tcpConn.writeChan)
-	tcpConn.isClose = true
-}
-
 func (tcpConn *TCPConn) readRoutine() {
 	tcpConn.readLoop()
-	tcpConn.close()
+	tcpConn.Close()
 
-	//通知client断开
+	//通知业务层net断开
 	tcpConn.msgDispatcher(G_MSG_DISCONNECT, nil)
-
-	if tcpConn.onReadRoutineEnd != nil {
-		tcpConn.onReadRoutineEnd()
-	}
 }
 func (tcpConn *TCPConn) readLoop() error {
-	defer func() {
-		tcpConn.conn.Close()
-	}()
-
 	var err error
 	var msgHeader = make([]byte, 6)
 	var msgID int16
@@ -129,10 +116,6 @@ func (tcpConn *TCPConn) readLoop() error {
 		msgID = int16(binary.LittleEndian.Uint16(msgHeader[4:]))
 		if msgLen <= 0 || msgLen > 10240 {
 			gamelog.Error("ReadProcess Invalid msgLen :%d", msgLen)
-			break
-		}
-		if msgID <= G_MSG_BEGIN || msgID >= G_MSG_END {
-			gamelog.Error("ReadProcess Invalid msgID :%d", msgID)
 			break
 		}
 

@@ -53,6 +53,7 @@ func (client *TCPClient) connect() bool {
 
 	if client.TcpConn != nil {
 		client.TcpConn.conn = conn
+		client.TcpConn.isClose = false //断线重连的新连接标记得重置，否则tcpConn.readRoutine.readLoop会直接break
 	} else {
 		client.TcpConn = newTCPConn(conn, client.PendingWriteNum)
 	}
@@ -60,6 +61,6 @@ func (client *TCPClient) connect() bool {
 }
 
 func (client *TCPClient) Close() {
-	client.TcpConn.close()
+	client.TcpConn.Close()
 	client.TcpConn = nil
 }

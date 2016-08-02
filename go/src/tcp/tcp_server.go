@@ -37,12 +37,8 @@ func NewServer(addr string, maxconn int) {
 	svr.PendingWriteNum = 32
 	svr.init()
 	svr.run()
-	svr.close()
+	svr.Close()
 }
-func (server *TCPServer) CloseRun() {
-	server.close()
-}
-
 func (server *TCPServer) init() bool {
 	ln, err := net.Listen("tcp", server.Addr)
 	if err != nil {
@@ -102,12 +98,11 @@ func (server *TCPServer) run() {
 		server.wgConns.Add(1)
 		gamelog.Info("Connect From: %s,  ConnNum: %d", conn.RemoteAddr().String(), connNum+1)
 		tcpConn := newTCPConn(conn, server.PendingWriteNum)
-		tcpConn.onReadRoutineEnd = func() {
+		tcpConn.OnNetClose = func() {
 			// 清理tcp_server相关数据
 			server.mutexConns.Lock()
 			delete(server.connset, tcpConn.conn)
-			connNum := len(server.connset)
-			gamelog.Info("Connect Endded:Data:%v, ConnNum is:%d", tcpConn.Data, connNum)
+			gamelog.Info("Connect Endded:Data:%v, ConnNum is:%d", tcpConn.Data, len(server.connset))
 			server.mutexConns.Unlock()
 			server.wgConns.Done()
 		}
@@ -115,7 +110,7 @@ func (server *TCPServer) run() {
 		go tcpConn.writeRoutine()
 	}
 }
-func (server *TCPServer) close() {
+func (server *TCPServer) Close() {
 	server.listener.Close()
 	server.wgLn.Wait()
 
