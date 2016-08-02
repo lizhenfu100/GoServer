@@ -37,7 +37,7 @@ func main() {
 	// tcp.NewTcpServer(":9001", 5000)
 
 	http.RegHttpMsgHandler()
-	http.NewHttpServer(":9002", 10)
+	http.NewHttpServer(":9002")
 }
 
 func testList() {

@@ -3,22 +3,18 @@ package http
 import (
 	"common"
 	"fmt"
-	"net"
+	// "net"
 	"net/http"
 )
 
-func NewHttpServer(addr string, max int) error {
-	if max <= 0 {
-		return http.ListenAndServe(addr, nil)
-	} else {
-		listener, err := net.Listen("tcp", addr)
-		if err != nil {
-			return err
-		}
-		defer listener.Close()
-		return http.Serve(listener, nil)
-	}
-	return nil
+func NewHttpServer(addr string) error {
+	return http.ListenAndServe(addr, nil)
+	// listener, err := net.Listen("tcp", addr)
+	// if err != nil {
+	// 	return err
+	// }
+	// defer listener.Close()
+	// return http.Serve(listener, nil)
 }
 func RegHttpMsgHandler() {
 	http.HandleFunc("/test_1", Hand_Test_1)
