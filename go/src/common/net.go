@@ -37,8 +37,8 @@ type PacketConn struct {
 	reader *bufio.Reader
 }
 
-func (self *PacketConn) Read(buf []byte) (int, error) { //开启bufio
-	return self.reader.Read(buf)
+func NewPacketConn(conn net.Conn) *PacketConn {
+	return &PacketConn{conn, bufio.NewReader(conn)}
 }
 func (self *PacketConn) ReadPacket() ([]byte, error) { //用户取网络包接口
 	//1、先读2字节头，里面记录了消息长度
@@ -55,9 +55,6 @@ func (self *PacketConn) ReadPacket() ([]byte, error) { //用户取网络包接�
 		return nil, err
 	}
 	return packet, nil
-}
-func NewPacketConn(conn net.Conn) *PacketConn {
-	return &PacketConn{conn, bufio.NewReader(conn)}
 }
 
 //! 异步`io.Writer`

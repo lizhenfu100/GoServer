@@ -30,7 +30,7 @@ func HandleFunc(msgid int16, mh MsgHanler) {
 	G_HandlerMap[msgid] = mh
 }
 
-func NewServer(addr string, maxconn int) {
+func NewTcpServer(addr string, maxconn int) {
 	svr := new(TCPServer)
 	svr.Addr = addr //"ip:port"，ip可缺省
 	svr.MaxConnNum = maxconn

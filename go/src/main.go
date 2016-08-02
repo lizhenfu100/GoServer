@@ -4,8 +4,9 @@ import (
 	//	"common"
 	"fmt"
 	"gamelog"
+	"http"
 	"strings"
-	"tcp"
+	// "tcp"
 	"time"
 )
 
@@ -13,10 +14,6 @@ func main() {
 	fmt.Println("=>", strings.Index("(c)#蘑菇adfadsf", "(c"))
 
 	fmt.Println(time.Now().Hour())
-
-	//初始化日志系统
-	gamelog.InitLogger("gitSundry", true)
-	gamelog.SetLevel(0)
 
 	//	TestInterface()
 	//	TestInterfaceSelect()
@@ -31,10 +28,16 @@ func main() {
 	//	fmt.Println(common.G_SliceCsv)
 
 	//	test_OOP()
-
 	//	testList()
 
-	tcp.NewServer(":9001", 5000)
+	//初始化日志系统
+	gamelog.InitLogger("gitSundry", true)
+	gamelog.SetLevel(0)
+
+	// tcp.NewTcpServer(":9001", 5000)
+
+	http.RegHttpMsgHandler()
+	http.NewHttpServer(":9002", 10)
 }
 
 func testList() {

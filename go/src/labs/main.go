@@ -1,31 +1,27 @@
 package main
 
 import (
-	"fmt"
-	"gamelog"
-	"tcp"
+	"http"
+	// "tcp"
 	"time"
 )
 
 func main() {
-	//初始化日志系统
-	gamelog.InitLogger("labs", true)
-	gamelog.SetLevel(0)
+	// client := tcp.TCPClient{}
+	// client.ConnectToSvr("127.0.0.1:9001")
 
-	client := tcp.TCPClient{}
-	client.ConnectToSvr("127.0.0.1:9001")
+	// // msgdata := []byte{1, 2, 3}
+	// msgdata := make([]byte, 100)
+	// for {
+	// 	if client.TcpConn != nil {
+	// 		client.TcpConn.WriteMsg(2, msgdata)
+	// 		// break
+	// 	}
+	// 	time.Sleep(200 * time.Millisecond)
+	// }
 
-	// msgdata := []byte{1, 2, 3}
-	msgdata := make([]byte, 100)
-	for {
-		if client.TcpConn != nil {
-			client.TcpConn.WriteMsg(2, msgdata)
-			// break
-		}
-		time.Sleep(200 * time.Millisecond)
-	}
+	http.Test_1()
 
 	//主线程可以干别的去了
-	fmt.Println("--- WriteMsg Over")
-	time.Sleep(3000 * time.Second)
+	time.Sleep(3 * time.Second)
 }
