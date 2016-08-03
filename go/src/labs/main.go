@@ -20,7 +20,7 @@ func main() {
 	// 	time.Sleep(200 * time.Millisecond)
 	// }
 
-	http.Test_1()
+	http.Http_Client_Test_1()
 
 	//主线程可以干别的去了
 	time.Sleep(3 * time.Second)

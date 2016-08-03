@@ -1,4 +1,4 @@
-package main
+package bug
 
 /*
 	1、最好别用切片当参数，内部若append会丢数据

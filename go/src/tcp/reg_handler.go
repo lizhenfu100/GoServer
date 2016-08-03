@@ -1,0 +1,16 @@
+package tcp
+
+import (
+	"fmt"
+)
+
+func RegTcpMsgHandler() {
+	HandleFunc(1, Hand_Msg_1)
+}
+
+//////////////////////////////////////////////////////////////////////
+//! 测试msg
+//////////////////////////////////////////////////////////////////////
+func Hand_Msg_1(pTcpConn *TCPConn, buf []byte) {
+	fmt.Println("Hand_Msg_1:", buf)
+}

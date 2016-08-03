@@ -36,7 +36,7 @@ type MSG_Test_Ack struct {
 	Data    string
 }
 
-func Test_1() {
+func Http_Client_Test_1() {
 	reqUrl := "http://127.0.0.1:9002/test_1"
 	req := MSG_Test_Req{1, "zzz", 1}
 	bytes, _ := common.ToBytes(req)

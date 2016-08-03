@@ -32,6 +32,7 @@ func main() {
 	// gamelog.InitLogger("gitSundry", true)
 	// gamelog.SetLevel(0)
 
+	// tcp.RegTcpMsgHandler()
 	// tcp.NewTcpServer(":9001", 5000)
 
 	http.RegHttpMsgHandler()

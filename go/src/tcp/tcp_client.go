@@ -14,11 +14,11 @@ type TCPClient struct { //作为client玩家数据的一个模块
 
 // type MsgHanler func(pTcpConn *TCPConn, pdata []byte)
 
-// var G_HandlerMap map[int16]func(pTcpConn *TCPConn, pdata []byte)
+// var G_HandlerMap map[int16]MsgHanler
 
 // func HandleFunc(msgid int16, mh MsgHanler) {
 // 	if G_HandlerMap == nil {
-// 		G_HandlerMap = make(map[int16]func(pTcpConn *TCPConn, pdata []byte), 100)
+// 		G_HandlerMap = make(map[int16]MsgHanler, 100)
 // 	}
 // 	G_HandlerMap[msgid] = mh
 // }
