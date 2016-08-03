@@ -111,7 +111,7 @@ func LoadCsv(name string) {
 		return
 	}
 
-	ptr, ok := G_CsvParserMap[strings.TrimSuffix(name, ".csv")]
+	ptr, ok := G_CsvParserMap[strings.TrimSuffix(fstate.Name(), ".csv")]
 	if !ok {
 		fmt.Printf("Csv not regist in G_CsvParserMap: %s", name)
 		return

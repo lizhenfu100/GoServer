@@ -1,19 +1,18 @@
 package main
 
 import (
-	//	"common"
+	"common"
 	"fmt"
-	"gamelog"
+	//	"gamelog"
 	"http"
 	"strings"
 	// "tcp"
-	"time"
 )
 
 func main() {
 	fmt.Println("=>", strings.Index("(c)#蘑菇adfadsf", "(c"))
 
-	fmt.Println(time.Now().Hour())
+	fmt.Println(common.GetCurrPath())
 
 	//	TestInterface()
 	//	TestInterfaceSelect()
@@ -21,9 +20,8 @@ func main() {
 	//	test_SetStruct()
 	//	test_SetMap()
 
-	//	fmt.Println(GetCurrPath())
 	//	common.InitReflectParser()
-	//	common.LoadCsv("test.csv")
+	//	common.LoadCsv("labs\\test.csv")
 	//	fmt.Println(common.G_MapCsv)
 	//	fmt.Println(common.G_SliceCsv)
 
@@ -31,8 +29,8 @@ func main() {
 	//	testList()
 
 	//初始化日志系统
-	gamelog.InitLogger("gitSundry", true)
-	gamelog.SetLevel(0)
+	// gamelog.InitLogger("gitSundry", true)
+	// gamelog.SetLevel(0)
 
 	// tcp.NewTcpServer(":9001", 5000)
 
