@@ -6,6 +6,7 @@ import (
 	"net/http"
 )
 
+//Notice：http的消息处理，是另开goroutine调用的，所以函数中可阻塞；tcp就不行了
 func RegHttpMsgHandler() {
 	http.HandleFunc("/test_1", Hand_Test_1)
 }

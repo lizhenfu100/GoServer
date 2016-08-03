@@ -9,7 +9,6 @@ import (
 func main() {
 	// client := tcp.TCPClient{}
 	// client.ConnectToSvr("127.0.0.1:9001")
-
 	// // msgdata := []byte{1, 2, 3}
 	// msgdata := make([]byte, 100)
 	// for {
