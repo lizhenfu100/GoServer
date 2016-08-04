@@ -36,6 +36,8 @@ const (
 	WarnLevel
 	ErrorLevel
 	FatalLevel
+
+	BinaryLog_Rename_Interval = 60 * 15
 )
 
 var g_logger *log.Logger
@@ -43,6 +45,7 @@ var g_level = InfoLevel
 var g_logFile *os.File
 var g_isOutputScreen = true
 var g_logDir = GetCurrPath() + "log\\"
+var g_BinaryLogTime time.Time
 
 func GetLevel() int {
 	return g_level
@@ -81,6 +84,8 @@ func InitLogger(strModule string, bScreen bool) bool {
 	}
 
 	g_isOutputScreen = bScreen
+
+	g_BinaryLogTime = time.Now()
 
 	return true
 }
@@ -142,4 +147,32 @@ func Fatal(format string, v ...interface{}) {
 			fmt.Println(str)
 		}
 	}
+}
+
+// 二进制文件log
+//
+func WriteBinaryLog(data1, data2 [][]byte) {
+	logFileName := _getBinaryLogName()
+	file, err := os.OpenFile(logFileName, os.O_CREATE|os.O_APPEND, os.ModePerm)
+	defer file.Close()
+	if err != nil {
+		Error("logsvr OpenFile:%s", err.Error())
+		return
+	}
+	for _, v := range data1 {
+		file.Write(v)
+	}
+	for _, v := range data2 {
+		file.Write(v)
+	}
+}
+func _getBinaryLogName() string {
+	timeNow := time.Now()
+	var timeStr string
+	if timeNow.Unix()-g_BinaryLogTime.Unix() >= BinaryLog_Rename_Interval {
+		timeStr = timeNow.Format("20060102_150405")
+	} else {
+		timeStr = g_BinaryLogTime.Format("20060102_150405")
+	}
+	return g_logDir + "test_logsvr_" + timeStr + ".log"
 }

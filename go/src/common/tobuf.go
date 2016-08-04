@@ -19,3 +19,12 @@ func ToStruct(b []byte, pStruct interface{}) error {
 	dec := gob.NewDecoder(buf)
 	return dec.Decode(pStruct)
 }
+
+func SwapBuf(rhs, lhs *[]byte) {
+	temp := *rhs
+	*rhs = *lhs
+	*lhs = temp
+}
+func ClearBuf(p *[]byte) {
+	*p = append((*p)[:0], []byte{}...)
+}
