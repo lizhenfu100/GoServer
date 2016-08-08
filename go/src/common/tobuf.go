@@ -3,7 +3,14 @@ package common
 import (
 	"bytes"
 	"encoding/gob"
+	// "encoding/json"
 )
+
+// stData := common.IntPair{11, 22}
+// b, _ := json.Marshal(stData)
+// var data common.IntPair
+// json.Unmarshal(b, &data)
+// fmt.Println(data)
 
 func ToBytes(Struct interface{}) ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
