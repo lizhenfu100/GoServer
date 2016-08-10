@@ -9,8 +9,6 @@ type TBinaryLog struct {
 	file *os.File
 }
 
-func InitBinaryLog() {
-}
 func NewBinaryLog(name string) *TBinaryLog {
 	var err error = nil
 	timeStr := time.Now().Format("20060102_150405")

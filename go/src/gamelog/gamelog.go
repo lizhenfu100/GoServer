@@ -8,7 +8,15 @@ import (
 	"time"
 )
 
-var G_CurPath string
+var (
+	G_CurPath string
+
+	g_logDir = GetCurrPath() + "log\\"
+
+	G_AsyncLog  *AsyncLog
+	g_binaryLog *TBinaryLog
+	g_mysqlLog  *TMysqlLog
+)
 
 func GetCurrPath() string {
 	if len(G_CurPath) <= 0 {
@@ -29,10 +37,6 @@ func IsDirExists(path string) bool {
 	return true
 }
 
-var (
-	g_logDir = GetCurrPath() + "log\\"
-)
-
 func InitLogger(name string, bScreen bool) {
 	var err error = nil
 	if !IsDirExists(g_logDir) {
@@ -47,5 +51,23 @@ func InitLogger(name string, bScreen bool) {
 	logFileName := g_logDir + name + "_" + timeStr + ".log"
 
 	InitDebugLog(logFileName, bScreen)
-	InitBinaryLog()
+
+	_initAsyncLog(name)
+
+}
+func _initAsyncLog(name string) {
+	G_AsyncLog = NewAsyncLog(1024, _doWriteBinaryLog)
+
+	g_binaryLog = NewBinaryLog("logsvr")
+	g_mysqlLog = NewMysqlLog()
+	if g_binaryLog == nil || g_mysqlLog == nil {
+		panic("New Log fail!")
+		return
+	}
+}
+func _doWriteBinaryLog(data1, data2 [][]byte) {
+	g_binaryLog.Write(data1, data2)
+}
+func _doWriteMysqlLog(data1, data2 [][]byte) {
+	g_mysqlLog.Write(data1, data2)
 }
