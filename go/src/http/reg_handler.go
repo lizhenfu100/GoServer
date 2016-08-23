@@ -31,7 +31,7 @@ func Hand_Test_1(w http.ResponseWriter, r *http.Request) {
 	ack.RetCode = 111
 	ack.Data = "aaaaaa"
 	defer func() {
-		b, _ := common.ToBytes(ack)
+		b, _ := common.ToBytes(&ack)
 		w.Write(b)
 	}()
 }
@@ -51,9 +51,7 @@ type MSG_Test_Ack struct {
 
 func Http_Client_Test_1() {
 	reqUrl := "http://127.0.0.1:9002/test_1"
-	req := MSG_Test_Req{1, "zzz", 1}
-	bytes, _ := common.ToBytes(req)
-	buffer, err := PostServerReq(reqUrl, bytes)
+	buffer, err := PostMsg(reqUrl, &MSG_Test_Req{1, "zzz", 1})
 	if err != nil {
 		fmt.Println(err.Error())
 		return

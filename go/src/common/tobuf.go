@@ -7,15 +7,15 @@ import (
 )
 
 // stData := common.IntPair{11, 22}
-// b, _ := json.Marshal(stData)
+// b, _ := json.Marshal(&stData)
 // var data common.IntPair
 // json.Unmarshal(b, &data)
 // fmt.Println(data)
 
-func ToBytes(Struct interface{}) ([]byte, error) {
+func ToBytes(pStruct interface{}) ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 	enc := gob.NewEncoder(buf)
-	err := enc.Encode(Struct)
+	err := enc.Encode(pStruct)
 	if err != nil {
 		return nil, err
 	}
