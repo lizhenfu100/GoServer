@@ -18,6 +18,8 @@ var (
 	g_mysqlLog  *TMysqlLog
 )
 
+//////////////////////////////////////////////////////////////////////
+// 辅助函数
 func GetCurrPath() string {
 	if len(G_CurPath) <= 0 {
 		file, _ := exec.LookPath(os.Args[0])
@@ -37,6 +39,8 @@ func IsDirExists(path string) bool {
 	return true
 }
 
+//////////////////////////////////////////////////////////////////////
+//
 func InitLogger(name string, bScreen bool) {
 	var err error = nil
 	if !IsDirExists(g_logDir) {
