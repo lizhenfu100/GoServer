@@ -29,8 +29,15 @@ import (
 	"time"
 )
 
+const (
+	G_MsgId_Disconnect = 7111
+	G_MsgId_Regist     = 7112
+)
+
 var (
-	G_MSG_DISCONNECT int16 = 111
+	G_HandlerMsgMap = map[uint16]func(*TCPConn, []byte){
+		G_MsgId_Regist: DoRegistToSvr,
+	}
 )
 
 type TCPConn struct { //登录时将TCPConn指针写入player中
@@ -44,10 +51,13 @@ type TCPConn struct { //登录时将TCPConn指针写入player中
 
 func newTCPConn(conn net.Conn, pendingWriteNum int) *TCPConn {
 	tcpConn := new(TCPConn)
-	tcpConn.conn = conn
-	tcpConn.reader = bufio.NewReader(conn)
+	tcpConn.ResetConn(conn)
 	tcpConn.writeChan = make(chan []byte, pendingWriteNum)
 	return tcpConn
+}
+func (tcpConn *TCPConn) ResetConn(conn net.Conn) {
+	tcpConn.conn = conn
+	tcpConn.reader = bufio.NewReader(conn)
 }
 func (tcpConn *TCPConn) Close() {
 	if tcpConn.isClose {
@@ -63,13 +73,13 @@ func (tcpConn *TCPConn) Close() {
 }
 
 // msgdata must not be modified by other goroutines
-func (tcpConn *TCPConn) WriteMsg(msgID int16, msgdata []byte) {
-	msgLen := len(msgdata)
+func (tcpConn *TCPConn) WriteMsg(msgID uint16, msgdata []byte) {
+	msgLen := uint16(len(msgdata))
 
 	msgbuffer := make([]byte, 4+msgLen) //前2字节-msgLen；后2字节-msgID
 
-	binary.LittleEndian.PutUint16(msgbuffer, uint16(msgLen))
-	binary.LittleEndian.PutUint16(msgbuffer[2:], uint16(msgID))
+	binary.LittleEndian.PutUint16(msgbuffer, msgLen)
+	binary.LittleEndian.PutUint16(msgbuffer[2:], msgID)
 
 	copy(msgbuffer[4:], msgdata)
 
@@ -105,13 +115,13 @@ func (tcpConn *TCPConn) readRoutine() {
 	tcpConn.Close()
 
 	//通知业务层net断开
-	tcpConn.msgDispatcher(G_MSG_DISCONNECT, nil)
+	tcpConn.msgDispatcher(G_MsgId_Disconnect, nil)
 }
 func (tcpConn *TCPConn) readLoop() error {
 	var err error
 	var msgHeader = make([]byte, 4) //前2字节-msgLen；后2字节-msgID
-	var msgID int16
-	var msgLen int32
+	var msgID uint16
+	var msgLen uint16
 	var firstTime bool = true
 
 	for {
@@ -133,8 +143,8 @@ func (tcpConn *TCPConn) readLoop() error {
 			return err
 		}
 
-		msgLen = int32(binary.LittleEndian.Uint16(msgHeader))
-		msgID = int16(binary.LittleEndian.Uint16(msgHeader[2:]))
+		msgLen = binary.LittleEndian.Uint16(msgHeader)
+		msgID = binary.LittleEndian.Uint16(msgHeader[2:])
 		if msgLen <= 0 || msgLen > 10240 {
 			gamelog.Error("ReadProcess Invalid msgLen :%d", msgLen)
 			break
@@ -151,9 +161,9 @@ func (tcpConn *TCPConn) readLoop() error {
 	}
 	return nil
 }
-func (tcpConn *TCPConn) msgDispatcher(msgID int16, pdata []byte) {
+func (tcpConn *TCPConn) msgDispatcher(msgID uint16, pdata []byte) {
 	// gamelog.Info("---msgID:%d, dataLen:%d", msgID, len(pdata))
-	msghandler, ok := G_HandlerMap[msgID]
+	msghandler, ok := G_HandlerMsgMap[msgID]
 	if !ok {
 		gamelog.Error("msgid : %d have not a msg handler!!", msgID)
 		return

@@ -1,33 +1,23 @@
 package tcp
 
 import (
+	"common"
+	"fmt"
 	"gamelog"
 	"net"
 	"sync"
 	"time"
 )
 
-type ConnSet map[net.Conn]bool
 type TCPServer struct {
 	Addr            string
 	MaxConnNum      int
 	PendingWriteNum int
 	listener        net.Listener
 	mutexConns      sync.Mutex
-	connset         ConnSet
+	connset         map[net.Conn]bool
 	wgLn            sync.WaitGroup
 	wgConns         sync.WaitGroup
-}
-
-type MsgHanler func(pTcpConn *TCPConn, pdata []byte)
-
-var G_HandlerMap map[int16]MsgHanler
-
-func HandleFunc(msgid int16, mh MsgHanler) {
-	if G_HandlerMap == nil {
-		G_HandlerMap = make(map[int16]MsgHanler, 100)
-	}
-	G_HandlerMap[msgid] = mh
 }
 
 func NewTcpServer(addr string, maxconn int) {
@@ -56,7 +46,7 @@ func (server *TCPServer) init() bool {
 	}
 
 	server.listener = ln
-	server.connset = make(ConnSet)
+	server.connset = make(map[net.Conn]bool)
 
 	return true
 }
@@ -123,4 +113,28 @@ func (server *TCPServer) Close() {
 	server.mutexConns.Unlock()
 	server.wgConns.Wait()
 	gamelog.Info("server been closed!!")
+}
+
+//////////////////////////////////////////////////////////////////////
+//! 模块注册
+type TcpConnKey struct {
+	Name string
+	ID   int
+}
+
+var g_reg_conn_list = make(map[TcpConnKey]*TCPConn)
+
+func DoRegistToSvr(conn *TCPConn, data []byte) {
+	var msg Msg_Regist_To_TcpSvr
+	common.ToStruct(data, &msg)
+	fmt.Println("TcpScr Reg:", msg)
+	g_reg_conn_list[TcpConnKey{msg.Module, msg.ID}] = conn
+}
+func FindRegModuleConn(module string, id int) *TCPConn {
+	fmt.Println(module, id)
+	fmt.Println(g_reg_conn_list)
+	if v, ok := g_reg_conn_list[TcpConnKey{module, id}]; ok {
+		return v
+	}
+	return nil
 }

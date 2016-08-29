@@ -11,7 +11,7 @@ import (
 var (
 	G_CurPath string
 
-	g_logDir = GetCurrPath() + "log\\"
+	g_logDir = _GetCurrPath() + "log\\"
 
 	G_AsyncLog  *AsyncLog
 	g_binaryLog *TBinaryLog
@@ -20,7 +20,7 @@ var (
 
 //////////////////////////////////////////////////////////////////////
 // 辅助函数
-func GetCurrPath() string {
+func _GetCurrPath() string {
 	if len(G_CurPath) <= 0 {
 		file, _ := exec.LookPath(os.Args[0])
 		G_CurPath, _ = filepath.Abs(file)
@@ -28,7 +28,7 @@ func GetCurrPath() string {
 	}
 	return G_CurPath
 }
-func IsDirExists(path string) bool {
+func _IsDirExists(path string) bool {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return os.IsExist(err)
@@ -43,7 +43,7 @@ func IsDirExists(path string) bool {
 //
 func InitLogger(name string, bScreen bool) {
 	var err error = nil
-	if !IsDirExists(g_logDir) {
+	if !_IsDirExists(g_logDir) {
 		err = os.MkdirAll(g_logDir, os.ModePerm)
 	}
 	if err != nil {

@@ -49,6 +49,22 @@ func (self *StrError) Error() string {
 	}
 }
 
+func GetCurrPath() string {
+	file, _ := exec.LookPath(os.Args[0])
+	path, _ := filepath.Abs(file)
+	path = string(path[0 : 1+strings.LastIndex(path, "\\")])
+	return path
+}
+func IsDirExists(path string) bool {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return os.IsExist(err)
+	} else {
+		return fi.IsDir()
+	}
+	return true
+}
+
 //////////////////////////////////////////////////////////////////////
 // 测试数据
 type TTestCsv struct {
@@ -73,13 +89,6 @@ var G_CsvParserMap = map[string]interface{}{
 
 //////////////////////////////////////////////////////////////////////
 //
-func GetCurrPath() string {
-	file, _ := exec.LookPath(os.Args[0])
-	path, _ := filepath.Abs(file)
-	path = string(path[0 : 1+strings.LastIndex(path, "\\")])
-	return path
-}
-
 func LoadCsv(path string) ([][]string, error) {
 	file, err := os.Open(path)
 	defer file.Close()
@@ -101,6 +110,25 @@ func LoadCsv(path string) ([][]string, error) {
 		return nil, err
 	}
 	return records, nil
+}
+func UpdateCsv(path string, records [][]string) error {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, os.ModePerm)
+	defer file.Close()
+	if err != nil {
+		return err
+	}
+
+	fstate, err := file.Stat()
+	if err != nil {
+		return err
+	}
+	if fstate.IsDir() == true {
+		return nil
+	}
+
+	csvWriter := csv.NewWriter(file)
+	csvWriter.UseCRLF = true
+	return csvWriter.WriteAll(records)
 }
 
 func LoadAllCsv() {
