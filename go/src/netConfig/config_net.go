@@ -124,10 +124,10 @@ func CreateNetSvr(module string) bool {
 						fmt.Sprintf("%s:%d", destCfg.IP, destCfg.TcpPort),
 						module,
 						selfCfg.SvrID)
+					//Notice：client.ConnectToSvr是异步过程，这里返回的client.TcpConn还是空指针，不能保存*tcp.TCPConn
 					G_Connect_Remote_TcpConn[TcpConnKey{v, destCfg.SvrID}] = client
 				} else {
 					print(v + ": have none HttpPort|TcpPort!!!")
-					return false
 				}
 			} else {
 				print(v + ": have none SvrNetCfg!!!")
@@ -142,7 +142,6 @@ func CreateNetSvr(module string) bool {
 			tcp.NewTcpServer(":"+strconv.Itoa(selfCfg.TcpPort), selfCfg.Maxconn)
 		} else {
 			print(module + ": have none HttpPort|TcpPort!!!")
-			return false
 		}
 		return true
 	}
@@ -191,5 +190,6 @@ func GetTcpConn(destModule string, destSvrID int) *tcp.TCPConn { //Notice：应�
 	return tcp.FindRegModuleConn(destModule, destSvrID)
 }
 
-// resp, err := http.Post(url, "text/HTML", bytes.NewReader(b)) //验证：此函数失败，resp是nil吗？那resp.Body.Close()就不能无脑调了
+// 已验证：此函数失败，resp是nil，那resp.Body.Close()就不能无脑调了
+// resp, err := http.Post(url, "text/HTML", bytes.NewReader(b))
 // resp.Body.Close()

@@ -19,7 +19,14 @@ func NewHttpServer(addr string) error {
 	// return http.Serve(listener, nil)
 }
 
-var g_reg_addr_list []Msg_Regist_To_HttpSvr
+//////////////////////////////////////////////////////////////////////
+//! 模块注册
+type HttpAddrKey struct {
+	Name string
+	ID   int
+}
+
+var g_reg_addr_map = make(map[HttpAddrKey]string) //slice结构可能出现多次注册问题
 
 func DoRegistToSvr(w http.ResponseWriter, r *http.Request) {
 	buffer := make([]byte, r.ContentLength)
@@ -33,7 +40,7 @@ func DoRegistToSvr(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Println(req)
-	g_reg_addr_list = append(g_reg_addr_list, req)
+	g_reg_addr_map[HttpAddrKey{req.Module, req.ID}] = req.Addr
 
 	defer func() {
 		w.Write([]byte("ok"))
@@ -41,12 +48,8 @@ func DoRegistToSvr(w http.ResponseWriter, r *http.Request) {
 }
 
 func FindRegModuleAddr(module string, id int) string {
-	max := len(g_reg_addr_list)
-	for i := 0; i < max; i++ {
-		data := &g_reg_addr_list[i]
-		if data.Module == module && data.ID == id {
-			return data.Addr
-		}
+	if v, ok := g_reg_addr_map[HttpAddrKey{module, id}]; ok {
+		return v
 	}
 	return ""
 }

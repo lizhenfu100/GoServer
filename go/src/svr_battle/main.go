@@ -17,7 +17,7 @@ func main() {
 	common.StartConsole()
 	common.RegConsoleCmd("setloglevel", HandCmd_SetLogLevel)
 
-	//注册所有http消息处理方法
+	//注册所有tcp消息处理方法
 	RegBattleTcpMsgHandler()
 
 	gamelog.Warn("----Battle Server Start-----")

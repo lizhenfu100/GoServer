@@ -122,18 +122,17 @@ type TcpConnKey struct {
 	ID   int
 }
 
-var g_reg_conn_list = make(map[TcpConnKey]*TCPConn)
+var g_reg_conn_map = make(map[TcpConnKey]*TCPConn)
 
 func DoRegistToSvr(conn *TCPConn, data []byte) {
 	var msg Msg_Regist_To_TcpSvr
 	common.ToStruct(data, &msg)
 	fmt.Println("TcpScr Reg:", msg)
-	g_reg_conn_list[TcpConnKey{msg.Module, msg.ID}] = conn
+	g_reg_conn_map[TcpConnKey{msg.Module, msg.ID}] = conn
 }
 func FindRegModuleConn(module string, id int) *TCPConn {
-	fmt.Println(module, id)
-	fmt.Println(g_reg_conn_list)
-	if v, ok := g_reg_conn_list[TcpConnKey{module, id}]; ok {
+	fmt.Println(module, id, g_reg_conn_map)
+	if v, ok := g_reg_conn_map[TcpConnKey{module, id}]; ok {
 		return v
 	}
 	return nil

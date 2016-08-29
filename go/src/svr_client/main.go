@@ -15,7 +15,7 @@ func main() {
 	gamelog.InitLogger("client", true)
 	gamelog.SetLevel(0)
 
-	netConfig.G_Local_Module = "client"
+	netConfig.CreateNetSvr("client")
 
 	gameAddr := netConfig.GetHttpAddr("game", 0)
 	fmt.Println("---", gameAddr)
