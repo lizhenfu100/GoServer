@@ -2,7 +2,7 @@ package tcp
 
 import (
 	"common"
-	"gamelog"
+	"fmt"
 	"net"
 	"time"
 )
@@ -40,7 +40,7 @@ func (client *TCPClient) connectRoutine(srcModule string, srcID int) {
 func (client *TCPClient) connect() bool {
 	conn, err := net.Dial("tcp", client.Addr)
 	if err != nil {
-		gamelog.Error("connect to %s error :%s", client.Addr, err.Error())
+		fmt.Printf("connect to %s error :%s \n", client.Addr, err.Error())
 		return false
 	}
 	if conn == nil {
@@ -48,8 +48,8 @@ func (client *TCPClient) connect() bool {
 	}
 
 	if client.TcpConn != nil {
+		//断线重连的新连接标记得重置，否则tcpConn.readRoutine.readLoop会直接break
 		client.TcpConn.ResetConn(conn)
-		client.TcpConn.isClose = false //断线重连的新连接标记得重置，否则tcpConn.readRoutine.readLoop会直接break
 	} else {
 		client.TcpConn = newTCPConn(conn, client.PendingWriteNum)
 	}

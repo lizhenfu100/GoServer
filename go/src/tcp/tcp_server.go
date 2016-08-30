@@ -2,7 +2,6 @@ package tcp
 
 import (
 	"common"
-	"fmt"
 	"gamelog"
 	"net"
 	"sync"
@@ -127,13 +126,13 @@ var g_reg_conn_map = make(map[TcpConnKey]*TCPConn)
 func DoRegistToSvr(conn *TCPConn, data []byte) {
 	var msg Msg_Regist_To_TcpSvr
 	common.ToStruct(data, &msg)
-	fmt.Println("TcpScr Reg:", msg)
+	gamelog.Info("DoRegistToSvr: %v", msg)
 	g_reg_conn_map[TcpConnKey{msg.Module, msg.ID}] = conn
 }
 func FindRegModuleConn(module string, id int) *TCPConn {
-	fmt.Println(module, id, g_reg_conn_map)
 	if v, ok := g_reg_conn_map[TcpConnKey{module, id}]; ok {
 		return v
 	}
+	gamelog.Error("FindRegModuleConn nil : (%s,%d)-%v", module, id, g_reg_conn_map)
 	return nil
 }

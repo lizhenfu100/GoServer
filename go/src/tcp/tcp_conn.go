@@ -55,9 +55,12 @@ func newTCPConn(conn net.Conn, pendingWriteNum int) *TCPConn {
 	tcpConn.writeChan = make(chan []byte, pendingWriteNum)
 	return tcpConn
 }
+
+//isClose标记仅在ResetConn、Close中设置，其它地方只读
 func (tcpConn *TCPConn) ResetConn(conn net.Conn) {
 	tcpConn.conn = conn
 	tcpConn.reader = bufio.NewReader(conn)
+	tcpConn.isClose = false
 }
 func (tcpConn *TCPConn) Close() {
 	if tcpConn.isClose {
