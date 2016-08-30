@@ -48,8 +48,7 @@ func SetLevel(l int) {
 
 func Warn(format string, v ...interface{}) {
 	if g_level <= WarnLevel {
-		var str string
-		str = "[W] " + format
+		str := "[W] " + format
 		str = fmt.Sprintf(str, v...)
 		g_logger.Output(2, str)
 
@@ -60,8 +59,7 @@ func Warn(format string, v ...interface{}) {
 }
 func ErrorColor(format string, v ...interface{}) {
 	if g_level <= ErrorLevel {
-		var str string
-		str = "[E] " + format
+		str := "[E] " + format
 		str = fmt.Sprintf(str, v...)
 		g_logger.Output(2, str)
 		if g_isOutputScreen {
@@ -71,8 +69,7 @@ func ErrorColor(format string, v ...interface{}) {
 }
 func Error(format string, v ...interface{}) {
 	if g_level <= ErrorLevel {
-		var str string
-		str = "[E] " + format
+		str := "[E] " + format
 		str = fmt.Sprintf(str, v...)
 		g_logger.Output(2, str)
 		if g_isOutputScreen {
@@ -82,8 +79,7 @@ func Error(format string, v ...interface{}) {
 }
 func Error3(format string, v ...interface{}) {
 	if g_level <= ErrorLevel {
-		var str string
-		str = "[E] " + format
+		str := "[E] " + format
 		str = fmt.Sprintf(str, v...)
 		g_logger.Output(3, str)
 
@@ -94,8 +90,7 @@ func Error3(format string, v ...interface{}) {
 }
 func Info(format string, v ...interface{}) {
 	if g_level <= InfoLevel {
-		var str string
-		str = "[I] " + format
+		str := "[I] " + format
 		str = fmt.Sprintf(str, v...)
 		g_logger.Output(2, str)
 
@@ -106,8 +101,7 @@ func Info(format string, v ...interface{}) {
 }
 func Fatal(format string, v ...interface{}) {
 	if g_level <= FatalLevel {
-		var str string
-		str = "[F] " + format
+		str := "[F] " + format
 		str = fmt.Sprintf(str, v...)
 		g_logger.Output(4, str)
 

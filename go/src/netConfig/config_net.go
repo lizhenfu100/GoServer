@@ -35,6 +35,8 @@ type TSvrNetCfg struct {
 	Connect []string
 }
 
+//TODO：各个模块崩溃重启
+//TODO：如何设计成可起多个的水平服务？
 var G_SvrNetCfg = map[string]TSvrNetCfg{
 	"account": {
 		TAddrInfo{
@@ -54,8 +56,6 @@ var G_SvrNetCfg = map[string]TSvrNetCfg{
 	},
 	"cross": {},
 
-	//TODO：各个模块崩溃重启
-	//TODO：如何设计成可起多个的水平服务？
 	"game": {
 		TAddrInfo{
 			IP:       "127.0.0.1",
@@ -63,8 +63,7 @@ var G_SvrNetCfg = map[string]TSvrNetCfg{
 			HttpPort: 7010,
 			SvrID:    1,
 		},
-		// []string{"chat", "battle", "sdk"},
-		[]string{"sdk", "battle"},
+		[]string{"sdk", "battle"}, // []string{"chat", "battle", "sdk"},
 	},
 	"chat": {
 		TAddrInfo{
@@ -87,8 +86,7 @@ var G_SvrNetCfg = map[string]TSvrNetCfg{
 	},
 	"client": {
 		TAddrInfo{},
-		// []string{"chat", "battle", "game"},
-		[]string{"game", "sdk"},
+		[]string{"game", "sdk", "battle"},
 	},
 }
 
@@ -157,6 +155,7 @@ func GetHttpAddr(destModule string, destSvrID int) string { //Notice：应用层
 		}
 		destCfg = &cfg.Listen
 	} else {
+		print(destModule + ": have none SvrNetCfg!!!")
 		return ""
 	}
 
@@ -176,6 +175,7 @@ func GetTcpConn(destModule string, destSvrID int) *tcp.TCPConn { //Notice：应�
 			destSvrID = cfg.Listen.SvrID
 		}
 	} else {
+		print(destModule + ": have none SvrNetCfg!!!")
 		return nil
 	}
 

@@ -14,7 +14,6 @@ func RegSdkHttpMsgHandler() {
 	var configSlice = []THttpFuncInfo{
 		//! From Gamesvr
 		{"/create_recharge_order", logic.HandSvr_CreateRechargeOrder},
-		{"/reg_gamesvr_addr", logic.HandSvr_GamesvrAddr},
 
 		//! From 第三方
 		{"/sdk_recharge_success", logic.HandSdk_RechargeSuccess},

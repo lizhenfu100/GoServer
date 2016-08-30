@@ -6,7 +6,6 @@ import (
 	"netConfig"
 	// "mongodb"
 	"strconv"
-	"svr_sdk/logic"
 )
 
 // 1 开一个http server
@@ -25,8 +24,6 @@ func main() {
 	//开启控制台窗口，可以接受一些调试命令
 	common.StartConsole()
 	common.RegConsoleCmd("setloglevel", HandCmd_SetLogLevel)
-
-	logic.LoadSvrAddrCsv()
 
 	//注册所有http消息处理方法
 	RegSdkHttpMsgHandler()

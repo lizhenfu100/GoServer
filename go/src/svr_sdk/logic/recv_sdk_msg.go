@@ -20,6 +20,7 @@ import (
 	"gamelog"
 	"msg/sdk_msg"
 	"net/http"
+	"svr_sdk/api"
 )
 
 func HandSdk_RechargeSuccess(w http.ResponseWriter, r *http.Request) {
@@ -62,6 +63,6 @@ func HandSdk_RechargeSuccess(w http.ResponseWriter, r *http.Request) {
 		gamesvrReq.PlayerID = req.PlayerID
 		gamesvrReq.ChargeCsvID = pOrder.chargeCsvID
 		gamesvrReq.RMB = req.RMB
-		RelayToGamesvr(pOrder.GamesvrID, "/sdk_recharge_success", &gamesvrReq)
+		api.RelayToGamesvr(pOrder.GamesvrID, "/sdk_recharge_success", &gamesvrReq)
 	}
 }
