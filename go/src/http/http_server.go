@@ -4,11 +4,15 @@ import (
 	"common"
 	// "net"
 	"fmt"
+	"gamelog"
 	"net/http"
+	"strconv"
 )
 
 func NewHttpServer(addr string) error {
-	http.HandleFunc("/reg_to_svr", DoRegistToSvr)
+	LoadSvrAddrCsv()
+
+	http.HandleFunc("/reg_to_svr", _doRegistToSvr)
 
 	return http.ListenAndServe(addr, nil)
 	// listener, err := net.Listen("tcp", addr)
@@ -28,7 +32,7 @@ type HttpAddrKey struct {
 
 var g_reg_addr_map = make(map[HttpAddrKey]string) //slice结构可能出现多次注册问题
 
-func DoRegistToSvr(w http.ResponseWriter, r *http.Request) {
+func _doRegistToSvr(w http.ResponseWriter, r *http.Request) {
 	buffer := make([]byte, r.ContentLength)
 	r.Body.Read(buffer)
 
@@ -40,7 +44,14 @@ func DoRegistToSvr(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Println("DoRegistToSvr: ", req)
-	g_reg_addr_map[HttpAddrKey{req.Module, req.ID}] = req.Addr
+
+	oldAddr, ok := g_reg_addr_map[HttpAddrKey{req.Module, req.ID}]
+	if ok && oldAddr == req.Addr {
+		return
+	} else {
+		g_reg_addr_map[HttpAddrKey{req.Module, req.ID}] = req.Addr
+		AppendSvrAddrCsv(req.Module, req.ID, req.Addr)
+	}
 
 	defer func() {
 		w.Write([]byte("ok"))
@@ -53,4 +64,40 @@ func FindRegModuleAddr(module string, id int) string {
 	}
 	fmt.Println("FindRegModuleAddr nil: ", HttpAddrKey{module, id}, g_reg_addr_map)
 	return ""
+}
+
+//////////////////////////////////////////////////////////////////////
+//! 本地存储“远程服务”注册地址，以备Local Http NetSvr崩溃重启
+
+//! 不似tcp，对端不知道这边傻逼了( ▔___▔)y
+
+//! 采用追加方式，同个“远程服务”的地址，会被最新追加的覆盖掉
+var (
+	g_svraddr_path = common.GetExePath() + "reg_addr.csv"
+)
+
+func LoadSvrAddrCsv() {
+	records, err := common.LoadCsv(g_svraddr_path)
+	if err != nil {
+		return
+	}
+
+	var (
+		module string
+		svrID  int
+	)
+	for i := 0; i < len(records); i++ {
+		module = records[i][0]
+		svrID, _ = strconv.Atoi(records[i][1])
+		//Notice：之前可能有同个key的，被后面追加的覆盖
+		g_reg_addr_map[HttpAddrKey{module, svrID}] = records[i][2]
+	}
+}
+func AppendSvrAddrCsv(module string, id int, addr string) {
+	record := []string{module, strconv.Itoa(id), addr}
+
+	err := common.AppendCsv(g_svraddr_path, record)
+	if err != nil {
+		gamelog.Error("AppendSvrAddrCsv (%v): %s", record, err.Error())
+	}
 }

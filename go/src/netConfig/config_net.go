@@ -7,8 +7,12 @@
 
 	3、未来扩展：Battle设计为多个，初始化完毕后http.Post自己的信息到Gamesvr（甚至能临时加机器）
 
-	TODO：
-		区分inner_ip/outer_ip
+* @ reboot
+	1、【1-1】关系中的"client"重启：game每次均会连接battle
+	2、【1-1】关系中的"server"重启：battle(tcp)重启，game的client.ConnectToSvr能检查到失败，循环重连
+
+	3、【1-N】关系中的"N"重启：game每次均会去sdk注册
+	4、【1-N】关系中的"1"重启：http_server.go会本地存储注册地址，重启时载入
 
 * @ author zhoumf
 * @ date 2016-8-11
@@ -35,7 +39,6 @@ type TSvrNetCfg struct {
 	Connect []string
 }
 
-//TODO：各个模块崩溃重启
 //TODO：如何设计成可起多个的水平服务？
 var G_SvrNetCfg = map[string]TSvrNetCfg{
 	"account": {

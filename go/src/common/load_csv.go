@@ -49,7 +49,7 @@ func (self *StrError) Error() string {
 	}
 }
 
-func GetCurrPath() string {
+func GetExePath() string {
 	file, _ := exec.LookPath(os.Args[0])
 	path, _ := filepath.Abs(file)
 	path = string(path[0 : 1+strings.LastIndex(path, "\\")])
@@ -100,7 +100,7 @@ func LoadCsv(path string) ([][]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if fstate.IsDir() == true {
+	if fstate.IsDir() {
 		return nil, &StrError{"LoadCsv is dir!", nil}
 	}
 
@@ -122,17 +122,42 @@ func UpdateCsv(path string, records [][]string) error {
 	if err != nil {
 		return err
 	}
-	if fstate.IsDir() == true {
-		return nil
+	if fstate.IsDir() {
+		return &StrError{"UpdateCsv is dir!", nil}
 	}
 
 	csvWriter := csv.NewWriter(file)
 	csvWriter.UseCRLF = true
 	return csvWriter.WriteAll(records)
 }
+func AppendCsv(path string, record []string) error {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND, os.ModePerm)
+	defer file.Close()
+	if err != nil {
+		return err
+	}
 
+	fstate, err := file.Stat()
+	if err != nil {
+		return err
+	}
+	if fstate.IsDir() {
+		return &StrError{"AppendCsv is dir!", nil}
+	}
+
+	csvWriter := csv.NewWriter(file)
+	csvWriter.UseCRLF = true
+	if err := csvWriter.Write(record); err != nil {
+		return err
+	}
+	csvWriter.Flush()
+	return nil
+}
+
+//////////////////////////////////////////////////////////////////////
+// 载入策划配表
 func LoadAllCsv() {
-	pattern := GetCurrPath() + "csv/*.csv"
+	pattern := GetExePath() + "csv/*.csv"
 	names, err := filepath.Glob(pattern)
 	if err != nil {
 		fmt.Printf("LoadAllCsv error : %s", err.Error())
