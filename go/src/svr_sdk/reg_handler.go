@@ -19,6 +19,7 @@ func RegSdkHttpMsgHandler() {
 		{"/sdk_recharge_success", logic.HandSdk_RechargeSuccess},
 	}
 
+	//! register
 	max := len(configSlice)
 	for i := 0; i < max; i++ {
 		data := &configSlice[i]

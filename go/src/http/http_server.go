@@ -9,6 +9,8 @@ import (
 	"strconv"
 )
 
+//Notice：http的消息处理，是另开goroutine调用的，所以函数中可阻塞；tcp就不行了
+//Notice：正因为每条消息都是另开goroutine，若玩家连续发多条消息，服务器就是并发处理了，存在竞态……client确保应答式通信
 func NewHttpServer(addr string) error {
 	LoadSvrAddrCsv()
 

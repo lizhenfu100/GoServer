@@ -51,7 +51,7 @@ func (client *TCPClient) connect() bool {
 		//断线重连的新连接标记得重置，否则tcpConn.readRoutine.readLoop会直接break
 		client.TcpConn.ResetConn(conn)
 	} else {
-		client.TcpConn = newTCPConn(conn, client.PendingWriteNum)
+		client.TcpConn = newTCPConn(conn, client.PendingWriteNum, nil)
 	}
 	return true
 }

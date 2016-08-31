@@ -74,27 +74,26 @@ func (server *TCPServer) run() {
 		}
 		tempDelay = 0
 		connNum := len(server.connset)
-		server.mutexConns.Lock()
 		if connNum >= server.MaxConnNum {
-			server.mutexConns.Unlock()
 			conn.Close()
 			gamelog.Error("too many connections")
 			continue
 		}
 
+		server.mutexConns.Lock()
 		server.connset[conn] = true
 		server.mutexConns.Unlock()
 		server.wgConns.Add(1)
 		gamelog.Info("Connect From: %s,  ConnNum: %d", conn.RemoteAddr().String(), connNum+1)
-		tcpConn := newTCPConn(conn, server.PendingWriteNum)
-		tcpConn.onNetClose = func() {
-			// 清理tcp_server相关数据
-			server.mutexConns.Lock()
-			delete(server.connset, tcpConn.conn)
-			gamelog.Info("Connect Endded:Data:%v, ConnNum is:%d", tcpConn.Data, len(server.connset))
-			server.mutexConns.Unlock()
-			server.wgConns.Done()
-		}
+		tcpConn := newTCPConn(conn, server.PendingWriteNum,
+			func(this *TCPConn) {
+				// 清理tcp_server相关数据
+				server.mutexConns.Lock()
+				delete(server.connset, this.conn)
+				server.mutexConns.Unlock()
+				gamelog.Info("Connect Endded:Data:%v, ConnNum is:%d", this.Data, len(server.connset))
+				server.wgConns.Done()
+			})
 		go tcpConn.readRoutine()
 		go tcpConn.writeRoutine()
 	}
@@ -107,9 +106,9 @@ func (server *TCPServer) Close() {
 	for conn := range server.connset {
 		conn.Close()
 	}
-
 	server.connset = nil
 	server.mutexConns.Unlock()
+
 	server.wgConns.Wait()
 	gamelog.Info("server been closed!!")
 }

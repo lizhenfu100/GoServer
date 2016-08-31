@@ -45,13 +45,14 @@ type TCPConn struct { //登录时将TCPConn指针写入player中
 	reader     *bufio.Reader //包装conn减少conn.Read的io次数，见【common\net.go】
 	writeChan  chan []byte
 	isClose    bool
-	onNetClose func()
+	onNetClose func(*TCPConn)
 	Data       interface{}
 }
 
-func newTCPConn(conn net.Conn, pendingWriteNum int) *TCPConn {
+func newTCPConn(conn net.Conn, pendingWriteNum int, callback func(*TCPConn)) *TCPConn {
 	tcpConn := new(TCPConn)
 	tcpConn.ResetConn(conn)
+	tcpConn.onNetClose = callback
 	tcpConn.writeChan = make(chan []byte, pendingWriteNum)
 	return tcpConn
 }
@@ -71,7 +72,7 @@ func (tcpConn *TCPConn) Close() {
 	tcpConn.isClose = true
 
 	if tcpConn.onNetClose != nil {
-		tcpConn.onNetClose()
+		tcpConn.onNetClose(tcpConn)
 	}
 }
 
