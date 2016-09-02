@@ -1,10 +1,14 @@
 package activity
 
 import (
+	"common"
 	"time"
 )
 
-var G_GlobalActivity TGlobalActivity
+var (
+	G_GlobalActivity TGlobalActivity
+	g_act_timer      *common.Timer
+)
 
 type TGlobalActivity struct {
 	ActivityLst []TActivityData //! 活动列表
@@ -37,6 +41,9 @@ func (self *TGlobalActivity) Init() {
 
 		self.UpdateActivityTime() //! 活动开启/结束时间
 	}
+
+	g_act_timer = common.NewHourTimer(24)
+	g_act_timer.AddTimeFunc(common.GetTodayLeftSec(), common.OneDay_SecCnt, -1, self)
 }
 func (self *TGlobalActivity) CheckActivityAdd() {
 	for _, csv := range G_ActivityCsv {
@@ -102,6 +109,12 @@ func (self *TGlobalActivity) db_LoadGlobalActivity() bool {
 // 活动数据刷新
 //////////////////////////////////////////////////////////////////////
 //! 在线跨天
+func (self *TGlobalActivity) OnTimerRefresh(now int64) bool {
+	self.EnterNextDay(now)
+	return true
+}
+func (self *TGlobalActivity) OnTimerRunEnd(now int64) {
+}
 func (self *TGlobalActivity) EnterNextDay(now int64) {
 	//! 【坑】range迭代的v是值拷贝，block内更改迭代数据，v的值是不变的
 	//! 【坑】要是循环有先更改状态，再通过v判断的逻辑，就有问题了

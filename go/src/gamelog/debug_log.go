@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"utility"
 )
 
 const (
@@ -52,16 +51,6 @@ func Warn(format string, v ...interface{}) {
 
 		if g_isOutputScreen {
 			fmt.Println(str)
-		}
-	}
-}
-func ErrorColor(format string, v ...interface{}) {
-	if g_level <= ErrorLevel {
-		str := "[E] " + format
-		str = fmt.Sprintf(str, v...)
-		g_logger.Output(2, str)
-		if g_isOutputScreen {
-			utility.ColorPrintln(str)
 		}
 	}
 }

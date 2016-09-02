@@ -3,7 +3,6 @@ package gamelog
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"os"
 	"time"
 )
@@ -23,8 +22,7 @@ func NewJsonLog(name string) *TJsonLog {
 	log := new(TJsonLog)
 	log.file, err = os.OpenFile(fullName, os.O_CREATE|os.O_APPEND, 0755)
 	if err != nil {
-		fmt.Println(err)
-		Error("JsonLog OpenFile:%v", err)
+		Error("JsonLog OpenFile:%v", err.Error())
 		return nil
 	}
 	log.wr = bufio.NewWriterSize(log.file, 1024)
