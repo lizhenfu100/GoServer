@@ -13,9 +13,7 @@ var (
 
 	g_logDir = GetExePath() + "log\\"
 
-	G_AsyncLog  *AsyncLog
-	g_binaryLog *TBinaryLog
-	g_mysqlLog  *TMysqlLog
+	G_AsyncLog *AsyncLog
 )
 
 //////////////////////////////////////////////////////////////////////
@@ -60,18 +58,14 @@ func InitLogger(name string, bScreen bool) {
 
 }
 func _initAsyncLog(name string) {
-	G_AsyncLog = NewAsyncLog(1024, _doWriteBinaryLog)
+	G_AsyncLog = NewAsyncLog(1024, NewBinaryLog("logsvr"))
+	// G_AsyncLog = NewAsyncLog(1024, NewMysqlLog("logsvr"))
 
-	g_binaryLog = NewBinaryLog("logsvr")
-	g_mysqlLog = NewMysqlLog()
-	if g_binaryLog == nil || g_mysqlLog == nil {
+	if G_AsyncLog == nil {
 		panic("New Log fail!")
 		return
 	}
 }
-func _doWriteBinaryLog(data1, data2 [][]byte) {
-	g_binaryLog.Write(data1, data2)
-}
-func _doWriteMysqlLog(data1, data2 [][]byte) {
-	g_mysqlLog.Write(data1, data2)
+func AppendAsyncLog(data []byte) {
+	G_AsyncLog.Append(data)
 }

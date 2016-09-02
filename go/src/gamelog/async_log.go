@@ -28,26 +28,27 @@ import (
 	"time"
 )
 
-type WriteFunc func(data1, data2 [][]byte)
-
 const (
 	Flush_Interval = 15 //间隔几秒写一次log
 )
 
+type Writer interface {
+	Write(data1, data2 [][]byte)
+}
 type AsyncLog struct {
 	sync.Mutex
-	curBuf       [][]byte
-	spareBuf     [][]byte
-	awakeChan    chan bool //chan要make初始化才能用~o(╯□╰)o
-	writeLogFunc WriteFunc
+	curBuf    [][]byte
+	spareBuf  [][]byte
+	awakeChan chan bool //chan要make初始化才能用~o(╯□╰)o
+	wr        Writer
 }
 
-func NewAsyncLog(bufSize int, fun WriteFunc) *AsyncLog {
+func NewAsyncLog(bufSize int, wr Writer) *AsyncLog {
 	log := new(AsyncLog)
 	log.curBuf = make([][]byte, 0, bufSize)
 	log.spareBuf = make([][]byte, 0, bufSize)
 	log.awakeChan = make(chan bool)
-	log.writeLogFunc = fun
+	log.wr = wr
 	go log._writeLoop(bufSize)
 	go log._timeOutWrite()
 	return log
@@ -87,7 +88,7 @@ func (self *AsyncLog) _writeLoop(bufSize int) {
 		self.Unlock()
 
 		//将bufToWrite中的数据全写进log，并清空
-		self.writeLogFunc(bufToWrite1, bufToWrite2)
+		self.wr.Write(bufToWrite1, bufToWrite2)
 		_clearBuf(&bufToWrite1)
 		_clearBuf(&bufToWrite2)
 	}

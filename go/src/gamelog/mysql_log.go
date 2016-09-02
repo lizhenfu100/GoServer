@@ -28,7 +28,8 @@ type MSG_SvrLogData struct {
 	Param    [4]int
 }
 type TMysqlLog struct {
-	db *sql.DB
+	db    *sql.DB
+	query string
 }
 
 const (
@@ -36,17 +37,15 @@ const (
 	g_password = ""
 	g_addr     = "localhost:3306"
 	g_dbname   = "mysql"
-	g_table    = "logsvr"
 )
 
 var (
-	g_dsn = fmt.Sprintf("%s:%s@tcp(%s)/%s?timeout=30s&strict=true",
+	g_dsn = fmt.Sprintf(
+		"%s:%s@tcp(%s)/%s?timeout=30s&strict=true",
 		g_user, g_password, g_addr, g_dbname) //连哪个数据库
-	g_query = fmt.Sprintf("INSERT %s SET EventID=?,SrcID=?,TargetID=?,Time=?,Param1=?,Param2=?,Param3=?,Param4=?",
-		g_table) //打开其中哪张表
 )
 
-func NewMysqlLog() *TMysqlLog {
+func NewMysqlLog(table string) *TMysqlLog {
 	var err error = nil
 	log := new(TMysqlLog)
 	log.db, err = sql.Open("mysql", g_dsn)
@@ -54,6 +53,10 @@ func NewMysqlLog() *TMysqlLog {
 		Error("NewMysqlLog: %s", err.Error())
 		return nil
 	}
+	log.query = fmt.Sprintf(
+		"INSERT %s SET EventID=?,SrcID=?,TargetID=?,Time=?,Param1=?,Param2=?,Param3=?,Param4=?",
+		table) //打开其中哪张表
+
 	return log
 }
 func (self *TMysqlLog) Close() {
@@ -65,7 +68,7 @@ func (self *TMysqlLog) Write(data1, data2 [][]byte) {
 	if err != nil {
 		Error("MysqlLog::db.Begin : %s", err.Error())
 	}
-	stmt, err := tx.Prepare(g_query)
+	stmt, err := tx.Prepare(self.query)
 	if err != nil {
 		Error("MysqlLog::tx.Prepare : %s", err.Error())
 	}
@@ -102,7 +105,7 @@ func _Exec(stmt *sql.Stmt, pMsg *MSG_SvrLogData) {
 
 func (self *TMysqlLog) InsertDB(pdata *MSG_SvrLogData) {
 	// 直接插入数据库
-	stmt, err := self.db.Prepare(g_query)
+	stmt, err := self.db.Prepare(self.query)
 	if err != nil {
 		Error("MysqlLog::db.Prepare : %s", err.Error())
 		return
