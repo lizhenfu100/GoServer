@@ -1,12 +1,14 @@
 package gamelog
 
 import (
+	"bufio"
 	"os"
 	"time"
 )
 
 type TBinaryLog struct {
 	file *os.File
+	wr   *bufio.Writer
 }
 
 func NewBinaryLog(name string) *TBinaryLog {
@@ -20,16 +22,24 @@ func NewBinaryLog(name string) *TBinaryLog {
 		Error("BinaryLog OpenFile:%s", err.Error())
 		return nil
 	}
+	log.wr = bufio.NewWriterSize(log.file, 1024)
+
 	return log
 }
 func (self *TBinaryLog) Close() {
+	self.wr.Flush()
 	self.file.Close()
 }
+
+// 用bufio，减少直接file.Write的IO次数
+// 实际上是，在bufio内部将data1+data2整合成一个[]byte，再调file.Write(data)
+// 用内存拷贝，节省IO次数
 func (self *TBinaryLog) Write(data1, data2 [][]byte) {
 	for _, v := range data1 {
-		self.file.Write(v)
+		self.wr.Write(v)
 	}
 	for _, v := range data2 {
-		self.file.Write(v)
+		self.wr.Write(v)
 	}
+	self.wr.Flush()
 }

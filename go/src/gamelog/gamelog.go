@@ -50,9 +50,8 @@ func InitLogger(name string) {
 	}
 
 	timeStr := time.Now().Format("20060102_150405")
-	logFileName := g_logDir + name + "_" + timeStr + ".log"
-
-	InitDebugLog(logFileName)
+	fullName := g_logDir + name + "_" + timeStr + ".log"
+	InitDebugLog(fullName)
 
 	_initAsyncLog(name)
 
