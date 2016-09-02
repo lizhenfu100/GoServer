@@ -20,7 +20,7 @@ var (
 	g_level          = InfoLevel
 )
 
-func InitDebugLog(logFileName string, bScreen bool) {
+func InitDebugLog(logFileName string) {
 	file, err := os.OpenFile(logFileName, os.O_WRONLY|os.O_CREATE, 0)
 	if err != nil {
 		panic("InitLogger error : " + err.Error())
@@ -32,8 +32,6 @@ func InitDebugLog(logFileName string, bScreen bool) {
 		panic("InitLogger error : " + err.Error())
 		return
 	}
-
-	g_isOutputScreen = bScreen
 }
 func GetLevel() int {
 	return g_level

@@ -11,7 +11,7 @@ import (
 
 func main() {
 	//初始化日志系统
-	gamelog.InitLogger("game", true)
+	gamelog.InitLogger("game")
 	gamelog.SetLevel(0)
 
 	//设置mongodb的服务器地址

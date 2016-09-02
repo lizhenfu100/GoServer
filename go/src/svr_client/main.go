@@ -14,7 +14,7 @@ import (
 
 func main() {
 	//初始化日志系统
-	gamelog.InitLogger("client", true)
+	gamelog.InitLogger("client")
 	gamelog.SetLevel(0)
 
 	netConfig.CreateNetSvr("client")

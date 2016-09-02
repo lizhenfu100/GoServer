@@ -1,5 +1,5 @@
 //! 内存数据库事务demo
-package common
+package main
 
 import (
 	"fmt"

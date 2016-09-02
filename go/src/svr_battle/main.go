@@ -10,7 +10,7 @@ import (
 
 func main() {
 	//初始化日志系统
-	gamelog.InitLogger("battle", true)
+	gamelog.InitLogger("battle")
 	gamelog.SetLevel(0)
 
 	//开启控制台窗口，可以接受一些调试命令
