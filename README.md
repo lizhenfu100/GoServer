@@ -29,66 +29,66 @@
 --------------
 
 	(1)"config_net.go"中非常容易指定连接方式
-		```go
-		var G_SvrNetCfg = map[string]TSvrNetCfg{
-			"sdk": {
-				TAddrInfo{
-					IP:       "127.0.0.1",
-					OutIP:    "192.168.1.177",
-					HttpPort: 7002,
-				},
-				[]string{},
-			},
-			"game": {
-				TAddrInfo{
-					IP:       "127.0.0.1",
-					OutIP:    "192.168.1.177",
-					HttpPort: 7010,
-					SvrID:    1,
-				},
-				[]string{"sdk", "battle"}, // 连接sdk、battle
-			},
-			"battle": {
-				TAddrInfo{
-					IP:      "127.0.0.1",
-					OutIP:   "192.168.1.177",
-					TcpPort: 7030,
-					Maxconn: 5000,
-					SvrID:   1,
-				},
-				[]string{},
-			},
-			"client": {
-				TAddrInfo{},
-				[]string{"game", "sdk", "battle"}, // 连接game、sdk、battle
-			},
-		}
-		```
+```go
+var G_SvrNetCfg = map[string]TSvrNetCfg{
+	"sdk": {
+		TAddrInfo{
+			IP:       "127.0.0.1",
+			OutIP:    "192.168.1.177",
+			HttpPort: 7002,
+		},
+		[]string{},
+	},
+	"game": {
+		TAddrInfo{
+			IP:       "127.0.0.1",
+			OutIP:    "192.168.1.177",
+			HttpPort: 7010,
+			SvrID:    1,
+		},
+		[]string{"sdk", "battle"}, // 连接sdk、battle
+	},
+	"battle": {
+		TAddrInfo{
+			IP:      "127.0.0.1",
+			OutIP:   "192.168.1.177",
+			TcpPort: 7030,
+			Maxconn: 5000,
+			SvrID:   1,
+		},
+		[]string{},
+	},
+	"client": {
+		TAddrInfo{},
+		[]string{"game", "sdk", "battle"}, // 连接game、sdk、battle
+	},
+}
+```
 	
 	(2)统一了连接获取方式，业务层使用，只需加几个Cache接口即可
-		```go
-		var (
-			g_cache_battle_conn *tcp.TCPConn
-		)
-		func SendToBattle(msgID uint16, msgdata []byte) {
-			if g_cache_battle_conn == nil {
-				g_cache_battle_conn = netConfig.GetTcpConn("battle", 0)
-			}
-			g_cache_battle_conn.WriteMsg(msgID, msgdata)
-		}
-		```
+```go
+var (
+	g_cache_battle_conn *tcp.TCPConn
+)
+func SendToBattle(msgID uint16, msgdata []byte) {
+	if g_cache_battle_conn == nil {
+		g_cache_battle_conn = netConfig.GetTcpConn("battle", 0)
+	}
+	g_cache_battle_conn.WriteMsg(msgID, msgdata)
+}
+```
 	
 	(3)构建一个新的服务进程，配置完毕后，只两行代码+SendToModule接口就够啦
-		```go
-		func main() {
-			//注册所有tcp消息处理方法
-			RegBattleTcpMsgHandler()
+```go
+func main() {
+	//注册所有tcp消息处理方法
+	RegBattleTcpMsgHandler()
 
-			gamelog.Warn("----Battle Server Start-----")
-			if netConfig.CreateNetSvr("battle") == false {
-				gamelog.Error("----Battle NetSvr Failed-----")
-			}
-		}
-		```
+	gamelog.Warn("----Battle Server Start-----")
+	if netConfig.CreateNetSvr("battle") == false {
+		gamelog.Error("----Battle NetSvr Failed-----")
+	}
+}
+```
 
 5、目前只配了game、battle、sdk、client网络模块，编译后运行bin目录的start_svr.bat可验证测试
