@@ -25,22 +25,26 @@ type TActivityData struct {
 	endTime   int64 //! 结束时间为0的为永久运行活动
 }
 
+func (data *TActivityData) RefreshStatus(now int64) {
+	data.beginTime, data.endTime = GetActivityEndTime(data.ActivityID)
+	if data.endTime == 0 {
+		//! 永久开启活动
+		data.Status = 1
+	} else if data.beginTime <= now && now <= data.endTime {
+		//! 活动时间内
+		data.Status = 1
+	} else {
+		data.Status = 0
+	}
+}
+
 //////////////////////////////////////////////////////////////////////
 // 开服，构造serv活动数据
 //////////////////////////////////////////////////////////////////////
 func (self *TGlobalActivity) Init() {
-	if self.db_LoadGlobalActivity() == false { //! 未找到数据则初始化
-		for _, csv := range G_ActivityCsv {
-			if csv.ID == 0 {
-				continue
-			}
-			self.AddNewActivity(csv.ID, csv.ActivityType)
-		}
-	} else {
-		self.CheckActivityAdd() //! 检测表中是否有新增活动
-
-		self.UpdateActivityTime() //! 活动开启/结束时间
-	}
+	self.db_LoadGlobalActivity()
+	self.CheckActivityAdd()   //! 检测表中是否有新增活动
+	self.UpdateActivityTime() //! 活动开启/结束时间
 
 	g_act_timer = common.NewHourTimer(24)
 	g_act_timer.AddTimeFunc(common.GetTodayLeftSec(), common.OneDay_SecCnt, -1, self)
@@ -65,40 +69,16 @@ func (self *TGlobalActivity) CheckActivityAdd() {
 func (self *TGlobalActivity) UpdateActivityTime() {
 	now := time.Now().Unix()
 	for i := 0; i < len(self.ActivityLst); i++ {
-		data := &self.ActivityLst[i]
-
-		data.beginTime, data.endTime = GetActivityEndTime(data.ActivityID)
-
-		if data.endTime == 0 {
-			//! 永久开启活动
-			data.Status = 1
-		} else if data.beginTime <= now && now <= data.endTime {
-			//! 活动时间内
-			data.Status = 1
-		} else {
-			data.Status = 0
-		}
+		self.ActivityLst[i].RefreshStatus(now)
 	}
 }
 func (self *TGlobalActivity) AddNewActivity(actID, actTyp int) {
-	var activity TActivityData
-	activity.ActivityID = actID
-	activity.actType = actTyp
-	activity.beginTime, activity.endTime = GetActivityEndTime(actID)
-
-	now := time.Now().Unix()
-	if activity.endTime == 0 {
-		//! 永久开启活动
-		activity.Status = 1
-	} else if activity.beginTime <= now && now <= activity.endTime {
-		//! 活动时间内
-		activity.Status = 1
-	} else {
-		activity.Status = 0
+	activity := TActivityData{
+		ActivityID: actID,
+		actType:    actTyp,
 	}
+	activity.RefreshStatus(time.Now().Unix())
 
-	activity.RunDayCnt = 0
-	activity.OpenTiems = 0
 	self.ActivityLst = append(self.ActivityLst, activity)
 }
 func (self *TGlobalActivity) db_LoadGlobalActivity() bool {
