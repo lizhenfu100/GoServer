@@ -43,15 +43,16 @@ type TimeHandler interface {
 	OnTimerRunEnd(now int64)
 }
 type TimerFunc struct {
-	CDSec    int   // 间隔多久
-	RunSec   int   // 总共跑多久
-	DealTime int64 // 要处理的时刻点
+	cdSec    int   // 间隔多久
+	runSec   int   // 总共跑多久
+	dealTime int64 // 要处理的时刻点
 	handler  TimeHandler
 }
 type Timer struct {
-	mutex   sync.Mutex
-	isLock  bool
+	sync.Mutex
 	funcLst []TimerFunc
+	addLst  []TimerFunc
+	delLst  []TimerFunc
 }
 
 //! 计时器
@@ -67,27 +68,34 @@ func (self *Timer) _OnTimer(interval time.Duration) {
 	}
 }
 func (self *Timer) _OnTimerFunc(now int64) {
-	var list []TimerFunc
-	if self.isLock {
-		// copy on write
-		self.mutex.Lock()
-		list = append(list, self.funcLst...)
-		self.mutex.Unlock()
-	} else {
-		list = self.funcLst
+	// 先处理要增、删的项
+	self.Lock()
+	{
+		self.funcLst = append(self.funcLst, self.addLst...)
+		for i := 0; i < len(self.delLst); i++ {
+			for j := len(self.funcLst) - 1; j >= 0; j-- { // 倒过来找，快一点
+				if self.funcLst[j].handler == self.delLst[i].handler {
+					self.funcLst = append(self.funcLst[:j], self.funcLst[j+1:]...)
+				}
+			}
+		}
+		self.addLst = append(self.addLst[:0], []TimerFunc{}...)
+		self.delLst = append(self.delLst[:0], []TimerFunc{}...)
 	}
+	self.Unlock()
 
-	isDelete, max := false, len(list)
-	for i := 0; i < max; i++ { //TODO：每秒遍历【优化】
-		data := &list[i]
-		if now >= data.DealTime {
+	//TODO：funcLst遍历优化
+	isDelete := false
+	for i := 0; i < len(self.funcLst); i++ { // 这里得用len()，每次迭代都算长度，因为可能删除
+		data := &self.funcLst[i]
+		if now >= data.dealTime {
 			if data.handler.OnTimerRefresh(now) {
 
 				isDelete = false
-				data.DealTime += int64(data.CDSec)
+				data.dealTime += int64(data.cdSec)
 
-				if data.RunSec != INT_MAX {
-					if data.RunSec -= data.CDSec; data.RunSec < 0 { //! 注意差一Bug，==0还要跑一次
+				if data.runSec != INT_MAX {
+					if data.runSec -= data.cdSec; data.runSec < 0 { //! 注意差一Bug，==0还要跑一次
 						isDelete = true
 					}
 				}
@@ -96,20 +104,12 @@ func (self *Timer) _OnTimerFunc(now int64) {
 			}
 			if isDelete {
 				data.handler.OnTimerRunEnd(now)
-				list = append(list[:i], list[i+1:]...)
+				self.funcLst = append(self.funcLst[:i], self.funcLst[i+1:]...)
 				i--
 				//! 删除该timer：上面的data仍在引用，在c++中若后续data指针被使用，就野了
 			}
 		}
 	}
-}
-func (self *Timer) _Lock() {
-	self.mutex.Lock()
-	self.isLock = true
-}
-func (self *Timer) _Unlock() {
-	self.mutex.Unlock()
-	self.isLock = false
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -138,20 +138,14 @@ func (self *Timer) AddTimeFunc(delaySec int64, cdSec, runSec int, handler TimeHa
 	}
 	nextDealTime := time.Now().Unix() + delaySec
 
-	self._Lock()
-	defer self._Unlock()
-	self.funcLst = append(self.funcLst, TimerFunc{cdSec, runSec, nextDealTime, handler})
+	self.Lock()
+	defer self.Unlock()
+	self.addLst = append(self.addLst, TimerFunc{cdSec, runSec, nextDealTime, handler})
 }
 func (self *Timer) DelTimeFunc(handler TimeHandler) {
-	self._Lock()
-	defer self._Unlock()
-
-	for i := 0; i < len(self.funcLst); i++ {
-		if self.funcLst[i].handler == handler {
-			self.funcLst = append(self.funcLst[:i], self.funcLst[i+1:]...)
-			return
-		}
-	}
+	self.Lock()
+	defer self.Unlock()
+	self.delLst = append(self.delLst, TimerFunc{handler: handler})
 }
 
 func (self *Timer) AddTimeFunc_S(delaySec int64, cdSec, runSec int, handler TimeHandler) {
@@ -160,13 +154,18 @@ func (self *Timer) AddTimeFunc_S(delaySec int64, cdSec, runSec int, handler Time
 	}
 	nextDealTime := time.Now().Unix() + delaySec
 
-	self._Lock()
-	defer self._Unlock()
+	self.Lock()
+	defer self.Unlock()
 
 	for i := 0; i < len(self.funcLst); i++ {
 		if self.funcLst[i].handler == handler { //已有
 			return
 		}
 	}
-	self.funcLst = append(self.funcLst, TimerFunc{cdSec, INT_MAX, nextDealTime, handler})
+	for i := 0; i < len(self.addLst); i++ {
+		if self.addLst[i].handler == handler { //已有
+			return
+		}
+	}
+	self.addLst = append(self.addLst, TimerFunc{cdSec, INT_MAX, nextDealTime, handler})
 }
