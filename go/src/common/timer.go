@@ -79,8 +79,6 @@ func (self *Timer) _OnTimerFunc(now int64) {
 				}
 			}
 		}
-		self.addLst = append(self.addLst[:0], []TimerFunc{}...)
-		self.delLst = append(self.delLst[:0], []TimerFunc{}...)
 	}
 	self.Unlock()
 
