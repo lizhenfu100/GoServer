@@ -53,6 +53,14 @@ func NewMysqlLog(table string) *TMysqlLog {
 		Error("NewMysqlLog: %s", err.Error())
 		return nil
 	}
+
+	//Notice：sql.Open("mysql", g_dsn) g_dsn为空不会报错，查看源码，只是生成一份数据记录，真正连接数据库是异步的
+	//所以这里检查是否真的连上了
+	if err = log.db.Ping(); err != nil {
+		Error("NewMysqlLog db.Ping(): %s", err.Error())
+		return nil
+	}
+
 	log.query = fmt.Sprintf(
 		"INSERT %s SET EventID=?,SrcID=?,TargetID=?,Time=?,Param1=?,Param2=?,Param3=?,Param4=?",
 		table) //打开其中哪张表
