@@ -6,12 +6,14 @@ import (
 )
 
 var (
-	g_cache_battle_conn *tcp.TCPConn
+	g_cache_battle_conn = make(map[int]*tcp.TCPConn)
 )
 
-func SendToBattle(msgID uint16, msgdata []byte) {
-	if g_cache_battle_conn == nil {
-		g_cache_battle_conn = netConfig.GetTcpConn("battle", 0)
-	}
-	g_cache_battle_conn.WriteMsg(msgID, msgdata)
+func SendToBattle(svrID int, msgID uint16, msgdata []byte) {
+    conn, _ := g_cache_battle_conn[svrID]
+    if conn == nil {
+        conn = netConfig.GetTcpConn("battle", svrID)
+        g_cache_battle_conn[svrID] = conn
+    }
+    conn.WriteMsg(msgID, msgdata)
 }

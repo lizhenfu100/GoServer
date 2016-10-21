@@ -17,7 +17,7 @@ func main() {
 	gamelog.InitLogger("client")
 	gamelog.SetLevel(0)
 
-	netConfig.CreateNetSvr("client")
+	netConfig.CreateNetSvr("client", 0)
 
 	test()
 
@@ -48,9 +48,12 @@ func test() {
 	buf2, _ := json.Marshal(&msg2)
 	http.PostReq(sdkAddr+"/sdk_recharge_success", buf2)
 
+	time.Sleep(2 * time.Second)
 	//向游戏服发战斗数据，后台game转到battle
-	http.PostReq(gameAddr+"/battle_echo", []byte("zhoumf 233!!!"))
+	http.PostReq(gameAddr+"/battle_echo", []byte("client-game-battle"))
 
+	time.Sleep(2 * time.Second)
 	//直接发给战斗服
-	api.SendToBattle(1, []byte("--- zhoumf 233 --- "))
+	api.SendToBattle(1, 1, []byte("--- zhoumf 233 --- "))
+	api.SendToBattle(2, 1, []byte("--- zhoumf 233 --- "))
 }

@@ -26,7 +26,7 @@ func main() {
 	RegGamesvrTcpMsgHandler()
 
 	gamelog.Warn("----Game Server Start-----")
-	if netConfig.CreateNetSvr("game") == false {
+	if netConfig.CreateNetSvr("game", 1) == false {
 		gamelog.Error("----Game NetSvr Failed-----")
 	}
 }

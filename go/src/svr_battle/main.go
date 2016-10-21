@@ -4,11 +4,19 @@ import (
 	"common"
 	"gamelog"
 	"netConfig"
+	"os"
 	"strconv"
 	// "svr_battle/logic"
 )
 
 func main() {
+	//获取命令参数 svrID
+	svrID, err := strconv.Atoi(os.Args[1])
+	if err != nil {
+		gamelog.Error("Please input the svrID!!!")
+		return
+	}
+
 	//初始化日志系统
 	gamelog.InitLogger("battle")
 	gamelog.SetLevel(0)
@@ -21,7 +29,7 @@ func main() {
 	RegBattleTcpMsgHandler()
 
 	gamelog.Warn("----Battle Server Start-----")
-	if netConfig.CreateNetSvr("battle") == false {
+	if netConfig.CreateNetSvr("battle", svrID) == false {
 		gamelog.Error("----Battle NetSvr Failed-----")
 	}
 }

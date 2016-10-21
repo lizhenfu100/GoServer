@@ -4,22 +4,11 @@ import (
 	"fmt"
 	"gamelog"
 	"net/http"
-	"netConfig"
+	"svr_game/api"
 	"tcp"
 
 	"unsafe"
 )
-
-var (
-	g_cache_battle_conn *tcp.TCPConn
-)
-
-func SendToBattle(msgID uint16, msgdata []byte) {
-	if g_cache_battle_conn == nil {
-		g_cache_battle_conn = netConfig.GetTcpConn("battle", 0)
-	}
-	g_cache_battle_conn.WriteMsg(msgID, msgdata)
-}
 
 //! 消息处理函数
 //
@@ -38,7 +27,7 @@ func Handle_Battle_Echo(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// 转发给Battle进程
-	SendToBattle(1, buffer)
+	api.SendToBattle(1, 1, buffer)
 }
 
 //////////////////////////////////////////////////////////////////////

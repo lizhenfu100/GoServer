@@ -35,95 +35,126 @@ type TAddrInfo struct {
 	SvrID    int
 }
 type TSvrNetCfg struct {
-	Listen  TAddrInfo
+	Listen  []TAddrInfo
 	Connect []string
 }
 
-//TODO：如何设计成可起多个的水平服务？
+//TODO：临时新增的battle起来，通知game(http)来连接
 var G_SvrNetCfg = map[string]TSvrNetCfg{
 	"account": {
-		TAddrInfo{
-			IP:      "127.0.0.1",
-			TcpPort: 7001,
-			Maxconn: 5000,
+		[]TAddrInfo{
+			{
+				IP:      "127.0.0.1",
+				TcpPort: 7001,
+				Maxconn: 5000,
+			},
 		},
 		[]string{},
 	},
 	"sdk": {
-		TAddrInfo{
-			IP:       "127.0.0.1",
-			OutIP:    "192.168.1.177",
-			HttpPort: 7002,
+		[]TAddrInfo{
+			{
+				IP:       "127.0.0.1",
+				OutIP:    "192.168.1.177",
+				HttpPort: 7002,
+				SvrID:    1,
+			},
 		},
 		[]string{},
 	},
 	"cross": {},
 
 	"game": {
-		TAddrInfo{
-			IP:       "127.0.0.1",
-			OutIP:    "192.168.1.177",
-			HttpPort: 7010,
-			SvrID:    1,
+		[]TAddrInfo{
+			{
+				IP:       "127.0.0.1",
+				OutIP:    "192.168.1.177",
+				HttpPort: 7010,
+				SvrID:    1,
+			},
 		},
 		[]string{"sdk", "battle"}, // []string{"chat", "battle", "sdk"},
 	},
 	"chat": {
-		TAddrInfo{
-			IP:      "127.0.0.1",
-			OutIP:   "192.168.1.177",
-			TcpPort: 7020,
-			Maxconn: 5000,
+		[]TAddrInfo{
+			{
+				IP:      "127.0.0.1",
+				OutIP:   "192.168.1.177",
+				TcpPort: 7020,
+				Maxconn: 5000,
+			},
 		},
 		[]string{},
 	},
 	"battle": {
-		TAddrInfo{
-			IP:      "127.0.0.1",
-			OutIP:   "192.168.1.177",
-			TcpPort: 7030,
-			Maxconn: 5000,
-			SvrID:   1,
+		[]TAddrInfo{
+			{
+				IP:      "127.0.0.1",
+				OutIP:   "192.168.1.177",
+				TcpPort: 7030,
+				Maxconn: 5000,
+				SvrID:   1,
+			},{
+				IP:      "127.0.0.1",
+				OutIP:   "192.168.1.177",
+				TcpPort: 7031,
+				Maxconn: 5000,
+				SvrID:   2,
+			},
 		},
 		[]string{},
 	},
 	"client": {
-		TAddrInfo{},
+		[]TAddrInfo{{}}, //配一个空的
 		[]string{"game", "sdk", "battle"},
 	},
 }
 
 var (
 	G_Connect_Remote_TcpConn = make(map[tcp.TcpConnKey]*tcp.TCPClient) //本模块，对其它模块的tcp连接
-	G_Local_Module           string
+	G_Local_Module 	string
+	G_Local_SvrID 	int
 )
 
-func CreateNetSvr(module string) bool {
+func CreateNetSvr(module string, svrID int) bool {
 	G_Local_Module = module
+	G_Local_SvrID = svrID
 
 	if cfg, ok := G_SvrNetCfg[module]; ok {
-		selfCfg := &cfg.Listen
+
+		var selfCfg *TAddrInfo = nil
+		for i := 0; i < len(cfg.Listen); i++ {
+			if svrID == cfg.Listen[i].SvrID {
+				selfCfg = &cfg.Listen[i]
+				break
+			}	
+		}
+		if selfCfg == nil {
+			print(fmt.Sprintf("%s-%d: have none SvrNetCfg!!!", module, svrID))
+			return false
+		}
 
 		// 连接/注册其它模块
 		for _, v := range cfg.Connect {
 			if cfg2, ok2 := G_SvrNetCfg[v]; ok2 {
-				destCfg := &cfg2.Listen
-				if destCfg.HttpPort > 0 {
-					http.RegistToSvr(
-						fmt.Sprintf("%s:%d", destCfg.IP, destCfg.HttpPort),
-						fmt.Sprintf("%s:%d", selfCfg.IP, selfCfg.HttpPort),
-						module,
-						selfCfg.SvrID)
-				} else if destCfg.TcpPort > 0 {
-					client := &tcp.TCPClient{}
-					client.ConnectToSvr(
-						fmt.Sprintf("%s:%d", destCfg.IP, destCfg.TcpPort),
-						module,
-						selfCfg.SvrID)
-					//Notice：client.ConnectToSvr是异步过程，这里返回的client.TcpConn还是空指针，不能保存*tcp.TCPConn
-					G_Connect_Remote_TcpConn[tcp.TcpConnKey{v, destCfg.SvrID}] = client
-				} else {
-					print(v + ": have none HttpPort|TcpPort!!!")
+				for _, destCfg := range cfg2.Listen {
+					if destCfg.HttpPort > 0 {
+						http.RegistToSvr(
+							fmt.Sprintf("%s:%d", destCfg.IP, destCfg.HttpPort),
+							fmt.Sprintf("%s:%d", selfCfg.IP, selfCfg.HttpPort),
+							module,
+							selfCfg.SvrID)
+					} else if destCfg.TcpPort > 0 {
+						client := &tcp.TCPClient{}
+						client.ConnectToSvr(
+							fmt.Sprintf("%s:%d", destCfg.IP, destCfg.TcpPort),
+							module,
+							selfCfg.SvrID)
+						//Notice：client.ConnectToSvr是异步过程，这里返回的client.TcpConn还是空指针，不能保存*tcp.TCPConn
+						G_Connect_Remote_TcpConn[tcp.TcpConnKey{v, destCfg.SvrID}] = client
+					} else {
+						print(v + ": have none HttpPort|TcpPort!!!")
+					}
 				}
 			} else {
 				print(v + ": have none SvrNetCfg!!!")
@@ -149,9 +180,14 @@ func GetHttpAddr(destModule string, destSvrID int) string { //Notice：应用层
 	var destCfg *TAddrInfo = nil
 	if cfg, ok := G_SvrNetCfg[destModule]; ok {
 		if destSvrID <= 0 {
-			destSvrID = cfg.Listen.SvrID
+			destSvrID = cfg.Listen[0].SvrID
 		}
-		destCfg = &cfg.Listen
+		for i := 0; i < len(cfg.Listen); i++ {
+			if destSvrID == cfg.Listen[i].SvrID {
+				destCfg = &cfg.Listen[i]
+				break
+			}
+		}
 	} else {
 		print(destModule + ": have none SvrNetCfg!!!")
 		return ""
@@ -170,7 +206,7 @@ func GetHttpAddr(destModule string, destSvrID int) string { //Notice：应用层
 func GetTcpConn(destModule string, destSvrID int) *tcp.TCPConn { //Notice：应用层cache住结果，避免每次都查找
 	if cfg, ok := G_SvrNetCfg[destModule]; ok {
 		if destSvrID <= 0 {
-			destSvrID = cfg.Listen.SvrID
+			destSvrID = cfg.Listen[0].SvrID
 		}
 	} else {
 		print(destModule + ": have none SvrNetCfg!!!")

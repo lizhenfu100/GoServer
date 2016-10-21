@@ -29,7 +29,7 @@ func main() {
 	RegSdkHttpMsgHandler()
 
 	gamelog.Warn("----Sdk Server Start-----")
-	if netConfig.CreateNetSvr("sdk") == false {
+	if netConfig.CreateNetSvr("sdk", 1) == false {
 		gamelog.Error("----Sdk NetSvr Failed-----")
 	}
 }
