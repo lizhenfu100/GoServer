@@ -5,7 +5,7 @@ import (
 	// "tcp"
 	"common"
 	"fmt"
-	"netConfig"
+	// "netConfig"
 	"time"
 )
 
@@ -28,5 +28,10 @@ func main() {
 	}
 
 	//主线程可以干别的去了
-	time.Sleep(3 * time.Second)
+	time.Sleep(10 * time.Second)
+
+	common.ReloadCsv("test")
+	for k, v := range common.G_MapCsv {
+		fmt.Println(k, v)
+	}
 }

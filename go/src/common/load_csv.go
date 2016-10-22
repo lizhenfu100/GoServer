@@ -81,7 +81,7 @@ type TTestCsv struct {
 	ArrStr []string
 }
 
-var G_MapCsv = make(map[int]*TTestCsv)
+var G_MapCsv map[int]*TTestCsv = nil
 var G_SliceCsv []TTestCsv = nil
 
 var G_CsvParserMap = map[string]interface{}{
@@ -100,6 +100,10 @@ func LoadAllCsv() {
 	for _, name := range names {
 		_LoadOneCsv(name)
 	}
+}
+func ReloadCsv(csvName string) {
+	name := fmt.Sprintf("%scsv/%s.csv", GetExePath(), csvName)
+	_LoadOneCsv(name)
 }
 func _LoadOneCsv(name string) {
 	file, err := os.Open(name)
@@ -147,6 +151,7 @@ func ParseRefCsv(records [][]string, ptr interface{}) {
 func ParseRefCsvByMap(records [][]string, pMap interface{}) {
 	table := reflect.ValueOf(pMap).Elem()
 	typ := table.Type().Elem().Elem() // map内保存的指针，第二次Elem()得到所指对象类型
+	table.Set(reflect.MakeMap(table.Type()))
 
 	total, idx := _GetRecordsValidCnt(records), 0
 	slice := reflect.MakeSlice(reflect.SliceOf(typ), total, total) // 避免多次new对象，直接new数组，拆开用
