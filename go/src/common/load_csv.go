@@ -13,11 +13,12 @@
 
 	4、使用方式如下：
 			type TTestCsv struct { // 字段须与csv表格的顺序一致
-				ID    int
-				Des   string
-				Item  []IntPair
-				Card  []IntPair
-				Array []string
+				ID     int
+				Des    string
+				Item   IntPair
+				Card   []IntPair
+				ArrInt []int
+				ArrStr []string
 			}
 			var G_MapCsv = make(map[int]*TTestCsv)  // map结构读表，将【&G_MapCsv】注册进G_ReflectParserMap即可自动读取
 			var G_SliceCsv []TTestCsv = nil 		// 数组结构读表，注册【&G_SliceCsv】
@@ -36,6 +37,10 @@ import (
 	"strings"
 )
 
+type IntPair struct {
+	ID  int
+	Cnt int
+}
 type StrError struct {
 	Str string
 	Err error
@@ -68,15 +73,12 @@ func IsDirExists(path string) bool {
 //////////////////////////////////////////////////////////////////////
 // 测试数据
 type TTestCsv struct {
-	ID    int
-	Des   string
-	Item  []IntPair
-	Card  []IntPair
-	Array []int
-}
-type IntPair struct {
-	ID  int
-	Cnt int
+	ID     int
+	Des    string
+	Item   IntPair
+	Card   []IntPair
+	ArrInt []int
+	ArrStr []string
 }
 
 var G_MapCsv = make(map[int]*TTestCsv)
@@ -85,73 +87,6 @@ var G_SliceCsv []TTestCsv = nil
 var G_CsvParserMap = map[string]interface{}{
 	"test": &G_MapCsv,
 	// "test": &G_SliceCsv,
-}
-
-//////////////////////////////////////////////////////////////////////
-//
-func LoadCsv(path string) ([][]string, error) {
-	file, err := os.Open(path)
-	defer file.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	fstate, err := file.Stat()
-	if err != nil {
-		return nil, err
-	}
-	if fstate.IsDir() {
-		return nil, &StrError{"LoadCsv is dir!", nil}
-	}
-
-	csvReader := csv.NewReader(file)
-	records, err := csvReader.ReadAll()
-	if err != nil {
-		return nil, err
-	}
-	return records, nil
-}
-func UpdateCsv(path string, records [][]string) error {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, os.ModePerm)
-	defer file.Close()
-	if err != nil {
-		return err
-	}
-
-	fstate, err := file.Stat()
-	if err != nil {
-		return err
-	}
-	if fstate.IsDir() {
-		return &StrError{"UpdateCsv is dir!", nil}
-	}
-
-	csvWriter := csv.NewWriter(file)
-	csvWriter.UseCRLF = true
-	return csvWriter.WriteAll(records)
-}
-func AppendCsv(path string, record []string) error {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND, os.ModePerm)
-	defer file.Close()
-	if err != nil {
-		return err
-	}
-
-	fstate, err := file.Stat()
-	if err != nil {
-		return err
-	}
-	if fstate.IsDir() {
-		return &StrError{"AppendCsv is dir!", nil}
-	}
-
-	csvWriter := csv.NewWriter(file)
-	csvWriter.UseCRLF = true
-	if err := csvWriter.Write(record); err != nil {
-		return err
-	}
-	csvWriter.Flush()
-	return nil
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -220,13 +155,13 @@ func ParseRefCsvByMap(records [][]string, pMap interface{}) {
 	for _, v := range records {
 		if strings.Index(v[0], "#") == -1 { // "#"起始的不读
 			if !bParsedName {
-				nilFlag = _parseRefName(v)
+				nilFlag = _parseHead(v)
 				bParsedName = true
 			} else {
 				// data := reflect.New(typ).Elem()
 				data := slice.Index(idx)
 				idx++
-				_parseRefData(v, nilFlag, data)
+				_parseData(v, nilFlag, data)
 				table.SetMapIndex(data.Field(0), data.Addr())
 			}
 		}
@@ -237,25 +172,24 @@ func ParseRefCsvBySlice(records [][]string, pSlice interface{}) { // slice可减
 	typ := reflect.TypeOf(pSlice).Elem()
 
 	// 表的数组，从1起始
-	idx := 1
-	total := _GetRecordsValidCnt(records) + 1
+	total, idx := _GetRecordsValidCnt(records), 1
 	slice.Set(reflect.MakeSlice(typ, total, total))
 
 	bParsedName, nilFlag := false, int64(0)
 	for _, v := range records {
 		if strings.Index(v[0], "#") == -1 { // "#"起始的不读
 			if !bParsedName {
-				nilFlag = _parseRefName(v)
+				nilFlag = _parseHead(v)
 				bParsedName = true
 			} else {
 				data := slice.Index(idx)
 				idx++
-				_parseRefData(v, nilFlag, data)
+				_parseData(v, nilFlag, data)
 			}
 		}
 	}
 }
-func _parseRefName(record []string) (ret int64) { // 不读的列：没命名/前缀"(c)"
+func _parseHead(record []string) (ret int64) { // 不读的列：没命名/前缀"(c)"
 	length := len(record)
 	if length > 64 {
 		fmt.Printf("csv column is over to 64 !!!")
@@ -267,7 +201,7 @@ func _parseRefName(record []string) (ret int64) { // 不读的列：没命名/�
 	}
 	return ret
 }
-func _parseRefData(record []string, nilFlag int64, data reflect.Value) {
+func _parseData(record []string, nilFlag int64, data reflect.Value) {
 	idx := 0
 	for i, s := range record {
 		if nilFlag&(1<<uint(i)) > 0 { // 跳过没命名的列
@@ -290,12 +224,22 @@ func _parseRefData(record []string, nilFlag int64, data reflect.Value) {
 			{
 				field.SetString(s)
 			}
+		case reflect.Struct:
+			{
+				vec := ParseStringToPair(s)
+				field.Set(reflect.ValueOf(vec[0]))
+			}
 		case reflect.Slice:
 			{
 				switch field.Type().Elem().Kind() {
 				case reflect.Int:
 					{
-						vec := ParseStringToArray(s)
+						vec := ParseStringToArrInt(s)
+						field.Set(reflect.ValueOf(vec))
+					}
+				case reflect.String:
+					{
+						vec := strings.Split(s, "|")
 						field.Set(reflect.ValueOf(vec))
 					}
 				case reflect.Struct:
@@ -323,4 +267,71 @@ func _GetRecordsValidCnt(records [][]string) (ret int) {
 		}
 	}
 	return ret
+}
+
+//////////////////////////////////////////////////////////////////////
+//
+func LoadCsv(path string) ([][]string, error) {
+	file, err := os.Open(path)
+	defer file.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	fstate, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if fstate.IsDir() {
+		return nil, &StrError{"LoadCsv is dir!", nil}
+	}
+
+	csvReader := csv.NewReader(file)
+	records, err := csvReader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+	return records, nil
+}
+func UpdateCsv(path string, records [][]string) error {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, os.ModePerm)
+	defer file.Close()
+	if err != nil {
+		return err
+	}
+
+	fstate, err := file.Stat()
+	if err != nil {
+		return err
+	}
+	if fstate.IsDir() {
+		return &StrError{"UpdateCsv is dir!", nil}
+	}
+
+	csvWriter := csv.NewWriter(file)
+	csvWriter.UseCRLF = true
+	return csvWriter.WriteAll(records)
+}
+func AppendCsv(path string, record []string) error {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND, os.ModePerm)
+	defer file.Close()
+	if err != nil {
+		return err
+	}
+
+	fstate, err := file.Stat()
+	if err != nil {
+		return err
+	}
+	if fstate.IsDir() {
+		return &StrError{"AppendCsv is dir!", nil}
+	}
+
+	csvWriter := csv.NewWriter(file)
+	csvWriter.UseCRLF = true
+	if err := csvWriter.Write(record); err != nil {
+		return err
+	}
+	csvWriter.Flush()
+	return nil
 }

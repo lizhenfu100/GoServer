@@ -27,6 +27,9 @@ func main() {
 
 	//注册所有http消息处理方法
 	RegSdkHttpMsgHandler()
+	RegSdkCsv()
+
+	common.LoadAllCsv()
 
 	gamelog.Warn("----Sdk Server Start-----")
 	if netConfig.CreateNetSvr("sdk", 1) == false {

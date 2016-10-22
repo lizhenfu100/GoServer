@@ -1,49 +1,47 @@
 package main
 
 import (
+	"common"
 	"net/http"
+	"netConfig"
 	"svr_game/logic"
 	"tcp"
 )
 
 //注册http消息处理方法
 func RegGamesvrHttpMsgHandler() {
-	type THttpFuncInfo struct {
-		url string
-		fun func(http.ResponseWriter, *http.Request)
-	}
-	var configSlice = []THttpFuncInfo{
+	var config = map[string]func(http.ResponseWriter, *http.Request){
 		//! Battle
-		{"/battle_echo", logic.Handle_Battle_Echo},
+		"/battle_echo": logic.Handle_Battle_Echo,
 
 		//! SDK
-		{"/create_recharge_order", logic.Handle_Create_Recharge_Order},
-		{"/sdk_recharge_success", logic.Handle_Recharge_Success},
+		"/create_recharge_order": logic.Handle_Create_Recharge_Order,
+		"/sdk_recharge_success":  logic.Handle_Recharge_Success,
 
-		{"/add_temp_svr", logic.Handle_Add_Temp_Svr},
+		"/add_temp_svr": logic.Handle_Add_Temp_Svr,
 	}
 
 	//! register
-	max := len(configSlice)
-	for i := 0; i < max; i++ {
-		data := &configSlice[i]
-		http.HandleFunc(data.url, data.fun)
+	for k, v := range config {
+		http.HandleFunc(k, v)
 	}
 }
-
 func RegGamesvrTcpMsgHandler() {
-	type TTcpFuncInfo struct {
-		msgID uint16
-		fun   func(*tcp.TCPConn, []byte)
-	}
-	var configSlice = []TTcpFuncInfo{
-		{1, logic.Hand_Msg_1},
+	var config = map[uint16]func(*tcp.TCPConn, []byte){
+		1: logic.Hand_Msg_1,
 	}
 
 	//! register
-	max := len(configSlice)
-	for i := 0; i < max; i++ {
-		data := &configSlice[i]
-		tcp.G_HandlerMsgMap[data.msgID] = data.fun
+	for k, v := range config {
+		tcp.G_HandlerMsgMap[k] = v
+	}
+}
+func RegGamesvrCsv() {
+	var config = map[string]interface{}{
+		"conf_net": &netConfig.G_SvrNetCfg,
+	}
+	//! register
+	for k, v := range config {
+		common.G_CsvParserMap[k] = v
 	}
 }

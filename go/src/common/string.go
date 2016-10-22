@@ -36,7 +36,7 @@ func ParseStringToPair(str string) []IntPair {
 }
 
 // 格式：32400|43200|64800|75600
-func ParseStringToArray(str string) []int {
+func ParseStringToArrInt(str string) []int {
 	slice := strings.Split(str, "|")
 	nums := make([]int, len(slice))
 	for i, v := range slice {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"common"
 	"encoding/json"
 	"fmt"
 	"gamelog"
@@ -17,16 +18,31 @@ func main() {
 	gamelog.InitLogger("client")
 	gamelog.SetLevel(0)
 
+	RegClientCsv()
+	common.LoadAllCsv()
+	// for k, v := range netConfig.G_SvrNetCfg {
+	// 	fmt.Println(k, v)
+	// }
+
 	netConfig.CreateNetSvr("client", 0)
 
 	test()
+	time.Sleep(100 * time.Second)
+}
 
-	time.Sleep(10 * time.Second)
+func RegClientCsv() {
+	var config = map[string]interface{}{
+		"conf_net": &netConfig.G_SvrNetCfg,
+	}
+	//! register
+	for k, v := range config {
+		common.G_CsvParserMap[k] = v
+	}
 }
 
 func test() {
 	//向游戏服请求充值
-	gameAddr := netConfig.GetHttpAddr("game", 0)
+	gameAddr := netConfig.GetHttpAddr("game", -1)
 	fmt.Println("---", gameAddr)
 	var msg1 sdk_msg.Msg_create_recharge_order_Req
 	msg1.SessionKey = "233xx"
@@ -38,7 +54,7 @@ func test() {
 	http.PostReq(gameAddr+"/create_recharge_order", buf1)
 
 	//模拟第三方的充值到账
-	sdkAddr := netConfig.GetHttpAddr("sdk", 0)
+	sdkAddr := netConfig.GetHttpAddr("sdk", -1)
 	fmt.Println("---", sdkAddr)
 	var msg2 sdk_msg.SDKMsg_recharge_result
 	msg2.OrderID = "abcdefg233"

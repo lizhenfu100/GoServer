@@ -21,9 +21,10 @@ func SendToBattle(svrID int, msgID uint16, msgdata []byte) {
 }
 
 func InitBattleSvrID() {
-	if cfg, ok := netConfig.G_SvrNetCfg["battle"]; ok {
-		for _, v := range cfg.Listen {
-			g_cache_battle_svrid = append(g_cache_battle_svrid, v.SvrID)
+	for i := 0; i < len(netConfig.G_SvrNetCfg); i++ {
+		cfg := &netConfig.G_SvrNetCfg[i]
+		if cfg.Module == "battle" {
+			g_cache_battle_svrid = append(g_cache_battle_svrid, cfg.SvrID)
 		}
 	}
 }

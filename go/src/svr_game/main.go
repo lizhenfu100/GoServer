@@ -25,6 +25,9 @@ func main() {
 	//注册所有http消息处理方法
 	RegGamesvrHttpMsgHandler()
 	RegGamesvrTcpMsgHandler()
+	RegGamesvrCsv()
+
+	common.LoadAllCsv()
 
 	api.InitBattleSvrID()
 

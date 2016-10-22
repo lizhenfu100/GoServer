@@ -13,7 +13,7 @@ var (
 // strKey = "/create_recharge_order"
 func PostSdkReq(strKey string, pMsg interface{}) ([]byte, error) {
 	if g_cache_sdk_addr == "" {
-		g_cache_sdk_addr = netConfig.GetHttpAddr("sdk", 0)
+		g_cache_sdk_addr = netConfig.GetHttpAddr("sdk", -1)
 	}
 
 	buf, _ := json.Marshal(pMsg)

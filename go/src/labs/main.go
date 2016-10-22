@@ -1,8 +1,11 @@
 package main
 
 import (
-	"http"
+	// "http"
 	// "tcp"
+	"common"
+	"fmt"
+	"netConfig"
 	"time"
 )
 
@@ -19,7 +22,10 @@ func main() {
 	// 	time.Sleep(200 * time.Millisecond)
 	// }
 
-	http.Http_Client_Test_1()
+	common.LoadAllCsv()
+	for k, v := range common.G_MapCsv {
+		fmt.Println(k, v)
+	}
 
 	//主线程可以干别的去了
 	time.Sleep(3 * time.Second)

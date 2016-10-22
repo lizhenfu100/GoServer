@@ -30,6 +30,9 @@ func main() {
 
 	//注册所有tcp消息处理方法
 	RegBattleTcpMsgHandler()
+	RegBattleCsv()
+
+	common.LoadAllCsv()
 
 	gamelog.Warn("----Battle Server Start[%d]-----", svrID)
 	if netConfig.CreateNetSvr("battle", svrID) == false {
@@ -63,13 +66,10 @@ func HandCmd_AddTempSvrToGame(args []string) bool {
 
 	gameAddr := netConfig.GetAddr("game", gameSvrID)
 
-	cfg := netConfig.G_SvrNetCfg[netConfig.G_Local_Module]
-	for _, v := range cfg.Listen {
-		if v.SvrID == netConfig.G_Local_SvrID {
-			selfAddr := fmt.Sprintf("%s:%d", v.IP, v.TcpPort)
-			api.AddTempBattleSvr(gameAddr, selfAddr, v.SvrID)
-			return true
-		}
+	if cfg := netConfig.GetLocalNetCfg(); cfg != nil {
+		selfAddr := fmt.Sprintf("%s:%d", cfg.IP, cfg.TcpPort)
+		api.AddTempBattleSvr(gameAddr, selfAddr, cfg.SvrID)
+		return true
 	}
 	return false
 }

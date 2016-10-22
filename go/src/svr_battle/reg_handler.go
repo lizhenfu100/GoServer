@@ -1,26 +1,31 @@
 package main
 
 import (
+	"common"
+	"netConfig"
 	"svr_battle/logic"
 	"tcp"
 )
 
 //注册http消息处理方法
 func RegBattleTcpMsgHandler() {
-	type TTcpFuncInfo struct {
-		msgID uint16
-		fun   func(*tcp.TCPConn, []byte)
-	}
-	var configSlice = []TTcpFuncInfo{
-		{1, logic.Hand_Msg_1},
-		{100, logic.Hand_Login},
-		{101, logic.Hand_Logout},
+	var config = map[uint16]func(*tcp.TCPConn, []byte){
+		1:   logic.Hand_Msg_1,
+		100: logic.Hand_Login,
+		101: logic.Hand_Logout,
 	}
 
 	//! register
-	max := len(configSlice)
-	for i := 0; i < max; i++ {
-		data := &configSlice[i]
-		tcp.G_HandlerMsgMap[data.msgID] = data.fun
+	for k, v := range config {
+		tcp.G_HandlerMsgMap[k] = v
+	}
+}
+func RegBattleCsv() {
+	var config = map[string]interface{}{
+		"conf_net": &netConfig.G_SvrNetCfg,
+	}
+	//! register
+	for k, v := range config {
+		common.G_CsvParserMap[k] = v
 	}
 }
