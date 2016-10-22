@@ -6,6 +6,7 @@ import (
 	"netConfig"
 	// "mongodb"
 	"strconv"
+	"svr_game/api"
 	// "svr_game/logic"
 )
 
@@ -24,6 +25,8 @@ func main() {
 	//注册所有http消息处理方法
 	RegGamesvrHttpMsgHandler()
 	RegGamesvrTcpMsgHandler()
+
+	api.InitBattleSvrID()
 
 	gamelog.Warn("----Game Server Start-----")
 	if netConfig.CreateNetSvr("game", 1) == false {

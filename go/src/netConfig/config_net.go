@@ -39,7 +39,9 @@ type TSvrNetCfg struct {
 	Connect []string
 }
 
-//TODO：临时新增的battle起来，通知game(http)来连接
+// Notice：临时新增battle
+// 1、先增加battle的配置（见注释），重新编译svr_battle.exe【TODO：做成配置文件就不用编译啦】
+// 2、执行bin/temp_svr.bat，在命令行输入"addsvrto 3"，通知game(http)来连接
 var G_SvrNetCfg = map[string]TSvrNetCfg{
 	"account": {
 		[]TAddrInfo{
@@ -94,13 +96,20 @@ var G_SvrNetCfg = map[string]TSvrNetCfg{
 				TcpPort: 7030,
 				Maxconn: 5000,
 				SvrID:   1,
-			},{
+			}, {
 				IP:      "127.0.0.1",
 				OutIP:   "192.168.1.177",
 				TcpPort: 7031,
 				Maxconn: 5000,
 				SvrID:   2,
 			},
+			// { //临时增加的战斗服
+			// 	IP:      "127.0.0.1",
+			// 	OutIP:   "192.168.1.177",
+			// 	TcpPort: 7032,
+			// 	Maxconn: 5000,
+			// 	SvrID:   3,
+			// },
 		},
 		[]string{},
 	},
@@ -110,10 +119,25 @@ var G_SvrNetCfg = map[string]TSvrNetCfg{
 	},
 }
 
+func GetAddr(module string, svrID int) string {
+	for _, v := range G_SvrNetCfg[module].Listen {
+		if v.SvrID == svrID {
+			if v.HttpPort > 0 {
+				return fmt.Sprintf("http://%s:%d", v.IP, v.HttpPort)
+			} else if v.TcpPort > 0 {
+				return fmt.Sprintf("%s:%d", v.IP, v.TcpPort)
+			} else {
+				return ""
+			}
+		}
+	}
+	return ""
+}
+
 var (
-	G_Connect_Remote_TcpConn = make(map[tcp.TcpConnKey]*tcp.TCPClient) //本模块，对其它模块的tcp连接
-	G_Local_Module 	string
-	G_Local_SvrID 	int
+	G_Cfg_Remote_TcpConn = make(map[tcp.TcpConnKey]*tcp.TCPClient) //本模块，对其它模块的tcp连接
+	G_Local_Module       string
+	G_Local_SvrID        int
 )
 
 func CreateNetSvr(module string, svrID int) bool {
@@ -122,26 +146,27 @@ func CreateNetSvr(module string, svrID int) bool {
 
 	if cfg, ok := G_SvrNetCfg[module]; ok {
 
+		//1、找到当前svrID的配置信息
 		var selfCfg *TAddrInfo = nil
 		for i := 0; i < len(cfg.Listen); i++ {
 			if svrID == cfg.Listen[i].SvrID {
 				selfCfg = &cfg.Listen[i]
 				break
-			}	
+			}
 		}
 		if selfCfg == nil {
 			print(fmt.Sprintf("%s-%d: have none SvrNetCfg!!!", module, svrID))
 			return false
 		}
 
-		// 连接/注册其它模块
+		//2、连接/注册其它模块
 		for _, v := range cfg.Connect {
 			if cfg2, ok2 := G_SvrNetCfg[v]; ok2 {
 				for _, destCfg := range cfg2.Listen {
 					if destCfg.HttpPort > 0 {
 						http.RegistToSvr(
-							fmt.Sprintf("%s:%d", destCfg.IP, destCfg.HttpPort),
-							fmt.Sprintf("%s:%d", selfCfg.IP, selfCfg.HttpPort),
+							fmt.Sprintf("http://%s:%d", destCfg.IP, destCfg.HttpPort),
+							fmt.Sprintf("http://%s:%d", selfCfg.IP, selfCfg.HttpPort),
 							module,
 							selfCfg.SvrID)
 					} else if destCfg.TcpPort > 0 {
@@ -151,7 +176,7 @@ func CreateNetSvr(module string, svrID int) bool {
 							module,
 							selfCfg.SvrID)
 						//Notice：client.ConnectToSvr是异步过程，这里返回的client.TcpConn还是空指针，不能保存*tcp.TCPConn
-						G_Connect_Remote_TcpConn[tcp.TcpConnKey{v, destCfg.SvrID}] = client
+						G_Cfg_Remote_TcpConn[tcp.TcpConnKey{v, destCfg.SvrID}] = client
 					} else {
 						print(v + ": have none HttpPort|TcpPort!!!")
 					}
@@ -162,7 +187,7 @@ func CreateNetSvr(module string, svrID int) bool {
 			}
 		}
 
-		// 开启本模块网络服务(Busy Loop)
+		//3、开启本模块网络服务(Busy Loop)
 		if selfCfg.HttpPort > 0 {
 			http.NewHttpServer(":" + strconv.Itoa(selfCfg.HttpPort))
 		} else if selfCfg.TcpPort > 0 {
@@ -216,7 +241,7 @@ func GetTcpConn(destModule string, destSvrID int) *tcp.TCPConn { //Notice：应�
 	for _, v := range G_SvrNetCfg[G_Local_Module].Connect {
 		if v == destModule {
 			// game(c) - battle(s)
-			return G_Connect_Remote_TcpConn[tcp.TcpConnKey{destModule, destSvrID}].TcpConn
+			return G_Cfg_Remote_TcpConn[tcp.TcpConnKey{destModule, destSvrID}].TcpConn
 		}
 	}
 

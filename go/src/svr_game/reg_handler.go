@@ -19,6 +19,8 @@ func RegGamesvrHttpMsgHandler() {
 		//! SDK
 		{"/create_recharge_order", logic.Handle_Create_Recharge_Order},
 		{"/sdk_recharge_success", logic.Handle_Recharge_Success},
+
+		{"/add_temp_svr", logic.Handle_Add_Temp_Svr},
 	}
 
 	//! register

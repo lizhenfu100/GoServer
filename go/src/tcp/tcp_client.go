@@ -11,6 +11,7 @@ type TCPClient struct { //作为client玩家数据的一个模块
 	Addr            string
 	PendingWriteNum int
 	TcpConn         *TCPConn
+	OnConnected     func(*TCPConn)
 }
 type Msg_Regist_To_TcpSvr struct {
 	Module string
@@ -29,6 +30,9 @@ func (client *TCPClient) connectRoutine(srcModule string, srcID int) {
 	for {
 		if client.connect() {
 			if client.TcpConn != nil {
+				if client.OnConnected != nil {
+					client.OnConnected(client.TcpConn)
+				}
 				go client.TcpConn.writeRoutine()
 				client.TcpConn.WriteMsg(G_MsgId_Regist, b)
 				client.TcpConn.readRoutine() //goroutine会阻塞在这里

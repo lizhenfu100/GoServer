@@ -14,27 +14,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"gamelog"
-	myhttp "http"
 	"msg/sdk_msg"
 	"net/http"
 	"netConfig"
+	"svr_game/api"
 )
-
-var (
-	g_cache_sdk_addr string
-)
-
-// strKey = "/create_recharge_order"
-func PostSdkReq(strKey string, pMsg interface{}) ([]byte, error) {
-	if g_cache_sdk_addr == "" {
-		g_cache_sdk_addr = netConfig.GetHttpAddr("sdk", 0)
-	}
-
-	buf, _ := json.Marshal(pMsg)
-	url := g_cache_sdk_addr + strKey
-
-	return myhttp.PostReq(url, buf)
-}
 
 //! 消息处理函数
 //
@@ -79,7 +63,7 @@ func Handle_Create_Recharge_Order(w http.ResponseWriter, r *http.Request) {
 	sdkReq.Channel = req.Channel
 	sdkReq.PlatformEnum = req.PlatformEnum
 	sdkReq.ChargeCsvID = req.ChargeCsvID
-	backBuf, err := PostSdkReq("/create_recharge_order", &sdkReq)
+	backBuf, err := api.PostSdkReq("/create_recharge_order", &sdkReq)
 	if err == nil {
 		json.Unmarshal(backBuf, &sdkAck)
 		//TODO：将SDKMsg_create_recharge_order_Ack中的数据，写入response

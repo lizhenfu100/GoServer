@@ -31,8 +31,6 @@ func PostReq(url string, b []byte) ([]byte, error) {
 }
 
 func RegistToSvr(destAddr, srcAddr, srcModule string, srcID int) {
-	destAddr = "http://" + destAddr
-	srcAddr = "http://" + srcAddr
 	go _RegistToSvr(destAddr, srcAddr, srcModule, srcID)
 }
 func _RegistToSvr(destAddr, srcAddr, srcModule string, srcID int) {
