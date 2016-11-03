@@ -1,12 +1,6 @@
 # 多进程Go游戏服务器
 ##网络拓扑关系纯配置控制
 
-核心的tcp、http是项目正在用的，效果还可以，虽然还没被外网玩家操过~
-
-在此之上封了一层netConfig，便于网络连接关系的管理
-
-各模块进程支持崩溃重启
-
 ##简介
 
 1、核心的tcp、http是项目正在用的，效果还可以，虽然还没被外网玩家操过
@@ -28,42 +22,17 @@
 [config_net.go](https://github.com/3workman/Sundry/tree/master/go/src/netConfig/config_net.go)
 --------------
 
-	(1)"config_net.go"中非常容易指定连接方式
-```go
-var G_SvrNetCfg = map[string]TSvrNetCfg{
-	"sdk": {
-		TAddrInfo{
-			IP:       "127.0.0.1",
-			OutIP:    "192.168.1.177",
-			HttpPort: 7002,
-		},
-		[]string{},
-	},
-	"game": {
-		TAddrInfo{
-			IP:       "127.0.0.1",
-			OutIP:    "192.168.1.177",
-			HttpPort: 7010,
-			SvrID:    1,
-		},
-		[]string{"sdk", "battle"}, // 连接sdk、battle
-	},
-	"battle": {
-		TAddrInfo{
-			IP:      "127.0.0.1",
-			OutIP:   "192.168.1.177",
-			TcpPort: 7030,
-			Maxconn: 5000,
-			SvrID:   1,
-		},
-		[]string{},
-	},
-	"client": {
-		TAddrInfo{},
-		[]string{"game", "sdk", "battle"}, // 连接game、sdk、battle
-	},
-}
-```
+	(1)"conf_net.csv"中非常容易指定连接方式
+| module  | ip        | out_ip | tcp_port | http_port | max_conn | svr_id | connect |
+| ------- | --------- | ------ | -------- | --------- | -------- | ------ | ------- |
+| account | 127.0.0.1 |        | 7001     |           | 5000     |        |         |
+| sdk     | 127.0.0.1 |        |          | 7002      |          | 1      |         |
+| game    | 127.0.0.1 |        |          | 7010      |          | 1      | sdk|battle |
+| chat    | 127.0.0.1 |        | 7020     |           | 5000     |        |         |
+| battle  | 127.0.0.1 |        | 7030     |           | 5000     | 1      |         |
+| battle  | 127.0.0.1 |        | 7031     |           | 5000     | 2      |         |
+| client  |           |        |          |           | 5000     |        | game|sdk|battle |
+
 	
 	(2)统一了连接获取方式，业务层使用，只需加几个Cache接口即可
 ```go
