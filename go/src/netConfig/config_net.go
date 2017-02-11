@@ -5,12 +5,17 @@
 
 	2、服务器进程间用tcp通信
 
-	3、未来扩展：Battle设计为多个，初始化完毕后http.Post自己的信息到Gamesvr（甚至能临时加机器）
+	3、Battle设计为多个，初始化完毕后http.Post自己的信息到Gamesvr
+
+* @ framework
+	1、游戏服，一个玩家区服一个GameSvr
+	2、战斗服，可动态扩展。可多个战斗服对应一个游戏服
+	3、唯一的支付SDK、唯一的账号服
+	4、唯一的Center，其它进程需在Center注册，管理后台所有进程
 
 * @ reboot
 	1、【1-1】关系中的"client"重启：game每次均会连接battle
 	2、【1-1】关系中的"server"重启：battle(tcp)重启，game的client.ConnectToSvr能检查到失败，循环重连
-
 	3、【1-N】关系中的"N"重启：game每次均会去sdk注册
 	4、【1-N】关系中的"1"重启：http_server.go会本地存储注册地址，重启时载入
 
@@ -31,12 +36,12 @@ import (
 // 2、执行bin/temp_svr.bat，在命令行输入"addsvrto 3"，通知game(http)来连接
 type TNetConfig struct {
 	Module     string
+	SvrID      int
 	IP         string // 内部局域网IP
 	OutIP      string
 	TcpPort    int
 	HttpPort   int
 	Maxconn    int
-	SvrID      int
 	ConnectLst []string // 待连接的模块名
 }
 
