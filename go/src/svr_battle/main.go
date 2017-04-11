@@ -32,8 +32,6 @@ func main() {
 	RegBattleTcpMsgHandler()
 	RegBattleCsv()
 
-	common.LoadAllCsv()
-
 	gamelog.Warn("----Battle Server Start[%d]-----", svrID)
 	if netConfig.CreateNetSvr("battle", svrID) == false {
 		gamelog.Error("----Battle NetSvr Failed[%d]-----", svrID)

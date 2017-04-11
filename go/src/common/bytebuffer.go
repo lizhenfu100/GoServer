@@ -14,11 +14,11 @@ func NewByteBuffer(capacity int) *ByteBuffer {
 	buf.DataPtr = make([]byte, 0, capacity)
 	return buf
 }
-func (self *ByteBuffer) ResetData(data []byte) {
+func (self *ByteBuffer) Reset(data []byte) {
 	self.DataPtr = data
 	self.ReadPos = 0
 }
-func (self *ByteBuffer) GetDataPtr() []byte {
+func (self *ByteBuffer) GetBuffer() []byte {
 	return self.DataPtr
 }
 

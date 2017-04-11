@@ -1,6 +1,7 @@
 package logic
 
 import (
+	"common"
 	"fmt"
 	"gamelog"
 	"net/http"
@@ -16,10 +17,14 @@ func Handle_Battle_Echo(w http.ResponseWriter, r *http.Request) {
 	gamelog.Info("message: %s", r.URL.String())
 
 	//! 接收信息
-	buffer := make([]byte, r.ContentLength)
-	r.Body.Read(buffer)
+	// buffer := make([]byte, r.ContentLength)
+	// r.Body.Read(buffer)
+	// fmt.Println(*(*string)(unsafe.Pointer(&buffer)))
 
-	fmt.Println(*(*string)(unsafe.Pointer(&buffer)))
+	buf := new(common.ByteBuffer)
+	buf.DataPtr = make([]byte, r.ContentLength)
+	r.Body.Read(buf.DataPtr)
+	fmt.Println(buf.ReadString())
 
 	//! 创建回复
 	defer func() {
@@ -27,7 +32,7 @@ func Handle_Battle_Echo(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// 转发给Battle进程
-	api.SendToBattle(1, 1, buffer)
+	api.SendToBattle(1, 1, buf)
 }
 
 //////////////////////////////////////////////////////////////////////

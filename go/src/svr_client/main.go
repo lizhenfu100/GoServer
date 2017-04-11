@@ -19,7 +19,6 @@ func main() {
 	gamelog.SetLevel(0)
 
 	RegClientCsv()
-	common.LoadAllCsv()
 	// for k, v := range netConfig.G_SvrNetCfg {
 	// 	fmt.Println(k, v)
 	// }
@@ -38,6 +37,7 @@ func RegClientCsv() {
 	for k, v := range config {
 		common.G_CsvParserMap[k] = v
 	}
+	common.LoadAllCsv()
 }
 
 func test() {

@@ -30,4 +30,5 @@ func RegSdkCsv() {
 	for k, v := range config {
 		common.G_CsvParserMap[k] = v
 	}
+	common.LoadAllCsv()
 }

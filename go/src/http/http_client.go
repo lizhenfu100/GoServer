@@ -10,14 +10,7 @@ import (
 
 func PostMsg(url string, pMsg interface{}) ([]byte, error) {
 	b, _ := common.ToBytes(pMsg)
-	resp, err := http.Post(url, "text/HTML", bytes.NewReader(b))
-	if err == nil {
-		backBuf := make([]byte, resp.ContentLength)
-		resp.Body.Read(backBuf)
-		resp.Body.Close()
-		return backBuf, nil
-	}
-	return nil, err
+	return PostReq(url, b)
 }
 func PostReq(url string, b []byte) ([]byte, error) {
 	resp, err := http.Post(url, "text/HTML", bytes.NewReader(b))

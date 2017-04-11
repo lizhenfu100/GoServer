@@ -35,7 +35,7 @@ func GetTodayLeftSec() int64 {
 
 const (
 	OneDay_SecCnt = 24 * 3600
-	INT_MAX       = 0xFFFFFFFF
+	INT_MAX       = 0x7FFFFFFF
 )
 
 type TimeHandler interface {

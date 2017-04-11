@@ -28,4 +28,5 @@ func RegBattleCsv() {
 	for k, v := range config {
 		common.G_CsvParserMap[k] = v
 	}
+	common.LoadAllCsv()
 }

@@ -27,8 +27,6 @@ func main() {
 	RegGamesvrTcpMsgHandler()
 	RegGamesvrCsv()
 
-	common.LoadAllCsv()
-
 	api.InitBattleSvrID()
 
 	gamelog.Warn("----Game Server Start-----")

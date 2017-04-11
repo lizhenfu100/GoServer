@@ -12,7 +12,7 @@ import (
 func main() {
 	fmt.Println("=>", strings.Index("(c)#蘑菇adfadsf", "(c"))
 
-	fmt.Println(common.GetCurrPath())
+	fmt.Println(common.GetExePath())
 
 	//	TestInterface()
 	//	TestInterfaceSelect()
