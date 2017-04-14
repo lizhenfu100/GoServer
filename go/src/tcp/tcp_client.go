@@ -26,7 +26,10 @@ func (client *TCPClient) ConnectToSvr(addr, srcModule string, srcID int) {
 	go client.connectRoutine(srcModule, srcID) //会断线后自动重连
 }
 func (client *TCPClient) connectRoutine(srcModule string, srcID int) {
-	b, _ := common.ToBytes(&Msg_Regist_To_TcpSvr{srcModule, srcID})
+	packet := common.NewNetPack(32)
+	packet.SetOpCode(G_MsgId_Regist)
+	packet.WriteString(srcModule)
+	packet.WriteInt32(int32(srcID))
 	for {
 		if client.connect() {
 			if client.TcpConn != nil {
@@ -34,7 +37,7 @@ func (client *TCPClient) connectRoutine(srcModule string, srcID int) {
 					client.OnConnected(client.TcpConn)
 				}
 				go client.TcpConn.writeRoutine()
-				client.TcpConn.WriteMsg(G_MsgId_Regist, b)
+				client.TcpConn.WriteMsg(packet)
 				client.TcpConn.readRoutine() //goroutine会阻塞在这里
 			}
 		}

@@ -4,7 +4,7 @@ import (
 	"common"
 	"fmt"
 	//	"gamelog"
-	"http"
+	//  "http"
 	"strings"
 	// "tcp"
 )
@@ -33,8 +33,15 @@ func main() {
 	// gamelog.SetLevel(0)
 
 	// tcp.NewTcpServer(":9001", 5000)
+	// http.NewHttpServer(":9002")
 
-	http.NewHttpServer(":9002")
+	buf := make([]byte, 4)
+	buf1 := buf[1:3]
+	buf1[0] = 5
+	fmt.Println(buf)
+	fmt.Println(buf1, len(buf1))
+	fmt.Println(&buf[0], &buf[1], &buf[2])
+	fmt.Println(&buf1[0], &buf1[1])
 }
 
 func testList() {

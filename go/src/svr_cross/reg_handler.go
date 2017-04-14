@@ -3,16 +3,13 @@ package main
 import (
 	"common"
 	"netConfig"
-	"svr_battle/logic"
+	"svr_cross/logic"
 	"tcp"
 )
 
-//注册http消息处理方法
-func RegBattleTcpMsgHandler() {
+func RegCrossTcpMsgHandler() {
 	var config = map[uint16]func(*tcp.TCPConn, *common.NetPack){
-		0:   logic.Rpc_Echo,
-		100: logic.Rpc_Login,
-		101: logic.Rpc_Logout,
+		0: logic.Rpc_Echo,
 	}
 
 	//! register
@@ -20,7 +17,7 @@ func RegBattleTcpMsgHandler() {
 		tcp.G_HandlerMsgMap[k] = v
 	}
 }
-func RegBattleCsv() {
+func RegCrossCsv() {
 	var config = map[string]interface{}{
 		"conf_net": &netConfig.G_SvrNetCfg,
 	}

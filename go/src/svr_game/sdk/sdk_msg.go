@@ -8,7 +8,7 @@
 * @ author zhoumf
 * @ date 2016-8-18
 ***********************************************************************/
-package logic
+package sdk
 
 import (
 	"encoding/json"

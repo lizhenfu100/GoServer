@@ -18,8 +18,8 @@ func (self *ByteBuffer) Reset(data []byte) {
 	self.DataPtr = data
 	self.ReadPos = 0
 }
-func (self *ByteBuffer) GetBuffer() []byte {
-	return self.DataPtr
+func (self *ByteBuffer) Size() int {
+	return len(self.DataPtr)
 }
 
 //! Write API
@@ -55,8 +55,9 @@ func (self *ByteBuffer) WriteFloat(v float32) {
 }
 func (self *ByteBuffer) WriteString(v string) {
 	bytes := []byte(v)
-	self.WriteUint16(uint16(len(bytes)))
-	for i := 0; i < len(bytes); i++ {
+	length := len(bytes)
+	self.WriteUint16(uint16(length))
+	for i := 0; i < length; i++ {
 		self.WriteByte(bytes[i])
 	}
 }

@@ -2,22 +2,21 @@ package main
 
 import (
 	"common"
-	"fmt"
+	//"fmt"
 	"gamelog"
 	"netConfig"
-	"os"
+	//"os"
 	"strconv"
-	// "svr_battle/logic"
-	"svr_battle/api"
 )
 
 func main() {
 	//获取命令参数 svrID
-	svrID, err := strconv.Atoi(os.Args[1])
-	if err != nil {
-		gamelog.Error("Please input the svrID!!!")
-		return
-	}
+	// svrID, err := strconv.Atoi(os.Args[1])
+	// if err != nil {
+	// 	gamelog.Error("Please input the svrID!!!")
+	// 	return
+	// }
+	svrID := 1
 
 	//初始化日志系统
 	gamelog.InitLogger("battle")
@@ -26,7 +25,6 @@ func main() {
 	//开启控制台窗口，可以接受一些调试命令
 	common.StartConsole()
 	common.RegConsoleCmd("setloglevel", HandCmd_SetLogLevel)
-	common.RegConsoleCmd("addsvrto", HandCmd_AddTempSvrToGame)
 
 	//注册所有tcp消息处理方法
 	RegBattleTcpMsgHandler()
@@ -50,24 +48,4 @@ func HandCmd_SetLogLevel(args []string) bool {
 	}
 	gamelog.SetLevel(level)
 	return true
-}
-func HandCmd_AddTempSvrToGame(args []string) bool {
-	if len(args) < 2 {
-		gamelog.Error("Lack of param")
-		return false
-	}
-	gameSvrID, err := strconv.Atoi(args[1])
-	if err != nil {
-		gamelog.Error("HandCmd_AddTempSvr Error : Invalid param :%s", args[1])
-		return false
-	}
-
-	gameAddr := netConfig.GetAddr("game", gameSvrID)
-
-	if cfg := netConfig.GetLocalNetCfg(); cfg != nil {
-		selfAddr := fmt.Sprintf("%s:%d", cfg.IP, cfg.TcpPort)
-		api.AddTempBattleSvr(gameAddr, selfAddr, cfg.SvrID)
-		return true
-	}
-	return false
 }

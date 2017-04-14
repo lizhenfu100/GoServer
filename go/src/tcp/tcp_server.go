@@ -122,11 +122,10 @@ type TcpConnKey struct {
 
 var g_reg_conn_map = make(map[TcpConnKey]*TCPConn)
 
-func DoRegistToSvr(conn *TCPConn, data []byte) {
-	var msg Msg_Regist_To_TcpSvr
-	common.ToStruct(data, &msg)
-	gamelog.Info("DoRegistToSvr: %v", msg)
-	g_reg_conn_map[TcpConnKey{msg.Module, msg.ID}] = conn
+func DoRegistToSvr(conn *TCPConn, data *common.NetPack) {
+	module := data.ReadString()
+	id := int(data.ReadInt32())
+	g_reg_conn_map[TcpConnKey{module, id}] = conn
 }
 func FindRegModuleConn(module string, id int) *TCPConn {
 	if v, ok := g_reg_conn_map[TcpConnKey{module, id}]; ok {

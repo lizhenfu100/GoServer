@@ -4,13 +4,12 @@ import (
 	"common"
 	"gamelog"
 	"netConfig"
-	// "mongodb"
 	"strconv"
 )
 
 func main() {
 	//初始化日志系统
-	gamelog.InitLogger("game")
+	gamelog.InitLogger("cross")
 	gamelog.SetLevel(0)
 
 	//设置mongodb的服务器地址
@@ -21,21 +20,24 @@ func main() {
 	common.RegConsoleCmd("setloglevel", HandCmd_SetLogLevel)
 
 	//注册所有http消息处理方法
-	RegGamesvrHttpMsgHandler()
-	RegGamesvrTcpMsgHandler()
-	RegGamesvrCsv()
+	RegCrossTcpMsgHandler()
+	RegCrossCsv()
 
-	gamelog.Warn("----Game Server Start-----")
-	if netConfig.CreateNetSvr("game", 1) == false {
-		gamelog.Error("----Game NetSvr Failed-----")
+	gamelog.Warn("----Cross Server Start-----")
+	if netConfig.CreateNetSvr("cross", 0) == false {
+		gamelog.Error("----Cross NetSvr Failed-----")
 	}
 }
 
 func HandCmd_SetLogLevel(args []string) bool {
+	if len(args) < 2 {
+		gamelog.Error("Lack of param")
+		return false
+	}
 	level, err := strconv.Atoi(args[1])
 	if err != nil {
 		gamelog.Error("HandCmd_SetLogLevel Error : Invalid param :%s", args[1])
-		return true
+		return false
 	}
 	gamelog.SetLevel(level)
 	return true

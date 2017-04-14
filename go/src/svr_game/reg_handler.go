@@ -4,21 +4,21 @@ import (
 	"common"
 	"net/http"
 	"netConfig"
+	"svr_game/cross"
 	"svr_game/logic"
+	"svr_game/sdk"
 	"tcp"
 )
 
 //注册http消息处理方法
 func RegGamesvrHttpMsgHandler() {
 	var config = map[string]func(http.ResponseWriter, *http.Request){
-		//! Battle
-		"/battle_echo": logic.Handle_Battle_Echo,
+		//! Client
+		"/battle_echo": logic.Handle_Client2Battle_Echo,
 
 		//! SDK
-		"/create_recharge_order": logic.Handle_Create_Recharge_Order,
-		"/sdk_recharge_success":  logic.Handle_Recharge_Success,
-
-		"/add_temp_svr": logic.Handle_Add_Temp_Svr,
+		"/create_recharge_order": sdk.Handle_Create_Recharge_Order,
+		"/sdk_recharge_success":  sdk.Handle_Recharge_Success,
 	}
 
 	//! register
@@ -27,8 +27,8 @@ func RegGamesvrHttpMsgHandler() {
 	}
 }
 func RegGamesvrTcpMsgHandler() {
-	var config = map[uint16]func(*tcp.TCPConn, []byte){
-		1: logic.Hand_Msg_1,
+	var config = map[uint16]func(*tcp.TCPConn, *common.NetPack){
+		0: cross.Rpc_Echo,
 	}
 
 	//! register

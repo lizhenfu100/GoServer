@@ -20,6 +20,7 @@ package tcp
 
 import (
 	"bufio"
+	"common"
 	"encoding/binary"
 	"gamelog"
 	"io"
@@ -30,12 +31,12 @@ import (
 )
 
 const (
-	G_MsgId_Disconnect = 7111
-	G_MsgId_Regist     = 7112
+	G_Msg_Size_Max = 1024
+	G_MsgId_Regist = 7112
 )
 
 var (
-	G_HandlerMsgMap = map[uint16]func(*TCPConn, []byte){
+	G_HandlerMsgMap = map[uint16]func(*TCPConn, *common.NetPack){
 		G_MsgId_Regist: DoRegistToSvr,
 	}
 )
@@ -77,18 +78,17 @@ func (tcpConn *TCPConn) Close() {
 }
 
 // msgdata must not be modified by other goroutines
-func (tcpConn *TCPConn) WriteMsg(msgID uint16, msgdata []byte) {
-	msgLen := uint16(len(msgdata))
+func (tcpConn *TCPConn) WriteMsg(msg *common.NetPack) {
+	msgLen := uint16(msg.Size())
 
-	msgbuffer := make([]byte, 4+msgLen) //前2字节-msgLen；后2字节-msgID
+	buf := make([]byte, 2+msgLen)
 
-	binary.LittleEndian.PutUint16(msgbuffer, msgLen)
-	binary.LittleEndian.PutUint16(msgbuffer[2:], msgID)
+	binary.LittleEndian.PutUint16(buf, msgLen)
 
-	copy(msgbuffer[4:], msgdata)
+	copy(buf[2:], msg.DataPtr)
 
 	if false == tcpConn.isClose {
-		tcpConn.doWrite(msgbuffer)
+		tcpConn.doWrite(buf)
 	}
 }
 func (tcpConn *TCPConn) doWrite(buf []byte) {
@@ -117,15 +117,13 @@ func (tcpConn *TCPConn) writeRoutine() {
 func (tcpConn *TCPConn) readRoutine() {
 	tcpConn.readLoop()
 	tcpConn.Close()
-
-	//通知业务层net断开
-	tcpConn.msgDispatcher(G_MsgId_Disconnect, nil)
 }
 func (tcpConn *TCPConn) readLoop() error {
 	var err error
-	var msgHeader = make([]byte, 4) //前2字节-msgLen；后2字节-msgID
-	var msgID uint16
-	var msgLen uint16
+	var msgLen int
+	var msgHeader = make([]byte, 2) //前2字节-msgLen
+	var msgBuf = make([]byte, G_Msg_Size_Max)
+	var packet = common.NewNetPackLen(0)
 	var firstTime bool = true
 
 	for {
@@ -147,32 +145,31 @@ func (tcpConn *TCPConn) readLoop() error {
 			return err
 		}
 
-		msgLen = binary.LittleEndian.Uint16(msgHeader)
-		msgID = binary.LittleEndian.Uint16(msgHeader[2:])
-		if msgLen <= 0 || msgLen > 10240 {
+		msgLen = int(binary.LittleEndian.Uint16(msgHeader))
+		if msgLen <= 0 || msgLen > G_Msg_Size_Max {
 			gamelog.Error("ReadProcess Invalid msgLen :%d", msgLen)
 			break
 		}
 
-		msgData := make([]byte, msgLen)
-		_, err = io.ReadFull(tcpConn.reader, msgData)
+		packet.Reset(msgBuf[:msgLen])
+
+		_, err = io.ReadFull(tcpConn.reader, packet.DataPtr)
 		if err != nil {
 			gamelog.Error("ReadFull msgData error: %s", err.Error())
 			return err
 		}
 
-		tcpConn.msgDispatcher(msgID, msgData)
+		tcpConn.msgDispatcher(packet.GetOpCode(), packet)
 	}
 	return nil
 }
-func (tcpConn *TCPConn) msgDispatcher(msgID uint16, pdata []byte) {
-	// gamelog.Info("---msgID:%d, dataLen:%d", msgID, len(pdata))
+func (tcpConn *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
+	// gamelog.Info("---msgID:%d, dataLen:%d", msgID, msg.Size())
 	msghandler, ok := G_HandlerMsgMap[msgID]
 	if !ok {
 		gamelog.Error("msgid : %d have not a msg handler!!", msgID)
 		return
 	}
-
 	defer func() {
 		if r := recover(); r != nil {
 			if _, ok := r.(runtime.Error); ok {
@@ -180,5 +177,5 @@ func (tcpConn *TCPConn) msgDispatcher(msgID uint16, pdata []byte) {
 			}
 		}
 	}()
-	msghandler(tcpConn, pdata)
+	msghandler(tcpConn, msg)
 }
