@@ -32,7 +32,7 @@ import (
 
 const (
 	G_Msg_Size_Max = 1024
-	G_MsgId_Regist = 7112
+	G_MsgId_Regist = 60000
 )
 
 var (

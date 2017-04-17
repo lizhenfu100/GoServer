@@ -31,6 +31,7 @@ func main() {
 func RegClientCsv() {
 	var config = map[string]interface{}{
 		"conf_net": &netConfig.G_SvrNetCfg,
+		"rpc":      &common.G_RpcCsv,
 	}
 	//! register
 	for k, v := range config {
@@ -68,7 +69,7 @@ func test() {
 	time.Sleep(2 * time.Second)
 	//向游戏服发战斗数据，后台game转到battle
 	buf := common.NewNetPackCap(32)
-	buf.SetOpCode(0)
+	buf.SetRpc("rpc_echo")
 	buf.WriteString("client-game-battle")
 	b, _ := http.PostReq(gameAddr+"/battle_echo", buf.DataPtr)
 	fmt.Println("---", string(b))
@@ -94,7 +95,7 @@ func test() {
 	// time.Sleep(2 * time.Second)
 	// //直接发给战斗服
 	// msg := common.NewNetPackCap(32)
-	// msg.SetOpCode(1)
+	// msg.SetRpc("rpc_echo")
 	// msg.WriteString("--- zhoumf 233 --- ")
 	// api.SendToBattle(1, msg)
 	// api.SendToBattle(2, msg)

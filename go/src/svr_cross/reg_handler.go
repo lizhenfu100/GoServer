@@ -7,19 +7,19 @@ import (
 	"tcp"
 )
 
-func RegCrossTcpMsgHandler() {
-	var config = map[uint16]func(*tcp.TCPConn, *common.NetPack){
-		0: logic.Rpc_Echo,
+func RegTcpMsgHandler() {
+	var config = map[string]func(*tcp.TCPConn, *common.NetPack){
+		"rpc_echo": logic.Rpc_Echo,
 	}
-
 	//! register
 	for k, v := range config {
-		tcp.G_HandlerMsgMap[k] = v
+		tcp.G_HandlerMsgMap[common.RpcToOpcode(k)] = v
 	}
 }
-func RegCrossCsv() {
+func RegCsv() {
 	var config = map[string]interface{}{
 		"conf_net": &netConfig.G_SvrNetCfg,
+		"rpc":      &common.G_RpcCsv,
 	}
 	//! register
 	for k, v := range config {

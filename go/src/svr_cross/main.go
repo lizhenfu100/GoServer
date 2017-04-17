@@ -20,8 +20,8 @@ func main() {
 	common.RegConsoleCmd("setloglevel", HandCmd_SetLogLevel)
 
 	//注册所有http消息处理方法
-	RegCrossTcpMsgHandler()
-	RegCrossCsv()
+	RegCsv()
+	RegTcpMsgHandler()
 
 	gamelog.Warn("----Cross Server Start-----")
 	if netConfig.CreateNetSvr("cross", 0) == false {

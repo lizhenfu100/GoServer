@@ -27,8 +27,8 @@ func main() {
 	common.RegConsoleCmd("setloglevel", HandCmd_SetLogLevel)
 
 	//注册所有tcp消息处理方法
-	RegBattleTcpMsgHandler()
-	RegBattleCsv()
+	RegCsv()
+	RegTcpMsgHandler()
 
 	gamelog.Warn("----Battle Server Start[%d]-----", svrID)
 	if netConfig.CreateNetSvr("battle", svrID) == false {

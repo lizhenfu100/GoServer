@@ -20,7 +20,7 @@
 				ArrInt []int
 				ArrStr []string
 			}
-			var G_MapCsv = make(map[int]*TTestCsv)  // map结构读表，首列作Key
+			var G_MapCsv map[int]*TTestCsv = nil  	// map结构读表，首列作Key
 			var G_SliceCsv []TTestCsv = nil 		// 数组结构读表，注册【&G_SliceCsv】到G_CsvParserMap
 * @ author zhoumf
 * @ date 2016-6-22

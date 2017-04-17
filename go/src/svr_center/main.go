@@ -20,8 +20,8 @@ func main() {
 	common.RegConsoleCmd("setloglevel", HandCmd_SetLogLevel)
 
 	//注册所有http消息处理方法
-	RegCenterHttpMsgHandler()
-	RegCenterCsv()
+	RegCsv()
+	RegHttpMsgHandler()
 
 	gamelog.Warn("----Center Server Start-----")
 	if netConfig.CreateNetSvr("center", 0) == false {

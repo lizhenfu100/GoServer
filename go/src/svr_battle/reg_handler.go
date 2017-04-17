@@ -7,22 +7,21 @@ import (
 	"tcp"
 )
 
-//注册http消息处理方法
-func RegBattleTcpMsgHandler() {
-	var config = map[uint16]func(*tcp.TCPConn, *common.NetPack){
-		0:   logic.Rpc_Echo,
-		100: logic.Rpc_Login,
-		101: logic.Rpc_Logout,
+func RegTcpMsgHandler() {
+	var config = map[string]func(*tcp.TCPConn, *common.NetPack){
+		"rpc_echo":   logic.Rpc_Echo,
+		"rpc_login":  logic.Rpc_Login,
+		"rpc_logout": logic.Rpc_Logout,
 	}
-
 	//! register
 	for k, v := range config {
-		tcp.G_HandlerMsgMap[k] = v
+		tcp.G_HandlerMsgMap[common.RpcToOpcode(k)] = v
 	}
 }
-func RegBattleCsv() {
+func RegCsv() {
 	var config = map[string]interface{}{
 		"conf_net": &netConfig.G_SvrNetCfg,
+		"rpc":      &common.G_RpcCsv,
 	}
 	//! register
 	for k, v := range config {

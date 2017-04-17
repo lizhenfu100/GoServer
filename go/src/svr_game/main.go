@@ -21,9 +21,9 @@ func main() {
 	common.RegConsoleCmd("setloglevel", HandCmd_SetLogLevel)
 
 	//注册所有http消息处理方法
-	RegGamesvrHttpMsgHandler()
-	RegGamesvrTcpMsgHandler()
-	RegGamesvrCsv()
+	RegCsv()
+	RegHttpMsgHandler()
+	RegTcpMsgHandler()
 
 	gamelog.Warn("----Game Server Start-----")
 	if netConfig.CreateNetSvr("game", 1) == false {

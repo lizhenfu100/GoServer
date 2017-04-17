@@ -33,6 +33,9 @@ func (self *NetPack) SetOpCode(id uint16) {
 	self.DataPtr[OPCODE_INDEX] = byte(id)
 	self.DataPtr[OPCODE_INDEX+1] = byte(id >> 8)
 }
+func (self *NetPack) SetRpc(name string) {
+	self.SetOpCode(RpcToOpcode(name))
+}
 func (self *NetPack) GetOpCode() uint16 {
 	ret := uint16(self.DataPtr[OPCODE_INDEX+1])<<8 | uint16(self.DataPtr[OPCODE_INDEX])
 	return ret
