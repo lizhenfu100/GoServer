@@ -134,3 +134,11 @@ func FindRegModuleConn(module string, id int) *TCPConn {
 	gamelog.Error("FindRegModuleConn nil : (%s,%d)-%v", module, id, g_reg_conn_map)
 	return nil
 }
+func GetRegModuleIDs(module string) (ret []int) {
+	for k, _ := range g_reg_conn_map {
+		if k.Name == module {
+			ret = append(ret, k.ID)
+		}
+	}
+	return
+}

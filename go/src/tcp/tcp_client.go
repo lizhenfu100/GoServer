@@ -13,10 +13,6 @@ type TCPClient struct { //作为client玩家数据的一个模块
 	TcpConn         *TCPConn
 	OnConnected     func(*TCPConn)
 }
-type Msg_Regist_To_TcpSvr struct {
-	Module string
-	ID     int
-}
 
 func (client *TCPClient) ConnectToSvr(addr, srcModule string, srcID int) {
 	client.Addr = addr
@@ -26,7 +22,7 @@ func (client *TCPClient) ConnectToSvr(addr, srcModule string, srcID int) {
 	go client.connectRoutine(srcModule, srcID) //会断线后自动重连
 }
 func (client *TCPClient) connectRoutine(srcModule string, srcID int) {
-	packet := common.NewNetPack(32)
+	packet := common.NewNetPackCap(32)
 	packet.SetOpCode(G_MsgId_Regist)
 	packet.WriteString(srcModule)
 	packet.WriteInt32(int32(srcID))

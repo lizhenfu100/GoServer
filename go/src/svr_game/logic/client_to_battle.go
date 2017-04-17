@@ -20,7 +20,7 @@ func Handle_Client2Battle_Echo(w http.ResponseWriter, r *http.Request) {
 
 	//! 创建回复
 	defer func() {
-		w.Write([]byte("echo"))
+		w.Write([]byte("ok"))
 	}()
 
 	// 转发给Battle进程

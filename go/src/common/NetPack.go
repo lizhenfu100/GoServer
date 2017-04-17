@@ -10,7 +10,7 @@ type NetPack struct {
 	ByteBuffer
 }
 
-func NewNetPack(capacity int) *NetPack {
+func NewNetPackCap(capacity int) *NetPack {
 	pack := new(NetPack)
 	pack.DataPtr = make([]byte, HEADER_SIZE, capacity+HEADER_SIZE)
 	pack.ReadPos = HEADER_SIZE

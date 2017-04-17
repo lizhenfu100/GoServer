@@ -26,6 +26,9 @@ func (self *ByteBuffer) Size() int {
 func (self *ByteBuffer) WriteByte(v byte) {
 	self.DataPtr = append(self.DataPtr, v)
 }
+func (self *ByteBuffer) WriteInt(v int) {
+	self.WriteInt32(int32(v))
+}
 func (self *ByteBuffer) WriteInt8(v int8) {
 	self.DataPtr = append(self.DataPtr, byte(v))
 }
@@ -85,6 +88,9 @@ func (self *ByteBuffer) ReadByte() (ret byte) {
 		self.ReadPos += 1
 	}
 	return
+}
+func (self *ByteBuffer) ReadInt() int {
+	return int(self.ReadInt32())
 }
 func (self *ByteBuffer) ReadInt8() (ret int8) {
 	if self.readableBytes() >= 1 {

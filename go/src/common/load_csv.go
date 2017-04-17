@@ -20,8 +20,8 @@
 				ArrInt []int
 				ArrStr []string
 			}
-			var G_MapCsv = make(map[int]*TTestCsv)  // map结构读表，将【&G_MapCsv】注册进G_ReflectParserMap即可自动读取
-			var G_SliceCsv []TTestCsv = nil 		// 数组结构读表，注册【&G_SliceCsv】
+			var G_MapCsv = make(map[int]*TTestCsv)  // map结构读表，首列作Key
+			var G_SliceCsv []TTestCsv = nil 		// 数组结构读表，注册【&G_SliceCsv】到G_CsvParserMap
 * @ author zhoumf
 * @ date 2016-6-22
 ***********************************************************************/

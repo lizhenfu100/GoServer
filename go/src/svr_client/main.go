@@ -9,7 +9,6 @@ import (
 	"netConfig"
 	//"svr_client/api"
 	"time"
-
 	//"msg/sdk_msg"
 )
 
@@ -43,7 +42,9 @@ func RegClientCsv() {
 func test() {
 	//向游戏服请求充值
 	gameAddr := netConfig.GetHttpAddr("game", -1)
-	// fmt.Println("---", gameAddr)
+	centerAddr := netConfig.GetHttpAddr("center", -1)
+	fmt.Println("---", gameAddr)
+	fmt.Println("---", centerAddr)
 	// var msg1 sdk_msg.Msg_create_recharge_order_Req
 	// msg1.SessionKey = "233xx"
 	// msg1.OrderID = "abcdefg233"
@@ -66,15 +67,33 @@ func test() {
 
 	time.Sleep(2 * time.Second)
 	//向游戏服发战斗数据，后台game转到battle
-	buf := common.NewNetPack(32)
+	buf := common.NewNetPackCap(32)
 	buf.SetOpCode(0)
 	buf.WriteString("client-game-battle")
 	b, _ := http.PostReq(gameAddr+"/battle_echo", buf.DataPtr)
-	fmt.Println("---", b)
+	fmt.Println("---", string(b))
+
+	//向center取游戏服务器列表
+	{
+		b, err := http.PostReq(centerAddr+"/rpc_get_gamesvr_lst", []byte{})
+		if err != nil {
+			fmt.Println("Error:", err)
+		}
+		buf := common.NewNetPackLen(0)
+		buf.Reset(b)
+		size := buf.ReadByte()
+		for i := byte(0); i < size; i++ {
+			module := buf.ReadString()
+			id := buf.ReadInt()
+			ip := buf.ReadString()
+			port := buf.ReadInt()
+			fmt.Println("GameSvr:", module, id, ip, port)
+		}
+	}
 
 	// time.Sleep(2 * time.Second)
 	// //直接发给战斗服
-	// msg := common.NewNetPack(32)
+	// msg := common.NewNetPackCap(32)
 	// msg.SetOpCode(1)
 	// msg.WriteString("--- zhoumf 233 --- ")
 	// api.SendToBattle(1, msg)

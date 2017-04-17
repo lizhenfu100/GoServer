@@ -44,7 +44,6 @@ func _doRegistToSvr(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("DoRegistToSvr common.ToStruct fail: ", err.Error())
 		return
 	}
-
 	fmt.Println("DoRegistToSvr: ", req)
 
 	oldAddr, ok := g_reg_addr_map[HttpAddrKey{req.Module, req.ID}]
@@ -59,13 +58,20 @@ func _doRegistToSvr(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
 	}()
 }
-
 func FindRegModuleAddr(module string, id int) string {
 	if v, ok := g_reg_addr_map[HttpAddrKey{module, id}]; ok {
 		return v
 	}
 	fmt.Println("FindRegModuleAddr nil: ", HttpAddrKey{module, id}, g_reg_addr_map)
 	return ""
+}
+func GetRegModuleIDs(module string) (ret []int) {
+	for k, _ := range g_reg_addr_map {
+		if k.Name == module {
+			ret = append(ret, k.ID)
+		}
+	}
+	return
 }
 
 //////////////////////////////////////////////////////////////////////

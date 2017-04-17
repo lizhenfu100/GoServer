@@ -48,16 +48,13 @@ func HandSdk_RechargeSuccess(w http.ResponseWriter, r *http.Request) {
 	jsonContent := ""
 	if CheckToken(req.Channel) == false {
 		//TODO：回复第三方错误信息
-		// w.Write([]byte("error info"))
 		response = "error info"
 		return
 	}
 
 	//TODO：验证订单，入库，回第三方ok
 	if pOrder := DB_Save_RechargeOrder(req.OrderID, req.ThirdOrderID, jsonContent, req.RMB); pOrder != nil {
-		// w.Write([]byte("ok"))
 		response = "ok"
-
 		//TODO：通知gamesvr，充值成功
 		var gamesvrReq sdk_msg.Msg_recharge_success
 		gamesvrReq.PlayerID = req.PlayerID

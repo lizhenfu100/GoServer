@@ -23,6 +23,14 @@ func PostReq(url string, b []byte) ([]byte, error) {
 	return nil, err
 }
 
+//////////////////////////////////////////////////////////////////////
+//! 模块注册
+type Msg_Regist_To_HttpSvr struct {
+	Addr   string
+	Module string
+	ID     int
+}
+
 func RegistToSvr(destAddr, srcAddr, srcModule string, srcID int) {
 	go _RegistToSvr(destAddr, srcAddr, srcModule, srcID)
 }
@@ -38,10 +46,4 @@ func _RegistToSvr(destAddr, srcAddr, srcModule string, srcID int) {
 			return
 		}
 	}
-}
-
-type Msg_Regist_To_HttpSvr struct {
-	Addr   string
-	Module string
-	ID     int
 }

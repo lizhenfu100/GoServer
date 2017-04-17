@@ -84,7 +84,7 @@ func CreateNetSvr(module string, svrID int) bool {
 	//1、找到当前的配置信息
 	selfCfg := GetNetCfg(module, &svrID)
 	if selfCfg == nil {
-		print(fmt.Sprintf("%s-%d: have none SvrNetCfg!!!", module, svrID))
+		print(fmt.Sprintf("%s-%d: have none SvrNetCfg!!!\n", module, svrID))
 		return false
 	}
 
@@ -103,7 +103,7 @@ func CreateNetSvr(module string, svrID int) bool {
 						module,
 						selfCfg.SvrID)
 				} else if destCfg.TcpPort > 0 {
-					client := &tcp.TCPClient{}
+					client := new(tcp.TCPClient)
 					client.ConnectToSvr(
 						fmt.Sprintf("%s:%d", destCfg.IP, destCfg.TcpPort),
 						module,
@@ -111,7 +111,7 @@ func CreateNetSvr(module string, svrID int) bool {
 					//Notice：client.ConnectToSvr是异步过程，这里返回的client.TcpConn还是空指针，不能保存*tcp.TCPConn
 					G_Cfg_Remote_TcpConn[tcp.TcpConnKey{destCfg.Module, destCfg.SvrID}] = client
 				} else {
-					print(destCfg.Module + ": have none HttpPort|TcpPort!!!")
+					fmt.Println(destCfg.Module + ": have none HttpPort|TcpPort!!!")
 				}
 			}
 		}
@@ -123,7 +123,7 @@ func CreateNetSvr(module string, svrID int) bool {
 	} else if selfCfg.TcpPort > 0 {
 		tcp.NewTcpServer(":"+strconv.Itoa(selfCfg.TcpPort), selfCfg.Maxconn)
 	} else {
-		print(module + ": have none HttpPort|TcpPort!!!")
+		fmt.Println(module + ": have none HttpPort|TcpPort!!!")
 	}
 	return true
 }
@@ -139,7 +139,7 @@ func GetHttpAddr(destModule string, destSvrID int) string { //Notice：应用层
 			}
 		}
 	} else {
-		print(destModule + ": have none SvrNetCfg!!!")
+		fmt.Println(destModule + ": have none SvrNetCfg!!!")
 		return ""
 	}
 
@@ -157,7 +157,7 @@ func GetTcpConn(destModule string, destSvrID int) *tcp.TCPConn { //Notice：应�
 			}
 		}
 	} else {
-		print(destModule + ": have none SvrNetCfg!!!")
+		fmt.Println(destModule + ": have none SvrNetCfg!!!")
 		return nil
 	}
 
