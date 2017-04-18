@@ -31,7 +31,7 @@ func RegTcpMsgHandler() {
 	}
 	//! register
 	for k, v := range config {
-		tcp.G_HandlerMsgMap[common.RpcToOpcode(k)] = v
+		tcp.G_HandlerMsgMap[common.RpcNameToId(k)] = v
 	}
 }
 func RegCsv() {

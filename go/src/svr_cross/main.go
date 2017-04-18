@@ -13,7 +13,7 @@ func main() {
 	gamelog.SetLevel(0)
 
 	//设置mongodb的服务器地址
-	// mongodb.Init(appconfig.GameDbAddr)
+	// mongodb.Init(conf.GameDbAddr)
 
 	//开启控制台窗口，可以接受一些调试命令
 	common.StartConsole()

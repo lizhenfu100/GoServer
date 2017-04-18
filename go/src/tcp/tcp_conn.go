@@ -13,6 +13,9 @@
 		不过那5k个readRoutine貌似省不了哇，感觉单独一个goroutine处理消息也不会有性能提升
 		且增加了风险，若某条消息有阻塞调用，后面的就得等了
 
+	4、Rpc:
+		g_rpc_response须加读写锁，与c++(多线程收-主线程顺序处理)不同，go是每个用户一条goroutine
+
 * @ author zhoumf
 * @ date 2016-8-3
 ***********************************************************************/
@@ -27,6 +30,7 @@ import (
 	"net"
 	"runtime"
 	"runtime/debug"
+	"sync"
 	"time"
 )
 
@@ -39,15 +43,19 @@ var (
 	G_HandlerMsgMap = map[uint16]func(*TCPConn, *common.NetPack){
 		G_MsgId_Regist: DoRegistToSvr,
 	}
+	g_rpc_response = make(map[uint16]func(*common.NetPack))
+	g_rw_lock      = new(sync.RWMutex)
 )
 
-type TCPConn struct { //登录时将TCPConn指针写入player中
+type TCPConn struct {
 	conn       net.Conn
 	reader     *bufio.Reader //包装conn减少conn.Read的io次数，见【common\net.go】
 	writeChan  chan []byte
-	isClose    bool
+	isClose    bool //isClose标记仅在ResetConn、Close中设置，其它地方只读
 	onNetClose func(*TCPConn)
 	Data       interface{}
+	sendBuffer *common.NetPack
+	BackBuffer *common.NetPack
 }
 
 func newTCPConn(conn net.Conn, pendingWriteNum int, callback func(*TCPConn)) *TCPConn {
@@ -55,10 +63,11 @@ func newTCPConn(conn net.Conn, pendingWriteNum int, callback func(*TCPConn)) *TC
 	tcpConn.ResetConn(conn)
 	tcpConn.onNetClose = callback
 	tcpConn.writeChan = make(chan []byte, pendingWriteNum)
+	tcpConn.sendBuffer = common.NewNetPackCap(64)
+	tcpConn.BackBuffer = common.NewNetPackCap(64)
 	return tcpConn
 }
 
-//isClose标记仅在ResetConn、Close中设置，其它地方只读
 func (tcpConn *TCPConn) ResetConn(conn net.Conn) {
 	tcpConn.conn = conn
 	tcpConn.reader = bufio.NewReader(conn)
@@ -123,7 +132,7 @@ func (tcpConn *TCPConn) readLoop() error {
 	var msgLen int
 	var msgHeader = make([]byte, 2) //前2字节-msgLen
 	var msgBuf = make([]byte, G_Msg_Size_Max)
-	var packet = common.NewNetPackLen(0)
+	var packet = common.NewNetPack(nil)
 	var firstTime bool = true
 
 	for {
@@ -165,11 +174,6 @@ func (tcpConn *TCPConn) readLoop() error {
 }
 func (tcpConn *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
 	// gamelog.Info("---msgID:%d, dataLen:%d", msgID, msg.Size())
-	msghandler, ok := G_HandlerMsgMap[msgID]
-	if !ok {
-		gamelog.Error("msgid : %d have not a msg handler!!", msgID)
-		return
-	}
 	defer func() {
 		if r := recover(); r != nil {
 			if _, ok := r.(runtime.Error); ok {
@@ -177,5 +181,51 @@ func (tcpConn *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
 			}
 		}
 	}()
-	msghandler(tcpConn, msg)
+	if msghandler, ok := G_HandlerMsgMap[msgID]; ok {
+		tcpConn.BackBuffer.ClearBody()
+		tcpConn.BackBuffer.SetOpCode(msg.GetOpCode())
+		tcpConn.BackBuffer.SetFromTyp(msg.GetFromTyp())
+		msghandler(tcpConn, msg)
+		if tcpConn.BackBuffer.BodyBytes() > 0 {
+			tcpConn.WriteMsg(tcpConn.BackBuffer)
+		}
+	} else if rpcRecv := _FindResponse(msgID); rpcRecv != nil {
+		rpcRecv(msg)
+	} else {
+		gamelog.Error("msgid[%d] havn't msg handler!!", msgID)
+	}
+}
+
+//! rpc
+func (tcpConn *TCPConn) CallRpc(rpc string, sendFun func(*common.NetPack)) uint16 {
+	msgID := common.RpcNameToId(rpc)
+	tcpConn.sendBuffer.ClearBody()
+	tcpConn.sendBuffer.SetOpCode(msgID)
+	sendFun(tcpConn.sendBuffer)
+	tcpConn.WriteMsg(tcpConn.sendBuffer)
+	return msgID
+}
+func (tcpConn *TCPConn) CallRpc2(rpc string, sendFun, recvFun func(*common.NetPack)) {
+	msgID := tcpConn.CallRpc(rpc, sendFun)
+	// insert recvFun
+	if _, ok := G_HandlerMsgMap[msgID]; ok {
+		gamelog.Error("Server and Client have the same Rpc[%s]", rpc)
+	} else if rpcRecv := _FindResponse(msgID); rpcRecv == nil {
+		g_rpc_response[msgID] = recvFun
+	}
+}
+func _FindResponse(msgid uint16) func(*common.NetPack) {
+	g_rw_lock.RLock()
+	defer g_rw_lock.RUnlock()
+	if rpcRecv, ok := g_rpc_response[msgid]; ok {
+		return rpcRecv
+	}
+	return nil
+}
+func _InsertResponse(msgid uint16, fun func(*common.NetPack)) {
+	if _FindResponse(msgid) == nil {
+		g_rw_lock.Lock()
+		g_rpc_response[msgid] = fun
+		g_rw_lock.Unlock()
+	}
 }

@@ -48,7 +48,7 @@ func DB_Save_RechargeOrder(orderID, thirdOrderID, content string, rmb int) *TRec
 		pInfo.ThirdOrderID = thirdOrderID
 		pInfo.FinishTime = time.Now().Format("2006-01-02 15:04:05")
 
-		// if mongodb.InsertToDB(appconfig.GameDbName, "RechargeOrder", pInfo) { //防止重复订单
+		// if mongodb.InsertToDB(conf.GameDbName, "RechargeOrder", pInfo) { //防止重复订单
 		delete(g_order_map, orderID)
 		return pInfo
 		// }

@@ -64,6 +64,9 @@ func (self *ByteBuffer) WriteString(v string) {
 		self.WriteByte(bytes[i])
 	}
 }
+func (self *ByteBuffer) WriteBuf(v []byte) {
+	self.DataPtr = append(self.DataPtr, v...)
+}
 
 //! Read API
 func (self *ByteBuffer) readableBytes() int { //剩余多少字节没读

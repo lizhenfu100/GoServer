@@ -33,6 +33,6 @@ func SwapBuf(rhs, lhs *[]byte) {
 	*lhs = temp
 }
 func ClearBuf(p *[]byte) {
-	// len(0), cap(old)
+	// len(0), cap(old), 旧数据不会修改
 	*p = append((*p)[:0], []byte{}...)
 }

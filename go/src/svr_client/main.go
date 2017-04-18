@@ -80,8 +80,7 @@ func test() {
 		if err != nil {
 			fmt.Println("Error:", err)
 		}
-		buf := common.NewNetPackLen(0)
-		buf.Reset(b)
+		buf := common.NewNetPack(b)
 		size := buf.ReadByte()
 		for i := byte(0); i < size; i++ {
 			module := buf.ReadString()
