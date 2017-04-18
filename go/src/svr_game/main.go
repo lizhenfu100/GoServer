@@ -15,7 +15,7 @@ func main() {
 	gamelog.SetLevel(0)
 
 	//设置mongodb的服务器地址
-	dbmgo.Init(conf.GameDbAddr)
+	dbmgo.Init(conf.GameDbAddr, conf.GameDbName)
 
 	//开启控制台窗口，可以接受一些调试命令
 	common.StartConsole()

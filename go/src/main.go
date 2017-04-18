@@ -34,14 +34,6 @@ func main() {
 
 	// tcp.NewTcpServer(":9001", 5000)
 	// http.NewHttpServer(":9002")
-
-	buf := make([]byte, 4)
-	buf1 := buf[1:3]
-	buf1[0] = 5
-	fmt.Println(buf)
-	fmt.Println(buf1, len(buf1))
-	fmt.Println(&buf[0], &buf[1], &buf[2])
-	fmt.Println(&buf1[0], &buf1[1])
 }
 
 func testList() {
@@ -61,4 +53,20 @@ func testList() {
 		}
 	}
 	fmt.Println(list) // []
+
+	buf := make([]byte, 4)
+	buf1 := buf[1:3]
+	buf1[0] = 5
+	fmt.Println(buf)
+	fmt.Println(buf1, len(buf1))
+	fmt.Println(&buf[0], &buf[1], &buf[2])
+	fmt.Println(&buf1[0], &buf1[1])
+
+	common.ClearBuf(&buf)
+	fmt.Println("--Clear--")
+	fmt.Println(buf, len(buf), cap(buf))
+	fmt.Println(buf1, len(buf1), cap(buf1))
+	buf = append(buf, []byte{1, 2, 3}...)
+	fmt.Println(buf, &buf[0], &buf[1])
+	fmt.Println(buf1, &buf1[0], &buf1[1])
 }
