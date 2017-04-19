@@ -1,3 +1,4 @@
+start ./mongodb/mongod.exe --dbpath D:\data\db
 start ./svr_sdk.exe
 rem start ./svr_battle.exe 1
 rem start ./svr_battle.exe 2
