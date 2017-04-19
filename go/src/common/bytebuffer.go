@@ -18,6 +18,10 @@ func (self *ByteBuffer) Reset(data []byte) {
 	self.DataPtr = data
 	self.ReadPos = 0
 }
+func (self *ByteBuffer) Clear() {
+	ClearBuf(&self.DataPtr)
+	self.ReadPos = 0
+}
 func (self *ByteBuffer) Size() int {
 	return len(self.DataPtr)
 }

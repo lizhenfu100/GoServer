@@ -182,11 +182,9 @@ func (tcpConn *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
 		}
 	}()
 	if msghandler, ok := G_HandlerMsgMap[msgID]; ok {
-		tcpConn.BackBuffer.ClearBody()
-		tcpConn.BackBuffer.SetOpCode(msg.GetOpCode())
-		tcpConn.BackBuffer.SetFromTyp(msg.GetFromTyp())
+		tcpConn.BackBuffer.ResetHead(msg)
 		msghandler(tcpConn, msg)
-		if tcpConn.BackBuffer.BodyBytes() > 0 {
+		if tcpConn.BackBuffer.BodySize() > 0 {
 			tcpConn.WriteMsg(tcpConn.BackBuffer)
 		}
 	} else if rpcRecv := _FindResponse(msgID); rpcRecv != nil {

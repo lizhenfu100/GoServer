@@ -40,16 +40,18 @@ func (self *NetPack) Reset(data []byte) {
 	self.DataPtr = data
 	self.ReadPos = HEADER_SIZE
 }
-func (self *NetPack) BodyBytes() int {
+func (self *NetPack) BodySize() int {
 	return len(self.DataPtr) - HEADER_SIZE
-}
-func (self *NetPack) GetBody() []byte {
-	return self.DataPtr[HEADER_SIZE:]
 }
 func (self *NetPack) ClearBody() {
 	head := self.DataPtr[:HEADER_SIZE]
 	ClearBuf(&self.DataPtr)
 	self.WriteBuf(head)
+	self.ReadPos = HEADER_SIZE
+}
+func (self *NetPack) ResetHead(other *NetPack) {
+	ClearBuf(&self.DataPtr)
+	self.WriteBuf(other.DataPtr[:HEADER_SIZE])
 	self.ReadPos = HEADER_SIZE
 }
 
@@ -58,7 +60,6 @@ func (self *NetPack) SetOpCode(id uint16) {
 	self.DataPtr[OPCODE_INDEX] = byte(id)
 	self.DataPtr[OPCODE_INDEX+1] = byte(id >> 8)
 }
-
 func (self *NetPack) GetOpCode() uint16 {
 	ret := uint16(self.DataPtr[OPCODE_INDEX+1])<<8 | uint16(self.DataPtr[OPCODE_INDEX])
 	return ret
