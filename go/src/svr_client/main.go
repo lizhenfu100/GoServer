@@ -74,6 +74,10 @@ func test() {
 	b, _ := http.PostReq(gameAddr+"/battle_echo", buf.DataPtr)
 	fmt.Println("---", string(b))
 
+	buf.ClearBody()
+	buf.WriteByte(4)
+	http.PostReq(gameAddr+"/rpc_test_mongodb", buf.DataPtr)
+
 	//向center取游戏服务器列表
 	{
 		b, err := http.PostReq(centerAddr+"/rpc_get_gamesvr_lst", []byte{})

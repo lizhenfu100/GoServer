@@ -63,8 +63,8 @@ func newTCPConn(conn net.Conn, pendingWriteNum int, callback func(*TCPConn)) *TC
 	tcpConn.ResetConn(conn)
 	tcpConn.onNetClose = callback
 	tcpConn.writeChan = make(chan []byte, pendingWriteNum)
-	tcpConn.sendBuffer = common.NewNetPackCap(64)
-	tcpConn.BackBuffer = common.NewNetPackCap(64)
+	tcpConn.sendBuffer = common.NewNetPackCap(128)
+	tcpConn.BackBuffer = common.NewNetPackCap(128)
 	return tcpConn
 }
 

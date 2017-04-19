@@ -10,8 +10,8 @@ var (
 	AccountDbAddr string
 
 	//游戏服
-	GameDbName string
-	GameDbAddr string
+	GameDbName string = "local"
+	GameDbAddr string = "127.0.0.1:27017"
 
 	//日志服
 	LogSvrLogLevel int

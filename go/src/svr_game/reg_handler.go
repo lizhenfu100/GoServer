@@ -14,7 +14,8 @@ import (
 func RegHttpMsgHandler() {
 	var config = map[string]func(http.ResponseWriter, *http.Request){
 		//! Client
-		"/battle_echo": logic.Handle_Client2Battle_Echo,
+		"/battle_echo":      logic.Handle_Client2Battle_Echo,
+		"/rpc_test_mongodb": logic.Rpc_test_mongodb,
 
 		//! SDK
 		"/create_recharge_order": sdk.Handle_Create_Recharge_Order,
