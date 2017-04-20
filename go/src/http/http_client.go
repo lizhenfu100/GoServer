@@ -38,7 +38,7 @@ func _RegistToSvr(destAddr, srcAddr, srcModule string, srcID int) {
 	pMsg := &Msg_Regist_To_HttpSvr{srcAddr, srcModule, srcID}
 	for {
 		http.DefaultClient.Timeout = 2 * time.Second
-		_, err := PostMsg(destAddr+"/reg_to_svr", pMsg)
+		_, err := PostMsg(destAddr+"reg_to_svr", pMsg)
 		if err != nil {
 			fmt.Printf("(%s) RegistToSvr failed: %s \n", srcModule, err.Error())
 			time.Sleep(3 * time.Second)

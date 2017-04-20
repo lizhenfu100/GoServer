@@ -11,14 +11,14 @@ import (
 func RegHttpMsgHandler() {
 	var config = map[string]func(http.ResponseWriter, *http.Request){
 		//! From Gamesvr
-		"/create_recharge_order": logic.HandSvr_CreateRechargeOrder,
+		"create_recharge_order": logic.HandSvr_CreateRechargeOrder,
 
 		//! From 第三方
-		"/sdk_recharge_success": logic.HandSdk_RechargeSuccess,
+		"sdk_recharge_success": logic.HandSdk_RechargeSuccess,
 	}
 	//! register
 	for k, v := range config {
-		http.HandleFunc(k, v)
+		http.HandleFunc("/"+k, v)
 	}
 }
 func RegCsv() {

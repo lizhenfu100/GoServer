@@ -53,7 +53,7 @@ func test() {
 	// msg1.PlatformEnum = 0
 	// msg1.ChargeCsvID = 2
 	// buf1, _ := json.Marshal(&msg1)
-	// http.PostReq(gameAddr+"/create_recharge_order", buf1)
+	// http.PostReq(gameAddr+"create_recharge_order", buf1)
 
 	// //模拟第三方的充值到账
 	// sdkAddr := netConfig.GetHttpAddr("sdk", -1)
@@ -64,23 +64,23 @@ func test() {
 	// msg2.Channel = "360"
 	// msg2.RMB = 233
 	// buf2, _ := json.Marshal(&msg2)
-	// http.PostReq(sdkAddr+"/sdk_recharge_success", buf2)
+	// http.PostReq(sdkAddr+"sdk_recharge_success", buf2)
 
 	time.Sleep(2 * time.Second)
 	//向游戏服发战斗数据，后台game转到battle
 	buf := common.NewNetPackCap(32)
 	buf.SetRpc("rpc_echo")
 	buf.WriteString("client-game-battle")
-	b, _ := http.PostReq(gameAddr+"/battle_echo", buf.DataPtr)
+	b, _ := http.PostReq(gameAddr+"battle_echo", buf.DataPtr)
 	fmt.Println("---", string(b))
 
 	buf.ClearBody()
 	buf.WriteByte(4)
-	http.PostReq(gameAddr+"/rpc_test_mongodb", buf.DataPtr)
+	http.PostReq(gameAddr+"rpc_test_mongodb", buf.DataPtr)
 
 	//向center取游戏服务器列表
 	{
-		b, err := http.PostReq(centerAddr+"/rpc_get_gamesvr_lst", []byte{})
+		b, err := http.PostReq(centerAddr+"rpc_get_gamesvr_lst", []byte{})
 		if err != nil {
 			fmt.Println("Error:", err)
 		}

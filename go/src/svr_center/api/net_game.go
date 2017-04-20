@@ -11,7 +11,7 @@ var (
 	g_cache_game_addr = make(map[int]string)
 )
 
-// strKey = "/sdk_recharge_info"
+// strKey = "sdk_recharge_info"
 func RelayToGamesvr(svrId int, strKey string, packet *common.NetPack) {
 	addr, ok := g_cache_game_addr[svrId]
 	if false == ok {

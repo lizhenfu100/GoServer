@@ -12,11 +12,11 @@ func RegHttpMsgHandler() {
 		//! From Gamesvr
 
 		//! From Client
-		"/rpc_get_gamesvr_lst": logic.Rpc_GetGameSvrLst,
+		"rpc_get_gamesvr_lst": logic.Rpc_GetGameSvrLst,
 	}
 	//! register
 	for k, v := range config {
-		http.HandleFunc(k, v)
+		http.HandleFunc("/"+k, v)
 	}
 }
 func RegCsv() {

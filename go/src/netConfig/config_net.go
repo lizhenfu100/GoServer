@@ -98,8 +98,8 @@ func CreateNetSvr(module string, svrID int) bool {
 			if destCfg.Module == destModule {
 				if destCfg.HttpPort > 0 {
 					http.RegistToSvr(
-						fmt.Sprintf("http://%s:%d", destCfg.IP, destCfg.HttpPort),
-						fmt.Sprintf("http://%s:%d", selfCfg.IP, selfCfg.HttpPort),
+						fmt.Sprintf("http://%s:%d/", destCfg.IP, destCfg.HttpPort),
+						fmt.Sprintf("http://%s:%d/", selfCfg.IP, selfCfg.HttpPort),
 						module,
 						selfCfg.SvrID)
 				} else if destCfg.TcpPort > 0 {
@@ -135,7 +135,7 @@ func GetHttpAddr(destModule string, destSvrID int) string { //Notice：应用层
 		for _, v := range selfCfg.ConnectLst {
 			if v == destModule && destCfg.HttpPort > 0 {
 				// game(n) - sdk(1)
-				return fmt.Sprintf("http://%s:%d", destCfg.IP, destCfg.HttpPort)
+				return fmt.Sprintf("http://%s:%d/", destCfg.IP, destCfg.HttpPort)
 			}
 		}
 	} else {

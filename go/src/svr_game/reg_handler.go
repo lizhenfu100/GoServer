@@ -14,16 +14,16 @@ import (
 func RegHttpMsgHandler() {
 	var config = map[string]func(http.ResponseWriter, *http.Request){
 		//! Client
-		"/battle_echo":      logic.Handle_Client2Battle_Echo,
-		"/rpc_test_mongodb": logic.Rpc_test_mongodb,
+		"battle_echo":      logic.Handle_Client2Battle_Echo,
+		"rpc_test_mongodb": logic.Rpc_test_mongodb,
 
 		//! SDK
-		"/create_recharge_order": sdk.Handle_Create_Recharge_Order,
-		"/sdk_recharge_success":  sdk.Handle_Recharge_Success,
+		"create_recharge_order": sdk.Handle_Create_Recharge_Order,
+		"sdk_recharge_success":  sdk.Handle_Recharge_Success,
 	}
 	//! register
 	for k, v := range config {
-		http.HandleFunc(k, v)
+		http.HandleFunc("/"+k, v)
 	}
 }
 func RegTcpMsgHandler() {

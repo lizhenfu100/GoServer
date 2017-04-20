@@ -60,6 +60,6 @@ func HandSdk_RechargeSuccess(w http.ResponseWriter, r *http.Request) {
 		gamesvrReq.PlayerID = req.PlayerID
 		gamesvrReq.ChargeCsvID = pOrder.chargeCsvID
 		gamesvrReq.RMB = req.RMB
-		api.RelayToGamesvr(pOrder.GamesvrID, "/sdk_recharge_success", &gamesvrReq)
+		api.RelayToGamesvr(pOrder.GamesvrID, "sdk_recharge_success", &gamesvrReq)
 	}
 }
