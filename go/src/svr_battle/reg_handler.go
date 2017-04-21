@@ -9,9 +9,7 @@ import (
 
 func RegTcpMsgHandler() {
 	var config = map[string]func(*tcp.TCPConn, *common.NetPack){
-		"rpc_echo":   logic.Rpc_Echo,
-		"rpc_login":  logic.Rpc_Login,
-		"rpc_logout": logic.Rpc_Logout,
+		"rpc_echo": logic.Rpc_Echo,
 	}
 	//! register
 	for k, v := range config {

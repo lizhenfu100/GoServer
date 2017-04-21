@@ -23,7 +23,7 @@ func RelayToGamesvr(svrId int, strKey string, packet *common.NetPack) {
 		gamelog.Error("RelayToGamesvr svrId(%d) fail: %s", svrId, err.Error())
 	}
 }
-func GetGamesvrCfgLst() (ret []*netConfig.TNetConfig) {
+func GetRegGamesvrCfgLst() (ret []*netConfig.TNetConfig) {
 	ids := http.GetRegModuleIDs("game")
 	for _, id := range ids {
 		cfg := netConfig.GetNetCfg("game", &id)

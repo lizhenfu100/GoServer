@@ -28,7 +28,7 @@ func bug_Add(self []IntPair, id int, num int) int {
 			return v.Cnt
 		}
 	}
-	self = append(self, IntPair{id, num}) //【坑】：虽然切片是引用传递，但append调用后，外界实参不会改变的
+	self = append(self, IntPair{id, num}) //【坑】：虽然切片是引用传递，但append调用后，如发生cap(容量)扩大，外界实参不会改变的
 	fmt.Println("IntPair New Add =>", self)
 	return num
 }

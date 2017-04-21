@@ -42,24 +42,15 @@ func InitWithUser(addr, dbname, username, password string) {
 }
 
 //! operation
-func InsertToDB(table string, pData interface{}) bool {
+func InsertSync(table string, pData interface{}) error {
 	coll := g_database.C(table)
-	err := coll.Insert(pData)
-	if err != nil {
-		if !mgo.IsDup(err) {
-			gamelog.Error("InsertToDB Failed: table:[%s] Error:[%s]", table, err.Error())
-		} else {
-			gamelog.Warn("InsertToDB Failed: table:[%s] Error:[%s]", table, err.Error())
-		}
-		return false
-	}
-	return true
+	return coll.Insert(pData)
 }
-func RemoveFromDB(table string, search *bson.M) error {
+func RemoveSync(table string, search bson.M) error {
 	coll := g_database.C(table)
 	return coll.Remove(search)
 }
-func Find(table, key string, value interface{}, pData interface{}) {
+func Find(table, key string, value, pData interface{}) bool {
 	coll := g_database.C(table)
 	err := coll.Find(bson.M{key: value}).One(pData)
 	if err != nil {
@@ -68,6 +59,32 @@ func Find(table, key string, value interface{}, pData interface{}) {
 		} else {
 			gamelog.Error3("Find error: %v \r\ntable: %s \r\nfind: %s:%v \r\n",
 				err.Error(), table, key, value)
+		}
+		return false
+	}
+	return true
+}
+
+/*
+=($eq)		bson.M{"name": "Jimmy Kuu"}
+!=($ne)		bson.M{"name": bson.M{"$ne": "Jimmy Kuu"}}
+>($gt)		bson.M{"age": bson.M{"$gt": 32}}
+<($lt)		bson.M{"age": bson.M{"$lt": 32}}
+>=($gte)	bson.M{"age": bson.M{"$gte": 33}}
+<=($lte)	bson.M{"age": bson.M{"$lte": 31}}
+in($in)		bson.M{"name": bson.M{"$in": []string{"Jimmy Kuu", "Tracy Yu"}}}
+and			bson.M{"name": "Jimmy Kuu", "age": 33}
+or			bson.M{"$or": []bson.M{bson.M{"name": "Jimmy Kuu"}, bson.M{"age": 31}}}
+*/
+func FindAll(table string, search bson.M, pSlice interface{}) {
+	coll := g_database.C(table)
+	err := coll.Find(search).All(pSlice)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			gamelog.Warn("Not Find table: %s  findall: %v", table, search)
+		} else {
+			gamelog.Error3("FindAll error: %v \r\ntable: %s \r\nfindall: %v \r\n",
+				err.Error(), table, search)
 		}
 	}
 }

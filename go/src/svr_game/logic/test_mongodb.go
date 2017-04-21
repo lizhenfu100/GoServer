@@ -66,7 +66,7 @@ func (self *TBlackMarketModule) CreateData() {
 	self.ResetDay = 100
 	self.IsOpen = true
 	self.Goods = append(self.Goods, TBlackMarketGoods{7, false})
-	go dbmgo.InsertToDB("PlayerBlackMarket", self)
+	dbmgo.InsertToDB("PlayerBlackMarket", self)
 }
 func FindData() {
 	ptr := &TBlackMarketModule{}
@@ -76,10 +76,10 @@ func FindData() {
 func (self *TBlackMarketModule) UpdateData() {
 	self.ResetDay = 777
 	self.Goods = append(self.Goods, TBlackMarketGoods{4, true})
-	dbmgo.UpdateToDB("PlayerBlackMarket", &bson.M{"_id": self.PlayerID}, &bson.M{"$set": bson.M{
+	dbmgo.UpdateToDB("PlayerBlackMarket", bson.M{"_id": self.PlayerID}, bson.M{"$set": bson.M{
 		"goods":    self.Goods,
 		"resetday": self.ResetDay}})
 }
 func (self *TBlackMarketModule) DelData() {
-	go dbmgo.RemoveFromDB("PlayerBlackMarket", &bson.M{"_id": self.PlayerID})
+	go dbmgo.RemoveSync("PlayerBlackMarket", bson.M{"_id": self.PlayerID})
 }

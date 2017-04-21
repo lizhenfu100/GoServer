@@ -13,10 +13,12 @@ var (
 )
 
 type TDB_Param struct {
-	isAll  bool    //是否更新全部记录
-	table  string  //表名
-	search *bson.M //条件
-	stuff  *bson.M //数据
+	isAll    bool //是否更新全部记录
+	isInsert bool
+	table    string //表名
+	search   bson.M //条件
+	stuff    bson.M //数据
+	pData    interface{}
 }
 
 func _DBProcess() {
@@ -31,7 +33,9 @@ func _DBProcess() {
 			}
 			g_last_table = param.table
 		}
-		if param.isAll {
+		if param.isInsert {
+			err = pColl.Insert(param.pData)
+		} else if param.isAll {
 			_, err = pColl.UpdateAll(param.search, param.stuff)
 		} else {
 			err = pColl.Update(param.search, param.stuff)
@@ -42,7 +46,7 @@ func _DBProcess() {
 		}
 	}
 }
-func UpdateToDB(table string, search *bson.M, stuff *bson.M) {
+func UpdateToDB(table string, search, stuff bson.M) {
 	var param TDB_Param
 	param.isAll = false
 	param.table = table
@@ -50,11 +54,18 @@ func UpdateToDB(table string, search *bson.M, stuff *bson.M) {
 	param.stuff = stuff
 	g_param_chan <- &param
 }
-func UpdateToDBAll(table string, search *bson.M, stuff *bson.M) {
+func UpdateToDBAll(table string, search, stuff bson.M) {
 	var param TDB_Param
 	param.isAll = true
 	param.table = table
 	param.search = search
 	param.stuff = stuff
+	g_param_chan <- &param
+}
+func InsertToDB(table string, pData interface{}) {
+	var param TDB_Param
+	param.isInsert = true
+	param.table = table
+	param.pData = pData
 	g_param_chan <- &param
 }

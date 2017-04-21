@@ -79,18 +79,29 @@ func test() {
 	http.PostReq(gameAddr+"rpc_test_mongodb", buf.DataPtr)
 
 	//向center取游戏服务器列表
+	accountName := "zhoumf"
+	password := "123"
+	accountBuf := common.NewNetPackCap(32)
+	accountBuf.WriteString(accountName)
+	accountBuf.WriteString(password)
 	{
-		b, err := http.PostReq(centerAddr+"rpc_get_gamesvr_lst", []byte{})
+		b, err := http.PostReq(centerAddr+"rpc_reg_account", accountBuf.DataPtr)
+	}
+	{
+		b, err := http.PostReq(centerAddr+"rpc_get_gamesvr_lst", accountBuf.DataPtr)
 		if err != nil {
 			fmt.Println("Error:", err)
 		}
 		buf := common.NewNetPack(b)
+		errCode := buf.ReadInt8()
+		accountId := buf.ReadUint32()
+		svrId := buf.ReadUint32()
 		size := buf.ReadByte()
 		for i := byte(0); i < size; i++ {
 			module := buf.ReadString()
-			id := buf.ReadInt()
+			id := buf.ReadUint32()
 			ip := buf.ReadString()
-			port := buf.ReadInt()
+			port := buf.ReadUint16()
 			fmt.Println("GameSvr:", module, id, ip, port)
 		}
 	}

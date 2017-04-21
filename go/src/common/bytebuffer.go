@@ -22,17 +22,13 @@ func (self *ByteBuffer) Clear() {
 	ClearBuf(&self.DataPtr)
 	self.ReadPos = 0
 }
-func (self *ByteBuffer) Size() int {
-	return len(self.DataPtr)
-}
+func (self *ByteBuffer) Size() int { return len(self.DataPtr) }
 
 //! Write API
 func (self *ByteBuffer) WriteByte(v byte) {
 	self.DataPtr = append(self.DataPtr, v)
 }
-func (self *ByteBuffer) WriteInt(v int) {
-	self.WriteInt32(int32(v))
-}
+func (self *ByteBuffer) WriteInt(v int) { self.WriteInt32(int32(v)) }
 func (self *ByteBuffer) WriteInt8(v int8) {
 	self.DataPtr = append(self.DataPtr, byte(v))
 }
@@ -96,9 +92,7 @@ func (self *ByteBuffer) ReadByte() (ret byte) {
 	}
 	return
 }
-func (self *ByteBuffer) ReadInt() int {
-	return int(self.ReadInt32())
-}
+func (self *ByteBuffer) ReadInt() int { return int(self.ReadInt32()) }
 func (self *ByteBuffer) ReadInt8() (ret int8) {
 	if self.readableBytes() >= 1 {
 		ret = int8(self.DataPtr[self.ReadPos])
