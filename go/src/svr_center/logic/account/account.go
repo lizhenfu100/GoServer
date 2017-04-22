@@ -3,8 +3,6 @@ package account
 import (
 	"common"
 	"dbmgo"
-	"gamelog"
-	"net/http"
 	"svr_center/api"
 	"time"
 
@@ -12,19 +10,9 @@ import (
 )
 
 //处理用户账户注册请求
-func Rpc_Reg_Account(w http.ResponseWriter, r *http.Request) {
-	gamelog.Info("message: %s", r.URL.String())
-
-	//! 接收信息
-	req := common.NewNetPackLen(int(r.ContentLength))
-	r.Body.Read(req.DataPtr)
-
+func Rpc_Reg_Account(req, ack *common.NetPack) {
 	name := req.ReadString()
 	password := req.ReadString()
-
-	//! 创建回复
-	ack := common.NewNetPackCap(64)
-	defer w.Write(ack.DataPtr)
 
 	if ptr := G_AccountMgr.AddNewAccount(name, password); ptr != nil {
 		ack.WriteInt8(1)
@@ -32,19 +20,9 @@ func Rpc_Reg_Account(w http.ResponseWriter, r *http.Request) {
 		ack.WriteInt8(-1)
 	}
 }
-func Rpc_GetGameSvrLst(w http.ResponseWriter, r *http.Request) {
-	gamelog.Info("message: %s", r.URL.String())
-
-	//! 接收信息
-	req := common.NewNetPackLen(int(r.ContentLength))
-	r.Body.Read(req.DataPtr)
-
+func Rpc_GetGameSvrLst(req, ack *common.NetPack) {
 	name := req.ReadString()
 	password := req.ReadString()
-
-	//! 创建回复
-	ack := common.NewNetPackCap(64)
-	defer w.Write(ack.DataPtr)
 
 	account := G_AccountMgr.GetAccountByName(name)
 	if account == nil {
@@ -52,7 +30,7 @@ func Rpc_GetGameSvrLst(w http.ResponseWriter, r *http.Request) {
 	} else if account.Forbidden {
 		ack.WriteInt8(-2) //forbidded_account
 	} else if password == account.Password {
-		ack.WriteInt8(0)
+		ack.WriteInt8(1)
 		ack.WriteUint32(account.AccountID)
 		ack.WriteUint32(account.LoginSvrID)
 		//游戏服列表
@@ -68,13 +46,7 @@ func Rpc_GetGameSvrLst(w http.ResponseWriter, r *http.Request) {
 		ack.WriteInt8(-3) //invalid_password
 	}
 }
-func Rpc_Login_Success(w http.ResponseWriter, r *http.Request) {
-	gamelog.Info("message: %s", r.URL.String())
-
-	//! 接收信息
-	req := common.NewNetPackLen(int(r.ContentLength))
-	r.Body.Read(req.DataPtr)
-
+func Rpc_Login_Success(req, ack *common.NetPack) {
 	accountId := req.ReadUint32()
 	svrId := req.ReadUint32()
 

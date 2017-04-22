@@ -53,7 +53,7 @@ type TCPConn struct {
 	writeChan  chan []byte
 	isClose    bool //isClose标记仅在ResetConn、Close中设置，其它地方只读
 	onNetClose func(*TCPConn)
-	Data       interface{}
+	UserPtr    interface{}
 	sendBuffer *common.NetPack
 	BackBuffer *common.NetPack
 }
@@ -177,7 +177,7 @@ func (tcpConn *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
 	defer func() {
 		if r := recover(); r != nil {
 			if _, ok := r.(runtime.Error); ok {
-				gamelog.Error("msgID %d Error  %s", msgID, debug.Stack())
+				gamelog.Error("recover msgID:%d %s", msgID, debug.Stack())
 			}
 		}
 	}()

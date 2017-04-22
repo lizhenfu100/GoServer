@@ -25,7 +25,7 @@ func (client *TCPClient) connectRoutine(srcModule string, srcID int) {
 	packet := common.NewNetPackCap(32)
 	packet.SetOpCode(G_MsgId_Regist)
 	packet.WriteString(srcModule)
-	packet.WriteInt32(int32(srcID))
+	packet.WriteInt(srcID)
 	for {
 		if client.connect() {
 			if client.TcpConn != nil {

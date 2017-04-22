@@ -39,16 +39,12 @@ func (self *TAccountMgr) Init() {
 	//只载入活跃玩家
 	var accountLst []TAccount
 	dbmgo.FindAll("Account", bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - Login_Active_Time}}, &accountLst)
-
-	size := len(accountLst)
-	if size <= 0 {
-		self.autoAccountID = Account_ID_Begin
-	} else {
-		self.autoAccountID = accountLst[size-1].AccountID + 1
-	}
-	for i := 0; i < size; i++ {
+	for i := 0; i < len(accountLst); i++ {
 		self._AddToCache(&accountLst[i])
 	}
+
+	dbmgo.Find_Desc("Account", "_id", 1, &accountLst)
+	self.autoAccountID = accountLst[0].AccountID + 1
 }
 func (self *TAccountMgr) AddNewAccount(name, password string) *TAccount {
 	if _, ok := self.NameToId[name]; ok {
@@ -59,7 +55,6 @@ func (self *TAccountMgr) AddNewAccount(name, password string) *TAccount {
 		Name:       name,
 		Password:   password,
 		CreateTime: time.Now().Unix(),
-		LoginCount: 1,
 	}
 	if err := dbmgo.InsertSync("Account", account); err != nil {
 		self._AddToCache(account)

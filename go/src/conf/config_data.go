@@ -6,8 +6,8 @@ var (
 	VerifyLoginUrl string //验证登录的URL
 
 	//账号服
-	AccountDbName string
-	AccountDbAddr string
+	AccountDbName string = "local"
+	AccountDbAddr string = "127.0.0.1:27017"
 
 	//游戏服
 	GameDbName string = "local"

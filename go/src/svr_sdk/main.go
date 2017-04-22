@@ -4,15 +4,11 @@ import (
 	"common"
 	"gamelog"
 	"netConfig"
-	// "mongodb"
 	"strconv"
 )
 
 // 1 开一个http server
 // 2 读取gamesvr list配置表，取得各游戏服的地址 —— 能够根据svrId往各游戏服推送数据
-
-// SDK向gamesvr post http
-
 func main() {
 	//初始化日志系统
 	gamelog.InitLogger("sdk")
@@ -25,16 +21,15 @@ func main() {
 	common.StartConsole()
 	common.RegConsoleCmd("setloglevel", HandCmd_SetLogLevel)
 
-	//注册所有http消息处理方法
-	RegCsv()
-	RegHttpMsgHandler()
+	InitConf()
+	common.LoadAllCsv()
+	RegSdkMsgHandler()
 
 	gamelog.Warn("----Sdk Server Start-----")
 	if netConfig.CreateNetSvr("sdk", 0) == false {
 		gamelog.Error("----Sdk NetSvr Failed-----")
 	}
 }
-
 func HandCmd_SetLogLevel(args []string) bool {
 	level, err := strconv.Atoi(args[1])
 	if err != nil {
@@ -43,4 +38,10 @@ func HandCmd_SetLogLevel(args []string) bool {
 	}
 	gamelog.SetLevel(level)
 	return true
+}
+func InitConf() {
+	common.G_Csv_Map = map[string]interface{}{
+		"conf_net": &netConfig.G_SvrNetCfg,
+		"rpc":      &common.G_RpcCsv,
+	}
 }

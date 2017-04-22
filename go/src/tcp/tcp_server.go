@@ -91,7 +91,7 @@ func (server *TCPServer) run() {
 				server.mutexConns.Lock()
 				delete(server.connset, this.conn)
 				server.mutexConns.Unlock()
-				gamelog.Info("Connect Endded:Data:%v, ConnNum is:%d", this.Data, len(server.connset))
+				gamelog.Info("Connect Endded:UserPtr:%v, ConnNum is:%d", this.UserPtr, len(server.connset))
 				server.wgConns.Done()
 			})
 		go tcpConn.readRoutine()
@@ -124,7 +124,7 @@ var g_reg_conn_map = make(map[TcpConnKey]*TCPConn)
 
 func DoRegistToSvr(conn *TCPConn, data *common.NetPack) {
 	module := data.ReadString()
-	id := int(data.ReadInt32())
+	id := data.ReadInt()
 	g_reg_conn_map[TcpConnKey{module, id}] = conn
 }
 func FindRegModuleConn(module string, id int) *TCPConn {

@@ -7,6 +7,8 @@ import (
 	"netConfig"
 	//"os"
 	"strconv"
+
+	"svr_battle/logic"
 )
 
 func main() {
@@ -26,16 +28,15 @@ func main() {
 	common.StartConsole()
 	common.RegConsoleCmd("setloglevel", HandCmd_SetLogLevel)
 
-	//注册所有tcp消息处理方法
-	RegCsv()
-	RegTcpMsgHandler()
+	InitConf()
+	common.LoadAllCsv()
+	netConfig.RegMsgHandler()
 
 	gamelog.Warn("----Battle Server Start[%d]-----", svrID)
 	if netConfig.CreateNetSvr("battle", svrID) == false {
 		gamelog.Error("----Battle NetSvr Failed[%d]-----", svrID)
 	}
 }
-
 func HandCmd_SetLogLevel(args []string) bool {
 	if len(args) < 2 {
 		gamelog.Error("Lack of param")
@@ -48,4 +49,13 @@ func HandCmd_SetLogLevel(args []string) bool {
 	}
 	gamelog.SetLevel(level)
 	return true
+}
+func InitConf() {
+	common.G_Csv_Map = map[string]interface{}{
+		"conf_net": &netConfig.G_SvrNetCfg,
+		"rpc":      &common.G_RpcCsv,
+	}
+	netConfig.G_Tcp_Handler = map[string]netConfig.TcpHandle{
+		"rpc_echo": logic.Rpc_Echo,
+	}
 }

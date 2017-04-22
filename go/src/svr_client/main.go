@@ -13,31 +13,22 @@ import (
 )
 
 func main() {
+	common.G_Csv_Map = map[string]interface{}{
+		"conf_net": &netConfig.G_SvrNetCfg,
+		"rpc":      &common.G_RpcCsv,
+	}
 	//初始化日志系统
 	gamelog.InitLogger("client")
 	gamelog.SetLevel(0)
 
-	RegClientCsv()
+	common.LoadAllCsv()
 	// for k, v := range netConfig.G_SvrNetCfg {
 	// 	fmt.Println(k, v)
 	// }
-
 	netConfig.CreateNetSvr("client", 0)
 
 	test()
 	time.Sleep(100 * time.Second)
-}
-
-func RegClientCsv() {
-	var config = map[string]interface{}{
-		"conf_net": &netConfig.G_SvrNetCfg,
-		"rpc":      &common.G_RpcCsv,
-	}
-	//! register
-	for k, v := range config {
-		common.G_CsvParserMap[k] = v
-	}
-	common.LoadAllCsv()
 }
 
 func test() {
@@ -71,8 +62,7 @@ func test() {
 	buf := common.NewNetPackCap(32)
 	buf.SetRpc("rpc_echo")
 	buf.WriteString("client-game-battle")
-	b, _ := http.PostReq(gameAddr+"battle_echo", buf.DataPtr)
-	fmt.Println("---", string(b))
+	http.PostReq(gameAddr+"battle_echo", buf.DataPtr)
 
 	buf.ClearBody()
 	buf.WriteByte(4)
@@ -85,24 +75,24 @@ func test() {
 	accountBuf.WriteString(accountName)
 	accountBuf.WriteString(password)
 	{
-		b, err := http.PostReq(centerAddr+"rpc_reg_account", accountBuf.DataPtr)
-	}
-	{
+		http.PostReq(centerAddr+"rpc_reg_account", accountBuf.DataPtr)
 		b, err := http.PostReq(centerAddr+"rpc_get_gamesvr_lst", accountBuf.DataPtr)
 		if err != nil {
 			fmt.Println("Error:", err)
 		}
 		buf := common.NewNetPack(b)
-		errCode := buf.ReadInt8()
-		accountId := buf.ReadUint32()
-		svrId := buf.ReadUint32()
-		size := buf.ReadByte()
-		for i := byte(0); i < size; i++ {
-			module := buf.ReadString()
-			id := buf.ReadUint32()
-			ip := buf.ReadString()
-			port := buf.ReadUint16()
-			fmt.Println("GameSvr:", module, id, ip, port)
+		if errCode := buf.ReadInt8(); errCode > 0 {
+			accountId := buf.ReadUint32()
+			svrId := buf.ReadUint32()
+			fmt.Println("Account Info:", accountId, svrId)
+			size := buf.ReadByte()
+			for i := byte(0); i < size; i++ {
+				module := buf.ReadString()
+				id := buf.ReadUint32()
+				ip := buf.ReadString()
+				port := buf.ReadUint16()
+				fmt.Println("GameSvr:", module, id, ip, port)
+			}
 		}
 	}
 

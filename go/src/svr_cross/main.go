@@ -5,6 +5,8 @@ import (
 	"gamelog"
 	"netConfig"
 	"strconv"
+
+	"svr_cross/logic"
 )
 
 func main() {
@@ -19,16 +21,15 @@ func main() {
 	common.StartConsole()
 	common.RegConsoleCmd("setloglevel", HandCmd_SetLogLevel)
 
-	//注册所有http消息处理方法
-	RegCsv()
-	RegTcpMsgHandler()
+	InitConf()
+	common.LoadAllCsv()
+	netConfig.RegMsgHandler()
 
 	gamelog.Warn("----Cross Server Start-----")
 	if netConfig.CreateNetSvr("cross", 0) == false {
 		gamelog.Error("----Cross NetSvr Failed-----")
 	}
 }
-
 func HandCmd_SetLogLevel(args []string) bool {
 	if len(args) < 2 {
 		gamelog.Error("Lack of param")
@@ -41,4 +42,13 @@ func HandCmd_SetLogLevel(args []string) bool {
 	}
 	gamelog.SetLevel(level)
 	return true
+}
+func InitConf() {
+	common.G_Csv_Map = map[string]interface{}{
+		"conf_net": &netConfig.G_SvrNetCfg,
+		"rpc":      &common.G_RpcCsv,
+	}
+	netConfig.G_Tcp_Handler = map[string]netConfig.TcpHandle{
+		"rpc_echo": logic.Rpc_Echo,
+	}
 }

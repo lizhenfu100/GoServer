@@ -4,8 +4,6 @@ import (
 	"common"
 	"dbmgo"
 	"fmt"
-	"gamelog"
-	"net/http"
 
 	"gopkg.in/mgo.v2/bson"
 )
@@ -26,19 +24,8 @@ type TBlackMarketModule struct {
 
 var g_test_mongodb TBlackMarketModule
 
-func Rpc_test_mongodb(w http.ResponseWriter, r *http.Request) {
-	gamelog.Info("message: %s", r.URL.String())
-
-	//! 接收信息
-	msg := common.NewNetPackLen(int(r.ContentLength))
-	r.Body.Read(msg.DataPtr)
-
-	//! 创建回复
-	defer func() {
-		w.Write([]byte("ok"))
-	}()
-
-	switch msg.ReadByte() {
+func Rpc_test_mongodb(req, ack *common.NetPack) {
+	switch req.ReadByte() {
 	case 1:
 		{
 			fmt.Println("CreateData")

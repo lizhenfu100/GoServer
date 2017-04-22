@@ -21,7 +21,13 @@
 				ArrStr []string
 			}
 			var G_MapCsv map[int]*TTestCsv = nil  	// map结构读表，首列作Key
-			var G_SliceCsv []TTestCsv = nil 		// 数组结构读表，注册【&G_SliceCsv】到G_CsvParserMap
+			var G_SliceCsv []TTestCsv = nil 		// 数组结构读表，注册【&G_SliceCsv】到G_Csv_Map
+
+			var G_Csv_Map = map[string]interface{}{
+				"test": &G_MapCsv,
+				// "test": &G_SliceCsv,
+			}
+}
 * @ author zhoumf
 * @ date 2016-6-22
 ***********************************************************************/
@@ -71,26 +77,9 @@ func IsDirExists(path string) bool {
 }
 
 //////////////////////////////////////////////////////////////////////
-// 测试数据
-type TTestCsv struct {
-	ID     int
-	Des    string
-	Item   IntPair
-	Card   []IntPair
-	ArrInt []int
-	ArrStr []string
-}
-
-var G_MapCsv map[int]*TTestCsv = nil
-var G_SliceCsv []TTestCsv = nil
-
-var G_CsvParserMap = map[string]interface{}{
-	"test": &G_MapCsv,
-	// "test": &G_SliceCsv,
-}
-
-//////////////////////////////////////////////////////////////////////
 // 载入策划配表
+var G_Csv_Map map[string]interface{} = nil
+
 func LoadAllCsv() {
 	pattern := GetExePath() + "csv/*.csv"
 	names, err := filepath.Glob(pattern)
@@ -130,10 +119,10 @@ func _LoadOneCsv(name string) {
 		return
 	}
 
-	if ptr, ok := G_CsvParserMap[strings.TrimSuffix(fstate.Name(), ".csv")]; ok {
+	if ptr, ok := G_Csv_Map[strings.TrimSuffix(fstate.Name(), ".csv")]; ok {
 		ParseRefCsv(records, ptr)
 	} else {
-		fmt.Printf("Csv not regist in G_CsvParserMap: %s", name)
+		fmt.Printf("Csv not regist in G_Csv_Map: %s", name)
 	}
 }
 
