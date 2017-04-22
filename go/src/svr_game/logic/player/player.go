@@ -62,10 +62,10 @@ func (self *TPlayer) InitWriteDB() {
 		v.InitWriteDB(self.Base.PlayerID)
 	}
 }
-func (self *TPlayer) LoadAllFromDB(id uint32) bool {
-	if ok := dbmgo.Find("Player", "_id", id, &self.Base); ok {
+func (self *TPlayer) LoadAllFromDB(key string, val uint32) bool {
+	if ok := dbmgo.Find("Player", key, val, &self.Base); ok {
 		for _, v := range self.moudles {
-			v.LoadFromDB(id)
+			v.LoadFromDB(self.Base.PlayerID)
 		}
 		return true
 	}

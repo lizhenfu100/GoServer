@@ -13,18 +13,6 @@ const (
 	Login_Active_Time = 30 * 24 * 3600 //一个月内登录过的，算活跃玩家
 )
 
-var G_AccountMgr TAccountMgr
-
-type TAccount struct {
-	AccountID  uint32 `bson:"_id"` //账号ID
-	Name       string //账户名
-	Password   string //密码
-	CreateTime int64
-	LoginTime  int64
-	LoginCount uint32
-	LoginSvrID uint32
-	Forbidden  bool //是否禁用
-}
 type TAccountMgr struct {
 	mutex         sync.Mutex
 	autoAccountID uint32
@@ -32,10 +20,11 @@ type TAccountMgr struct {
 	IdToPtr       map[uint32]*TAccount
 }
 
-func (self *TAccountMgr) Init() {
-	self.IdToPtr = make(map[uint32]*TAccount, 1024)
-	self.NameToId = make(map[string]uint32, 1024)
+var G_AccountMgr TAccountMgr
 
+func (self *TAccountMgr) Init() {
+	self.IdToPtr = make(map[uint32]*TAccount, 5000)
+	self.NameToId = make(map[string]uint32, 5000)
 	//只载入活跃玩家
 	var accountLst []TAccount
 	dbmgo.FindAll("Account", bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - Login_Active_Time}}, &accountLst)
@@ -44,7 +33,11 @@ func (self *TAccountMgr) Init() {
 	}
 
 	dbmgo.Find_Desc("Account", "_id", 1, &accountLst)
-	self.autoAccountID = accountLst[0].AccountID + 1
+	if len(accountLst) > 0 {
+		self.autoAccountID = accountLst[0].AccountID + 1
+	} else {
+		self.autoAccountID = Account_ID_Begin
+	}
 }
 func (self *TAccountMgr) AddNewAccount(name, password string) *TAccount {
 	if _, ok := self.NameToId[name]; ok {
@@ -85,9 +78,11 @@ func (self *TAccountMgr) ResetPassword(name, password, newpassword string) bool 
 	}
 	return false
 }
+
+//! 辅助函数
 func (self *TAccountMgr) _GetNextAccountID() (ret uint32) {
-	ret = self.autoAccountID
 	self.mutex.Lock()
+	ret = self.autoAccountID
 	self.autoAccountID++
 	self.mutex.Unlock()
 	return
@@ -97,4 +92,7 @@ func (self *TAccountMgr) _AddToCache(account *TAccount) {
 	self.IdToPtr[account.AccountID] = account
 	self.NameToId[account.Name] = account.AccountID
 	self.mutex.Unlock()
+}
+func CreateLoginToken() string {
+	return "chillyroom"
 }

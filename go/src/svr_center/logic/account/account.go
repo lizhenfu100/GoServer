@@ -9,6 +9,17 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+type TAccount struct {
+	AccountID  uint32 `bson:"_id"` //账号ID
+	Name       string //账户名
+	Password   string //密码
+	CreateTime int64
+	LoginTime  int64
+	LoginCount uint32
+	LoginSvrID uint32
+	Forbidden  bool //是否禁用
+}
+
 //处理用户账户注册请求
 func Rpc_Reg_Account(req, ack *common.NetPack) {
 	name := req.ReadString()
@@ -33,6 +44,10 @@ func Rpc_GetGameSvrLst(req, ack *common.NetPack) {
 		ack.WriteInt8(1)
 		ack.WriteUint32(account.AccountID)
 		ack.WriteUint32(account.LoginSvrID)
+		//TODO:zhoumf:生成一个临时token，发给gamesvr、client，用以登录验证
+		// token := CreateLoginToken()
+		// ack.WriteString(token)
+		// api.RelayToGamesvr(1, strKey, token)
 		//游戏服列表
 		cfgLst := api.GetRegGamesvrCfgLst()
 		ack.WriteByte(byte(len(cfgLst)))

@@ -6,9 +6,7 @@ import (
 	"svr_game/api"
 )
 
-//! 消息处理函数
-//
-func Handle_Client2Battle_Echo(req, ack *common.NetPack) {
+func Rpc_Client2Battle_Echo(req, ack *common.NetPack) {
 	fmt.Println(req.ReadString())
 
 	ack.WriteString("ok")
