@@ -44,6 +44,7 @@ var (
 		G_MsgId_Regist: DoRegistToSvr,
 	}
 	g_rpc_response = make(map[uint64]func(*common.NetPack))
+	g_auto_req_idx = uint32(0)
 	g_rw_lock      = new(sync.RWMutex)
 )
 
@@ -203,6 +204,7 @@ func (tcpConn *TCPConn) CallRpc(rpc string, sendFun func(*common.NetPack)) uint6
 	}
 	tcpConn.sendBuffer.ClearBody()
 	tcpConn.sendBuffer.SetOpCode(msgID)
+	tcpConn.sendBuffer.SetReqIdx(_GetNextReqIdx())
 	sendFun(tcpConn.sendBuffer)
 	tcpConn.WriteMsg(tcpConn.sendBuffer)
 	return tcpConn.sendBuffer.GetReqKey()
@@ -225,4 +227,11 @@ func _InsertResponse(reqKey uint64, fun func(*common.NetPack)) {
 		g_rpc_response[reqKey] = fun
 		g_rw_lock.Unlock()
 	}
+}
+func _GetNextReqIdx() (ret uint32) {
+	g_rw_lock.Lock()
+	ret = g_auto_req_idx
+	g_auto_req_idx++
+	g_rw_lock.Unlock()
+	return
 }
