@@ -10,7 +10,7 @@ import (
 
 type (
 	TcpHandle  func(*tcp.TCPConn, *common.NetPack)
-	HttpHandle func(*common.NetPack, *common.NetPack)
+	HttpHandle func(*common.ByteBuffer, *common.ByteBuffer)
 )
 
 var (
@@ -35,11 +35,11 @@ func _HandleHttpMsg(w http.ResponseWriter, r *http.Request) {
 
 	key := strings.TrimLeft(r.URL.String(), "/")
 	//! 接收信息
-	req := common.NewNetPackLen(int(r.ContentLength))
+	req := common.NewByteBufferLen(int(r.ContentLength))
 	r.Body.Read(req.DataPtr)
 
 	//! 创建回复
-	ack := common.NewNetPackCap(64)
+	ack := common.NewByteBuffer(64)
 
 	if handler, ok := G_Http_Handler[key]; ok {
 		handler(req, ack)

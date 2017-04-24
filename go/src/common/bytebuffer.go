@@ -14,15 +14,22 @@ func NewByteBuffer(capacity int) *ByteBuffer {
 	buf.DataPtr = make([]byte, 0, capacity)
 	return buf
 }
+func NewByteBufferLen(length int) *ByteBuffer {
+	buf := new(ByteBuffer)
+	buf.DataPtr = make([]byte, length, length)
+	return buf
+}
 func (self *ByteBuffer) Reset(data []byte) {
 	self.DataPtr = data
 	self.ReadPos = 0
 }
+func (self *ByteBuffer) ClearBody() { self.Clear() }
 func (self *ByteBuffer) Clear() {
 	ClearBuf(&self.DataPtr)
 	self.ReadPos = 0
 }
-func (self *ByteBuffer) Size() int { return len(self.DataPtr) }
+func (self *ByteBuffer) Size() int     { return len(self.DataPtr) }
+func (self *ByteBuffer) BodySize() int { return self.Size() }
 
 //! Write API
 func (self *ByteBuffer) WriteByte(v byte) {

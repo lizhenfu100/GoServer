@@ -21,7 +21,7 @@ type TAccount struct {
 }
 
 //处理用户账户注册请求
-func Rpc_Reg_Account(req, ack *common.NetPack) {
+func Rpc_Reg_Account(req, ack *common.ByteBuffer) {
 	name := req.ReadString()
 	password := req.ReadString()
 
@@ -31,7 +31,7 @@ func Rpc_Reg_Account(req, ack *common.NetPack) {
 		ack.WriteInt8(-1)
 	}
 }
-func Rpc_GetGameSvrLst(req, ack *common.NetPack) {
+func Rpc_GetGameSvrLst(req, ack *common.ByteBuffer) {
 	name := req.ReadString()
 	password := req.ReadString()
 
@@ -61,7 +61,7 @@ func Rpc_GetGameSvrLst(req, ack *common.NetPack) {
 		ack.WriteInt8(-3) //invalid_password
 	}
 }
-func Rpc_Login_Success(req, ack *common.NetPack) {
+func Rpc_Login_Success(req, ack *common.ByteBuffer) {
 	accountId := req.ReadUint32()
 	svrId := req.ReadUint32()
 

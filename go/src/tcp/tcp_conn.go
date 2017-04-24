@@ -43,7 +43,7 @@ var (
 	G_HandlerMsgMap = map[uint16]func(*TCPConn, *common.NetPack){
 		G_MsgId_Regist: DoRegistToSvr,
 	}
-	g_rpc_response = make(map[uint16]func(*common.NetPack))
+	g_rpc_response = make(map[uint64]func(*common.NetPack))
 	g_rw_lock      = new(sync.RWMutex)
 )
 
@@ -187,7 +187,7 @@ func (tcpConn *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
 		if tcpConn.BackBuffer.BodySize() > 0 {
 			tcpConn.WriteMsg(tcpConn.BackBuffer)
 		}
-	} else if rpcRecv := _FindResponse(msgID); rpcRecv != nil {
+	} else if rpcRecv := _FindResponse(msg.GetReqKey()); rpcRecv != nil {
 		rpcRecv(msg)
 	} else {
 		gamelog.Error("msgid[%d] havn't msg handler!!", msgID)
@@ -195,35 +195,34 @@ func (tcpConn *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
 }
 
 //! rpc
-func (tcpConn *TCPConn) CallRpc(rpc string, sendFun func(*common.NetPack)) uint16 {
+func (tcpConn *TCPConn) CallRpc(rpc string, sendFun func(*common.NetPack)) uint64 {
 	msgID := common.RpcNameToId(rpc)
+	if _, ok := G_HandlerMsgMap[msgID]; ok {
+		gamelog.Error("Server and Client have the same Rpc[%s]", rpc)
+		return 0
+	}
 	tcpConn.sendBuffer.ClearBody()
 	tcpConn.sendBuffer.SetOpCode(msgID)
 	sendFun(tcpConn.sendBuffer)
 	tcpConn.WriteMsg(tcpConn.sendBuffer)
-	return msgID
+	return tcpConn.sendBuffer.GetReqKey()
 }
 func (tcpConn *TCPConn) CallRpc2(rpc string, sendFun, recvFun func(*common.NetPack)) {
-	msgID := tcpConn.CallRpc(rpc, sendFun)
-	// insert recvFun
-	if _, ok := G_HandlerMsgMap[msgID]; ok {
-		gamelog.Error("Server and Client have the same Rpc[%s]", rpc)
-	} else if rpcRecv := _FindResponse(msgID); rpcRecv == nil {
-		g_rpc_response[msgID] = recvFun
-	}
+	reqKey := tcpConn.CallRpc(rpc, sendFun)
+	_InsertResponse(reqKey, recvFun)
 }
-func _FindResponse(msgid uint16) func(*common.NetPack) {
+func _FindResponse(reqKey uint64) func(*common.NetPack) {
 	g_rw_lock.RLock()
 	defer g_rw_lock.RUnlock()
-	if rpcRecv, ok := g_rpc_response[msgid]; ok {
+	if rpcRecv, ok := g_rpc_response[reqKey]; ok {
 		return rpcRecv
 	}
 	return nil
 }
-func _InsertResponse(msgid uint16, fun func(*common.NetPack)) {
-	if _FindResponse(msgid) == nil {
+func _InsertResponse(reqKey uint64, fun func(*common.NetPack)) {
+	if _FindResponse(reqKey) == nil {
 		g_rw_lock.Lock()
-		g_rpc_response[msgid] = fun
+		g_rpc_response[reqKey] = fun
 		g_rw_lock.Unlock()
 	}
 }

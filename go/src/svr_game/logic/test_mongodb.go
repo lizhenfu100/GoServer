@@ -24,7 +24,7 @@ type TBlackMarketModule struct {
 
 var g_test_mongodb TBlackMarketModule
 
-func Rpc_test_mongodb(req, ack *common.NetPack) {
+func Rpc_test_mongodb(req, ack *common.ByteBuffer) {
 	switch req.ReadByte() {
 	case 1:
 		{

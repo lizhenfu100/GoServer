@@ -59,8 +59,7 @@ func test() {
 
 	time.Sleep(2 * time.Second)
 	//向游戏服发战斗数据，后台game转到battle
-	buf := common.NewNetPackCap(32)
-	buf.SetRpc("rpc_echo")
+	buf := common.NewByteBuffer(32)
 	buf.WriteString("client-game-battle")
 	http.PostReq(gameAddr+"battle_echo", buf.DataPtr)
 
@@ -71,7 +70,7 @@ func test() {
 	//向center取游戏服务器列表
 	accountName := "zhoumf"
 	password := "123"
-	accountBuf := common.NewNetPackCap(32)
+	accountBuf := common.NewByteBuffer(32)
 	accountBuf.WriteString(accountName)
 	accountBuf.WriteString(password)
 	{
