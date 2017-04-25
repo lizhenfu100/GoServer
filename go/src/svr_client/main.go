@@ -58,40 +58,51 @@ func test() {
 	// http.PostReq(sdkAddr+"sdk_recharge_success", buf2)
 
 	time.Sleep(2 * time.Second)
+	buf := common.NewByteBufferCap(32)
 	//向游戏服发战斗数据，后台game转到battle
-	buf := common.NewByteBuffer(32)
-	buf.WriteString("client-game-battle")
-	http.PostReq(gameAddr+"battle_echo", buf.DataPtr)
+	// buf.WriteString("client-game-battle")
+	// http.PostReq(gameAddr+"battle_echo", buf.DataPtr)
 
 	buf.ClearBody()
-	buf.WriteByte(4)
+	buf.WriteByte(1)
 	http.PostReq(gameAddr+"rpc_test_mongodb", buf.DataPtr)
 
 	//向center取游戏服务器列表
 	accountName := "zhoumf"
 	password := "123"
-	accountBuf := common.NewByteBuffer(32)
+	accountBuf := common.NewByteBufferCap(32)
 	accountBuf.WriteString(accountName)
 	accountBuf.WriteString(password)
 	{
-		http.PostReq(centerAddr+"rpc_reg_account", accountBuf.DataPtr)
+		b, err := http.PostReq(centerAddr+"rpc_reg_account", accountBuf.DataPtr)
+		if err != nil {
+			fmt.Println("Error:", err)
+		}
+		buf := common.NewByteBuffer(b)
+		errCode1 := buf.ReadInt8()
+		fmt.Println("errCode1:", errCode1)
+	}
+	{
 		b, err := http.PostReq(centerAddr+"rpc_get_gamesvr_lst", accountBuf.DataPtr)
 		if err != nil {
 			fmt.Println("Error:", err)
 		}
-		buf := common.NewNetPack(b)
-		if errCode := buf.ReadInt8(); errCode > 0 {
-			accountId := buf.ReadUint32()
-			svrId := buf.ReadUint32()
-			fmt.Println("Account Info:", accountId, svrId)
+		buf := common.NewByteBuffer(b)
+		errCode2 := buf.ReadInt8()
+		if errCode2 > 0 {
+			accountId := buf.ReadUInt32()
+			svrId := buf.ReadUInt32()
 			size := buf.ReadByte()
 			for i := byte(0); i < size; i++ {
 				module := buf.ReadString()
-				id := buf.ReadUint32()
+				id := buf.ReadUInt32()
 				ip := buf.ReadString()
-				port := buf.ReadUint16()
+				port := buf.ReadUInt16()
 				fmt.Println("GameSvr:", module, id, ip, port)
 			}
+			fmt.Println("Account Info:", accountId, svrId)
+		} else {
+			fmt.Println("errCode2:", errCode2)
 		}
 	}
 

@@ -42,8 +42,8 @@ func Rpc_GetGameSvrLst(req, ack *common.ByteBuffer) {
 		ack.WriteInt8(-2) //forbidded_account
 	} else if password == account.Password {
 		ack.WriteInt8(1)
-		ack.WriteUint32(account.AccountID)
-		ack.WriteUint32(account.LoginSvrID)
+		ack.WriteUInt32(account.AccountID)
+		ack.WriteUInt32(account.LoginSvrID)
 		//TODO:zhoumf:生成一个临时token，发给gamesvr、client，用以登录验证
 		// token := CreateLoginToken()
 		// ack.WriteString(token)
@@ -53,17 +53,17 @@ func Rpc_GetGameSvrLst(req, ack *common.ByteBuffer) {
 		ack.WriteByte(byte(len(cfgLst)))
 		for _, v := range cfgLst {
 			ack.WriteString(v.Module)
-			ack.WriteUint32(uint32(v.SvrID))
+			ack.WriteUInt32(uint32(v.SvrID))
 			ack.WriteString(v.OutIP)
-			ack.WriteUint16(uint16(v.HttpPort))
+			ack.WriteUInt16(uint16(v.HttpPort))
 		}
 	} else {
 		ack.WriteInt8(-3) //invalid_password
 	}
 }
 func Rpc_Login_Success(req, ack *common.ByteBuffer) {
-	accountId := req.ReadUint32()
-	svrId := req.ReadUint32()
+	accountId := req.ReadUInt32()
+	svrId := req.ReadUInt32()
 
 	if account, ok := G_AccountMgr.IdToPtr[accountId]; ok {
 		account.LoginCount++

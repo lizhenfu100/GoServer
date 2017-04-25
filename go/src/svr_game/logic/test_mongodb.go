@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"gopkg.in/mgo.v2/bson"
+	"svr_game/logic/player"
 )
 
 type TBlackMarketGoods struct {
@@ -22,24 +23,29 @@ type TBlackMarketModule struct {
 	ResetDay uint32 //! 隔天刷新
 }
 
-var g_test_mongodb TBlackMarketModule
+// var g_test_mongodb TBlackMarketModule
 
 func Rpc_test_mongodb(req, ack *common.ByteBuffer) {
 	switch req.ReadByte() {
 	case 1:
 		{
 			fmt.Println("CreateData")
-			g_test_mongodb.CreateData()
+			// g_test_mongodb.CreateData()
+			ptr := player.AddNewPlayer(233, "zhoumf")
+			fmt.Println(ptr)
+			mail1 := ptr.Mail.CreateMail("title", "from", "content", common.IntPair{11, 2})
+			ptr.Mail.CreateMail("title2", "from2", "content2", common.IntPair{22, 3})
+			ptr.Mail.DelMail(mail1.ID)
 		}
 	case 2:
 		{
 			fmt.Println("UpdateData")
-			g_test_mongodb.UpdateData()
+			// g_test_mongodb.UpdateData()
 		}
 	case 3:
 		{
 			fmt.Println("DelData")
-			g_test_mongodb.DelData()
+			// g_test_mongodb.DelData()
 		}
 	default:
 		{

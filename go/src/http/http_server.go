@@ -27,12 +27,7 @@ func NewHttpServer(addr string) error {
 
 //////////////////////////////////////////////////////////////////////
 //! 模块注册
-type HttpAddrKey struct {
-	Name string
-	ID   int
-}
-
-var g_reg_addr_map = make(map[HttpAddrKey]string) //slice结构可能出现多次注册问题
+var g_reg_addr_map = make(map[common.KeyPair]string) //slice结构可能出现多次注册问题
 
 func _doRegistToSvr(w http.ResponseWriter, r *http.Request) {
 	buffer := make([]byte, r.ContentLength)
@@ -46,11 +41,11 @@ func _doRegistToSvr(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println("DoRegistToSvr: ", req)
 
-	oldAddr, ok := g_reg_addr_map[HttpAddrKey{req.Module, req.ID}]
+	oldAddr, ok := g_reg_addr_map[common.KeyPair{req.Module, req.ID}]
 	if ok && oldAddr == req.Addr {
 		return
 	} else {
-		g_reg_addr_map[HttpAddrKey{req.Module, req.ID}] = req.Addr
+		g_reg_addr_map[common.KeyPair{req.Module, req.ID}] = req.Addr
 		AppendSvrAddrCsv(req.Module, req.ID, req.Addr)
 	}
 
@@ -59,10 +54,10 @@ func _doRegistToSvr(w http.ResponseWriter, r *http.Request) {
 	}()
 }
 func FindRegModuleAddr(module string, id int) string {
-	if v, ok := g_reg_addr_map[HttpAddrKey{module, id}]; ok {
+	if v, ok := g_reg_addr_map[common.KeyPair{module, id}]; ok {
 		return v
 	}
-	fmt.Println("FindRegModuleAddr nil: ", HttpAddrKey{module, id}, g_reg_addr_map)
+	fmt.Println("FindRegModuleAddr nil: ", common.KeyPair{module, id}, g_reg_addr_map)
 	return ""
 }
 func GetRegModuleIDs(module string) (ret []int) {
@@ -98,7 +93,7 @@ func LoadSvrAddrCsv() {
 		module = records[i][0]
 		svrID, _ = strconv.Atoi(records[i][1])
 		//Notice：之前可能有同个key的，被后面追加的覆盖
-		g_reg_addr_map[HttpAddrKey{module, svrID}] = records[i][2]
+		g_reg_addr_map[common.KeyPair{module, svrID}] = records[i][2]
 	}
 }
 func AppendSvrAddrCsv(module string, id int, addr string) {

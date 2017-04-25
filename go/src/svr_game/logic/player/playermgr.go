@@ -9,7 +9,6 @@ var (
 	g_player_mutex  sync.Mutex
 	g_player_cache  = make(map[uint32]*TPlayer, 5000)
 	g_account_cache = make(map[uint32]*TPlayer, 5000)
-	g_auto_playerId uint32
 )
 
 func FindPlayerInCache(id uint32) *TPlayer { return g_player_cache[id] }
@@ -38,7 +37,7 @@ func FindWithDB_AccountId(id uint32) *TPlayer {
 	return nil
 }
 func AddNewPlayer(accountId uint32, name string) *TPlayer {
-	if player := NewPlayer(accountId, _GetNextPlayerID(), name); player != nil {
+	if player := NewPlayer(accountId, dbmgo.GetNextIncId("PlayerId"), name); player != nil {
 		AddPlayerCache(player)
 		return player
 	}
@@ -57,20 +56,4 @@ func DelPlayerCache(playerId uint32) {
 		delete(g_account_cache, player.Base.AccountID)
 		g_player_mutex.Unlock()
 	}
-}
-func _GetNextPlayerID() (ret uint32) {
-	if g_auto_playerId == 0 {
-		var lst []TBaseMoudle
-		dbmgo.Find_Desc("Player", "_id", 1, &lst)
-		if len(lst) > 0 {
-			g_auto_playerId = lst[0].PlayerID + 1
-		} else {
-			g_auto_playerId = 10000
-		}
-	}
-	g_player_mutex.Lock()
-	ret = g_auto_playerId
-	g_auto_playerId++
-	g_player_mutex.Unlock()
-	return
 }

@@ -39,7 +39,7 @@ func _HandleHttpMsg(w http.ResponseWriter, r *http.Request) {
 	r.Body.Read(req.DataPtr)
 
 	//! 创建回复
-	ack := common.NewByteBuffer(64)
+	ack := common.NewByteBufferCap(64)
 
 	if handler, ok := G_Http_Handler[key]; ok {
 		handler(req, ack)

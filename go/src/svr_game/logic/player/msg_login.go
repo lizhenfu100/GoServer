@@ -7,7 +7,7 @@ import (
 func Rpc_Player_Login(req, ack *common.ByteBuffer) {
 	//req: accountId, loginKey(账号服生成的登录验证码)
 	//ack: playerId, data
-	accountId := req.ReadUint32()
+	accountId := req.ReadUInt32()
 
 	if player := FindWithDB_AccountId(accountId); player != nil {
 
@@ -17,15 +17,15 @@ func Rpc_Player_Login(req, ack *common.ByteBuffer) {
 }
 func Rpc_Player_Logout(req, ack *common.ByteBuffer) {
 	//req: playerId
-	playerId := req.ReadUint32()
+	playerId := req.ReadUInt32()
 	DelPlayerCache(playerId)
 }
 func Rpc_Player_Create(req, ack *common.ByteBuffer) {
 	//req: accountId, loginKey, playerName
 	//ack: playerId
-	accountId := req.ReadUint32()
+	accountId := req.ReadUInt32()
 	playerName := req.ReadString()
 	if player := AddNewPlayer(accountId, playerName); player != nil {
-		ack.WriteUint32(player.Base.PlayerID)
+		ack.WriteUInt32(player.Base.PlayerID)
 	}
 }

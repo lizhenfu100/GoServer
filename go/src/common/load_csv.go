@@ -47,6 +47,10 @@ type IntPair struct {
 	ID  int
 	Cnt int
 }
+type KeyPair struct {
+	Name string `bson:"_id"`
+	ID   int
+}
 type StrError struct {
 	Str string
 	Err error

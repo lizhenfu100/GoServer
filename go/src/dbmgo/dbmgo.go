@@ -5,6 +5,18 @@
 			支持轻量线程的架构里
 			是否比“同步读-处理-再写回”的方式好呢？
 
+* @ 几种更新方式
+	UpdateToDB("Player", bson.M{"_id": playerID}, bson.M{"$set": bson.M{
+		"goods":    self.Goods,
+		"resetday": self.ResetDay}})
+	UpdateToDB("Player", bson.M{"_id": playerID}, bson.M{"$inc": bson.M{"logincnt": 1}})
+	UpdateToDB("Player", bson.M{"_id": playerID}, bson.M{"$push": bson.M{"awardlst": *pAward}})
+	UpdateToDB("Player", bson.M{"_id": playerID}, bson.M{"$pushAll": bson.M{"awardlst": awards}})
+	UpdateToDB("Player", bson.M{"_id": playerID}, bson.M{"$pull": bson.M{
+		"bag.items": bson.M{"itemid": itemid}}})
+	UpdateToDB("Player", bson.M{"_id": playerID}, bson.M{"$pull": bson.M{
+		"bag.items": nil}})
+
 * @ author zhoumf
 * @ date 2017-4-22
 ***********************************************************************/
@@ -12,10 +24,9 @@ package dbmgo
 
 import (
 	"gamelog"
-	"time"
-
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"time"
 )
 
 var (
@@ -33,9 +44,10 @@ func Init(addr, dbname string) {
 	g_db_session.SetPoolLimit(20)
 	g_database = g_db_session.DB(dbname)
 	go _DBProcess()
+	_init_inc_ids()
 }
 func InitWithUser(addr, dbname, username, password string) {
-	mgoDialInfo := mgo.DialInfo{
+	pInfo := &mgo.DialInfo{
 		Addrs:     []string{addr},
 		Timeout:   5 * time.Second,
 		Username:  username,
@@ -43,7 +55,7 @@ func InitWithUser(addr, dbname, username, password string) {
 		PoolLimit: 20,
 	}
 	var err error
-	if g_db_session, err = mgo.DialWithInfo(&mgoDialInfo); err != nil {
+	if g_db_session, err = mgo.DialWithInfo(pInfo); err != nil {
 		gamelog.Error(err.Error())
 		panic("Mongodb Init Failed " + err.Error())
 	}
@@ -52,17 +64,33 @@ func InitWithUser(addr, dbname, username, password string) {
 }
 
 //! operation
-func InsertSync(table string, pData interface{}) error {
+func InsertSync(table string, pData interface{}) bool {
 	coll := g_database.C(table)
-	return coll.Insert(pData)
+	err := coll.Insert(pData)
+	if err != nil {
+		gamelog.Error3("InsertSync error: %v \r\ntable: %s \r\n", err.Error(), table)
+		return false
+	}
+	return true
 }
-func UpdateSync(table string, id, pData interface{}) error {
+func UpdateSync(table string, id, pData interface{}) bool {
 	coll := g_database.C(table)
-	return coll.UpdateId(id, pData)
+	err := coll.UpdateId(id, pData)
+	if err != nil {
+		gamelog.Error3("UpdateSync error: %v \r\ntable: %s \r\nid: %v \r\ndata: %v \r\n",
+			err.Error(), table, id, pData)
+		return false
+	}
+	return true
 }
-func RemoveSync(table string, search bson.M) error {
+func RemoveSync(table string, search bson.M) bool {
 	coll := g_database.C(table)
-	return coll.Remove(search)
+	err := coll.Remove(search)
+	if err != nil {
+		gamelog.Error3("RemoveSync error: %v \r\ntable: %s \r\nsearch: %v \r\n", err.Error(), table, search)
+		return false
+	}
+	return true
 }
 func Find(table, key string, value, pData interface{}) bool {
 	coll := g_database.C(table)

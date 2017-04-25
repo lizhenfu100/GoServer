@@ -115,20 +115,15 @@ func (server *TCPServer) Close() {
 
 //////////////////////////////////////////////////////////////////////
 //! 模块注册
-type TcpConnKey struct {
-	Name string
-	ID   int
-}
-
-var g_reg_conn_map = make(map[TcpConnKey]*TCPConn)
+var g_reg_conn_map = make(map[common.KeyPair]*TCPConn)
 
 func DoRegistToSvr(conn *TCPConn, data *common.NetPack) {
 	module := data.ReadString()
 	id := data.ReadInt()
-	g_reg_conn_map[TcpConnKey{module, id}] = conn
+	g_reg_conn_map[common.KeyPair{module, id}] = conn
 }
 func FindRegModuleConn(module string, id int) *TCPConn {
-	if v, ok := g_reg_conn_map[TcpConnKey{module, id}]; ok {
+	if v, ok := g_reg_conn_map[common.KeyPair{module, id}]; ok {
 		return v
 	}
 	gamelog.Error("FindRegModuleConn nil : (%s,%d)-%v", module, id, g_reg_conn_map)

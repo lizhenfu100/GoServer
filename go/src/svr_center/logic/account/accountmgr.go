@@ -14,10 +14,9 @@ const (
 )
 
 type TAccountMgr struct {
-	mutex         sync.Mutex
-	autoAccountID uint32
-	NameToId      map[string]uint32
-	IdToPtr       map[uint32]*TAccount
+	mutex    sync.Mutex
+	NameToId map[string]uint32
+	IdToPtr  map[uint32]*TAccount
 }
 
 var G_AccountMgr TAccountMgr
@@ -32,24 +31,25 @@ func (self *TAccountMgr) Init() {
 		self._AddToCache(&accountLst[i])
 	}
 
-	dbmgo.Find_Desc("Account", "_id", 1, &accountLst)
-	if len(accountLst) > 0 {
-		self.autoAccountID = accountLst[0].AccountID + 1
-	} else {
-		self.autoAccountID = Account_ID_Begin
-	}
+	// dbmgo.Find_Desc("Account", "_id", 1, &accountLst)
+	// if len(accountLst) > 0 {
+	// 	self.autoAccountID = accountLst[0].AccountID + 1
+	// } else {
+	// 	self.autoAccountID = Account_ID_Begin
+	// }
 }
 func (self *TAccountMgr) AddNewAccount(name, password string) *TAccount {
-	if _, ok := self.NameToId[name]; ok {
-		return nil
-	}
 	account := &TAccount{
-		AccountID:  self._GetNextAccountID(),
 		Name:       name,
 		Password:   password,
 		CreateTime: time.Now().Unix(),
 	}
-	if err := dbmgo.InsertSync("Account", account); err != nil {
+	if dbmgo.Find("Account", "name", name, account) {
+		return nil
+	}
+	account.AccountID = dbmgo.GetNextIncId("AccountId")
+
+	if dbmgo.InsertSync("Account", account) {
 		self._AddToCache(account)
 		return account
 	}
@@ -80,13 +80,6 @@ func (self *TAccountMgr) ResetPassword(name, password, newpassword string) bool 
 }
 
 //! 辅助函数
-func (self *TAccountMgr) _GetNextAccountID() (ret uint32) {
-	self.mutex.Lock()
-	ret = self.autoAccountID
-	self.autoAccountID++
-	self.mutex.Unlock()
-	return
-}
 func (self *TAccountMgr) _AddToCache(account *TAccount) {
 	self.mutex.Lock()
 	self.IdToPtr[account.AccountID] = account

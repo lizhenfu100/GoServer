@@ -63,19 +63,16 @@ func NewPlayer(accountId uint32, id uint32, name string) *TPlayer {
 	player.Base.AccountID = accountId
 	player.Base.PlayerID = id
 	player.Base.Name = name
-	if err := dbmgo.InsertSync("Player", &player.Base); err != nil {
-		player.InitAndInsertDB()
+	if dbmgo.InsertSync("Player", &player.Base) {
+		for _, v := range player.moudles {
+			v.InitAndInsert(id)
+		}
 		return player
 	}
 	return nil
 }
-func (self *TPlayer) InitAndInsertDB() {
-	for _, v := range self.moudles {
-		v.InitAndInsert(self.Base.PlayerID)
-	}
-}
 func (self *TPlayer) LoadAllFromDB(key string, val uint32) bool {
-	if ok := dbmgo.Find("Player", key, val, &self.Base); ok {
+	if dbmgo.Find("Player", key, val, &self.Base) {
 		for _, v := range self.moudles {
 			v.LoadFromDB(self.Base.PlayerID)
 		}
@@ -84,9 +81,10 @@ func (self *TPlayer) LoadAllFromDB(key string, val uint32) bool {
 	return false
 }
 func (self *TPlayer) WriteAllToDB() {
-	dbmgo.UpdateSync("Player", self.Base.PlayerID, &self.Base)
-	for _, v := range self.moudles {
-		v.WriteToDB()
+	if dbmgo.UpdateSync("Player", self.Base.PlayerID, &self.Base) {
+		for _, v := range self.moudles {
+			v.WriteToDB()
+		}
 	}
 }
 func (self *TPlayer) OnLogin() {

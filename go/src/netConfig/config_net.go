@@ -25,6 +25,7 @@
 package netConfig
 
 import (
+	"common"
 	"fmt"
 	"http"
 	"strconv"
@@ -75,7 +76,7 @@ func GetAddr(module string, svrID int) string {
 }
 
 var (
-	G_Cfg_Remote_TcpConn = make(map[tcp.TcpConnKey]*tcp.TCPClient) //本模块，对其它模块的tcp连接
+	G_Cfg_Remote_TcpConn = make(map[common.KeyPair]*tcp.TCPClient) //本模块，对其它模块的tcp连接
 	G_Local_Module       string
 	G_Local_SvrID        int
 )
@@ -109,7 +110,7 @@ func CreateNetSvr(module string, svrID int) bool {
 						module,
 						selfCfg.SvrID)
 					//Notice：client.ConnectToSvr是异步过程，这里返回的client.TcpConn还是空指针，不能保存*tcp.TCPConn
-					G_Cfg_Remote_TcpConn[tcp.TcpConnKey{destCfg.Module, destCfg.SvrID}] = client
+					G_Cfg_Remote_TcpConn[common.KeyPair{destCfg.Module, destCfg.SvrID}] = client
 				} else {
 					fmt.Println(destCfg.Module + ": have none HttpPort|TcpPort!!!")
 				}
@@ -153,7 +154,7 @@ func GetTcpConn(destModule string, destSvrID int) *tcp.TCPConn { //Notice：应�
 		for _, v := range selfCfg.ConnectLst {
 			if v == destModule {
 				// game(c) - battle(s)
-				return G_Cfg_Remote_TcpConn[tcp.TcpConnKey{destModule, destSvrID}].TcpConn
+				return G_Cfg_Remote_TcpConn[common.KeyPair{destModule, destSvrID}].TcpConn
 			}
 		}
 	} else {
