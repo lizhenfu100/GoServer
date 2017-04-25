@@ -56,6 +56,10 @@ func InsertSync(table string, pData interface{}) error {
 	coll := g_database.C(table)
 	return coll.Insert(pData)
 }
+func UpdateSync(table string, id, pData interface{}) error {
+	coll := g_database.C(table)
+	return coll.UpdateId(id, pData)
+}
 func RemoveSync(table string, search bson.M) error {
 	coll := g_database.C(table)
 	return coll.Remove(search)

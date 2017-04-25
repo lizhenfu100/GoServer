@@ -16,6 +16,9 @@
 	4、Rpc:
 		g_rpc_response须加读写锁，与c++(多线程收-主线程顺序处理)不同，go是每个用户一条goroutine
 
+	5、现在的架构是：每条连接各线程收数据，直接在io线程调注册的业务函数，对强交互的业务不友好
+		要是做MMO之类的，可考虑像c++一样，io线程只负责收发，数据交付给全局队列，主线程逐帧处理，避免竞态
+
 * @ author zhoumf
 * @ date 2016-8-3
 ***********************************************************************/
@@ -160,7 +163,6 @@ func (tcpConn *TCPConn) readLoop() error {
 			gamelog.Error("ReadProcess Invalid msgLen :%d", msgLen)
 			break
 		}
-
 		packet.Reset(msgBuf[:msgLen])
 
 		_, err = io.ReadFull(tcpConn.reader, packet.DataPtr)
@@ -168,7 +170,6 @@ func (tcpConn *TCPConn) readLoop() error {
 			gamelog.Error("ReadFull msgData error: %s", err.Error())
 			return err
 		}
-
 		tcpConn.msgDispatcher(packet.GetOpCode(), packet)
 	}
 	return nil

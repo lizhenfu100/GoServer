@@ -85,8 +85,8 @@ func (self *AsyncLog) _writeLoop(bufSize int) {
 
 		//将bufToWrite中的数据全写进log，并清空
 		self.wr.Write(bufToWrite1, bufToWrite2)
-		_clearBuf(&bufToWrite1)
-		_clearBuf(&bufToWrite2)
+		bufToWrite1 = bufToWrite1[:0]
+		bufToWrite2 = bufToWrite2[:0]
 	}
 }
 func (self *AsyncLog) _timeOutWrite() {
@@ -99,7 +99,4 @@ func _swapBuf(rhs, lhs *[][]byte) {
 	temp := *rhs
 	*rhs = *lhs
 	*lhs = temp
-}
-func _clearBuf(p *[][]byte) {
-	*p = append((*p)[:0], [][]byte{}...)
 }

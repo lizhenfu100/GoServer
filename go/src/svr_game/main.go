@@ -30,6 +30,8 @@ func main() {
 	netConfig.RegMsgHandler()
 	RegSdkMsgHandler()
 
+	go logic.MainLoop()
+
 	gamelog.Warn("----Game Server Start-----")
 	if netConfig.CreateNetSvr("game", 1) == false {
 		gamelog.Error("----Game NetSvr Failed-----")
