@@ -10,7 +10,7 @@
 		"goods":    self.Goods,
 		"resetday": self.ResetDay}})
 	UpdateToDB("Player", bson.M{"_id": playerID}, bson.M{"$inc": bson.M{"logincnt": 1}})
-	UpdateToDB("Player", bson.M{"_id": playerID}, bson.M{"$push": bson.M{"awardlst": *pAward}})
+	UpdateToDB("Player", bson.M{"_id": playerID}, bson.M{"$push": bson.M{"awardlst": pAward}})
 	UpdateToDB("Player", bson.M{"_id": playerID}, bson.M{"$pushAll": bson.M{"awardlst": awards}})
 	UpdateToDB("Player", bson.M{"_id": playerID}, bson.M{"$pull": bson.M{
 		"bag.items": bson.M{"itemid": itemid}}})

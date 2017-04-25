@@ -1,4 +1,4 @@
-package mail
+package player
 
 import (
 	"common"
@@ -47,7 +47,8 @@ func (self *TMailMoudle) DelMail(id uint32) {
 		}
 	}
 }
-func (self *TMail) MailToBuf(buf *common.NetPack) {
+func (self *TMail) MailToBuf(buf *common.ByteBuffer) {
+	// func (self *TMail) MailToBuf(buf *common.NetPack) {
 	buf.WriteUInt32(self.ID)
 	buf.WriteInt64(self.Time)
 	buf.WriteString(self.Title)
@@ -62,7 +63,8 @@ func (self *TMail) MailToBuf(buf *common.NetPack) {
 		buf.WriteInt(item.Cnt)
 	}
 }
-func (self *TMail) BufToMail(buf *common.NetPack) {
+func (self *TMail) BufToMail(buf *common.ByteBuffer) {
+	// func (self *TMail) BufToMail(buf *common.NetPack) {
 	self.ID = buf.ReadUInt32()
 	self.Time = buf.ReadInt64()
 	self.Title = buf.ReadString()

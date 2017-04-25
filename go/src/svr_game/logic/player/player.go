@@ -1,7 +1,7 @@
 /***********************************************************************
 * @ 玩家数据
 * @ brief
-	1、数据散列模块化，按业务区分成块，各自独立处理，如：TBaseMoudle、TMailMoudle
+	1、数据散列模块化，按业务区分成块，各自独立处理，如：TMailMoudle
 	2、可调用DB【同步读单个模块】，编辑后再【异步写】
 	3、本文件的数据库操作接口，都是【同步的】
 
@@ -23,8 +23,6 @@ import (
 	"common"
 	"dbmgo"
 	"sync"
-
-	"svr_game/logic/mail"
 )
 
 var (
@@ -38,20 +36,20 @@ type PlayerMoudle interface {
 	OnLogin()
 	OnLogout()
 }
-type TBaseMoudle struct {
+type TPlayer struct {
+	//db data
+	Base TPlayerBase
+	Mail TMailMoudle
+	//temp data
+	mutex   sync.Mutex
+	moudles []PlayerMoudle
+}
+type TPlayerBase struct {
 	PlayerID   uint32 `bson:"_id"`
 	AccountID  uint32
 	Name       string
 	LoginTime  int64
 	LogoutTime int64
-}
-type TPlayer struct {
-	//db data
-	Base TBaseMoudle
-	Mail mail.TMailMoudle
-	//temp data
-	mutex   sync.Mutex
-	moudles []PlayerMoudle
 }
 
 func NewPlayer(accountId uint32, id uint32, name string) *TPlayer {
