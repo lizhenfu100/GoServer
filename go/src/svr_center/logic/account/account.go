@@ -21,7 +21,7 @@ type TAccount struct {
 }
 
 //处理用户账户注册请求
-func Rpc_Reg_Account(req, ack *common.ByteBuffer) {
+func Rpc_Reg_Account(req, ack *common.ByteBuffer) interface{} {
 	name := req.ReadString()
 	password := req.ReadString()
 
@@ -30,8 +30,9 @@ func Rpc_Reg_Account(req, ack *common.ByteBuffer) {
 	} else {
 		ack.WriteInt8(-1)
 	}
+	return nil
 }
-func Rpc_GetGameSvrLst(req, ack *common.ByteBuffer) {
+func Rpc_GetGameSvrLst(req, ack *common.ByteBuffer) interface{} {
 	name := req.ReadString()
 	password := req.ReadString()
 
@@ -60,8 +61,9 @@ func Rpc_GetGameSvrLst(req, ack *common.ByteBuffer) {
 	} else {
 		ack.WriteInt8(-3) //invalid_password
 	}
+	return nil
 }
-func Rpc_Login_Success(req, ack *common.ByteBuffer) {
+func Rpc_Login_Success(req, ack *common.ByteBuffer) interface{} {
 	accountId := req.ReadUInt32()
 	svrId := req.ReadUInt32()
 
@@ -74,4 +76,5 @@ func Rpc_Login_Success(req, ack *common.ByteBuffer) {
 			"logincount": account.LoginCount,
 			"logintime":  account.LoginTime}})
 	}
+	return nil
 }

@@ -20,7 +20,7 @@ func RelayToGamesvr(svrId int, strKey string, pMsg interface{}) {
 	}
 
 	data, _ := json.Marshal(pMsg)
-	if _, err := http.PostReq(addr+strKey, data); err != nil {
-		gamelog.Error("RelayToGamesvr svrId(%d) fail: %s", svrId, err.Error())
+	if http.PostReq(addr+strKey, data) == nil {
+		gamelog.Error("RelayToGamesvr svrId(%d) fail", svrId)
 	}
 }

@@ -9,11 +9,14 @@ import (
 )
 
 type TMailMoudle struct {
-	PlayerID uint32 `bson:"_id"`
-	MailLst  []TMail
+	PlayerID     uint32 `bson:"_id"`
+	MailLst      []TMail
+	SvrMailId    uint32 //已收到的全服邮件索引位，登录时收后续的
+	owner        *TPlayer
+	clientMailId uint32 //已发给client的
 }
 type TMail struct {
-	ID      uint32
+	ID      uint32 `bson:"_id"`
 	Time    int64
 	Title   string
 	From    string
@@ -22,14 +25,22 @@ type TMail struct {
 	Items   []common.IntPair
 }
 
-func (self *TMailMoudle) InitAndInsert(id uint32) {
-	self.PlayerID = id
+func (self *TMailMoudle) InitAndInsert(player *TPlayer) {
+	self.PlayerID = player.PlayerID
+	self.owner = player
 	dbmgo.InsertSync("Mail", self)
 }
-func (self *TMailMoudle) WriteToDB()           { dbmgo.UpdateSync("Mail", self.PlayerID, self) }
-func (self *TMailMoudle) LoadFromDB(id uint32) { dbmgo.Find("Mail", "_id", id, self) }
-func (self *TMailMoudle) OnLogin()             {}
-func (self *TMailMoudle) OnLogout()            {}
+func (self *TMailMoudle) WriteToDB() { dbmgo.UpdateSync("Mail", self.PlayerID, self) }
+func (self *TMailMoudle) LoadFromDB(player *TPlayer) {
+	dbmgo.Find("Mail", "_id", player.PlayerID, self)
+	self.owner = player
+}
+func (self *TMailMoudle) OnLogin() {
+	SendSvrMailOnLogin(self.owner)
+}
+func (self *TMailMoudle) OnLogout() {
+	self.clientMailId = 0
+}
 
 func (self *TMailMoudle) CreateMail(title, from, content string, items ...common.IntPair) *TMail {
 	id := dbmgo.GetNextIncId("MailId")
@@ -47,8 +58,19 @@ func (self *TMailMoudle) DelMail(id uint32) {
 		}
 	}
 }
+func (self *TMailMoudle) DelMailRead() {
+	for i := 0; i < len(self.MailLst); i++ {
+		if self.MailLst[i].IsRead == 1 {
+			self.MailLst = append(self.MailLst[:i], self.MailLst[i+1:]...)
+		}
+	}
+	dbmgo.UpdateToDB("Mail", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
+		"maillst": bson.M{"isread": 1}}})
+}
+
+// buf := common.NewNetPack()
+// MailToBuf(&buf.ByteBuffer)
 func (self *TMail) MailToBuf(buf *common.ByteBuffer) {
-	// func (self *TMail) MailToBuf(buf *common.NetPack) {
 	buf.WriteUInt32(self.ID)
 	buf.WriteInt64(self.Time)
 	buf.WriteString(self.Title)
@@ -64,7 +86,6 @@ func (self *TMail) MailToBuf(buf *common.ByteBuffer) {
 	}
 }
 func (self *TMail) BufToMail(buf *common.ByteBuffer) {
-	// func (self *TMail) BufToMail(buf *common.NetPack) {
 	self.ID = buf.ReadUInt32()
 	self.Time = buf.ReadInt64()
 	self.Title = buf.ReadString()
@@ -76,5 +97,23 @@ func (self *TMail) BufToMail(buf *common.ByteBuffer) {
 		id := buf.ReadInt()
 		cnt := buf.ReadInt()
 		self.Items = append(self.Items, common.IntPair{id, cnt})
+	}
+}
+func (self *TMailMoudle) GetNoSendMailIdx() int {
+	length := len(self.MailLst)
+	for i := 0; i < length; i++ {
+		if self.MailLst[i].ID > self.clientMailId {
+			return i
+		}
+	}
+	return -1
+}
+func (self *TMailMoudle) MailLstToBuf(buf *common.ByteBuffer, pos int) {
+	length := len(self.MailLst)
+	buf.WriteUInt32(uint32(length - pos))
+	for i := pos; i < length; i++ {
+		mail := &self.MailLst[i]
+		mail.MailToBuf(buf)
+		self.clientMailId = mail.ID
 	}
 }

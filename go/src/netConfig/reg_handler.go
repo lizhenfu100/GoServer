@@ -10,12 +10,13 @@ import (
 
 type (
 	TcpHandle  func(*tcp.TCPConn, *common.NetPack)
-	HttpHandle func(*common.ByteBuffer, *common.ByteBuffer)
+	HttpHandle func(*common.ByteBuffer, *common.ByteBuffer) interface{}
 )
 
 var (
-	G_Tcp_Handler  map[string]TcpHandle  = nil
-	G_Http_Handler map[string]HttpHandle = nil
+	G_Tcp_Handler      map[string]TcpHandle  = nil
+	G_Http_Handler     map[string]HttpHandle = nil
+	G_Before_Recv_Http func(interface{}, *common.ByteBuffer)
 )
 
 func RegMsgHandler() {
@@ -42,7 +43,12 @@ func _HandleHttpMsg(w http.ResponseWriter, r *http.Request) {
 	ack := common.NewByteBufferCap(64)
 
 	if handler, ok := G_Http_Handler[key]; ok {
-		handler(req, ack)
+
+		player := handler(req, ack)
+
+		if G_Before_Recv_Http != nil && player != nil {
+			G_Before_Recv_Http(player, ack) //需要主动发给client的数据，每回通信时捎带过去
+		}
 		if ack.BodySize() > 0 {
 			w.Write(ack.DataPtr)
 		}

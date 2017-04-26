@@ -14,7 +14,12 @@ func test_List() {
 	var list []int
 	fmt.Println(len(list)) // 0
 	if list == nil {       //! 判断通过哟！
-		fmt.Println(list) // []
+		fmt.Println("var list []int: ", list) // []
+	}
+	if make([]byte, 0) == nil {
+		fmt.Println("make([]byte, 0) is nil !!!")
+	} else {
+		fmt.Println("make([]byte, 0) isn't nil !!!")
 	}
 	list = append(list, 22)
 	list = append(list, 33)

@@ -18,8 +18,8 @@ func RelayToGamesvr(svrId int, strKey string, packet *common.NetPack) {
 		addr = netConfig.GetHttpAddr("game", svrId)
 		g_cache_game_addr[svrId] = addr
 	}
-	if _, err := http.PostReq(addr+strKey, packet.DataPtr); err != nil {
-		gamelog.Error("RelayToGamesvr svrId(%d) fail: %s", svrId, err.Error())
+	if http.PostReq(addr+strKey, packet.DataPtr) == nil {
+		gamelog.Error("RelayToGamesvr svrId(%d) fail", svrId)
 	}
 }
 func GetRegGamesvrCfgLst() (ret []*netConfig.TNetConfig) {

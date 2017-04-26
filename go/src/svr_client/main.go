@@ -2,14 +2,17 @@ package main
 
 import (
 	"common"
-	//"encoding/json"
+	"conf"
+	"dbmgo"
 	"fmt"
 	"gamelog"
 	"http"
 	"netConfig"
-	//"svr_client/api"
 	"time"
 	//"msg/sdk_msg"
+
+	//"svr_client/api"
+	"svr_game/logic/player"
 )
 
 func main() {
@@ -20,6 +23,8 @@ func main() {
 	//初始化日志系统
 	gamelog.InitLogger("client")
 	gamelog.SetLevel(0)
+
+	dbmgo.Init(conf.GameDbAddr, conf.GameDbName)
 
 	common.LoadAllCsv()
 	// for k, v := range netConfig.G_SvrNetCfg {
@@ -58,39 +63,29 @@ func test() {
 	// http.PostReq(sdkAddr+"sdk_recharge_success", buf2)
 
 	time.Sleep(2 * time.Second)
-	buf := common.NewByteBufferCap(32)
-	//向游戏服发战斗数据，后台game转到battle
-	// buf.WriteString("client-game-battle")
-	// http.PostReq(gameAddr+"battle_echo", buf.DataPtr)
-
-	buf.ClearBody()
-	buf.WriteByte(1)
-	http.PostReq(gameAddr+"rpc_test_mongodb", buf.DataPtr)
+	sendBuf := common.NewByteBufferCap(32)
+	// sendBuf.WriteByte(1)
+	// http.PostReq(gameAddr+"rpc_test_mongodb", sendBuf.DataPtr)
 
 	//向center取游戏服务器列表
 	accountName := "zhoumf"
 	password := "123"
+	accountId := uint32(0)
 	accountBuf := common.NewByteBufferCap(32)
 	accountBuf.WriteString(accountName)
 	accountBuf.WriteString(password)
 	{
-		b, err := http.PostReq(centerAddr+"rpc_reg_account", accountBuf.DataPtr)
-		if err != nil {
-			fmt.Println("Error:", err)
-		}
+		b := http.PostReq(centerAddr+"rpc_reg_account", accountBuf.DataPtr)
 		buf := common.NewByteBuffer(b)
 		errCode1 := buf.ReadInt8()
 		fmt.Println("errCode1:", errCode1)
 	}
 	{
-		b, err := http.PostReq(centerAddr+"rpc_get_gamesvr_lst", accountBuf.DataPtr)
-		if err != nil {
-			fmt.Println("Error:", err)
-		}
+		b := http.PostReq(centerAddr+"rpc_get_gamesvr_lst", accountBuf.DataPtr)
 		buf := common.NewByteBuffer(b)
 		errCode2 := buf.ReadInt8()
 		if errCode2 > 0 {
-			accountId := buf.ReadUInt32()
+			accountId = buf.ReadUInt32()
 			svrId := buf.ReadUInt32()
 			size := buf.ReadByte()
 			for i := byte(0); i < size; i++ {
@@ -103,6 +98,45 @@ func test() {
 			fmt.Println("Account Info:", accountId, svrId)
 		} else {
 			fmt.Println("errCode2:", errCode2)
+		}
+	}
+
+	//向游戏服发战斗数据，后台game转到battle
+	// buf.ClearBody()
+	// buf.WriteString("client-game-battle")
+	// http.PostReq(gameAddr+"battle_echo", buf.DataPtr)
+
+	//创建
+	// {
+	// 	sendBuf.ClearBody()
+	// 	sendBuf.WriteUInt32(accountId)
+	// 	sendBuf.WriteString("zhoumf")
+	// 	b := http.PostReq(gameAddr+"rpc_player_create", sendBuf.DataPtr)
+	// 	buf := common.NewByteBuffer(b)
+	// 	playerId := buf.ReadUInt32()
+
+	// 	//写邮件
+	// 	player := player.FindWithDB_PlayerId(playerId)
+	// 	fmt.Println("create player id:", playerId, "\n", player)
+	// }
+	//登录
+	{
+		sendBuf.ClearBody()
+		sendBuf.WriteUInt32(accountId)
+		b := http.PostReq(gameAddr+"rpc_player_login", sendBuf.DataPtr)
+		buf := common.NewByteBuffer(b)
+		fmt.Println("rpc_player_login:", b)
+		// 先读逻辑回包
+
+		// http svr send data
+		bit := buf.ReadUInt32()
+		if common.GetBit32(bit, player.Bit_Mail_Lst) {
+			var mail player.TMail
+			cnt := buf.ReadUInt32()
+			for i := uint32(0); i < cnt; i++ {
+				mail.BufToMail(buf)
+				fmt.Println(mail)
+			}
 		}
 	}
 

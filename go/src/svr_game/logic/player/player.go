@@ -30,19 +30,20 @@ var (
 )
 
 type PlayerMoudle interface {
-	InitAndInsert(id uint32)
-	LoadFromDB(id uint32)
+	InitAndInsert(*TPlayer)
+	LoadFromDB(*TPlayer)
 	WriteToDB()
 	OnLogin()
 	OnLogout()
 }
 type TPlayer struct {
 	//db data
-	Base TPlayerBase
+	TPlayerBase
 	Mail TMailMoudle
 	//temp data
 	mutex   sync.Mutex
 	moudles []PlayerMoudle
+	isOnlie bool
 }
 type TPlayerBase struct {
 	PlayerID   uint32 `bson:"_id"`
@@ -52,49 +53,57 @@ type TPlayerBase struct {
 	LogoutTime int64
 }
 
-func NewPlayer(accountId uint32, id uint32, name string) *TPlayer {
+func NewPlayer() *TPlayer {
 	player := new(TPlayer)
 	//! regist
 	player.moudles = []PlayerMoudle{
 		&player.Mail,
 	}
-	player.Base.AccountID = accountId
-	player.Base.PlayerID = id
-	player.Base.Name = name
-	if dbmgo.InsertSync("Player", &player.Base) {
+	return player
+}
+func NewPlayerInDB(accountId uint32, id uint32, name string) *TPlayer {
+	player := NewPlayer()
+	player.AccountID = accountId
+	player.PlayerID = id
+	player.Name = name
+	if dbmgo.InsertSync("Player", &player.TPlayerBase) {
 		for _, v := range player.moudles {
-			v.InitAndInsert(id)
+			v.InitAndInsert(player)
 		}
 		return player
 	}
 	return nil
 }
-func (self *TPlayer) LoadAllFromDB(key string, val uint32) bool {
-	if dbmgo.Find("Player", key, val, &self.Base) {
-		for _, v := range self.moudles {
-			v.LoadFromDB(self.Base.PlayerID)
+func LoadPlayerFromDB(key string, val uint32) *TPlayer {
+	player := NewPlayer()
+	if dbmgo.Find("Player", key, val, &player.TPlayerBase) {
+		for _, v := range player.moudles {
+			v.LoadFromDB(player)
 		}
-		return true
+		return player
 	}
-	return false
+	return nil
 }
 func (self *TPlayer) WriteAllToDB() {
-	if dbmgo.UpdateSync("Player", self.Base.PlayerID, &self.Base) {
+	if dbmgo.UpdateSync("Player", self.PlayerID, &self.TPlayerBase) {
 		for _, v := range self.moudles {
 			v.WriteToDB()
 		}
 	}
 }
 func (self *TPlayer) OnLogin() {
+	self.isOnlie = true
 	for _, v := range self.moudles {
 		v.OnLogin()
 	}
 	G_auto_write_db.Register(self)
 }
 func (self *TPlayer) OnLogout() {
+	self.isOnlie = false
 	for _, v := range self.moudles {
 		v.OnLogout()
 	}
+	DelPlayerCache(self.PlayerID)
 	G_auto_write_db.UnRegister(self)
 }
 func _WritePlayerToDB(ptr interface{}) {

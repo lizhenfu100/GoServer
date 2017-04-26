@@ -62,4 +62,5 @@ func InitConf() {
 		"rpc_player_logout": player.Rpc_Player_Logout,
 		"rpc_player_create": player.Rpc_Player_Create,
 	}
+	netConfig.G_Before_Recv_Http = player.PackSendData
 }

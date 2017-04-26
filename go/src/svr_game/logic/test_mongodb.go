@@ -25,7 +25,7 @@ type TBlackMarketModule struct {
 
 // var g_test_mongodb TBlackMarketModule
 
-func Rpc_test_mongodb(req, ack *common.ByteBuffer) {
+func Rpc_test_mongodb(req, ack *common.ByteBuffer) interface{} {
 	switch req.ReadByte() {
 	case 1:
 		{
@@ -52,6 +52,7 @@ func Rpc_test_mongodb(req, ack *common.ByteBuffer) {
 			FindData()
 		}
 	}
+	return nil
 }
 func (self *TBlackMarketModule) CreateData() {
 	self.PlayerID = 233

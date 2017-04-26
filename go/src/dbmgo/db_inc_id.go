@@ -2,8 +2,9 @@ package dbmgo
 
 import (
 	"common"
-	"gopkg.in/mgo.v2/bson"
 	"sync"
+
+	"gopkg.in/mgo.v2/bson"
 )
 
 var (
@@ -20,13 +21,13 @@ func _init_inc_ids() {
 }
 func GetNextIncId(key string) uint32 {
 	g_inc_id_mutex.Lock()
-	ret := g_inc_id_map[key]
-	g_inc_id_map[key] = ret + 1
+	ret := g_inc_id_map[key] + 1
+	g_inc_id_map[key] = ret
 	g_inc_id_mutex.Unlock()
-	if ret == 0 {
+	if ret == 1 {
 		InsertToDB("IncId", common.KeyPair{key, 1})
 	} else {
-		UpdateToDB("IncId", bson.M{"_id": key}, bson.M{"$inc": bson.M{"id": 1}})
+		UpdateToDB("IncId", bson.M{"_id": key}, bson.M{"$set": bson.M{"id": ret}})
 	}
 	return ret
 }

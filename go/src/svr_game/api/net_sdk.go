@@ -11,7 +11,7 @@ var (
 )
 
 // strKey = "create_recharge_order"
-func PostSdkReq(strKey string, pMsg interface{}) ([]byte, error) {
+func PostSdkReq(strKey string, pMsg interface{}) []byte {
 	if g_cache_sdk_addr == "" {
 		g_cache_sdk_addr = netConfig.GetHttpAddr("sdk", -1)
 	}

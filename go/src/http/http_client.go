@@ -17,24 +17,26 @@ package http
 import (
 	"bytes"
 	"common"
-	"fmt"
+	"gamelog"
 	"net/http"
 	"time"
 )
 
-func PostMsg(url string, pMsg interface{}) ([]byte, error) {
+func PostMsg(url string, pMsg interface{}) []byte {
 	b, _ := common.ToBytes(pMsg)
 	return PostReq(url, b)
 }
-func PostReq(url string, b []byte) ([]byte, error) {
+func PostReq(url string, b []byte) []byte {
 	resp, err := http.Post(url, "text/HTML", bytes.NewReader(b))
 	if err == nil {
 		backBuf := make([]byte, resp.ContentLength)
 		resp.Body.Read(backBuf)
 		resp.Body.Close()
-		return backBuf, nil
+		return backBuf
+	} else {
+		gamelog.Error3("PostReq url: %s \r\nerr: %s \r\n", url, err.Error())
+		return nil
 	}
-	return nil, err
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -52,9 +54,7 @@ func _RegistToSvr(destAddr, srcAddr, srcModule string, srcID int) {
 	pMsg := &Msg_Regist_To_HttpSvr{srcAddr, srcModule, srcID}
 	for {
 		http.DefaultClient.Timeout = 2 * time.Second
-		_, err := PostMsg(destAddr+"reg_to_svr", pMsg)
-		if err != nil {
-			fmt.Printf("(%s) RegistToSvr failed: %s \n", srcModule, err.Error())
+		if PostMsg(destAddr+"reg_to_svr", pMsg) == nil {
 			time.Sleep(3 * time.Second)
 		} else {
 			return

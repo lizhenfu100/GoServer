@@ -6,7 +6,7 @@ import (
 	"svr_game/api"
 )
 
-func Rpc_Client2Battle_Echo(req, ack *common.ByteBuffer) {
+func Rpc_Client2Battle_Echo(req, ack *common.ByteBuffer) interface{} {
 	fmt.Println(req.ReadString())
 
 	ack.WriteString("ok")
@@ -17,4 +17,6 @@ func Rpc_Client2Battle_Echo(req, ack *common.ByteBuffer) {
 	msg.WriteBuf(req.DataPtr)
 	// api.SendToBattle(1, msg)
 	api.SendToCross(msg)
+
+	return nil
 }
