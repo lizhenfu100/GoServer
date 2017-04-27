@@ -10,6 +10,7 @@ import (
 
 	"svr_game/cross"
 	"svr_game/logic"
+	"svr_game/logic/msg"
 	"svr_game/logic/player"
 )
 
@@ -56,8 +57,8 @@ func InitConf() {
 	}
 	netConfig.G_Http_Handler = map[string]netConfig.HttpHandle{
 		//! Client
-		"battle_echo":       logic.Rpc_Client2Battle_Echo,
-		"rpc_test_mongodb":  logic.Rpc_test_mongodb,
+		"battle_echo":       msg.Rpc_Client2Battle_Echo,
+		"rpc_test_mongodb":  msg.Rpc_test_mongodb,
 		"rpc_player_login":  player.Rpc_Player_Login,
 		"rpc_player_logout": player.Rpc_Player_Logout,
 		"rpc_player_create": player.Rpc_Player_Create,
