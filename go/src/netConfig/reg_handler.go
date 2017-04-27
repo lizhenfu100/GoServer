@@ -10,13 +10,15 @@ import (
 
 type (
 	TcpHandle  func(*tcp.TCPConn, *common.NetPack)
-	HttpHandle func(*common.ByteBuffer, *common.ByteBuffer) interface{}
+	HttpHandle func(*common.NetPack, *common.NetPack, interface{})
 )
 
 var (
-	G_Tcp_Handler      map[string]TcpHandle  = nil
-	G_Http_Handler     map[string]HttpHandle = nil
-	G_Before_Recv_Http func(interface{}, *common.ByteBuffer)
+	G_Tcp_Handler  map[string]TcpHandle  = nil
+	G_Http_Handler map[string]HttpHandle = nil
+
+	//! 需要主动发给client的数据，每回通信时捎带过去
+	G_Before_Recv_Http func(uint32, *common.NetPack) interface{}
 )
 
 func RegMsgHandler() {
@@ -32,22 +34,24 @@ func RegMsgHandler() {
 	}
 }
 func _HandleHttpMsg(w http.ResponseWriter, r *http.Request) {
-	gamelog.Info("HttpMsg: %s", r.URL.String())
-
-	key := strings.TrimLeft(r.URL.String(), "/")
 	//! 接收信息
-	req := common.NewByteBufferLen(int(r.ContentLength))
+	req := common.NewNetPackLen(int(r.ContentLength))
 	r.Body.Read(req.DataPtr)
 
 	//! 创建回复
-	ack := common.NewByteBufferCap(64)
+	ack := common.NewNetPackCap(64)
+
+	//! http通信包头没用，拿来填充playerId
+	pid := req.GetReqIdx()
+	key := strings.TrimLeft(r.URL.String(), "/")
+	gamelog.Info("HttpMsg: %s, pid(%d)", key, pid)
 
 	if handler, ok := G_Http_Handler[key]; ok {
-
-		player := handler(req, ack)
-
-		if G_Before_Recv_Http != nil && player != nil {
-			G_Before_Recv_Http(player, ack) //需要主动发给client的数据，每回通信时捎带过去
+		if G_Before_Recv_Http != nil {
+			player := G_Before_Recv_Http(pid, ack)
+			handler(req, ack, player)
+		} else {
+			handler(req, ack, nil)
 		}
 		if ack.BodySize() > 0 {
 			w.Write(ack.DataPtr)

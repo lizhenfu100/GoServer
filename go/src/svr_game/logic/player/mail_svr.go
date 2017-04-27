@@ -11,7 +11,7 @@ import (
 
 var (
 	g_svr_mail   []TMail
-	g_mail_mutex sync.Mutex
+	g_mail_mutex sync.RWMutex
 )
 
 func InitSvrMailLst() {
@@ -27,23 +27,30 @@ func CreateSvrMail(title, from, content string, items ...common.IntPair) {
 	g_svr_mail = append(g_svr_mail, *pMail)
 	g_mail_mutex.Unlock()
 
-	ForEachOnlinePlayer(func(player *TPlayer) {
-		SendSvrMail(player, pMail)
-	})
+	// 遍历全服，太不可控了
+	// ForEachOnlinePlayer(func(player *TPlayer) {
+	// 	player.Mail.SendSvrMail(pMail)
+	// })
 }
-func SendSvrMail(player *TPlayer, pData *TMail) {
-	player.Mail.SvrMailId = pData.ID
-	player.Mail.MailLst = append(player.Mail.MailLst, *pData)
-	mail := &player.Mail.MailLst[len(player.Mail.MailLst)-1]
+func (self *TMailMoudle) SendSvrMail(pData *TMail) bool {
+	if pData.ID <= self.SvrMailId {
+		return false // received
+	}
+	self.SvrMailId = pData.ID
+	self.MailLst = append(self.MailLst, *pData)
+	mail := &self.MailLst[len(self.MailLst)-1]
 	mail.ID = dbmgo.GetNextIncId("MailId")
-	dbmgo.UpdateToDB("Mail", bson.M{"_id": player.PlayerID}, bson.M{"$push": bson.M{"maillst": mail}})
-	// player.WriteMsg( mail.MailToBuf() )
+	dbmgo.UpdateToDB("Mail", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"maillst": mail}})
+	// self.owner.WriteMsg( mail.MailToBuf() )
+	return true
 }
-func SendSvrMailOnLogin(player *TPlayer) {
-	g_mail_mutex.Lock()
-	defer g_mail_mutex.Unlock()
+func (self *TMailMoudle) SendSvrMailAll() {
+	g_mail_mutex.RLock()
+	defer g_mail_mutex.RUnlock()
 	length := len(g_svr_mail)
-	for i := 0; i < length; i++ {
-		SendSvrMail(player, &g_svr_mail[i])
+	for i := length - 1; i >= 0; i-- {
+		if false == self.SendSvrMail(&g_svr_mail[i]) {
+			return
+		}
 	}
 }

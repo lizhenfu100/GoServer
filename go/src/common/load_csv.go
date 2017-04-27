@@ -43,27 +43,6 @@ import (
 	"strings"
 )
 
-type IntPair struct {
-	ID  int
-	Cnt int
-}
-type KeyPair struct {
-	Name string `bson:"_id"`
-	ID   int
-}
-type StrError struct {
-	Str string
-	Err error
-}
-
-func (self *StrError) Error() string {
-	if self.Err == nil {
-		return self.Str
-	} else {
-		return self.Str + " " + self.Err.Error()
-	}
-}
-
 func GetExePath() string {
 	file, _ := exec.LookPath(os.Args[0])
 	path, _ := filepath.Abs(file)

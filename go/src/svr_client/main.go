@@ -63,7 +63,7 @@ func test() {
 	// http.PostReq(sdkAddr+"sdk_recharge_success", buf2)
 
 	time.Sleep(2 * time.Second)
-	sendBuf := common.NewByteBufferCap(32)
+	sendBuf := common.NewNetPackCap(32)
 	// sendBuf.WriteByte(1)
 	// http.PostReq(gameAddr+"rpc_test_mongodb", sendBuf.DataPtr)
 
@@ -71,18 +71,18 @@ func test() {
 	accountName := "zhoumf"
 	password := "123"
 	accountId := uint32(0)
-	accountBuf := common.NewByteBufferCap(32)
+	accountBuf := common.NewNetPackCap(32)
 	accountBuf.WriteString(accountName)
 	accountBuf.WriteString(password)
 	{
 		b := http.PostReq(centerAddr+"rpc_reg_account", accountBuf.DataPtr)
-		buf := common.NewByteBuffer(b)
+		buf := common.NewNetPack(b)
 		errCode1 := buf.ReadInt8()
 		fmt.Println("errCode1:", errCode1)
 	}
 	{
 		b := http.PostReq(centerAddr+"rpc_get_gamesvr_lst", accountBuf.DataPtr)
-		buf := common.NewByteBuffer(b)
+		buf := common.NewNetPack(b)
 		errCode2 := buf.ReadInt8()
 		if errCode2 > 0 {
 			accountId = buf.ReadUInt32()
@@ -112,7 +112,7 @@ func test() {
 	// 	sendBuf.WriteUInt32(accountId)
 	// 	sendBuf.WriteString("zhoumf")
 	// 	b := http.PostReq(gameAddr+"rpc_player_create", sendBuf.DataPtr)
-	// 	buf := common.NewByteBuffer(b)
+	// 	buf := common.NewNetPack(b)
 	// 	playerId := buf.ReadUInt32()
 
 	// 	//写邮件
@@ -124,7 +124,7 @@ func test() {
 		sendBuf.ClearBody()
 		sendBuf.WriteUInt32(accountId)
 		b := http.PostReq(gameAddr+"rpc_player_login", sendBuf.DataPtr)
-		buf := common.NewByteBuffer(b)
+		buf := common.NewNetPack(b)
 		fmt.Println("rpc_player_login:", b)
 		// 先读逻辑回包
 

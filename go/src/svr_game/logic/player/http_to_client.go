@@ -24,8 +24,13 @@ const (
 	Bit_Chat_Info = 1
 )
 
-func PackSendData(ptr interface{}, buf *common.ByteBuffer) {
-	player := ptr.(*TPlayer)
+func PackSendData(pid uint32, buf *common.NetPack) interface{} {
+	player := FindPlayerInCache(pid)
+	if player == nil {
+		return nil
+	}
+	player.UpdateOnRecvClientData()
+
 	//! 先写位标记
 	bit, bitPosInBuf := uint32(0), uint32(buf.Size())
 	buf.WriteUInt32(bit)
@@ -39,8 +44,9 @@ func PackSendData(ptr interface{}, buf *common.ByteBuffer) {
 
 	//! 最后重置位标记
 	_ResetBitInByteBuffer(buf, bitPosInBuf, bit)
+	return player
 }
-func _ResetBitInByteBuffer(buf *common.ByteBuffer, pos, v uint32) {
+func _ResetBitInByteBuffer(buf *common.NetPack, pos, v uint32) {
 	for i := uint32(0); i < 4; i++ {
 		buf.DataPtr[pos+i] = byte(v << i)
 	}

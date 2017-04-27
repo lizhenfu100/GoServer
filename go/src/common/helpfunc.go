@@ -1,0 +1,84 @@
+package common
+
+import (
+	"time"
+)
+
+type IntPair struct {
+	ID  int
+	Cnt int
+}
+type KeyPair struct {
+	Name string `bson:"_id"`
+	ID   int
+}
+type StrError struct {
+	Str string
+	Err error
+}
+
+func (self *StrError) Error() string {
+	if self.Err == nil {
+		return self.Str
+	} else {
+		return self.Str + " " + self.Err.Error()
+	}
+}
+
+//! 数组封装
+type (
+	IntLst    []int
+	UInt32Lst []uint32
+)
+
+func (self *IntLst) IsExist(v int) int {
+	for i := 0; i < len(*self); i++ {
+		if v == (*self)[i] {
+			return i
+		}
+	}
+	return -1
+}
+func (self *IntLst) Add(v int) {
+	(*self) = append(*self, v)
+}
+func (self *IntLst) Del(i int) {
+	(*self) = append((*self)[:i], (*self)[i+1:]...)
+}
+func (self *IntLst) Less(i, j int) bool {
+	return (*self)[i] < (*self)[j]
+}
+func (self *IntLst) Swap(i, j int) {
+	temp := (*self)[i]
+	(*self)[i] = (*self)[j]
+	(*self)[j] = temp
+}
+func (self *UInt32Lst) IsExist(v uint32) int {
+	for i := 0; i < len(*self); i++ {
+		if v == (*self)[i] {
+			return i
+		}
+	}
+	return -1
+}
+func (self *UInt32Lst) Add(v uint32) {
+	(*self) = append(*self, v)
+}
+func (self *UInt32Lst) Del(i int) {
+	(*self) = append((*self)[:i], (*self)[i+1:]...)
+}
+func (self *UInt32Lst) Less(i, j uint32) bool {
+	return (*self)[i] < (*self)[j]
+}
+func (self *UInt32Lst) Swap(i, j uint32) {
+	temp := (*self)[i]
+	(*self)[i] = (*self)[j]
+	(*self)[j] = temp
+}
+
+//! 辅助函数
+func IsToday(day int) bool { return time.Now().Day() == day }
+func WeekInYear() int {
+	_, ret := time.Now().ISOWeek()
+	return ret
+}

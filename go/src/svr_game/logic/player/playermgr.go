@@ -6,14 +6,19 @@ import (
 )
 
 var (
-	g_player_mutex  sync.Mutex
+	g_player_mutex  sync.RWMutex
 	g_player_cache  = make(map[uint32]*TPlayer, 5000)
 	g_account_cache = make(map[uint32]*TPlayer, 5000)
 )
 
-func FindPlayerInCache(id uint32) *TPlayer { return g_player_cache[id] }
+func FindPlayerInCache(id uint32) *TPlayer {
+	g_player_mutex.RLock()
+	ret := g_player_cache[id]
+	g_player_mutex.RUnlock()
+	return ret
+}
 func FindWithDB_PlayerId(id uint32) *TPlayer {
-	if player := g_player_cache[id]; player != nil {
+	if player := FindPlayerInCache(id); player != nil {
 		return player
 	} else {
 		if player := LoadPlayerFromDB("_id", id); player != nil {
@@ -24,10 +29,15 @@ func FindWithDB_PlayerId(id uint32) *TPlayer {
 	return nil
 }
 func FindWithDB_AccountId(id uint32) *TPlayer {
-	if player := g_account_cache[id]; player != nil {
+
+	g_player_mutex.RLock()
+	player := g_account_cache[id]
+	g_player_mutex.RUnlock()
+
+	if player != nil {
 		return player
 	} else {
-		if player := LoadPlayerFromDB("accountid", id); player != nil {
+		if player = LoadPlayerFromDB("accountid", id); player != nil {
 			AddPlayerCache(player)
 			return player
 		}
@@ -55,10 +65,12 @@ func DelPlayerCache(playerId uint32) {
 		g_player_mutex.Unlock()
 	}
 }
-func ForEachOnlinePlayer(fun func(player *TPlayer)) {
-	for _, v := range g_player_cache {
-		if v.isOnlie {
-			fun(v)
-		}
-	}
-}
+
+// 多线程环境，做全服遍历，找死(╰_╯)#
+// func ForEachOnlinePlayer(fun func(player *TPlayer)) {
+// 	for _, v := range g_player_cache {
+// 		if v.isOnlie {
+// 			fun(v)
+// 		}
+// 	}
+// }

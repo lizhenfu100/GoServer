@@ -9,9 +9,10 @@ import (
 )
 
 type TMailMoudle struct {
-	PlayerID     uint32 `bson:"_id"`
-	MailLst      []TMail
-	SvrMailId    uint32 //已收到的全服邮件索引位，登录时收后续的
+	PlayerID  uint32 `bson:"_id"`
+	MailLst   []TMail
+	SvrMailId uint32 //已收到的全服邮件索引位
+
 	owner        *TPlayer
 	clientMailId uint32 //已发给client的
 }
@@ -25,6 +26,8 @@ type TMail struct {
 	Items   []common.IntPair
 }
 
+// -------------------------------------
+// -- 框架接口
 func (self *TMailMoudle) InitAndInsert(player *TPlayer) {
 	self.PlayerID = player.PlayerID
 	self.owner = player
@@ -36,12 +39,13 @@ func (self *TMailMoudle) LoadFromDB(player *TPlayer) {
 	self.owner = player
 }
 func (self *TMailMoudle) OnLogin() {
-	SendSvrMailOnLogin(self.owner)
 }
 func (self *TMailMoudle) OnLogout() {
 	self.clientMailId = 0
 }
 
+// -------------------------------------
+// -- API
 func (self *TMailMoudle) CreateMail(title, from, content string, items ...common.IntPair) *TMail {
 	id := dbmgo.GetNextIncId("MailId")
 	pMail := &TMail{id, time.Now().Unix(), title, from, content, 0, items}
@@ -70,7 +74,7 @@ func (self *TMailMoudle) DelMailRead() {
 
 // buf := common.NewNetPack()
 // MailToBuf(&buf.ByteBuffer)
-func (self *TMail) MailToBuf(buf *common.ByteBuffer) {
+func (self *TMail) MailToBuf(buf *common.NetPack) {
 	buf.WriteUInt32(self.ID)
 	buf.WriteInt64(self.Time)
 	buf.WriteString(self.Title)
@@ -85,7 +89,7 @@ func (self *TMail) MailToBuf(buf *common.ByteBuffer) {
 		buf.WriteInt(item.Cnt)
 	}
 }
-func (self *TMail) BufToMail(buf *common.ByteBuffer) {
+func (self *TMail) BufToMail(buf *common.NetPack) {
 	self.ID = buf.ReadUInt32()
 	self.Time = buf.ReadInt64()
 	self.Title = buf.ReadString()
@@ -108,7 +112,7 @@ func (self *TMailMoudle) GetNoSendMailIdx() int {
 	}
 	return -1
 }
-func (self *TMailMoudle) MailLstToBuf(buf *common.ByteBuffer, pos int) {
+func (self *TMailMoudle) MailLstToBuf(buf *common.NetPack, pos int) {
 	length := len(self.MailLst)
 	buf.WriteUInt32(uint32(length - pos))
 	for i := pos; i < length; i++ {

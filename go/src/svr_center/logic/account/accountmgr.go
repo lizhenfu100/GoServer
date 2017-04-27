@@ -14,7 +14,7 @@ const (
 )
 
 type TAccountMgr struct {
-	mutex    sync.Mutex
+	sync.RWMutex
 	NameToId map[string]uint32
 	IdToPtr  map[uint32]*TAccount
 }
@@ -30,13 +30,6 @@ func (self *TAccountMgr) Init() {
 	for i := 0; i < len(accountLst); i++ {
 		self._AddToCache(&accountLst[i])
 	}
-
-	// dbmgo.Find_Desc("Account", "_id", 1, &accountLst)
-	// if len(accountLst) > 0 {
-	// 	self.autoAccountID = accountLst[0].AccountID + 1
-	// } else {
-	// 	self.autoAccountID = Account_ID_Begin
-	// }
 }
 func (self *TAccountMgr) AddNewAccount(name, password string) *TAccount {
 	account := &TAccount{
@@ -56,8 +49,14 @@ func (self *TAccountMgr) AddNewAccount(name, password string) *TAccount {
 	return nil
 }
 func (self *TAccountMgr) GetAccountByName(name string) *TAccount {
-	if id, ok := self.NameToId[name]; ok {
-		return self.IdToPtr[id]
+	self.RLock()
+	id := self.NameToId[name]
+	self.RUnlock()
+	if id > 0 {
+		self.RLock()
+		account := self.IdToPtr[id]
+		self.RUnlock()
+		return account
 	} else {
 		account := new(TAccount)
 		if ok := dbmgo.Find("Account", "name", name, account); ok {
@@ -81,10 +80,10 @@ func (self *TAccountMgr) ResetPassword(name, password, newpassword string) bool 
 
 //! 辅助函数
 func (self *TAccountMgr) _AddToCache(account *TAccount) {
-	self.mutex.Lock()
+	self.Lock()
 	self.IdToPtr[account.AccountID] = account
 	self.NameToId[account.Name] = account.AccountID
-	self.mutex.Unlock()
+	self.Unlock()
 }
 func CreateLoginToken() string {
 	return "chillyroom"

@@ -24,13 +24,11 @@ func (self *ByteBuffer) Reset(data []byte) {
 	self.DataPtr = data
 	self.ReadPos = 0
 }
-func (self *ByteBuffer) ClearBody() { self.Clear() }
 func (self *ByteBuffer) Clear() {
 	self.DataPtr = self.DataPtr[:0]
 	self.ReadPos = 0
 }
-func (self *ByteBuffer) Size() int     { return len(self.DataPtr) }
-func (self *ByteBuffer) BodySize() int { return self.Size() }
+func (self *ByteBuffer) Size() int { return len(self.DataPtr) }
 
 //! Write API
 func (self *ByteBuffer) WriteByte(v byte) {

@@ -34,6 +34,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -229,10 +230,4 @@ func _InsertResponse(reqKey uint64, fun func(*common.NetPack)) {
 		g_rw_lock.Unlock()
 	}
 }
-func _GetNextReqIdx() (ret uint32) {
-	g_rw_lock.Lock()
-	ret = g_auto_req_idx
-	g_auto_req_idx++
-	g_rw_lock.Unlock()
-	return
-}
+func _GetNextReqIdx() uint32 { return atomic.AddUint32(&g_auto_req_idx, 1) }

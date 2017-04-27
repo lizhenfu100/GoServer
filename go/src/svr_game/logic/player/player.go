@@ -22,7 +22,6 @@ package player
 import (
 	"common"
 	"dbmgo"
-	"sync"
 )
 
 var (
@@ -39,9 +38,9 @@ type PlayerMoudle interface {
 type TPlayer struct {
 	//db data
 	TPlayerBase
-	Mail TMailMoudle
+	Mail   TMailMoudle
+	Friend TFriendMoudle
 	//temp data
-	mutex   sync.Mutex
 	moudles []PlayerMoudle
 	isOnlie bool
 }
