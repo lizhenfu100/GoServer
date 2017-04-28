@@ -2,7 +2,6 @@ package api
 
 import (
 	"common"
-	"gamelog"
 	"http"
 	"netConfig"
 )
@@ -12,15 +11,13 @@ var (
 )
 
 // strKey = "sdk_recharge_info"
-func RelayToGamesvr(svrId int, strKey string, packet *common.NetPack) {
+func SendToGame(svrId int, strKey string, packet *common.NetPack) []byte {
 	addr, ok := g_cache_game_addr[svrId]
 	if false == ok {
 		addr = netConfig.GetHttpAddr("game", svrId)
 		g_cache_game_addr[svrId] = addr
 	}
-	if http.PostReq(addr+strKey, packet.DataPtr) == nil {
-		gamelog.Error("RelayToGamesvr svrId(%d) fail", svrId)
-	}
+	return http.PostReq(addr+strKey, packet.DataPtr)
 }
 func GetRegGamesvrCfgLst() (ret []*netConfig.TNetConfig) {
 	ids := http.GetRegModuleIDs("game")

@@ -63,7 +63,7 @@ func Handle_Create_Recharge_Order(w http.ResponseWriter, r *http.Request) {
 	sdkReq.Channel = req.Channel
 	sdkReq.PlatformEnum = req.PlatformEnum
 	sdkReq.ChargeCsvID = req.ChargeCsvID
-	if backBuf := api.PostSdkReq("create_recharge_order", &sdkReq); backBuf != nil {
+	if backBuf := api.SendToSdk("create_recharge_order", &sdkReq); backBuf != nil {
 		json.Unmarshal(backBuf, &sdkAck)
 		//TODO：将SDKMsg_create_recharge_order_Ack中的数据，写入response
 	}

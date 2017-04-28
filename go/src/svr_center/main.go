@@ -24,8 +24,6 @@ func main() {
 	common.RegConsoleCmd("setloglevel", HandCmd_SetLogLevel)
 
 	InitConf()
-	common.LoadAllCsv()
-	netConfig.RegMsgHandler()
 
 	account.G_AccountMgr.Init()
 
@@ -52,12 +50,14 @@ func InitConf() {
 		"conf_net": &netConfig.G_SvrNetCfg,
 		"rpc":      &common.G_RpcCsv,
 	}
-	netConfig.G_Http_Handler = map[string]netConfig.HttpHandle{
+	common.LoadAllCsv()
+
+	netConfig.RegHttpPlayerHandler(map[string]netConfig.HttpPlayerHandle{
 		//! From Gamesvr
 		"rpc_login_success": account.Rpc_Login_Success,
 
 		//! From Client
 		"rpc_reg_account":     account.Rpc_Reg_Account,
 		"rpc_get_gamesvr_lst": account.Rpc_GetGameSvrLst,
-	}
+	})
 }

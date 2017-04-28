@@ -2,57 +2,68 @@ package netConfig
 
 import (
 	"common"
-	"gamelog"
 	"net/http"
-	"strings"
 	"tcp"
 )
 
 type (
-	TcpHandle  func(*tcp.TCPConn, *common.NetPack)
-	HttpHandle func(*common.NetPack, *common.NetPack, interface{})
+	TcpHandle        func(*tcp.TCPConn, *common.NetPack)
+	HttpHandle       func(http.ResponseWriter, *http.Request)
+	HttpPlayerHandle func(*common.NetPack, *common.NetPack, interface{})
 )
 
 var (
-	G_Tcp_Handler  map[string]TcpHandle  = nil
-	G_Http_Handler map[string]HttpHandle = nil
+	g_http_player_handler = make(map[uint16]HttpPlayerHandle)
 
 	//! 需要主动发给client的数据，每回通信时捎带过去
-	G_Before_Recv_Http func(uint32, *common.NetPack) interface{}
+	G_Before_Recv_Player_Http func(uint32) interface{}
+	G_After_Recv_Player_Http  func(interface{}, *common.NetPack)
 )
 
-func RegMsgHandler() {
-	if G_Http_Handler != nil {
-		for k, _ := range G_Http_Handler {
-			http.HandleFunc("/"+k, _HandleHttpMsg)
-		}
-	}
-	if G_Tcp_Handler != nil {
-		for k, v := range G_Tcp_Handler {
-			tcp.G_HandlerMsgMap[common.RpcNameToId(k)] = v
-		}
+func RegTcpHandler(tcpLst map[string]TcpHandle) {
+	for k, v := range tcpLst {
+		tcp.G_HandlerMsgMap[common.RpcNameToId(k)] = v
 	}
 }
-func _HandleHttpMsg(w http.ResponseWriter, r *http.Request) {
+
+//! 后台各系统间的数据传输格式可能有多种，比如Json，所以接口参数是原始http的
+func RegHttpSystemHandler(httpLst map[string]HttpHandle) {
+	for k, v := range httpLst {
+		http.HandleFunc("/"+k, v)
+	}
+}
+func RegHttpPlayerHandler(httpLst map[string]HttpPlayerHandle) {
+	http.HandleFunc("/client_rpc", _HandleHttpPlayerMsg)
+
+	for k, v := range httpLst {
+		g_http_player_handler[common.RpcNameToId(k)] = v
+	}
+}
+func _HandleHttpPlayerMsg(w http.ResponseWriter, r *http.Request) {
 	//! 接收信息
 	req := common.NewNetPackLen(int(r.ContentLength))
 	r.Body.Read(req.DataPtr)
 
 	//! 创建回复
-	ack := common.NewNetPackCap(64)
+	ack := common.NewNetPackCap(128)
 
-	//! http通信包头没用，拿来填充playerId
+	msgId := req.GetOpCode()
 	pid := req.GetReqIdx()
-	key := strings.TrimLeft(r.URL.String(), "/")
-	gamelog.Info("HttpMsg: %s, pid(%d)", key, pid)
+	println("\nHttpMsg:", common.DebugRpcIdToName(msgId), "  playerId:", pid)
 
-	if handler, ok := G_Http_Handler[key]; ok {
-		if G_Before_Recv_Http != nil {
-			player := G_Before_Recv_Http(pid, ack)
-			handler(req, ack, player)
-		} else {
-			handler(req, ack, nil)
+	if handler, ok := g_http_player_handler[msgId]; ok {
+
+		var player interface{}
+		if G_Before_Recv_Player_Http != nil {
+			player = G_Before_Recv_Player_Http(pid)
 		}
+
+		handler(req, ack, player)
+
+		if G_After_Recv_Player_Http != nil && player != nil {
+			G_After_Recv_Player_Http(player, ack)
+		}
+
 		if ack.BodySize() > 0 {
 			w.Write(ack.DataPtr)
 		}

@@ -22,8 +22,6 @@ func main() {
 	common.RegConsoleCmd("setloglevel", HandCmd_SetLogLevel)
 
 	InitConf()
-	common.LoadAllCsv()
-	netConfig.RegMsgHandler()
 
 	gamelog.Warn("----Cross Server Start-----")
 	if netConfig.CreateNetSvr("cross", 0) == false {
@@ -48,7 +46,9 @@ func InitConf() {
 		"conf_net": &netConfig.G_SvrNetCfg,
 		"rpc":      &common.G_RpcCsv,
 	}
-	netConfig.G_Tcp_Handler = map[string]netConfig.TcpHandle{
+	common.LoadAllCsv()
+
+	netConfig.RegTcpHandler(map[string]netConfig.TcpHandle{
 		"rpc_echo": logic.Rpc_Echo,
-	}
+	})
 }

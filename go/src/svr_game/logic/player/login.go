@@ -29,7 +29,8 @@ func Rpc_Player_Login(req, ack *common.NetPack, ptr interface{}) {
 
 	if player != nil {
 		player.OnLogin()
-		fmt.Println(player)
+		fmt.Println("Rpc_Player_Login:\n", player)
+		ack.WriteUInt32(player.PlayerID)
 	} else {
 		//notify client to create new player
 	}
@@ -38,7 +39,7 @@ func Rpc_Player_Logout(req, ack *common.NetPack, ptr interface{}) {
 
 	player := ptr.(*TPlayer)
 
-	player.OnLogin()
+	player.OnLogout()
 }
 func Rpc_Player_Create(req, ack *common.NetPack, ptr interface{}) {
 	//req: accountId, loginKey, playerName

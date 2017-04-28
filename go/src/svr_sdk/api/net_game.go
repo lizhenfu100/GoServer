@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"gamelog"
 	"http"
 	"netConfig"
 )
@@ -12,7 +11,7 @@ var (
 )
 
 // strKey = "sdk_recharge_info"
-func RelayToGamesvr(svrId int, strKey string, pMsg interface{}) {
+func SendToGame(svrId int, strKey string, pMsg interface{}) []byte {
 	addr, ok := g_cache_game_addr[svrId]
 	if false == ok {
 		addr = netConfig.GetHttpAddr("game", svrId)
@@ -20,7 +19,5 @@ func RelayToGamesvr(svrId int, strKey string, pMsg interface{}) {
 	}
 
 	data, _ := json.Marshal(pMsg)
-	if http.PostReq(addr+strKey, data) == nil {
-		gamelog.Error("RelayToGamesvr svrId(%d) fail", svrId)
-	}
+	return http.PostReq(addr+strKey, data)
 }

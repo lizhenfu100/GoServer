@@ -20,13 +20,14 @@ func main() {
 		"conf_net": &netConfig.G_SvrNetCfg,
 		"rpc":      &common.G_RpcCsv,
 	}
+	common.LoadAllCsv()
+
 	//初始化日志系统
 	gamelog.InitLogger("client")
 	gamelog.SetLevel(0)
 
 	dbmgo.Init(conf.GameDbAddr, conf.GameDbName)
 
-	common.LoadAllCsv()
 	// for k, v := range netConfig.G_SvrNetCfg {
 	// 	fmt.Println(k, v)
 	// }
@@ -37,11 +38,14 @@ func main() {
 }
 
 func test() {
-	//向游戏服请求充值
 	gameAddr := netConfig.GetHttpAddr("game", -1)
 	centerAddr := netConfig.GetHttpAddr("center", -1)
 	fmt.Println("---", gameAddr)
 	fmt.Println("---", centerAddr)
+	gameRpc := http.NewClientRpc(gameAddr, 0)
+	centerRpc := http.NewClientRpc(centerAddr, 0)
+
+	//向游戏服请求充值
 	// var msg1 sdk_msg.Msg_create_recharge_order_Req
 	// msg1.SessionKey = "233xx"
 	// msg1.OrderID = "abcdefg233"
@@ -63,82 +67,97 @@ func test() {
 	// http.PostReq(sdkAddr+"sdk_recharge_success", buf2)
 
 	time.Sleep(2 * time.Second)
-	sendBuf := common.NewNetPackCap(32)
-	// sendBuf.WriteByte(1)
-	// http.PostReq(gameAddr+"rpc_test_mongodb", sendBuf.DataPtr)
+	// gameRpc.CallRpc("rpc_test_mongodb", func(buf *common.NetPack) {
+	// 	buf.WriteByte(1)
+	// }, func(backBuf *common.NetPack) {
+
+	// })
 
 	//向center取游戏服务器列表
 	accountName := "zhoumf"
 	password := "123"
 	accountId := uint32(0)
-	accountBuf := common.NewNetPackCap(32)
-	accountBuf.WriteString(accountName)
-	accountBuf.WriteString(password)
-	{
-		b := http.PostReq(centerAddr+"rpc_reg_account", accountBuf.DataPtr)
-		buf := common.NewNetPack(b)
-		errCode1 := buf.ReadInt8()
+
+	centerRpc.CallRpc("rpc_reg_account", func(buf *common.NetPack) {
+		buf.WriteString(accountName)
+		buf.WriteString(password)
+	}, func(backBuf *common.NetPack) {
+		errCode1 := backBuf.ReadInt8()
 		fmt.Println("errCode1:", errCode1)
-	}
-	{
-		b := http.PostReq(centerAddr+"rpc_get_gamesvr_lst", accountBuf.DataPtr)
-		buf := common.NewNetPack(b)
-		errCode2 := buf.ReadInt8()
+	})
+
+	centerRpc.CallRpc("rpc_get_gamesvr_lst", func(buf *common.NetPack) {
+		buf.WriteString(accountName)
+		buf.WriteString(password)
+	}, func(backBuf *common.NetPack) {
+		errCode2 := backBuf.ReadInt8()
 		if errCode2 > 0 {
-			accountId = buf.ReadUInt32()
-			svrId := buf.ReadUInt32()
-			size := buf.ReadByte()
+			accountId = backBuf.ReadUInt32()
+			svrId := backBuf.ReadUInt32()
+			size := backBuf.ReadByte()
 			for i := byte(0); i < size; i++ {
-				module := buf.ReadString()
-				id := buf.ReadUInt32()
-				ip := buf.ReadString()
-				port := buf.ReadUInt16()
+				module := backBuf.ReadString()
+				id := backBuf.ReadUInt32()
+				ip := backBuf.ReadString()
+				port := backBuf.ReadUInt16()
 				fmt.Println("GameSvr:", module, id, ip, port)
 			}
 			fmt.Println("Account Info:", accountId, svrId)
 		} else {
 			fmt.Println("errCode2:", errCode2)
 		}
-	}
+	})
 
 	//向游戏服发战斗数据，后台game转到battle
-	// buf.ClearBody()
-	// buf.WriteString("client-game-battle")
-	// http.PostReq(gameAddr+"battle_echo", buf.DataPtr)
+	// gameRpc.CallRpc("battle_echo", func(buf *common.NetPack) {
+	// 	buf.WriteString("client-game-battle")
+	// }, func(backBuf *common.NetPack) {
+
+	// })
 
 	//创建
-	// {
-	// 	sendBuf.ClearBody()
-	// 	sendBuf.WriteUInt32(accountId)
-	// 	sendBuf.WriteString("zhoumf")
-	// 	b := http.PostReq(gameAddr+"rpc_player_create", sendBuf.DataPtr)
-	// 	buf := common.NewNetPack(b)
-	// 	playerId := buf.ReadUInt32()
-
+	// gameRpc.CallRpc("rpc_player_create", func(buf *common.NetPack) {
+	// 	buf.WriteUInt32(accountId)
+	// 	buf.WriteString("zhoumf")
+	// }, func(backBuf *common.NetPack) {
+	// 	playerId := backBuf.ReadUInt32()
 	// 	//写邮件
 	// 	player := player.FindWithDB_PlayerId(playerId)
 	// 	fmt.Println("create player id:", playerId, "\n", player)
-	// }
+	// })
+
 	//登录
-	{
-		sendBuf.ClearBody()
-		sendBuf.WriteUInt32(accountId)
-		b := http.PostReq(gameAddr+"rpc_player_login", sendBuf.DataPtr)
-		buf := common.NewNetPack(b)
-		fmt.Println("rpc_player_login:", b)
-		// 先读逻辑回包
+	gameRpc.CallRpc("rpc_login", func(buf *common.NetPack) {
+		buf.WriteUInt32(accountId)
+	}, func(backBuf *common.NetPack) {
+		gameRpc.PlayerId = backBuf.ReadUInt32()
+	})
+	gameRpc.CallRpc("rpc_test_mongodb", func(buf *common.NetPack) {
+		buf.WriteByte(17)
+	}, func(backBuf *common.NetPack) {
+		fmt.Println("BodySize: ", backBuf.BodySize())
+
+		// 读逻辑回包
 
 		// http svr send data
-		bit := buf.ReadUInt32()
+		bit := backBuf.ReadUInt32()
+		fmt.Println("PackSendBit", bit)
 		if common.GetBit32(bit, player.Bit_Mail_Lst) {
-			var mail player.TMail
-			cnt := buf.ReadUInt32()
+			cnt := backBuf.ReadUInt32()
 			for i := uint32(0); i < cnt; i++ {
-				mail.BufToMail(buf)
+				var mail player.TMail
+				mail.BufToMail(backBuf)
 				fmt.Println(mail)
 			}
 		}
-	}
+	})
+
+	//登出
+	gameRpc.CallRpc("rpc_logout", func(buf *common.NetPack) {
+
+	}, func(backBuf *common.NetPack) {
+
+	})
 
 	// time.Sleep(2 * time.Second)
 	// //直接发给战斗服
@@ -147,4 +166,6 @@ func test() {
 	// msg.WriteString("--- zhoumf 233 --- ")
 	// api.SendToBattle(1, msg)
 	// api.SendToBattle(2, msg)
+
+	time.Sleep(2 * time.Hour)
 }

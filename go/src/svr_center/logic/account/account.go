@@ -47,7 +47,7 @@ func Rpc_GetGameSvrLst(req, ack *common.NetPack, ptr interface{}) {
 		//TODO:zhoumf:生成一个临时token，发给gamesvr、client，用以登录验证
 		// token := CreateLoginToken()
 		// ack.WriteString(token)
-		// api.RelayToGamesvr(1, strKey, token)
+		// api.SendToGame(1, strKey, token)
 		//游戏服列表
 		cfgLst := api.GetRegGamesvrCfgLst()
 		ack.WriteByte(byte(len(cfgLst)))

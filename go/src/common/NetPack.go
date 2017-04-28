@@ -14,7 +14,6 @@ type TRpcCsv struct {
 	Name     string
 	ID       int
 	IsClient int //是否Client实现的rpc
-	Comment  string
 }
 
 var G_RpcCsv map[string]*TRpcCsv
@@ -83,6 +82,14 @@ func (self *NetPack) GetReqIdx() (ret uint32) {
 }
 
 //! rpc
+func DebugRpcIdToName(id uint16) string {
+	for _, v := range G_RpcCsv {
+		if v.ID == int(id) {
+			return v.Name
+		}
+	}
+	return "nil"
+}
 func RpcNameToId(rpc string) uint16 {
 	if csv, ok := G_RpcCsv[rpc]; ok {
 		return uint16(csv.ID)

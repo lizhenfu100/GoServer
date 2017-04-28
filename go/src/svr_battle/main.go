@@ -29,8 +29,6 @@ func main() {
 	common.RegConsoleCmd("setloglevel", HandCmd_SetLogLevel)
 
 	InitConf()
-	common.LoadAllCsv()
-	netConfig.RegMsgHandler()
 
 	gamelog.Warn("----Battle Server Start[%d]-----", svrID)
 	if netConfig.CreateNetSvr("battle", svrID) == false {
@@ -55,7 +53,9 @@ func InitConf() {
 		"conf_net": &netConfig.G_SvrNetCfg,
 		"rpc":      &common.G_RpcCsv,
 	}
-	netConfig.G_Tcp_Handler = map[string]netConfig.TcpHandle{
+	common.LoadAllCsv()
+
+	netConfig.RegTcpHandler(map[string]netConfig.TcpHandle{
 		"rpc_echo": logic.Rpc_Echo,
-	}
+	})
 }

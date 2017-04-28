@@ -5,6 +5,7 @@ import (
 	"gamelog"
 	"netConfig"
 	"strconv"
+	"svr_sdk/logic"
 )
 
 // 1 开一个http server
@@ -22,8 +23,6 @@ func main() {
 	common.RegConsoleCmd("setloglevel", HandCmd_SetLogLevel)
 
 	InitConf()
-	common.LoadAllCsv()
-	RegSdkMsgHandler()
 
 	gamelog.Warn("----Sdk Server Start-----")
 	if netConfig.CreateNetSvr("sdk", 0) == false {
@@ -44,4 +43,13 @@ func InitConf() {
 		"conf_net": &netConfig.G_SvrNetCfg,
 		"rpc":      &common.G_RpcCsv,
 	}
+	common.LoadAllCsv()
+
+	netConfig.RegHttpSystemHandler(map[string]netConfig.HttpHandle{
+		//! From Gamesvr
+		"create_recharge_order": logic.HandSvr_CreateRechargeOrder,
+
+		//! From 第三方
+		"sdk_recharge_success": logic.HandSdk_RechargeSuccess,
+	})
 }

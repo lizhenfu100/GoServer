@@ -41,7 +41,7 @@ func HandSdk_RechargeSuccess(w http.ResponseWriter, r *http.Request) {
 	//! 创建回复
 	response := "fail"
 	defer func() {
-		w.Write([]byte(response)) //Notice：用defer安全些，但得等RelayToGamesvr返回，会慢一点
+		w.Write([]byte(response)) //Notice：用defer安全些，但得等SendToGame返回，会慢一点
 	}()
 
 	//TODO：验证token，解析JSON数据
@@ -60,6 +60,6 @@ func HandSdk_RechargeSuccess(w http.ResponseWriter, r *http.Request) {
 		gamesvrReq.PlayerID = req.PlayerID
 		gamesvrReq.ChargeCsvID = pOrder.chargeCsvID
 		gamesvrReq.RMB = req.RMB
-		api.RelayToGamesvr(pOrder.GamesvrID, "sdk_recharge_success", &gamesvrReq)
+		api.SendToGame(pOrder.GamesvrID, "sdk_recharge_success", &gamesvrReq)
 	}
 }

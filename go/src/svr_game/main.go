@@ -12,6 +12,7 @@ import (
 	"svr_game/logic"
 	"svr_game/logic/msg"
 	"svr_game/logic/player"
+	"svr_game/sdk"
 )
 
 func main() {
@@ -27,9 +28,6 @@ func main() {
 	common.RegConsoleCmd("setloglevel", HandCmd_SetLogLevel)
 
 	InitConf()
-	common.LoadAllCsv()
-	netConfig.RegMsgHandler()
-	RegSdkMsgHandler()
 
 	go logic.MainLoop()
 
@@ -52,16 +50,24 @@ func InitConf() {
 		"conf_net": &netConfig.G_SvrNetCfg,
 		"rpc":      &common.G_RpcCsv,
 	}
-	netConfig.G_Tcp_Handler = map[string]netConfig.TcpHandle{
+	common.LoadAllCsv()
+
+	netConfig.RegTcpHandler(map[string]netConfig.TcpHandle{
 		"rpc_echo": cross.Rpc_Echo,
-	}
-	netConfig.G_Http_Handler = map[string]netConfig.HttpHandle{
+	})
+	netConfig.RegHttpSystemHandler(map[string]netConfig.HttpHandle{
+		//! SDK
+		"create_recharge_order": sdk.Handle_Create_Recharge_Order,
+		"sdk_recharge_success":  sdk.Handle_Recharge_Success,
+	})
+	netConfig.RegHttpPlayerHandler(map[string]netConfig.HttpPlayerHandle{
 		//! Client
 		"battle_echo":       msg.Rpc_Client2Battle_Echo,
 		"rpc_test_mongodb":  msg.Rpc_test_mongodb,
-		"rpc_player_login":  player.Rpc_Player_Login,
-		"rpc_player_logout": player.Rpc_Player_Logout,
+		"rpc_login":         player.Rpc_Player_Login,
+		"rpc_logout":        player.Rpc_Player_Logout,
 		"rpc_player_create": player.Rpc_Player_Create,
-	}
-	netConfig.G_Before_Recv_Http = player.PackSendData
+	})
+	netConfig.G_Before_Recv_Player_Http = player.BeforeRecvHttpMsg
+	netConfig.G_After_Recv_Player_Http = player.AfterRecvHttpMsg
 }

@@ -57,6 +57,7 @@ func NewPlayer() *TPlayer {
 	//! regist
 	player.moudles = []PlayerMoudle{
 		&player.Mail,
+		&player.Friend,
 	}
 	return player
 }
