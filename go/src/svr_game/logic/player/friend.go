@@ -1,6 +1,7 @@
 package player
 
 import (
+	"common"
 	"dbmgo"
 
 	"gopkg.in/mgo.v2/bson"
@@ -48,7 +49,7 @@ func (self *TFriendMoudle) FindFriend(pid uint32) *TFriend {
 	}
 	return nil
 }
-func (self *TFriendMoudle) RecvApply(pid uint32, name string) int {
+func (self *TFriendMoudle) RecvApply(pid uint32, name string) int8 {
 	if self.InApplyLst(pid) >= 0 {
 		return -1
 	}
@@ -63,8 +64,8 @@ func (self *TFriendMoudle) RecvApply(pid uint32, name string) int {
 	dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"applylst": data}})
 	return 0
 }
-func (self *TFriendMoudle) Agree(i int) {
-	if i >= len(self.ApplyLst) {
+func (self *TFriendMoudle) Agree(i byte) {
+	if i >= byte(len(self.ApplyLst)) {
 		return
 	}
 	ptr := &self.ApplyLst[i]
@@ -73,8 +74,8 @@ func (self *TFriendMoudle) Agree(i int) {
 	self.AddFriend(ptr.ID, ptr.Name)
 	self.ApplyLst = append(self.ApplyLst[:i], self.ApplyLst[i+1:]...)
 }
-func (self *TFriendMoudle) Refuse(i int) {
-	if i >= len(self.ApplyLst) {
+func (self *TFriendMoudle) Refuse(i byte) {
+	if i >= byte(len(self.ApplyLst)) {
 		return
 	}
 	ptr := &self.ApplyLst[i]
@@ -82,7 +83,7 @@ func (self *TFriendMoudle) Refuse(i int) {
 		"applylst": bson.M{"id": ptr.ID}}})
 	self.ApplyLst = append(self.ApplyLst[:i], self.ApplyLst[i+1:]...)
 }
-func (self *TFriendMoudle) AddFriend(pid uint32, name string) int {
+func (self *TFriendMoudle) AddFriend(pid uint32, name string) int8 {
 	if self.InFriendLst(pid) >= 0 {
 		return -2
 	}
@@ -143,4 +144,36 @@ func (self *TFriendMoudle) InBlackLst(pid uint32) int {
 		}
 	}
 	return -1
+}
+
+//! buf
+func (self *TFriend) DataToBuf(buf *common.NetPack) {
+	buf.WriteUInt32(self.ID)
+	buf.WriteString(self.Name)
+}
+func (self *TFriend) BufToData(buf *common.NetPack) {
+	self.ID = buf.ReadUInt32()
+	self.Name = buf.ReadString()
+}
+func (self *TFriendMoudle) DataToBuf(buf *common.NetPack) {
+	length := len(self.FriendLst)
+	buf.WriteUInt16(uint16(length))
+	for i := 0; i < length; i++ {
+		data := &self.FriendLst[i]
+		data.DataToBuf(buf)
+	}
+
+	length = len(self.ApplyLst)
+	buf.WriteUInt16(uint16(length))
+	for i := 0; i < length; i++ {
+		data := &self.ApplyLst[i]
+		data.DataToBuf(buf)
+	}
+
+	length = len(self.BlackLst)
+	buf.WriteUInt16(uint16(length))
+	for i := 0; i < length; i++ {
+		data := &self.BlackLst[i]
+		data.DataToBuf(buf)
+	}
 }

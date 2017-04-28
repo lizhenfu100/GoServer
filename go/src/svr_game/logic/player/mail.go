@@ -74,7 +74,7 @@ func (self *TMailMoudle) DelMailRead() {
 
 // buf := common.NewNetPack()
 // MailToBuf(&buf.ByteBuffer)
-func (self *TMail) MailToBuf(buf *common.NetPack) {
+func (self *TMail) DataToBuf(buf *common.NetPack) {
 	buf.WriteUInt32(self.ID)
 	buf.WriteInt64(self.Time)
 	buf.WriteString(self.Title)
@@ -89,7 +89,7 @@ func (self *TMail) MailToBuf(buf *common.NetPack) {
 		buf.WriteInt(item.Cnt)
 	}
 }
-func (self *TMail) BufToMail(buf *common.NetPack) {
+func (self *TMail) BufToData(buf *common.NetPack) {
 	self.ID = buf.ReadUInt32()
 	self.Time = buf.ReadInt64()
 	self.Title = buf.ReadString()
@@ -112,12 +112,12 @@ func (self *TMailMoudle) GetNoSendMailIdx() int {
 	}
 	return -1
 }
-func (self *TMailMoudle) MailLstToBuf(buf *common.NetPack, pos int) {
+func (self *TMailMoudle) DataToBuf(buf *common.NetPack, pos int) {
 	length := len(self.MailLst)
 	buf.WriteUInt32(uint32(length - pos))
 	for i := pos; i < length; i++ {
 		mail := &self.MailLst[i]
-		mail.MailToBuf(buf)
+		mail.DataToBuf(buf)
 		self.clientMailId = mail.ID
 	}
 }

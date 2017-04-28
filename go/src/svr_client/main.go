@@ -146,7 +146,7 @@ func test() {
 			cnt := backBuf.ReadUInt32()
 			for i := uint32(0); i < cnt; i++ {
 				var mail player.TMail
-				mail.BufToMail(backBuf)
+				mail.BufToData(backBuf)
 				fmt.Println(mail)
 			}
 		}

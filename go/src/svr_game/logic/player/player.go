@@ -14,6 +14,19 @@
 	1、借助ServicePatch，十五分钟全写一遍在线玩家，重要数据才手动异步写dbmgo.InsertToDB
 	2、关服，须先踢所有玩家下线，触发Logou流程写库，再才能关闭进程
 
+* @ 玩家之间互改数据【多线程架构】
+	1、禁止直接操作对方内存
+
+	2、异步间接改别人的数据
+			*、提供统一接口，将写操作发送到目标所在线程，让目标自己改写
+			*、因为读别人数据是直接拿内存，此方式可能带来时序Bug【异步写在读之前，但读到旧数据】
+			*、比如：异步扣别人100块，又立即读，可能他还是没钱
+
+	3、分别加读写锁
+			*、会被其他人改的数据块，性质上同全局数据类似，多读多写的
+			*、读写锁封装接口，谁都不允许直接访问
+			*、比异步方式(可能读到旧值)安全，但要写好锁代码【屏蔽所有竞态条件、无死锁】可不是件容易事~_~
+
 * @ author zhoumf
 * @ date 2017-4-22
 ***********************************************************************/
@@ -22,19 +35,13 @@ package player
 import (
 	"common"
 	"dbmgo"
+	"gamelog"
 )
 
 var (
-	G_auto_write_db = common.NewServicePatch(_WritePlayerToDB, 15*60*1000)
+	G_Auto_Write_DB = common.NewServicePatch(_WritePlayerToDB, 15*60*1000)
 )
 
-type PlayerMoudle interface {
-	InitAndInsert(*TPlayer)
-	LoadFromDB(*TPlayer)
-	WriteToDB()
-	OnLogin()
-	OnLogout()
-}
 type TPlayer struct {
 	//db data
 	TPlayerBase
@@ -42,6 +49,8 @@ type TPlayer struct {
 	Friend TFriendMoudle
 	//temp data
 	moudles []PlayerMoudle
+	askchan chan func(*TPlayer)
+
 	isOnlie bool
 }
 type TPlayerBase struct {
@@ -51,6 +60,13 @@ type TPlayerBase struct {
 	LoginTime  int64
 	LogoutTime int64
 }
+type PlayerMoudle interface {
+	InitAndInsert(*TPlayer)
+	LoadFromDB(*TPlayer)
+	WriteToDB()
+	OnLogin()
+	OnLogout()
+}
 
 func NewPlayer() *TPlayer {
 	player := new(TPlayer)
@@ -59,6 +75,7 @@ func NewPlayer() *TPlayer {
 		&player.Mail,
 		&player.Friend,
 	}
+	player.askchan = make(chan func(*TPlayer), 128)
 	return player
 }
 func NewPlayerInDB(accountId uint32, id uint32, name string) *TPlayer {
@@ -96,7 +113,7 @@ func (self *TPlayer) OnLogin() {
 	for _, v := range self.moudles {
 		v.OnLogin()
 	}
-	G_auto_write_db.Register(self)
+	G_Auto_Write_DB.Register(self)
 }
 func (self *TPlayer) OnLogout() {
 	self.isOnlie = false
@@ -104,10 +121,32 @@ func (self *TPlayer) OnLogout() {
 		v.OnLogout()
 	}
 	DelPlayerCache(self.PlayerID)
-	G_auto_write_db.UnRegister(self)
+	G_Auto_Write_DB.UnRegister(self)
 }
 func _WritePlayerToDB(ptr interface{}) {
 	if player, ok := ptr.(TPlayer); ok {
 		player.WriteAllToDB()
+	}
+}
+
+//! for other player write my data
+func AsyncNotifyPlayer(id uint32, handler func(*TPlayer)) {
+	if player := _FindPlayerInCache(id); player != nil {
+		select {
+		case player.askchan <- handler:
+		default:
+			gamelog.Warn("Player askChan is full !!!")
+			return
+		}
+	}
+}
+func (self *TPlayer) _HandleAsyncNotify() {
+	for {
+		select {
+		case handler := <-self.askchan:
+			handler(self)
+		default:
+			return
+		}
 	}
 }

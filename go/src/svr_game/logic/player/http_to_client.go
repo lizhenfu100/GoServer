@@ -19,13 +19,15 @@ import (
 	"fmt"
 )
 
+//TODO:zhoumf: 这里可以优化为红点提示，然后client打开界面时再请求相应模块数据
 const (
-	Bit_Mail_Lst  = 0
-	Bit_Chat_Info = 1
+	Bit_Mail_Lst     = 0
+	Bit_Chat_Info    = 1
+	Bit_Friend_Apply = 2
 )
 
 func BeforeRecvHttpMsg(pid uint32) interface{} {
-	player := FindPlayerInCache(pid)
+	player := _FindPlayerInCache(pid)
 	if player == nil {
 		return nil
 	}
@@ -40,7 +42,7 @@ func AfterRecvHttpMsg(ptr interface{}, buf *common.NetPack) {
 
 	//! 再写数据块
 	if pos := player.Mail.GetNoSendMailIdx(); pos >= 0 {
-		player.Mail.MailLstToBuf(buf, pos)
+		player.Mail.DataToBuf(buf, pos)
 		common.SetBit32(&bit, Bit_Mail_Lst, true)
 	}
 

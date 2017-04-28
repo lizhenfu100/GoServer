@@ -11,14 +11,15 @@ var (
 	g_account_cache = make(map[uint32]*TPlayer, 5000)
 )
 
-func FindPlayerInCache(id uint32) *TPlayer {
+//! 多线程架构，玩家内存，只能他自己直接修改，别人须转给他后间接改(异步)
+func _FindPlayerInCache(id uint32) *TPlayer {
 	g_player_mutex.RLock()
 	ret := g_player_cache[id]
 	g_player_mutex.RUnlock()
 	return ret
 }
 func FindWithDB_PlayerId(id uint32) *TPlayer {
-	if player := FindPlayerInCache(id); player != nil {
+	if player := _FindPlayerInCache(id); player != nil {
 		return player
 	} else {
 		if player := LoadPlayerFromDB("_id", id); player != nil {

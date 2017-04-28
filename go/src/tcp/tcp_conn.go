@@ -144,10 +144,8 @@ func (tcpConn *TCPConn) readLoop() error {
 		if tcpConn.isClose {
 			break
 		}
-
-		//TODO：client无需超时限制
 		if firstTime == true {
-			tcpConn.conn.SetReadDeadline(time.Now().Add(5000 * time.Second)) //首次读，5秒超时
+			tcpConn.conn.SetReadDeadline(time.Now().Add(5000 * time.Second)) //首次读，5秒超时【Notice: Client无需超时限制】
 			firstTime = false
 		} else {
 			tcpConn.conn.SetReadDeadline(time.Time{}) //后面读的就没有超时了
