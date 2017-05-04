@@ -39,6 +39,7 @@ func (self *TMailMoudle) LoadFromDB(player *TPlayer) {
 	self.owner = player
 }
 func (self *TMailMoudle) OnLogin() {
+	self.clientMailId = 0
 }
 func (self *TMailMoudle) OnLogout() {
 	self.clientMailId = 0
@@ -103,7 +104,7 @@ func (self *TMail) BufToData(buf *common.NetPack) {
 		self.Items = append(self.Items, common.IntPair{id, cnt})
 	}
 }
-func (self *TMailMoudle) GetNoSendMailIdx() int {
+func (self *TMailMoudle) GetNoSendIdx() int {
 	length := len(self.MailLst)
 	for i := 0; i < length; i++ {
 		if self.MailLst[i].ID > self.clientMailId {

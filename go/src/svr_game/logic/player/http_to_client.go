@@ -41,9 +41,13 @@ func AfterRecvHttpMsg(ptr interface{}, buf *common.NetPack) {
 	buf.WriteUInt32(bit)
 
 	//! 再写数据块
-	if pos := player.Mail.GetNoSendMailIdx(); pos >= 0 {
+	if pos := player.Mail.GetNoSendIdx(); pos >= 0 {
 		player.Mail.DataToBuf(buf, pos)
 		common.SetBit32(&bit, Bit_Mail_Lst, true)
+	}
+	if pos := player.Chat.GetNoSendIdx(); pos >= 0 {
+		player.Chat.DataToBuf(buf, pos)
+		common.SetBit32(&bit, Bit_Chat_Info, true)
 	}
 
 	//! 最后重置位标记

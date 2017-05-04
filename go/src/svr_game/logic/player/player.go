@@ -22,8 +22,8 @@
 			*、因为读别人数据是直接拿内存，此方式可能带来时序Bug【异步写在读之前，但读到旧数据】
 			*、比如：异步扣别人100块，又立即读，可能他还是没钱
 
-	3、分别加读写锁
-			*、会被其他人改的数据块，性质上同全局数据类似，多读多写的
+	3、分别加读写锁【多读少写用RWMutex，写也多的用Mutex】
+			*、会被其他人改的数据块，性质上同全局数据类似，多读少写的
 			*、读写锁封装接口，谁都不允许直接访问
 			*、比异步方式(可能读到旧值)安全，但要写好锁代码【屏蔽所有竞态条件、无死锁】可不是件容易事~_~
 
@@ -47,10 +47,10 @@ type TPlayer struct {
 	TPlayerBase
 	Mail   TMailMoudle
 	Friend TFriendMoudle
+	Chat   TChatMoudle
 	//temp data
 	moudles []PlayerMoudle
 	askchan chan func(*TPlayer)
-
 	isOnlie bool
 }
 type TPlayerBase struct {
@@ -74,6 +74,7 @@ func NewPlayer() *TPlayer {
 	player.moudles = []PlayerMoudle{
 		&player.Mail,
 		&player.Friend,
+		&player.Chat,
 	}
 	player.askchan = make(chan func(*TPlayer), 128)
 	return player
@@ -120,8 +121,10 @@ func (self *TPlayer) OnLogout() {
 	for _, v := range self.moudles {
 		v.OnLogout()
 	}
-	DelPlayerCache(self.PlayerID)
 	G_Auto_Write_DB.UnRegister(self)
+
+	//TODO:zhoumf: 可以延时30s后再删，提升重连效率
+	DelPlayerCache(self.PlayerID)
 }
 func _WritePlayerToDB(ptr interface{}) {
 	if player, ok := ptr.(TPlayer); ok {
