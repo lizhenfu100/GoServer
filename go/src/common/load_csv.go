@@ -9,7 +9,7 @@
 
 	2、首次出现的有效行(非注释的)，即为表头
 
-	3、行列注释："#"开头的行，没命名/前缀"(c)"的列    有些列仅client显示用的
+	3、行列注释："#"开头的行，没命名/前缀"_"的列    有些列仅client显示用的
 
 	4、使用方式如下：
 			type TTestCsv struct { // 字段须与csv表格的顺序一致
@@ -172,7 +172,7 @@ func _parseHead(record []string) (ret int64) { // 不读的列：没命名/前�
 		fmt.Printf("csv column is over to 64 !!!")
 	}
 	for i := 0; i < length; i++ {
-		if record[i] == "" || strings.Index(record[i], "(c)") == 0 {
+		if record[i] == "" || strings.Index(record[i], "_") == 0 {
 			ret |= (1 << uint(i))
 		}
 	}

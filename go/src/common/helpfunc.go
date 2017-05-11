@@ -1,9 +1,5 @@
 package common
 
-import (
-	"time"
-)
-
 type IntPair struct {
 	ID  int
 	Cnt int
@@ -74,11 +70,4 @@ func (self *UInt32Lst) Swap(i, j uint32) {
 	temp := (*self)[i]
 	(*self)[i] = (*self)[j]
 	(*self)[j] = temp
-}
-
-//! 辅助函数
-func IsToday(day int) bool { return time.Now().Day() == day }
-func WeekInYear() int {
-	_, ret := time.Now().ISOWeek()
-	return ret
 }

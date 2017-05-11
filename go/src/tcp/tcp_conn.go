@@ -190,6 +190,7 @@ func (tcpConn *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
 		}
 	} else if rpcRecv := _FindResponse(msg.GetReqKey()); rpcRecv != nil {
 		rpcRecv(msg)
+		_DeleteResponse(msg.GetReqKey())
 	} else {
 		gamelog.Error("msgid[%d] havn't msg handler!!", msgID)
 	}
@@ -227,5 +228,10 @@ func _InsertResponse(reqKey uint64, fun func(*common.NetPack)) {
 		g_rpc_response[reqKey] = fun
 		g_rw_lock.Unlock()
 	}
+}
+func _DeleteResponse(reqKey uint64) {
+	g_rw_lock.Lock()
+	delete(g_rpc_response, reqKey)
+	g_rw_lock.Unlock()
 }
 func _GetNextReqIdx() uint32 { return atomic.AddUint32(&g_auto_req_idx, 1) }

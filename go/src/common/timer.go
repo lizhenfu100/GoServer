@@ -17,6 +17,11 @@ import (
 	"time"
 )
 
+func IsToday(day int) bool { return time.Now().Day() == day }
+func WeekInYear() int {
+	_, ret := time.Now().ISOWeek()
+	return ret
+}
 func GetTodayBeginSec() int64 {
 	now := time.Now()
 	todayTime := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
