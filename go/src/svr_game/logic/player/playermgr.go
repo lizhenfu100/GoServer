@@ -30,7 +30,6 @@ func FindWithDB_PlayerId(id uint32) *TPlayer {
 	return nil
 }
 func FindWithDB_AccountId(id uint32) *TPlayer {
-
 	g_player_mutex.RLock()
 	player := g_account_cache[id]
 	g_player_mutex.RUnlock()

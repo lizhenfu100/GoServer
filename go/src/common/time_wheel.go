@@ -99,8 +99,8 @@ func _NewTimerMgr() *TimerMgr {
 	}
 	return ret
 }
-func (self *TimerMgr) Refresh(time_elasped, timenow int) {
-	tickCnt := time_elasped / TIME_TICK_LEN
+func (self *TimerMgr) Refresh(time_elapse, timenow int) {
+	tickCnt := time_elapse / TIME_TICK_LEN
 	for i := 0; i < tickCnt; i++ { //扫过的slot均超时
 		isCascade := false
 		wheel := &self.wheels[0]

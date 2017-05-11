@@ -36,6 +36,7 @@ import (
 	"common"
 	"dbmgo"
 	"gamelog"
+	"time"
 )
 
 var (
@@ -123,8 +124,13 @@ func (self *TPlayer) OnLogout() {
 	}
 	G_Auto_Write_DB.UnRegister(self)
 
-	//TODO:zhoumf: 可以延时30s后再删，提升重连效率
-	DelPlayerCache(self.PlayerID)
+	// 延时30s后再删，提升重连效率
+	time.AfterFunc(30*time.Second, func() {
+		if !self.isOnlie {
+			go self.WriteAllToDB()
+			DelPlayerCache(self.PlayerID)
+		}
+	})
 }
 func _WritePlayerToDB(ptr interface{}) {
 	if player, ok := ptr.(TPlayer); ok {

@@ -10,13 +10,13 @@ func MainLoop() {
 	// init func list
 	player.InitSvrMailLst()
 
-	timeOld, timeNow, time_elasped := 0, time.Now().Nanosecond()/int(time.Millisecond), 0
+	timeOld, timeNow, time_elapse := 0, time.Now().Nanosecond()/int(time.Millisecond), 0
 	for {
 		timeOld = timeNow
 		timeNow = time.Now().Nanosecond() / int(time.Millisecond)
-		time_elasped = timeNow - timeOld
+		time_elapse = timeNow - timeOld
 
-		player.G_Auto_Write_DB.RunSevice(time_elasped)
+		player.G_Auto_Write_DB.RunSevice(time_elapse)
 
 		time.Sleep(100 * time.Millisecond)
 	}
