@@ -133,7 +133,7 @@ func (self *TPlayer) OnLogout() {
 	})
 }
 func _WritePlayerToDB(ptr interface{}) {
-	if player, ok := ptr.(TPlayer); ok {
+	if player, ok := ptr.(*TPlayer); ok {
 		player.WriteAllToDB()
 	}
 }
