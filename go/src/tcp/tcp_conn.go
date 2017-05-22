@@ -223,11 +223,12 @@ func _FindResponse(reqKey uint64) func(*common.NetPack) {
 	return nil
 }
 func _InsertResponse(reqKey uint64, fun func(*common.NetPack)) {
-	if _FindResponse(reqKey) == nil {
-		g_rw_lock.Lock()
-		g_rpc_response[reqKey] = fun
-		g_rw_lock.Unlock()
-	}
+	// 后来的应该覆盖之前的
+	// if _FindResponse(reqKey) == nil {
+	g_rw_lock.Lock()
+	g_rpc_response[reqKey] = fun
+	g_rw_lock.Unlock()
+	// }
 }
 func _DeleteResponse(reqKey uint64) {
 	g_rw_lock.Lock()

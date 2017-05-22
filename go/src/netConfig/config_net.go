@@ -5,8 +5,6 @@
 
 	2、服务器进程间用tcp通信
 
-	3、Battle设计为多个，初始化完毕后http.Post自己的信息到Gamesvr
-
 * @ framework
 	1、游戏服，一个玩家区服一个GameSvr
 	2、战斗服，可动态扩展。可多个战斗服对应一个游戏服

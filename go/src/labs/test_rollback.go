@@ -47,7 +47,7 @@ func (self *Database) Transaction(trans func() int) {
 			self.transLogs[i].Commit(self)
 		}
 	}
-	self.transLogs = self.transLogs[0:0] //每次事务过后清空记录
+	self.transLogs = self.transLogs[:0] //每次事务过后清空记录
 }
 
 //////////////////////////////////////////////////////////////////////
