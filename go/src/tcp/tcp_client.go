@@ -7,11 +7,11 @@ import (
 	"time"
 )
 
-type TCPClient struct { //作为client玩家数据的一个模块
+type TCPClient struct {
 	Addr            string
 	PendingWriteNum int
 	TcpConn         *TCPConn
-	OnConnected     func(*TCPConn)
+	OnConnect       func(*TCPConn)
 }
 
 func (client *TCPClient) ConnectToSvr(addr, srcModule string, srcID int) {
@@ -29,8 +29,8 @@ func (client *TCPClient) connectRoutine(srcModule string, srcID int) {
 	for {
 		if client.connect() {
 			if client.TcpConn != nil {
-				if client.OnConnected != nil {
-					client.OnConnected(client.TcpConn)
+				if client.OnConnect != nil {
+					client.OnConnect(client.TcpConn)
 				}
 				go client.TcpConn.writeRoutine()
 				client.TcpConn.WriteMsg(packet)

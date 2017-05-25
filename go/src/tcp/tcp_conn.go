@@ -95,6 +95,8 @@ func (tcpConn *TCPConn) Close() {
 func (tcpConn *TCPConn) WriteMsg(msg *common.NetPack) {
 	msgLen := uint16(msg.Size())
 
+	//【Notice: chan里传递的是地址，这里不能像readLoop中那样，优化为"操作同一块buf"，必须每次new新的】
+	//【否则writeRoutine里拿到的极可能是同样数据】
 	buf := make([]byte, 2+msgLen)
 
 	binary.LittleEndian.PutUint16(buf, msgLen)
@@ -120,7 +122,13 @@ func (tcpConn *TCPConn) writeRoutine() {
 		if buf == nil {
 			break
 		}
-		_, err := tcpConn.conn.Write(buf)
+		var n, nn int
+		var err error
+		length := len(buf)
+		for n < length && err == nil {
+			nn, err = tcpConn.conn.Write(buf[n:]) //【Notice: WriteFull】
+			n += nn
+		}
 		if err != nil {
 			gamelog.Error("WriteRoutine error: %s", err.Error())
 			break
