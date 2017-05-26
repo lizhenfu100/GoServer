@@ -150,7 +150,7 @@ LOOP:
 			var err error
 			for i := 0; i < 100; i++ { //还写不完，等下一轮调度吧
 				if err = tcpConn.writer.Flush(); err != io.ErrShortWrite {
-					break LOOP
+					break
 				}
 			}
 			if err != nil {
