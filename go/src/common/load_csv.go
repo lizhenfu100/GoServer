@@ -35,6 +35,7 @@ package common
 
 import (
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -260,7 +261,7 @@ func LoadCsv(path string) ([][]string, error) {
 		return nil, err
 	}
 	if fstate.IsDir() {
-		return nil, &StrError{"LoadCsv is dir!", nil}
+		return nil, errors.New("LoadCsv is dir!")
 	}
 
 	csvReader := csv.NewReader(file)
@@ -282,7 +283,7 @@ func UpdateCsv(path string, records [][]string) error {
 		return err
 	}
 	if fstate.IsDir() {
-		return &StrError{"UpdateCsv is dir!", nil}
+		return errors.New("UpdateCsv is dir!")
 	}
 
 	csvWriter := csv.NewWriter(file)
@@ -301,7 +302,7 @@ func AppendCsv(path string, record []string) error {
 		return err
 	}
 	if fstate.IsDir() {
-		return &StrError{"AppendCsv is dir!", nil}
+		return errors.New("AppendCsv is dir!")
 	}
 
 	csvWriter := csv.NewWriter(file)

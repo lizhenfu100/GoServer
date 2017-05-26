@@ -28,6 +28,7 @@ import (
 	"bufio"
 	"common"
 	"encoding/binary"
+	"errors"
 	"gamelog"
 	"io"
 	"net"
@@ -50,11 +51,14 @@ var (
 	g_rpc_response = make(map[uint64]func(*common.NetPack))
 	g_auto_req_idx = uint32(0)
 	g_rw_lock      = new(sync.RWMutex)
+
+	g_error_conn_close = errors.New("tcp conn close")
 )
 
 type TCPConn struct {
 	conn       net.Conn
 	reader     *bufio.Reader //包装conn减少conn.Read的io次数，见【common\net.go】
+	writer     *bufio.Writer
 	writeChan  chan []byte
 	isClose    bool //isClose标记仅在ResetConn、Close中设置，其它地方只读
 	onNetClose func(*TCPConn)
@@ -76,6 +80,7 @@ func newTCPConn(conn net.Conn, pendingWriteNum int, callback func(*TCPConn)) *TC
 func (tcpConn *TCPConn) ResetConn(conn net.Conn) {
 	tcpConn.conn = conn
 	tcpConn.reader = bufio.NewReader(conn)
+	tcpConn.writer = bufio.NewWriter(conn)
 	tcpConn.isClose = false
 }
 func (tcpConn *TCPConn) Close() {
@@ -83,7 +88,7 @@ func (tcpConn *TCPConn) Close() {
 		return
 	}
 	tcpConn.conn.Close()
-	tcpConn.doWrite(nil) //触发writeRoutine结束
+	tcpConn.WriteBuf(nil) //触发writeRoutine结束
 	tcpConn.isClose = true
 
 	if tcpConn.onNetClose != nil {
@@ -104,34 +109,60 @@ func (tcpConn *TCPConn) WriteMsg(msg *common.NetPack) {
 	copy(buf[2:], msg.DataPtr)
 
 	if false == tcpConn.isClose {
-		tcpConn.doWrite(buf)
+		tcpConn.WriteBuf(buf)
 	}
 }
-func (tcpConn *TCPConn) doWrite(buf []byte) {
+func (tcpConn *TCPConn) WriteBuf(buf []byte) {
 	select {
 	case tcpConn.writeChan <- buf: //chan满后再写即阻塞，select进入default分支报错
 	default:
-		gamelog.Error("doWrite: channel full")
+		gamelog.Error("WriteBuf: channel full")
 		tcpConn.conn.(*net.TCPConn).SetLinger(0)
 		tcpConn.Close()
 		// close(tcpConn.writeChan) //client重连chan里的数据得保留，server都是新new的
 	}
 }
+func (tcpConn *TCPConn) _WriteFull(buf []byte) (err error) {
+	if buf == nil {
+		return g_error_conn_close
+	}
+	var n, nn int
+	length := len(buf)
+	for n < length && err == nil {
+		nn, err = tcpConn.writer.Write(buf[n:]) //【Notice: WriteFull】bufio包装过，这里不会陷入系统调用；先缓存完chan的数据再Flush，更高效
+		n += nn
+	}
+	if err != nil {
+		gamelog.Error("WriteRoutine Write error: %s", err.Error())
+	}
+	return
+}
 func (tcpConn *TCPConn) writeRoutine() {
-	for buf := range tcpConn.writeChan {
-		if buf == nil {
-			break
-		}
-		var n, nn int
-		var err error
-		length := len(buf)
-		for n < length && err == nil {
-			nn, err = tcpConn.conn.Write(buf[n:]) //【Notice: WriteFull】
-			n += nn
-		}
-		if err != nil {
-			gamelog.Error("WriteRoutine error: %s", err.Error())
-			break
+LOOP:
+	for {
+	goto_handle_chan:
+		select {
+		case buf := <-tcpConn.writeChan:
+			if tcpConn._WriteFull(buf) != nil {
+				break LOOP
+			}
+		default:
+			var err error
+			for i := 0; i < 100; i++ { //还写不完，等下一轮调度吧
+				if err = tcpConn.writer.Flush(); err != io.ErrShortWrite {
+					break LOOP
+				}
+			}
+			if err != nil {
+				gamelog.Error("WriteRoutine Flush error: %s", err.Error())
+				break LOOP
+			}
+			//! block
+			buf := <-tcpConn.writeChan
+			if tcpConn._WriteFull(buf) != nil {
+				break LOOP
+			}
+			goto goto_handle_chan
 		}
 	}
 	tcpConn.Close()
@@ -143,7 +174,7 @@ func (tcpConn *TCPConn) readRoutine() {
 func (tcpConn *TCPConn) readLoop() error {
 	var err error
 	var msgLen int
-	var msgHeader = make([]byte, 2) //前2字节-msgLen
+	var msgHeader = make([]byte, 2) //前2字节存msgLen
 	var msgBuf = make([]byte, G_Msg_Size_Max)
 	var packet = common.NewNetPack(nil)
 	var firstTime bool = true

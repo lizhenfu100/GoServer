@@ -22,8 +22,13 @@ func main() {
 	// 	time.Sleep(200 * time.Millisecond)
 	// }
 
+	//test_reload_csv()
+
+	time.Sleep(100 * time.Second)
+}
+func test_reload_csv() {
 	common.LoadAllCsv()
-	for k, v := range common.G_MapCsv {
+	for k, v := range common.G_Csv_Map {
 		fmt.Println(k, v)
 	}
 
@@ -31,7 +36,7 @@ func main() {
 	time.Sleep(10 * time.Second)
 
 	common.ReloadCsv("test")
-	for k, v := range common.G_MapCsv {
+	for k, v := range common.G_Csv_Map {
 		fmt.Println(k, v)
 	}
 }

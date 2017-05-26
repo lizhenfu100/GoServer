@@ -1,4 +1,4 @@
-name,id,is_client,
+name,id,is_client,_common
 rpc_regist,60000,0,
 rpc_echo,0,0,≤‚ ‘
 rpc_login,1,0,

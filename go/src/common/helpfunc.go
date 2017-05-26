@@ -8,18 +8,6 @@ type KeyPair struct {
 	Name string `bson:"_id"`
 	ID   int
 }
-type StrError struct {
-	Str string
-	Err error
-}
-
-func (self *StrError) Error() string {
-	if self.Err == nil {
-		return self.Str
-	} else {
-		return self.Str + " " + self.Err.Error()
-	}
-}
 
 //! 数组封装
 type (
