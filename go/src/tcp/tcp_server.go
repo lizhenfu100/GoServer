@@ -28,26 +28,26 @@ func NewTcpServer(addr string, maxconn int) {
 	svr.run()
 	svr.Close()
 }
-func (server *TCPServer) init() bool {
-	ln, err := net.Listen("tcp", server.Addr)
+func (self *TCPServer) init() bool {
+	ln, err := net.Listen("tcp", self.Addr)
 	if err != nil {
 		gamelog.Error("TCPServer Init failed  error :%s", err.Error())
 		return false
 	}
-	if server.PendingWriteNum <= 0 {
-		server.PendingWriteNum = 32
-		gamelog.Info("Invalid PendingWriteNum, reset to %d", server.PendingWriteNum)
+	if self.PendingWriteNum <= 0 {
+		self.PendingWriteNum = 32
+		gamelog.Info("Invalid PendingWriteNum, reset to %d", self.PendingWriteNum)
 	}
-	server.listener = ln
-	server.connset = make(map[net.Conn]bool)
+	self.listener = ln
+	self.connset = make(map[net.Conn]bool)
 	return true
 }
-func (server *TCPServer) run() {
-	server.wgLn.Add(1)
-	defer server.wgLn.Done()
+func (self *TCPServer) run() {
+	self.wgLn.Add(1)
+	defer self.wgLn.Done()
 	var tempDelay time.Duration
 	for {
-		conn, err := server.listener.Accept()
+		conn, err := self.listener.Accept()
 		if err != nil {
 			if ne, ok := err.(net.Error); ok && ne.Temporary() {
 				if tempDelay == 0 {
@@ -66,43 +66,43 @@ func (server *TCPServer) run() {
 			return
 		}
 		tempDelay = 0
-		connNum := len(server.connset)
-		if connNum >= server.MaxConnNum {
+		connNum := len(self.connset)
+		if connNum >= self.MaxConnNum {
 			conn.Close()
-			gamelog.Error("too many connections(%d/%d)", connNum, server.MaxConnNum)
+			gamelog.Error("too many connections(%d/%d)", connNum, self.MaxConnNum)
 			continue
 		}
 
-		server.mutexConns.Lock()
-		server.connset[conn] = true
-		server.mutexConns.Unlock()
-		server.wgConns.Add(1)
+		self.mutexConns.Lock()
+		self.connset[conn] = true
+		self.mutexConns.Unlock()
+		self.wgConns.Add(1)
 		gamelog.Info("Connect From: %s,  ConnNum: %d", conn.RemoteAddr().String(), connNum+1)
-		tcpConn := newTCPConn(conn, server.PendingWriteNum,
+		tcpConn := newTCPConn(conn, self.PendingWriteNum,
 			func(this *TCPConn) {
 				// 清理tcp_server相关数据
-				server.mutexConns.Lock()
-				delete(server.connset, this.conn)
-				server.mutexConns.Unlock()
-				gamelog.Info("Connect Endded:UserPtr:%v, ConnNum is:%d", this.UserPtr, len(server.connset))
-				server.wgConns.Done()
+				self.mutexConns.Lock()
+				delete(self.connset, this.conn)
+				self.mutexConns.Unlock()
+				gamelog.Info("Connect Endded:UserPtr:%v, ConnNum is:%d", this.UserPtr, len(self.connset))
+				self.wgConns.Done()
 			})
 		go tcpConn.readRoutine()
 		go tcpConn.writeRoutine()
 	}
 }
-func (server *TCPServer) Close() {
-	server.listener.Close()
-	server.wgLn.Wait()
+func (self *TCPServer) Close() {
+	self.listener.Close()
+	self.wgLn.Wait()
 
-	server.mutexConns.Lock()
-	for conn := range server.connset {
+	self.mutexConns.Lock()
+	for conn := range self.connset {
 		conn.Close()
 	}
-	server.connset = nil
-	server.mutexConns.Unlock()
+	self.connset = nil
+	self.mutexConns.Unlock()
 
-	server.wgConns.Wait()
+	self.wgConns.Wait()
 	gamelog.Info("server been closed!!")
 }
 

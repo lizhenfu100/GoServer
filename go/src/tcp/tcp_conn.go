@@ -19,6 +19,34 @@
 	5、现在的架构是：每条连接各线程收数据，直接在io线程调注册的业务函数，对强交互的业务不友好
 		要是做MMO之类的，可考虑像c++一样，io线程只负责收发，数据交付给全局队列，主线程逐帧处理，避免竞态
 
+* @ reconnect
+	1、Accept返回的conn，先收一个包，内含connId
+	2、connId为0表示新连接，挑选一个空闲的TCPConn，newTCPConn()
+	3、不为0即重连，取对应TCPConn，若它关闭的，随即ResetConn()
+
+* @ 更稳定的连接
+	*、参考项目
+		【http://blog.codingnow.com/2014/02/connection_reuse.html】
+		【https://github.com/funny/snet】
+	*、新连接建立
+		上行包：
+			1、ConnID==0
+			2、DH密钥
+		下行包：
+			1、加密的ConnID
+			2、DH密钥
+	*、连接修复(断线重连)
+		上行包：
+			1、旧有的ConnID
+			2、Client已发送字节数
+			3、Client已接收字节数
+			4、密钥计算出的MD5
+		服务器：
+			1、验证合法性，失败立即断开
+			2、根据ConnID定位旧连接，并下发“已发、已收字节数”作为重连回应
+			3、再由Client上报的“已接收字节数”，计算出需重传数据，立即下发
+			4、Client收到重连响应后，比较收发字节数差值来读取Server下发的重传数据
+
 * @ author zhoumf
 * @ date 2016-8-3
 ***********************************************************************/
@@ -36,7 +64,6 @@ import (
 	"runtime/debug"
 	"sync"
 	"sync/atomic"
-	"time"
 )
 
 const (
@@ -50,7 +77,7 @@ var (
 	}
 	g_rpc_response = make(map[uint64]func(*common.NetPack))
 	g_auto_req_idx = uint32(0)
-	g_rw_lock      = new(sync.RWMutex)
+	g_rw_lock      sync.RWMutex
 
 	g_error_conn_close = errors.New("tcp conn close")
 )
@@ -68,36 +95,36 @@ type TCPConn struct {
 }
 
 func newTCPConn(conn net.Conn, pendingWriteNum int, callback func(*TCPConn)) *TCPConn {
-	tcpConn := new(TCPConn)
-	tcpConn.ResetConn(conn)
-	tcpConn.onNetClose = callback
-	tcpConn.writeChan = make(chan []byte, pendingWriteNum)
-	tcpConn.sendBuffer = common.NewNetPackCap(128)
-	tcpConn.BackBuffer = common.NewNetPackCap(128)
-	return tcpConn
+	self := new(TCPConn)
+	self.ResetConn(conn)
+	self.onNetClose = callback
+	self.writeChan = make(chan []byte, pendingWriteNum)
+	self.sendBuffer = common.NewNetPackCap(128)
+	self.BackBuffer = common.NewNetPackCap(128)
+	return self
 }
 
-func (tcpConn *TCPConn) ResetConn(conn net.Conn) {
-	tcpConn.conn = conn
-	tcpConn.reader = bufio.NewReader(conn)
-	tcpConn.writer = bufio.NewWriter(conn)
-	tcpConn.isClose = false
+func (self *TCPConn) ResetConn(conn net.Conn) {
+	self.conn = conn
+	self.reader = bufio.NewReader(conn)
+	self.writer = bufio.NewWriter(conn)
+	self.isClose = false
 }
-func (tcpConn *TCPConn) Close() {
-	if tcpConn.isClose {
+func (self *TCPConn) Close() {
+	if self.isClose {
 		return
 	}
-	tcpConn.conn.Close()
-	tcpConn.WriteBuf(nil) //触发writeRoutine结束
-	tcpConn.isClose = true
+	self.conn.Close()
+	self.WriteBuf(nil) //触发writeRoutine结束
+	self.isClose = true
 
-	if tcpConn.onNetClose != nil {
-		tcpConn.onNetClose(tcpConn)
+	if self.onNetClose != nil {
+		self.onNetClose(self)
 	}
 }
 
 // msgdata must not be modified by other goroutines
-func (tcpConn *TCPConn) WriteMsg(msg *common.NetPack) {
+func (self *TCPConn) WriteMsg(msg *common.NetPack) {
 	msgLen := uint16(msg.Size())
 
 	//【Notice: chan里传递的是地址，这里不能像readLoop中那样，优化为"操作同一块buf"，必须每次new新的】
@@ -108,28 +135,28 @@ func (tcpConn *TCPConn) WriteMsg(msg *common.NetPack) {
 
 	copy(buf[2:], msg.DataPtr)
 
-	if false == tcpConn.isClose {
-		tcpConn.WriteBuf(buf)
+	if false == self.isClose {
+		self.WriteBuf(buf)
 	}
 }
-func (tcpConn *TCPConn) WriteBuf(buf []byte) {
+func (self *TCPConn) WriteBuf(buf []byte) {
 	select {
-	case tcpConn.writeChan <- buf: //chan满后再写即阻塞，select进入default分支报错
+	case self.writeChan <- buf: //chan满后再写即阻塞，select进入default分支报错
 	default:
 		gamelog.Error("WriteBuf: channel full")
-		tcpConn.conn.(*net.TCPConn).SetLinger(0)
-		tcpConn.Close()
-		// close(tcpConn.writeChan) //client重连chan里的数据得保留，server都是新new的
+		self.conn.(*net.TCPConn).SetLinger(0)
+		self.Close()
+		// close(self.writeChan) //client重连chan里的数据得保留，server都是新new的
 	}
 }
-func (tcpConn *TCPConn) _WriteFull(buf []byte) (err error) {
+func (self *TCPConn) _WriteFull(buf []byte) (err error) {
 	if buf == nil {
 		return g_error_conn_close
 	}
 	var n, nn int
 	length := len(buf)
 	for n < length && err == nil {
-		nn, err = tcpConn.writer.Write(buf[n:]) //【Notice: WriteFull】bufio包装过，这里不会陷入系统调用；先缓存完chan的数据再Flush，更高效
+		nn, err = self.writer.Write(buf[n:]) //【Notice: WriteFull】bufio包装过，这里不会陷入系统调用；先缓存完chan的数据再Flush，更高效
 		n += nn
 	}
 	if err != nil {
@@ -137,19 +164,19 @@ func (tcpConn *TCPConn) _WriteFull(buf []byte) (err error) {
 	}
 	return
 }
-func (tcpConn *TCPConn) writeRoutine() {
+func (self *TCPConn) writeRoutine() {
 LOOP:
 	for {
 	goto_handle_chan:
 		select {
-		case buf := <-tcpConn.writeChan:
-			if tcpConn._WriteFull(buf) != nil {
+		case buf := <-self.writeChan:
+			if self._WriteFull(buf) != nil {
 				break LOOP
 			}
 		default:
 			var err error
 			for i := 0; i < 100; i++ { //还写不完，等下一轮调度吧
-				if err = tcpConn.writer.Flush(); err != io.ErrShortWrite {
+				if err = self.writer.Flush(); err != io.ErrShortWrite {
 					break
 				}
 			}
@@ -158,39 +185,38 @@ LOOP:
 				break LOOP
 			}
 			//! block
-			buf := <-tcpConn.writeChan
-			if tcpConn._WriteFull(buf) != nil {
+			buf := <-self.writeChan
+			if self._WriteFull(buf) != nil {
 				break LOOP
 			}
 			goto goto_handle_chan
 		}
 	}
-	tcpConn.Close()
+	self.Close()
 }
-func (tcpConn *TCPConn) readRoutine() {
-	tcpConn.readLoop()
-	tcpConn.Close()
+func (self *TCPConn) readRoutine() {
+	self.readLoop()
+	self.Close()
 }
-func (tcpConn *TCPConn) readLoop() error {
+func (self *TCPConn) readLoop() error {
 	var err error
 	var msgLen int
 	var msgHeader = make([]byte, 2) //前2字节存msgLen
 	var msgBuf = make([]byte, G_Msg_Size_Max)
 	var packet = common.NewNetPack(nil)
-	var firstTime bool = true
-
+	// var firstTime bool = true
 	for {
-		if tcpConn.isClose {
+		if self.isClose {
 			break
 		}
-		if firstTime == true {
-			tcpConn.conn.SetReadDeadline(time.Now().Add(5000 * time.Second)) //首次读，5秒超时【Notice: Client无需超时限制】
-			firstTime = false
-		} else {
-			tcpConn.conn.SetReadDeadline(time.Time{}) //后面读的就没有超时了
-		}
-
-		_, err = io.ReadFull(tcpConn.reader, msgHeader)
+		//【check client heartbeat to close invalid conn】
+		// if firstTime == true {
+		// 	self.conn.SetReadDeadline(time.Now().Add(5 * time.Second)) //首次读，5秒超时【Notice: Client无需超时限制】
+		// 	firstTime = false
+		// } else {
+		// 	self.conn.SetReadDeadline(time.Time{}) //后面读的就没有超时了
+		// }
+		_, err = io.ReadFull(self.reader, msgHeader)
 		if err != nil {
 			gamelog.Error("ReadFull msgHeader error: %s", err.Error())
 			return err
@@ -203,16 +229,19 @@ func (tcpConn *TCPConn) readLoop() error {
 		}
 		packet.Reset(msgBuf[:msgLen])
 
-		_, err = io.ReadFull(tcpConn.reader, packet.DataPtr)
+		_, err = io.ReadFull(self.reader, packet.DataPtr)
 		if err != nil {
 			gamelog.Error("ReadFull msgData error: %s", err.Error())
 			return err
 		}
-		tcpConn.msgDispatcher(packet.GetOpCode(), packet)
+
+		//TODO:zhoumf: 消息加密、验证有效性，不通过即踢掉
+
+		self.msgDispatcher(packet.GetOpCode(), packet)
 	}
 	return nil
 }
-func (tcpConn *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
+func (self *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
 	// gamelog.Info("---msgID:%d, dataLen:%d", msgID, msg.Size())
 	defer func() {
 		if r := recover(); r != nil {
@@ -222,10 +251,10 @@ func (tcpConn *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
 		}
 	}()
 	if msghandler, ok := G_HandlerMsgMap[msgID]; ok {
-		tcpConn.BackBuffer.ResetHead(msg)
-		msghandler(tcpConn, msg)
-		if tcpConn.BackBuffer.BodySize() > 0 {
-			tcpConn.WriteMsg(tcpConn.BackBuffer)
+		self.BackBuffer.ResetHead(msg)
+		msghandler(self, msg)
+		if self.BackBuffer.BodySize() > 0 {
+			self.WriteMsg(self.BackBuffer)
 		}
 	} else if rpcRecv := _FindResponse(msg.GetReqKey()); rpcRecv != nil {
 		rpcRecv(msg)
@@ -236,21 +265,21 @@ func (tcpConn *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
 }
 
 //! rpc
-func (tcpConn *TCPConn) CallRpc(rpc string, sendFun func(*common.NetPack)) uint64 {
+func (self *TCPConn) CallRpc(rpc string, sendFun func(*common.NetPack)) uint64 {
 	msgID := common.RpcNameToId(rpc)
 	if _, ok := G_HandlerMsgMap[msgID]; ok {
 		gamelog.Error("Server and Client have the same Rpc[%s]", rpc)
 		return 0
 	}
-	tcpConn.sendBuffer.ClearBody()
-	tcpConn.sendBuffer.SetOpCode(msgID)
-	tcpConn.sendBuffer.SetReqIdx(_GetNextReqIdx())
-	sendFun(tcpConn.sendBuffer)
-	tcpConn.WriteMsg(tcpConn.sendBuffer)
-	return tcpConn.sendBuffer.GetReqKey()
+	self.sendBuffer.ClearBody()
+	self.sendBuffer.SetOpCode(msgID)
+	self.sendBuffer.SetReqIdx(_GetNextReqIdx())
+	sendFun(self.sendBuffer)
+	self.WriteMsg(self.sendBuffer)
+	return self.sendBuffer.GetReqKey()
 }
-func (tcpConn *TCPConn) CallRpc2(rpc string, sendFun, recvFun func(*common.NetPack)) {
-	reqKey := tcpConn.CallRpc(rpc, sendFun)
+func (self *TCPConn) CallRpc2(rpc string, sendFun, recvFun func(*common.NetPack)) {
+	reqKey := self.CallRpc(rpc, sendFun)
 	_InsertResponse(reqKey, recvFun)
 }
 func _FindResponse(reqKey uint64) func(*common.NetPack) {

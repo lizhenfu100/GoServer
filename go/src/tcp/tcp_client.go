@@ -14,52 +14,52 @@ type TCPClient struct {
 	OnConnect       func(*TCPConn)
 }
 
-func (client *TCPClient) ConnectToSvr(addr, srcModule string, srcID int) {
-	client.Addr = addr
-	client.PendingWriteNum = 32
-	client.TcpConn = nil
+func (self *TCPClient) ConnectToSvr(addr, srcModule string, srcID int) {
+	self.Addr = addr
+	self.PendingWriteNum = 32
+	self.TcpConn = nil
 
-	go client.connectRoutine(srcModule, srcID) //会断线后自动重连
+	go self.connectRoutine(srcModule, srcID) //会断线后自动重连
 }
-func (client *TCPClient) connectRoutine(srcModule string, srcID int) {
+func (self *TCPClient) connectRoutine(srcModule string, srcID int) {
 	packet := common.NewNetPackCap(32)
 	packet.SetOpCode(G_MsgId_Regist)
 	packet.WriteString(srcModule)
 	packet.WriteInt(srcID)
 	for {
-		if client.connect() {
-			if client.TcpConn != nil {
-				if client.OnConnect != nil {
-					client.OnConnect(client.TcpConn)
+		if self.connect() {
+			if self.TcpConn != nil {
+				if self.OnConnect != nil {
+					self.OnConnect(self.TcpConn)
 				}
-				go client.TcpConn.writeRoutine()
-				client.TcpConn.WriteMsg(packet)
-				client.TcpConn.readRoutine() //goroutine会阻塞在这里
+				go self.TcpConn.writeRoutine()
+				self.TcpConn.WriteMsg(packet)
+				self.TcpConn.readRoutine() //goroutine会阻塞在这里
 			}
 		}
 		time.Sleep(3 * time.Second)
 	}
 }
-func (client *TCPClient) connect() bool {
-	conn, err := net.Dial("tcp", client.Addr)
+func (self *TCPClient) connect() bool {
+	conn, err := net.Dial("tcp", self.Addr)
 	if err != nil {
-		fmt.Printf("connect to %s error :%s \n", client.Addr, err.Error())
+		fmt.Printf("connect to %s error :%s \n", self.Addr, err.Error())
 		return false
 	}
 	if conn == nil {
 		return false
 	}
 
-	if client.TcpConn != nil {
+	if self.TcpConn != nil {
 		//断线重连的新连接标记得重置，否则tcpConn.readRoutine.readLoop会直接break
-		client.TcpConn.ResetConn(conn)
+		self.TcpConn.ResetConn(conn)
 	} else {
-		client.TcpConn = newTCPConn(conn, client.PendingWriteNum, nil)
+		self.TcpConn = newTCPConn(conn, self.PendingWriteNum, nil)
 	}
 	return true
 }
 
-func (client *TCPClient) Close() {
-	client.TcpConn.Close()
-	client.TcpConn = nil
+func (self *TCPClient) Close() {
+	self.TcpConn.Close()
+	self.TcpConn = nil
 }
