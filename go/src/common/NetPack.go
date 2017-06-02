@@ -26,7 +26,7 @@ func NewNetPackCap(capacity int) *NetPack {
 }
 func NewNetPackLen(length int) *NetPack {
 	pack := new(NetPack)
-	pack.DataPtr = make([]byte, length)
+	pack.DataPtr = make([]byte, length+PACK_HEADER_SIZE)
 	pack.ReadPos = PACK_HEADER_SIZE
 	return pack
 }
@@ -80,6 +80,10 @@ func (self *NetPack) GetReqIdx() (ret uint32) {
 	}
 	return
 }
+
+//! Set
+func (self *NetPack) SetPos(pos int, v uint32) { self.ByteBuffer.SetPos(PACK_HEADER_SIZE+pos, v) }
+func (self *NetPack) GetPos(pos int) uint32    { return self.ByteBuffer.GetPos(PACK_HEADER_SIZE + pos) }
 
 //! rpc
 func DebugRpcIdToName(id uint16) string {

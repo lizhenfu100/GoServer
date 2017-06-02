@@ -67,13 +67,15 @@ import (
 )
 
 const (
-	G_Msg_Size_Max = 1024
-	G_MsgId_Regist = 60000
+	G_Msg_Size_Max    = 1024
+	G_MsgId_Regist    = 60000
+	G_MsgId_SvrAccept = 60001
 )
 
 var (
 	G_HandlerMsgMap = map[uint16]func(*TCPConn, *common.NetPack){
-		G_MsgId_Regist: DoRegistToSvr,
+		G_MsgId_Regist:    DoRegistToSvr,
+		G_MsgId_SvrAccept: OnSvrAcceptConn,
 	}
 	g_rpc_response = make(map[uint64]func(*common.NetPack))
 	g_auto_req_idx = uint32(0)
@@ -103,7 +105,6 @@ func newTCPConn(conn net.Conn, pendingWriteNum int, callback func(*TCPConn)) *TC
 	self.BackBuffer = common.NewNetPackCap(128)
 	return self
 }
-
 func (self *TCPConn) ResetConn(conn net.Conn) {
 	self.conn = conn
 	self.reader = bufio.NewReader(conn)
@@ -195,10 +196,6 @@ LOOP:
 	self.Close()
 }
 func (self *TCPConn) readRoutine() {
-	self.readLoop()
-	self.Close()
-}
-func (self *TCPConn) readLoop() error {
 	var err error
 	var msgLen int
 	var msgHeader = make([]byte, 2) //前2字节存msgLen
@@ -219,7 +216,7 @@ func (self *TCPConn) readLoop() error {
 		_, err = io.ReadFull(self.reader, msgHeader)
 		if err != nil {
 			gamelog.Error("ReadFull msgHeader error: %s", err.Error())
-			return err
+			break
 		}
 
 		msgLen = int(binary.LittleEndian.Uint16(msgHeader))
@@ -232,14 +229,14 @@ func (self *TCPConn) readLoop() error {
 		_, err = io.ReadFull(self.reader, packet.DataPtr)
 		if err != nil {
 			gamelog.Error("ReadFull msgData error: %s", err.Error())
-			return err
+			break
 		}
 
 		//TODO:zhoumf: 消息加密、验证有效性，不通过即踢掉
 
 		self.msgDispatcher(packet.GetOpCode(), packet)
 	}
-	return nil
+	self.Close()
 }
 func (self *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
 	// gamelog.Info("---msgID:%d, dataLen:%d", msgID, msg.Size())
@@ -264,7 +261,8 @@ func (self *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
 	}
 }
 
-//! rpc
+//////////////////////////////////////////////////////////////////////
+//! rpc 非线程安全的
 func (self *TCPConn) CallRpc(rpc string, sendFun func(*common.NetPack)) uint64 {
 	msgID := common.RpcNameToId(rpc)
 	if _, ok := G_HandlerMsgMap[msgID]; ok {

@@ -37,7 +37,7 @@ func BeforeRecvHttpMsg(pid uint32) interface{} {
 func AfterRecvHttpMsg(ptr interface{}, buf *common.NetPack) {
 	player := ptr.(*TPlayer)
 	//! 先写位标记
-	bit, bitPosInBuf := uint32(0), uint32(buf.Size())
+	bit, bitPosInBuf := uint32(0), buf.Size()
 	buf.WriteUInt32(bit)
 
 	//! 再写数据块
@@ -52,10 +52,5 @@ func AfterRecvHttpMsg(ptr interface{}, buf *common.NetPack) {
 
 	//! 最后重置位标记
 	fmt.Println("PackSendBit", bit)
-	_ResetBitInByteBuffer(buf, bitPosInBuf, bit)
-}
-func _ResetBitInByteBuffer(buf *common.NetPack, pos, v uint32) {
-	for i := uint32(0); i < 4; i++ {
-		buf.DataPtr[pos+i] = byte(v >> i)
-	}
+	buf.SetPos(bitPosInBuf, bit)
 }

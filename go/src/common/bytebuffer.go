@@ -16,7 +16,7 @@ func NewByteBufferCap(capacity int) *ByteBuffer {
 }
 func NewByteBufferLen(length int) *ByteBuffer {
 	buf := new(ByteBuffer)
-	buf.DataPtr = make([]byte, length, length)
+	buf.DataPtr = make([]byte, length)
 	return buf
 }
 func NewByteBuffer(data []byte) *ByteBuffer { return &ByteBuffer{data, 0} }
@@ -30,7 +30,7 @@ func (self *ByteBuffer) Clear() {
 }
 func (self *ByteBuffer) Size() int { return len(self.DataPtr) }
 
-//! Write API
+//! Write
 func (self *ByteBuffer) WriteByte(v byte) {
 	self.DataPtr = append(self.DataPtr, v)
 }
@@ -74,7 +74,7 @@ func (self *ByteBuffer) WriteBuf(v []byte) {
 	self.DataPtr = append(self.DataPtr, v...)
 }
 
-//! Read API
+//! Read
 func (self *ByteBuffer) readableBytes() int { //剩余多少字节没读
 	return len(self.DataPtr) - self.ReadPos
 }
@@ -160,6 +160,24 @@ func (self *ByteBuffer) ReadUInt64() (ret uint64) {
 			ret |= uint64(self.DataPtr[self.ReadPos+i]) << uint(i*8)
 		}
 		self.ReadPos += 8
+	}
+	return
+}
+
+//! Set
+func (self *ByteBuffer) SetPos(pos int, v uint32) {
+	if len(self.DataPtr) >= pos+4 {
+		self.DataPtr[pos] = byte(v)
+		self.DataPtr[pos+1] = byte(v >> 8)
+		self.DataPtr[pos+2] = byte(v >> 16)
+		self.DataPtr[pos+3] = byte(v >> 24)
+	}
+}
+func (self *ByteBuffer) GetPos(pos int) (ret uint32) {
+	if len(self.DataPtr) >= pos+4 {
+		for i := 0; i < 4; i++ {
+			ret |= uint32(self.DataPtr[pos+i]) << uint(i*8)
+		}
 	}
 	return
 }

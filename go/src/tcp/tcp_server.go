@@ -3,6 +3,7 @@ package tcp
 import (
 	"common"
 	"gamelog"
+	"io"
 	"net"
 	"sync"
 	"time"
@@ -12,9 +13,10 @@ type TCPServer struct {
 	Addr            string
 	MaxConnNum      int
 	PendingWriteNum int
+	autoConnId      uint32
+	connmap         map[uint32]*TCPConn
 	listener        net.Listener
 	mutexConns      sync.Mutex
-	connset         map[net.Conn]bool
 	wgLn            sync.WaitGroup
 	wgConns         sync.WaitGroup
 }
@@ -39,7 +41,7 @@ func (self *TCPServer) init() bool {
 		gamelog.Info("Invalid PendingWriteNum, reset to %d", self.PendingWriteNum)
 	}
 	self.listener = ln
-	self.connset = make(map[net.Conn]bool)
+	self.connmap = make(map[uint32]*TCPConn)
 	return true
 }
 func (self *TCPServer) run() {
@@ -66,29 +68,75 @@ func (self *TCPServer) run() {
 			return
 		}
 		tempDelay = 0
-		connNum := len(self.connset)
-		if connNum >= self.MaxConnNum {
-			conn.Close()
-			gamelog.Error("too many connections(%d/%d)", connNum, self.MaxConnNum)
-			continue
-		}
+		go self._HandleAcceptConn(conn)
+	}
+}
+func (self *TCPServer) _HandleAcceptConn(conn net.Conn) {
+	// 收第一个包，客户端上报connId、密钥等
+	firstBufSize := 4
+	buf := make([]byte, 2+common.PACK_HEADER_SIZE+firstBufSize)
+	if _, err := io.ReadFull(conn, buf); err != nil {
+		conn.Close()
+		gamelog.Error("RecvFirstPack: %s", err.Error())
+		return
+	}
+	firstBuf := common.NewNetPack(buf[2:])
+	connId := firstBuf.GetPos(0)
+	gamelog.Info("_HandleAcceptConn: %d", connId)
 
-		self.mutexConns.Lock()
-		self.connset[conn] = true
-		self.mutexConns.Unlock()
-		self.wgConns.Add(1)
-		gamelog.Info("Connect From: %s,  ConnNum: %d", conn.RemoteAddr().String(), connNum+1)
-		tcpConn := newTCPConn(conn, self.PendingWriteNum,
-			func(this *TCPConn) {
-				// 清理tcp_server相关数据
-				self.mutexConns.Lock()
-				delete(self.connset, this.conn)
-				self.mutexConns.Unlock()
-				gamelog.Info("Connect Endded:UserPtr:%v, ConnNum is:%d", this.UserPtr, len(self.connset))
-				self.wgConns.Done()
-			})
-		go tcpConn.readRoutine()
-		go tcpConn.writeRoutine()
+	if connId > 0 {
+		self._ResetOldConn(conn, connId)
+	} else {
+		self.autoConnId++
+		self._AddNewConn(conn, self.autoConnId)
+	}
+}
+func (self *TCPServer) _AddNewConn(conn net.Conn, connId uint32) {
+	if len(self.connmap) >= self.MaxConnNum {
+		conn.Close()
+		gamelog.Error("too many connections(%d/%d)", len(self.connmap), self.MaxConnNum)
+		return
+	}
+	gamelog.Info("_AddNewConn: %d", connId)
+
+	self.wgConns.Add(1)
+	tcpConn := newTCPConn(conn, self.PendingWriteNum,
+		func(this *TCPConn) {
+			self.mutexConns.Lock()
+			delete(self.connmap, connId)
+			self.mutexConns.Unlock()
+			gamelog.Info("Connect End: UserPtr:%v, ConnNum is:%d", this.UserPtr, len(self.connmap))
+			self.wgConns.Done()
+		})
+	self.mutexConns.Lock()
+	self.connmap[connId] = tcpConn
+	self.mutexConns.Unlock()
+	gamelog.Info("Connect From: %s,  ConnNum: %d", conn.RemoteAddr().String(), len(self.connmap))
+	go tcpConn.readRoutine()
+	// 通知client，连接被接收，下发connId、密钥等
+	acceptMsg := common.NewNetPackCap(32)
+	acceptMsg.SetOpCode(G_MsgId_SvrAccept)
+	acceptMsg.WriteUInt32(connId)
+	tcpConn.WriteMsg(acceptMsg)
+	tcpConn.writeRoutine()
+}
+func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
+	self.mutexConns.Lock()
+	oldconn, ok := self.connmap[oldId]
+	self.mutexConns.Unlock()
+	if oldconn != nil && ok {
+		if oldconn.isClose {
+			gamelog.Info("_ResetOldConn isClose: %d", oldId)
+			oldconn.ResetConn(newconn)
+			go oldconn.readRoutine()
+			oldconn.writeRoutine()
+		} else {
+			gamelog.Info("_ResetOldConn isOpen: %d", oldId)
+			newconn.Close()
+		}
+	} else {
+		gamelog.Info("_ResetOldConn to _AddNewConn: %d", oldId)
+		self._AddNewConn(newconn, oldId)
 	}
 }
 func (self *TCPServer) Close() {
@@ -96,10 +144,10 @@ func (self *TCPServer) Close() {
 	self.wgLn.Wait()
 
 	self.mutexConns.Lock()
-	for conn := range self.connset {
+	for _, conn := range self.connmap {
 		conn.Close()
 	}
-	self.connset = nil
+	self.connmap = nil
 	self.mutexConns.Unlock()
 
 	self.wgConns.Wait()
@@ -114,6 +162,7 @@ func DoRegistToSvr(conn *TCPConn, data *common.NetPack) {
 	module := data.ReadString()
 	id := data.ReadInt()
 	g_reg_conn_map[common.KeyPair{module, id}] = conn
+	gamelog.Info("DoRegistToSvr: {%s %d}", module, id)
 }
 func FindRegModuleConn(module string, id int) *TCPConn {
 	if v, ok := g_reg_conn_map[common.KeyPair{module, id}]; ok {

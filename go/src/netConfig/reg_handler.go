@@ -55,7 +55,7 @@ func RegHttpPlayerHandler(httpLst map[string]HttpPlayerHandle) {
 }
 func _HandleHttpPlayerMsg(w http.ResponseWriter, r *http.Request) {
 	//! 接收信息
-	req := common.NewNetPackLen(int(r.ContentLength))
+	req := common.NewNetPackLen(int(r.ContentLength) - common.PACK_HEADER_SIZE)
 	r.Body.Read(req.DataPtr)
 
 	//! 创建回复
