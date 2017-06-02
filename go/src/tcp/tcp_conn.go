@@ -64,6 +64,7 @@ import (
 	"runtime/debug"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 const (
@@ -120,7 +121,11 @@ func (self *TCPConn) Close() {
 	self.isClose = true
 
 	if self.onNetClose != nil {
-		self.onNetClose(self)
+		time.AfterFunc(30*time.Second, func() { // 30s内允许重连
+			if self.isClose {
+				self.onNetClose(self)
+			}
+		})
 	}
 }
 

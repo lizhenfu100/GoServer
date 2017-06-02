@@ -112,6 +112,7 @@ func (self *TCPServer) _AddNewConn(conn net.Conn, connId uint32) {
 	self.connmap[connId] = tcpConn
 	self.mutexConns.Unlock()
 	gamelog.Info("Connect From: %s,  ConnNum: %d", conn.RemoteAddr().String(), len(self.connmap))
+
 	go tcpConn.readRoutine()
 	// 通知client，连接被接收，下发connId、密钥等
 	acceptMsg := common.NewNetPackCap(32)
