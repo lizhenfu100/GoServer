@@ -3,6 +3,7 @@ package account
 import (
 	"dbmgo"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"gopkg.in/mgo.v2/bson"
@@ -15,8 +16,9 @@ const (
 
 type TAccountMgr struct {
 	sync.RWMutex
-	NameToId map[string]uint32
-	IdToPtr  map[uint32]*TAccount
+	NameToId   map[string]uint32
+	IdToPtr    map[uint32]*TAccount
+	loginToken uint32
 }
 
 var G_AccountMgr TAccountMgr
@@ -66,6 +68,18 @@ func (self *TAccountMgr) GetAccountByName(name string) *TAccount {
 	}
 	return nil
 }
+func (self *TAccountMgr) GetAccountById(accountId uint32) *TAccount {
+	self.RLock()
+	account := self.IdToPtr[accountId]
+	self.RUnlock()
+	if account == nil {
+		account := new(TAccount)
+		if ok := dbmgo.Find("Account", "_id", accountId, account); ok {
+			self._AddToCache(account)
+		}
+	}
+	return account
+}
 func (self *TAccountMgr) ResetPassword(name, password, newpassword string) bool {
 	if account := self.GetAccountByName(name); account != nil {
 		if account.Password == password {
@@ -85,6 +99,4 @@ func (self *TAccountMgr) _AddToCache(account *TAccount) {
 	self.NameToId[account.Name] = account.AccountID
 	self.Unlock()
 }
-func CreateLoginToken() string {
-	return "chillyroom"
-}
+func (self *TAccountMgr) CreateLoginToken() uint32 { return atomic.AddUint32(&self.loginToken, 1) }

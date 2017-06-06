@@ -52,12 +52,16 @@ func InitConf() {
 	}
 	common.LoadAllCsv()
 
+	netConfig.RegHttpSystemHandler(map[string]netConfig.HttpHandle{
+		//! Gamesvr
+		"login_success": account.Handle_Login_Success,
+	})
 	netConfig.RegHttpPlayerHandler(map[string]netConfig.HttpPlayerHandle{
-		//! From Gamesvr
-		"rpc_login_success": account.Rpc_Login_Success,
-
-		//! From Client
-		"rpc_reg_account":     account.Rpc_Reg_Account,
-		"rpc_get_gamesvr_lst": account.Rpc_GetGameSvrLst,
+		//! Client
+		"rpc_reg_account":            account.Rpc_Reg_Account,
+		"rpc_change_password":        account.Rpc_Change_Password,
+		"rpc_get_gamesvr_lst":        account.Rpc_GetGameSvr_Lst,
+		"rpc_get_gamesvr_last_login": account.Rpc_GetGameSvr_LastLogin,
+		"rpc_login_gamesvr":          account.Rpc_Login_GameSvr,
 	})
 }

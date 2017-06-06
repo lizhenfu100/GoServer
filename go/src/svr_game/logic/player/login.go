@@ -18,21 +18,35 @@ import (
 	"common"
 	"fmt"
 	"gamelog"
+	"netConfig"
+	"svr_game/api"
+	"svr_game/center"
 )
 
 func Rpc_Player_Login(req, ack *common.NetPack, ptr interface{}) {
-	//req: accountId, loginKey(账号服生成的登录验证码)
+	//req: accountId, token(账号服生成的登录验证码)
 	//ack: playerId, data
 	accountId := req.ReadUInt32()
+	token := req.ReadUInt32()
 
-	player := FindWithDB_AccountId(accountId)
-
-	if player != nil {
-		player.OnLogin()
-		fmt.Println("Rpc_Player_Login:\n", player)
-		ack.WriteUInt32(player.PlayerID)
+	if !center.CheckLoginToken(accountId, token) {
+		ack.WriteInt8(-1)
 	} else {
-		//notify client to create new player
+		player := FindWithDB_AccountId(accountId)
+		if player == nil {
+			ack.WriteInt8(-2) //notify client to create new player
+		} else {
+			player.OnLogin()
+			fmt.Println("Rpc_Player_Login:\n", player)
+			ack.WriteInt8(1)
+			ack.WriteUInt32(player.PlayerID)
+
+			// notify svr_center login success
+			buf := common.NewByteBufferCap(8)
+			buf.WriteUInt32(accountId)
+			buf.WriteUInt32(uint32(netConfig.G_Local_SvrID))
+			api.SendToCenter("login_success", buf.DataPtr)
+		}
 	}
 }
 func Rpc_Player_Logout(req, ack *common.NetPack, ptr interface{}) {
@@ -42,13 +56,15 @@ func Rpc_Player_Logout(req, ack *common.NetPack, ptr interface{}) {
 	player.OnLogout()
 }
 func Rpc_Player_Create(req, ack *common.NetPack, ptr interface{}) {
-	//req: accountId, loginKey, playerName
+	//req: accountId, playerName
 	//ack: playerId
 	accountId := req.ReadUInt32()
 	playerName := req.ReadString()
-	player := AddNewPlayer(accountId, playerName)
-	if player != nil {
+
+	if player := AddNewPlayer(accountId, playerName); player != nil {
 		gamelog.Info("Create New Player: %s(%d)", playerName, player.PlayerID)
 		ack.WriteUInt32(player.PlayerID)
+	} else {
+		ack.WriteUInt32(0)
 	}
 }

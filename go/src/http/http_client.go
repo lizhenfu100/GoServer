@@ -43,10 +43,6 @@ func (self *ClientRpc) CallRpc(rpc string, sendFun, recvFun func(*common.NetPack
 
 //////////////////////////////////////////////////////////////////////
 //! 底层接口，业务层一般用不到
-func PostMsg(url string, pMsg interface{}) []byte {
-	b, _ := common.ToBytes(pMsg)
-	return PostReq(url, b)
-}
 func PostReq(url string, b []byte) []byte {
 	ack, err := http.Post(url, "text/HTML", bytes.NewReader(b))
 	if err == nil {
@@ -72,9 +68,10 @@ func RegistToSvr(destAddr, srcAddr, srcModule string, srcID int) {
 }
 func _RegistToSvr(destAddr, srcAddr, srcModule string, srcID int) {
 	pMsg := &Msg_Regist_To_HttpSvr{srcAddr, srcModule, srcID}
+	buf, _ := common.ToBytes(pMsg)
 	for {
 		http.DefaultClient.Timeout = 2 * time.Second
-		if PostMsg(destAddr+"reg_to_svr", pMsg) == nil {
+		if PostReq(destAddr+"reg_to_svr", buf) == nil {
 			time.Sleep(3 * time.Second)
 			gamelog.Error("Regist to (%s) Fail", srcModule)
 		} else {

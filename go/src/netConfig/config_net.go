@@ -36,6 +36,7 @@ import (
 type TNetConfig struct {
 	Module     string
 	SvrID      int
+	SvrName    string
 	IP         string // 内部局域网IP
 	OutIP      string
 	TcpPort    int

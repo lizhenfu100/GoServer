@@ -77,6 +77,9 @@ func test() {
 	accountName := "zhoumf"
 	password := "123"
 	accountId := uint32(0)
+	gamesvrIp := ""
+	gamesvrPort := uint16(0)
+	logintoken := uint32(0)
 
 	centerRpc.CallRpc("rpc_reg_account", func(buf *common.NetPack) {
 		buf.WriteString(accountName)
@@ -86,52 +89,51 @@ func test() {
 		fmt.Println("errCode1:", errCode1)
 	})
 
-	centerRpc.CallRpc("rpc_get_gamesvr_lst", func(buf *common.NetPack) {
+	centerRpc.CallRpc("rpc_login_gamesvr", func(buf *common.NetPack) {
 		buf.WriteString(accountName)
 		buf.WriteString(password)
+		buf.WriteInt(1) //gamesvrId
 	}, func(backBuf *common.NetPack) {
 		errCode2 := backBuf.ReadInt8()
 		if errCode2 > 0 {
 			accountId = backBuf.ReadUInt32()
-			svrId := backBuf.ReadUInt32()
-			size := backBuf.ReadByte()
-			for i := byte(0); i < size; i++ {
-				module := backBuf.ReadString()
-				id := backBuf.ReadUInt32()
-				ip := backBuf.ReadString()
-				port := backBuf.ReadUInt16()
-				fmt.Println("GameSvr:", module, id, ip, port)
-			}
-			fmt.Println("Account Info:", accountId, svrId)
+			gamesvrIp = backBuf.ReadString()
+			gamesvrPort = backBuf.ReadUInt16()
+			logintoken = backBuf.ReadUInt32()
 		} else {
 			fmt.Println("errCode2:", errCode2)
 		}
 	})
 
 	//向游戏服发战斗数据，后台game转到battle
-	// gameRpc.CallRpc("battle_echo", func(buf *common.NetPack) {
-	// 	buf.WriteString("client-game-battle")
-	// }, func(backBuf *common.NetPack) {
+	gameRpc.CallRpc("battle_echo", func(buf *common.NetPack) {
+		buf.WriteString("client-game-battle")
+	}, func(backBuf *common.NetPack) {
 
-	// })
-
-	//创建
-	// gameRpc.CallRpc("rpc_player_create", func(buf *common.NetPack) {
-	// 	buf.WriteUInt32(accountId)
-	// 	buf.WriteString("zhoumf")
-	// }, func(backBuf *common.NetPack) {
-	// 	playerId := backBuf.ReadUInt32()
-	// 	//写邮件
-	// 	player := player.FindWithDB_PlayerId(playerId)
-	// 	fmt.Println("create player id:", playerId, "\n", player)
-	// })
+	})
 
 	//登录
 	gameRpc.CallRpc("rpc_login", func(buf *common.NetPack) {
 		buf.WriteUInt32(accountId)
+		buf.WriteUInt32(logintoken)
 	}, func(backBuf *common.NetPack) {
-		gameRpc.PlayerId = backBuf.ReadUInt32()
+		errCode3 := backBuf.ReadInt8()
+		if errCode3 > 0 {
+			gameRpc.PlayerId = backBuf.ReadUInt32()
+		} else if errCode3 == -2 {
+			//创建新角色
+			gameRpc.CallRpc("rpc_player_create", func(buf *common.NetPack) {
+				buf.WriteUInt32(accountId)
+				buf.WriteString("zhoumf")
+			}, func(backBuf *common.NetPack) {
+				gameRpc.PlayerId = backBuf.ReadUInt32()
+			})
+		} else {
+			fmt.Println("errCode3:", errCode3)
+		}
 	})
+
+	// 测试
 	gameRpc.CallRpc("rpc_test_mongodb", func(buf *common.NetPack) {
 		buf.WriteByte(17)
 	}, func(backBuf *common.NetPack) {
@@ -153,11 +155,9 @@ func test() {
 	})
 
 	//登出
-	gameRpc.CallRpc("rpc_logout", func(buf *common.NetPack) {
-
-	}, func(backBuf *common.NetPack) {
-
-	})
+	// gameRpc.CallRpc("rpc_logout", func(buf *common.NetPack) {
+	// }, func(backBuf *common.NetPack) {
+	// })
 
 	// time.Sleep(2 * time.Second)
 	// //直接发给战斗服

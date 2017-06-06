@@ -19,8 +19,3 @@ func SendToBattle(svrID int, msg *common.NetPack) {
 	}
 	conn.WriteMsg(msg)
 }
-func AllocBattleSvrID(userid int) int {
-	svrIDs := tcp.GetRegModuleIDs("battle")
-	idx := userid % len(svrIDs)
-	return svrIDs[idx]
-}

@@ -8,6 +8,7 @@ import (
 	"netConfig"
 	"strconv"
 
+	"svr_game/center"
 	"svr_game/cross"
 	"svr_game/logic"
 	"svr_game/logic/msg"
@@ -56,6 +57,8 @@ func InitConf() {
 		"rpc_echo": cross.Rpc_Echo,
 	})
 	netConfig.RegHttpSystemHandler(map[string]netConfig.HttpHandle{
+		//! Center
+		"login_token": center.Handle_Login_Token,
 		//! SDK
 		"create_recharge_order": sdk.Handle_Create_Recharge_Order,
 		"sdk_recharge_success":  sdk.Handle_Recharge_Success,

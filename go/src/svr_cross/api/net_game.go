@@ -7,12 +7,14 @@ import (
 )
 
 var (
-	g_cache_game_conn *tcp.TCPConn
+	g_cache_game_conn = make(map[int]*tcp.TCPConn)
 )
 
-func SendToGame(msg *common.NetPack) {
-	if g_cache_game_conn == nil {
-		g_cache_game_conn = netConfig.GetTcpConn("game", -1)
+func SendToGame(svrId int, msg *common.NetPack) {
+	conn, ok := g_cache_game_conn[svrId]
+	if false == ok {
+		conn = netConfig.GetTcpConn("game", svrId)
+		g_cache_game_conn[svrId] = conn
 	}
-	g_cache_game_conn.WriteMsg(msg)
+	conn.WriteMsg(msg)
 }
