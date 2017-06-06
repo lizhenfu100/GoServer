@@ -2,18 +2,17 @@ package logic
 
 import (
 	"common"
-	"fmt"
 	"svr_cross/api"
 	"tcp"
 )
 
 //////////////////////////////////////////////////////////////////////
 //!
-func Relay_Battle_Data(conn *tcp.TCPConn, msg *common.NetPack) {
+func Rpc_Relay_Battle_Data(conn *tcp.TCPConn, msg *common.NetPack) {
 
 	// 转发给Battle进程
-	msg.SetRpc("handle_battle_data")
-	api.SendToBattle(1, buf)
+	msg.SetRpc("rpc_handle_battle_data")
+	api.SendToBattle(1, msg)
 
 	//设置定时器，
 	//若还未收到匹配成功消息，30s后通知战斗服取消

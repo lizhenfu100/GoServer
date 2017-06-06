@@ -73,7 +73,6 @@ func _RegistToSvr(destAddr, srcAddr, srcModule string, srcID int) {
 		http.DefaultClient.Timeout = 2 * time.Second
 		if PostReq(destAddr+"reg_to_svr", buf) == nil {
 			time.Sleep(3 * time.Second)
-			gamelog.Error("Regist to (%s) Fail", srcModule)
 		} else {
 			return
 		}

@@ -12,11 +12,7 @@ package player
 
 import (
 	"common"
-	"fmt"
-	"gamelog"
-	"netConfig"
 	"svr_game/api"
-	"svr_game/center"
 )
 
 func Rpc_Battle_Begin(req, ack *common.NetPack, ptr interface{}) {
