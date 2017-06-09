@@ -40,6 +40,7 @@ func (self *NetPack) Reset(data []byte) {
 	self.DataPtr = data
 	self.ReadPos = PACK_HEADER_SIZE
 }
+func (self *NetPack) Body() []byte  { return self.DataPtr[PACK_HEADER_SIZE:] }
 func (self *NetPack) BodySize() int { return len(self.DataPtr) - PACK_HEADER_SIZE }
 func (self *NetPack) ClearBody() {
 	self.DataPtr = self.DataPtr[:PACK_HEADER_SIZE]

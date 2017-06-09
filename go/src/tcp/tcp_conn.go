@@ -128,6 +128,7 @@ func (self *TCPConn) Close() {
 		})
 	}
 }
+func (self *TCPConn) IsClose() bool { return self.isClose }
 
 // msgdata must not be modified by other goroutines
 func (self *TCPConn) WriteMsg(msg *common.NetPack) {
@@ -244,7 +245,6 @@ func (self *TCPConn) readRoutine() {
 	self.Close()
 }
 func (self *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
-	// gamelog.Info("---msgID:%d, dataLen:%d", msgID, msg.Size())
 	defer func() {
 		if r := recover(); r != nil {
 			if _, ok := r.(runtime.Error); ok {
@@ -253,6 +253,7 @@ func (self *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
 		}
 	}()
 	if msghandler, ok := G_HandlerMsgMap[msgID]; ok {
+		println("\nTcpMsg:", common.DebugRpcIdToName(msgID), "  len:", msg.Size())
 		self.BackBuffer.ResetHead(msg)
 		msghandler(self, msg)
 		if self.BackBuffer.BodySize() > 0 {
@@ -267,7 +268,7 @@ func (self *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
 }
 
 //////////////////////////////////////////////////////////////////////
-//! rpc 非线程安全的
+//! rpc 【非线程安全的】只给Player用
 func (self *TCPConn) CallRpc(rpc string, sendFun func(*common.NetPack)) uint64 {
 	msgID := common.RpcNameToId(rpc)
 	if _, ok := G_HandlerMsgMap[msgID]; ok {
@@ -284,6 +285,19 @@ func (self *TCPConn) CallRpc(rpc string, sendFun func(*common.NetPack)) uint64 {
 func (self *TCPConn) CallRpc2(rpc string, sendFun, recvFun func(*common.NetPack)) {
 	reqKey := self.CallRpc(rpc, sendFun)
 	_InsertResponse(reqKey, recvFun)
+}
+func (self *TCPConn) CallRpcSafe(rpc string, sendFun, recvFun func(*common.NetPack)) {
+	msgID := common.RpcNameToId(rpc)
+	if _, ok := G_HandlerMsgMap[msgID]; ok {
+		gamelog.Error("Server and Client have the same Rpc[%s]", rpc)
+		return
+	}
+	buf := common.NewNetPackCap(128)
+	buf.SetOpCode(msgID)
+	buf.SetReqIdx(_GetNextReqIdx())
+	sendFun(buf)
+	self.WriteMsg(buf)
+	_InsertResponse(buf.GetReqKey(), recvFun)
 }
 func _FindResponse(reqKey uint64) func(*common.NetPack) {
 	g_rw_lock.RLock()

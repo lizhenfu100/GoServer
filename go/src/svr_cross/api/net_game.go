@@ -11,8 +11,8 @@ var (
 )
 
 func SendToGame(svrId int, msg *common.NetPack) {
-	conn, ok := g_cache_game_conn[svrId]
-	if false == ok {
+	conn, _ := g_cache_game_conn[svrId]
+	if conn == nil || conn.IsClose() {
 		conn = netConfig.GetTcpConn("game", svrId)
 		g_cache_game_conn[svrId] = conn
 	}

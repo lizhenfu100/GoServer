@@ -43,16 +43,12 @@ var (
 	G_Auto_Write_DB = common.NewServicePatch(_WritePlayerToDB, 15*60*1000)
 )
 
-type TPlayer struct {
-	//db data
-	TPlayerBase
-	Mail   TMailMoudle
-	Friend TFriendMoudle
-	Chat   TChatMoudle
-	//temp data
-	moudles []PlayerMoudle
-	askchan chan func(*TPlayer)
-	isOnlie bool
+type MoudleInterface interface {
+	InitAndInsert(*TPlayer)
+	LoadFromDB(*TPlayer)
+	WriteToDB()
+	OnLogin()
+	OnLogout()
 }
 type TPlayerBase struct {
 	PlayerID   uint32 `bson:"_id"`
@@ -61,21 +57,27 @@ type TPlayerBase struct {
 	LoginTime  int64
 	LogoutTime int64
 }
-type PlayerMoudle interface {
-	InitAndInsert(*TPlayer)
-	LoadFromDB(*TPlayer)
-	WriteToDB()
-	OnLogin()
-	OnLogout()
+type TPlayer struct {
+	//temp data
+	moudles []MoudleInterface
+	askchan chan func(*TPlayer)
+	isOnlie bool
+	//db data
+	TPlayerBase
+	Mail   TMailMoudle
+	Friend TFriendMoudle
+	Chat   TChatMoudle
+	Battle TBattleMoudle
 }
 
 func NewPlayer() *TPlayer {
 	player := new(TPlayer)
 	//! regist
-	player.moudles = []PlayerMoudle{
+	player.moudles = []MoudleInterface{
 		&player.Mail,
 		&player.Friend,
 		&player.Chat,
+		&player.Battle,
 	}
 	player.askchan = make(chan func(*TPlayer), 128)
 	return player
@@ -141,12 +143,15 @@ func _WritePlayerToDB(ptr interface{}) {
 //! for other player write my data
 func AsyncNotifyPlayer(id uint32, handler func(*TPlayer)) {
 	if player := _FindPlayerInCache(id); player != nil {
-		select {
-		case player.askchan <- handler:
-		default:
-			gamelog.Warn("Player askChan is full !!!")
-			return
-		}
+		player.AsyncNotify(handler)
+	}
+}
+func (self *TPlayer) AsyncNotify(handler func(*TPlayer)) {
+	select {
+	case self.askchan <- handler:
+	default:
+		gamelog.Warn("Player askChan is full !!!")
+		return
 	}
 }
 func (self *TPlayer) _HandleAsyncNotify() {

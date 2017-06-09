@@ -97,21 +97,19 @@ func (self *TCPServer) _AddNewConn(conn net.Conn, connId uint32) {
 		gamelog.Error("too many connections(%d/%d)", len(self.connmap), self.MaxConnNum)
 		return
 	}
-	gamelog.Info("_AddNewConn: %d", connId)
-
 	self.wgConns.Add(1)
 	tcpConn := newTCPConn(conn, self.PendingWriteNum,
 		func(this *TCPConn) {
 			self.mutexConns.Lock()
 			delete(self.connmap, connId)
 			self.mutexConns.Unlock()
-			gamelog.Info("Connect End: UserPtr:%v, ConnNum is:%d", this.UserPtr, len(self.connmap))
+			gamelog.Info("Disconnect: UserPtr:%v, ConnNum: %d, DelConnId: %d", this.UserPtr, len(self.connmap), connId)
 			self.wgConns.Done()
 		})
 	self.mutexConns.Lock()
 	self.connmap[connId] = tcpConn
 	self.mutexConns.Unlock()
-	gamelog.Info("Connect From: %s,  ConnNum: %d", conn.RemoteAddr().String(), len(self.connmap))
+	gamelog.Info("Connect From: %s,  ConnNum: %d, AddConnId: %d", conn.RemoteAddr().String(), len(self.connmap), connId)
 
 	go tcpConn.readRoutine()
 	// 通知client，连接被接收，下发connId、密钥等

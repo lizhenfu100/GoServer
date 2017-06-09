@@ -11,11 +11,12 @@ var (
 	g_cache_battle_conn = make(map[int]*tcp.TCPConn)
 )
 
-func SendToBattle(svrID int, msg *common.NetPack) {
+func GetBattleConn(svrID int) *tcp.TCPConn {
 	conn, _ := g_cache_battle_conn[svrID]
-	if conn == nil {
+	if conn == nil || conn.IsClose() {
 		conn = netConfig.GetTcpConn("battle", svrID)
 		g_cache_battle_conn[svrID] = conn
 	}
-	conn.WriteMsg(msg)
+	return conn
 }
+func SendToBattle(svrID int, msg *common.NetPack) { GetBattleConn(svrID).WriteMsg(msg) }

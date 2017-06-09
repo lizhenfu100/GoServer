@@ -54,7 +54,9 @@ func InitConf() {
 	common.LoadAllCsv()
 
 	netConfig.RegTcpHandler(map[string]netConfig.TcpHandle{
-		"rpc_echo": cross.Rpc_Echo,
+		//! Cross
+		"rpc_echo":       cross.Rpc_Echo,
+		"rpc_battle_ack": player.Rpc_Battle_Ack,
 	})
 	netConfig.RegHttpSystemHandler(map[string]netConfig.HttpHandle{
 		//! Center
@@ -65,11 +67,13 @@ func InitConf() {
 	})
 	netConfig.RegHttpPlayerHandler(map[string]netConfig.HttpPlayerHandle{
 		//! Client
-		"battle_echo":       msg.Rpc_Client2Battle_Echo,
-		"rpc_test_mongodb":  msg.Rpc_test_mongodb,
-		"rpc_login":         player.Rpc_Player_Login,
-		"rpc_logout":        player.Rpc_Player_Logout,
-		"rpc_player_create": player.Rpc_Player_Create,
+		"battle_echo":            msg.Rpc_Client2Battle_Echo,
+		"rpc_test_mongodb":       msg.Rpc_test_mongodb,
+		"rpc_login":              player.Rpc_Player_Login,
+		"rpc_logout":             player.Rpc_Player_Logout,
+		"rpc_player_create":      player.Rpc_Player_Create,
+		"rpc_battle_begin":       player.Rpc_Battle_Begin,
+		"rpc_probe_login_battle": player.Rpc_Probe_Login_Battle,
 	})
 	netConfig.G_Before_Recv_Player_Http = player.BeforeRecvHttpMsg
 	netConfig.G_After_Recv_Player_Http = player.AfterRecvHttpMsg

@@ -55,24 +55,20 @@ func GetNetCfg(module string, pSvrID *int) *TNetConfig { //负ID表示自动找�
 			return cfg
 		}
 	}
+	print(fmt.Sprintf("{%s %d}: have none SvrNetCfg!!!\n", module, *pSvrID))
 	return nil
 }
-func GetLocalNetCfg() *TNetConfig {
-	return GetNetCfg(G_Local_Module, &G_Local_SvrID)
-}
-func GetAddr(module string, svrID int) string {
-	if cfg := GetNetCfg(module, &svrID); cfg != nil {
+func WriteAddr(buf *common.NetPack, module string, pSvrID *int) {
+	if cfg := GetNetCfg(module, pSvrID); cfg != nil {
+		buf.WriteString(cfg.IP)
 		if cfg.HttpPort > 0 {
-			return fmt.Sprintf("http://%s:%d", cfg.IP, cfg.HttpPort)
-		} else if cfg.TcpPort > 0 {
-			return fmt.Sprintf("%s:%d", cfg.IP, cfg.TcpPort)
+			buf.WriteUInt16(uint16(cfg.HttpPort))
 		} else {
-			return ""
+			buf.WriteUInt16(uint16(cfg.TcpPort))
 		}
-	} else {
-		return ""
 	}
 }
+func GetLocalNetCfg() *TNetConfig { return GetNetCfg(G_Local_Module, &G_Local_SvrID) }
 
 var (
 	G_Cfg_Remote_TcpConn = make(map[common.KeyPair]*tcp.TCPClient) //本模块，对其它模块的tcp连接
@@ -84,7 +80,6 @@ func CreateNetSvr(module string, svrID int) bool {
 	//1、找到当前的配置信息
 	selfCfg := GetNetCfg(module, &svrID)
 	if selfCfg == nil {
-		print(fmt.Sprintf("%s-%d: have none SvrNetCfg!!!\n", module, svrID))
 		return false
 	}
 
@@ -131,7 +126,6 @@ func CreateNetSvr(module string, svrID int) bool {
 func GetHttpAddr(destModule string, destSvrID int) string { //Notice：应用层cache住结果，避免每次都查找
 	if destCfg := GetNetCfg(destModule, &destSvrID); destCfg != nil {
 		selfCfg := GetLocalNetCfg()
-
 		for _, v := range selfCfg.ConnectLst {
 			if v == destModule && destCfg.HttpPort > 0 {
 				// game(n) - sdk(1)
@@ -139,17 +133,14 @@ func GetHttpAddr(destModule string, destSvrID int) string { //Notice：应用层
 			}
 		}
 	} else {
-		fmt.Println(destModule + ": have none SvrNetCfg!!!")
 		return ""
 	}
-
 	// sdk(1) - game(n)
 	return http.FindRegModuleAddr(destModule, destSvrID)
 }
 func GetTcpConn(destModule string, destSvrID int) *tcp.TCPConn { //Notice：应用层cache住结果，避免每次都查找
 	if destCfg := GetNetCfg(destModule, &destSvrID); destCfg != nil {
 		selfCfg := GetLocalNetCfg()
-
 		for _, v := range selfCfg.ConnectLst {
 			if v == destModule {
 				// game(c) - battle(s)
@@ -157,10 +148,8 @@ func GetTcpConn(destModule string, destSvrID int) *tcp.TCPConn { //Notice：应�
 			}
 		}
 	} else {
-		fmt.Println(destModule + ": have none SvrNetCfg!!!")
 		return nil
 	}
-
 	// battle(s) - game(c)
 	return tcp.FindRegModuleConn(destModule, destSvrID)
 }

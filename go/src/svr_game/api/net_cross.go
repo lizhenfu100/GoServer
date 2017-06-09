@@ -12,7 +12,7 @@ var (
 )
 
 func SendToCross(msg *common.NetPack) {
-	if g_cache_cross_conn == nil {
+	if g_cache_cross_conn == nil || g_cache_cross_conn.IsClose() {
 		g_cache_cross_conn = netConfig.GetTcpConn("cross", -1)
 	}
 	g_cache_cross_conn.WriteMsg(msg)

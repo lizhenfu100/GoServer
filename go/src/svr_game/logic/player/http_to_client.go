@@ -27,19 +27,19 @@ const (
 )
 
 func BeforeRecvHttpMsg(pid uint32) interface{} {
-	player := _FindPlayerInCache(pid)
-	if player == nil {
-		return nil
+	if player := _FindPlayerInCache(pid); player != nil {
+		player._HandleAsyncNotify()
+		player.Mail.SendSvrMailAll()
+		return player
 	}
-	player.UpdateOnRecvClientData()
-	return player
+	return nil
 }
 func AfterRecvHttpMsg(ptr interface{}, buf *common.NetPack) {
 	player := ptr.(*TPlayer)
-	//! 先写位标记
-	bit, bitPosInBuf := uint32(0), buf.Size()
-	buf.WriteUInt32(bit)
 
+	bit, bitPosInBuf := uint32(0), buf.Size()
+	//! 先写位标记
+	buf.WriteUInt32(bit)
 	//! 再写数据块
 	if pos := player.Mail.GetNoSendIdx(); pos >= 0 {
 		player.Mail.DataToBuf(buf, pos)
@@ -49,7 +49,6 @@ func AfterRecvHttpMsg(ptr interface{}, buf *common.NetPack) {
 		player.Chat.DataToBuf(buf, pos)
 		common.SetBit32(&bit, Bit_Chat_Info, true)
 	}
-
 	//! 最后重置位标记
 	fmt.Println("PackSendBit", bit)
 	buf.SetPos(bitPosInBuf, bit)

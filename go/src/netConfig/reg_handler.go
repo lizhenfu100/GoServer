@@ -81,5 +81,7 @@ func _HandleHttpPlayerMsg(w http.ResponseWriter, r *http.Request) {
 		if ack.BodySize() > 0 {
 			w.Write(ack.DataPtr)
 		}
+	} else {
+		println("\n===> HttpMsg:", common.DebugRpcIdToName(msgId), "Not Regist!!!")
 	}
 }
