@@ -40,6 +40,7 @@ func Rpc_Player_Login(req, ack *common.NetPack, ptr interface{}) {
 			fmt.Println("Player_Login:\n", player)
 			ack.WriteInt8(1)
 			ack.WriteUInt32(player.PlayerID)
+			ack.WriteString(player.Name)
 
 			// notify svr_center login success
 			buf := common.NewByteBufferCap(8)
@@ -62,7 +63,8 @@ func Rpc_Player_Create(req, ack *common.NetPack, ptr interface{}) {
 	playerName := req.ReadString()
 
 	if player := AddNewPlayer(accountId, playerName); player != nil {
-		gamelog.Info("Create New Player: %s(%d)", playerName, player.PlayerID)
+		gamelog.Info("Create NewPlayer: accountId(%d) name(%s) pid(%d)",
+			accountId, playerName, player.PlayerID)
 		player.OnLogin()
 		ack.WriteUInt32(player.PlayerID)
 	} else {

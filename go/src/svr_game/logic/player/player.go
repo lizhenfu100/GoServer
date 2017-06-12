@@ -70,7 +70,7 @@ type TPlayer struct {
 	Battle TBattleMoudle
 }
 
-func NewPlayer() *TPlayer {
+func _NewPlayer() *TPlayer {
 	player := new(TPlayer)
 	//! regist
 	player.moudles = []MoudleInterface{
@@ -82,8 +82,11 @@ func NewPlayer() *TPlayer {
 	player.askchan = make(chan func(*TPlayer), 128)
 	return player
 }
-func NewPlayerInDB(accountId uint32, id uint32, name string) *TPlayer {
-	player := NewPlayer()
+func _NewPlayerInDB(accountId uint32, id uint32, name string) *TPlayer {
+	player := _NewPlayer()
+	if dbmgo.Find("Account", "name", name, player) {
+		return nil
+	}
 	player.AccountID = accountId
 	player.PlayerID = id
 	player.Name = name
@@ -96,7 +99,7 @@ func NewPlayerInDB(accountId uint32, id uint32, name string) *TPlayer {
 	return nil
 }
 func LoadPlayerFromDB(key string, val uint32) *TPlayer {
-	player := NewPlayer()
+	player := _NewPlayer()
 	if dbmgo.Find("Player", key, val, &player.TPlayerBase) {
 		for _, v := range player.moudles {
 			v.LoadFromDB(player)

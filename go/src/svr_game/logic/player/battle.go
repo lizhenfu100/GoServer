@@ -31,11 +31,15 @@ func (self *TBattleMoudle) InitAndInsert(player *TPlayer) {
 	self.PlayerID = player.PlayerID
 	self.owner = player
 	dbmgo.InsertSync("Battle", self)
+
+	self.loginBattleMsg = common.NewByteBufferCap(32)
 }
 func (self *TBattleMoudle) WriteToDB() { dbmgo.UpdateSync("Battle", self.PlayerID, self) }
 func (self *TBattleMoudle) LoadFromDB(player *TPlayer) {
 	dbmgo.Find("Battle", "_id", player.PlayerID, self)
 	self.owner = player
+
+	self.loginBattleMsg = common.NewByteBufferCap(32)
 }
 func (self *TBattleMoudle) OnLogin() {
 }
@@ -53,6 +57,9 @@ func Rpc_Battle_Begin(req, ack *common.NetPack, ptr interface{}) {
 		if player := _FindPlayerInCache(pid); player != nil {
 			// pack player battle data
 			battleMsg.WriteUInt32(pid)
+
+			//重新匹配战斗服
+			player.Battle.loginBattleMsg.Clear()
 		} else {
 			ack.WriteInt8(-1)
 			return
@@ -71,22 +78,21 @@ func Rpc_Battle_Ack(conn *tcp.TCPConn, msg *common.NetPack) {
 		idx := msg.ReadUInt32() //战斗服分配的玩家内存索引
 		//通知client登录战斗服
 		AsyncNotifyPlayer(pid, func(player *TPlayer) {
-			buf := common.NewByteBufferCap(32)
+			buf := player.Battle.loginBattleMsg
 			buf.WriteString(battleSvrIP)
 			buf.WriteUInt16(battleSvrPort)
 			buf.WriteUInt32(idx)
-			player.Battle.loginBattleMsg = buf
 		})
 	}
 }
 func Rpc_Probe_Login_Battle(req, ack *common.NetPack, ptr interface{}) {
 	player := ptr.(*TPlayer)
 
-	if player.Battle.loginBattleMsg != nil {
+	msg := player.Battle.loginBattleMsg
+	if msg.Size() > 0 {
 		ack.WriteInt8(1)
-		ack.WriteBuf(player.Battle.loginBattleMsg.DataPtr)
-
-		player.Battle.loginBattleMsg = nil
+		ack.WriteBuf(msg.DataPtr)
+		msg.Clear()
 	}
 	ack.WriteInt8(-1)
 }

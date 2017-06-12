@@ -63,7 +63,7 @@ func _HandleHttpPlayerMsg(w http.ResponseWriter, r *http.Request) {
 
 	msgId := req.GetOpCode()
 	pid := req.GetReqIdx()
-	println("\nHttpMsg:", common.DebugRpcIdToName(msgId), "  playerId:", pid)
+	println("\nHttpMsg:", common.DebugRpcIdToName(msgId), "len:", req.Size(), "  playerId:", pid)
 
 	if handler, ok := g_http_player_handler[msgId]; ok {
 

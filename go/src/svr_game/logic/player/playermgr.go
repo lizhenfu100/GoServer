@@ -45,11 +45,12 @@ func FindWithDB_AccountId(id uint32) *TPlayer {
 	return nil
 }
 func AddNewPlayer(accountId uint32, name string) *TPlayer {
-	if player := NewPlayerInDB(accountId, dbmgo.GetNextIncId("PlayerId"), name); player != nil {
+	playerId := dbmgo.GetNextIncId("PlayerId")
+	player := _NewPlayerInDB(accountId, playerId, name)
+	if player != nil {
 		AddPlayerCache(player)
-		return player
 	}
-	return nil
+	return player
 }
 func AddPlayerCache(player *TPlayer) {
 	g_player_mutex.Lock()
