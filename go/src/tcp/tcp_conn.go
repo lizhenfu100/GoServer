@@ -74,7 +74,7 @@ const (
 )
 
 var (
-	G_HandlerMsgMap = map[uint16]func(*TCPConn, *common.NetPack){
+	G_HandlerMsgMap = map[uint16]func(*common.NetPack, *common.NetPack, *TCPConn){
 		G_MsgId_Regist:    DoRegistToSvr,
 		G_MsgId_SvrAccept: OnSvrAcceptConn,
 	}
@@ -94,7 +94,7 @@ type TCPConn struct {
 	onNetClose func(*TCPConn)
 	UserPtr    interface{}
 	sendBuffer *common.NetPack
-	BackBuffer *common.NetPack
+	backBuffer *common.NetPack
 }
 
 func newTCPConn(conn net.Conn, pendingWriteNum int, callback func(*TCPConn)) *TCPConn {
@@ -103,7 +103,7 @@ func newTCPConn(conn net.Conn, pendingWriteNum int, callback func(*TCPConn)) *TC
 	self.onNetClose = callback
 	self.writeChan = make(chan []byte, pendingWriteNum)
 	self.sendBuffer = common.NewNetPackCap(128)
-	self.BackBuffer = common.NewNetPackCap(128)
+	self.backBuffer = common.NewNetPackCap(128)
 	return self
 }
 func (self *TCPConn) ResetConn(conn net.Conn) {
@@ -121,7 +121,7 @@ func (self *TCPConn) Close() {
 	self.isClose = true
 
 	if self.onNetClose != nil {
-		time.AfterFunc(30*time.Second, func() { // 30s内允许重连
+		time.AfterFunc(30*time.Second, func() { //Notice:AfterFunc是在另一线程执行，所以调的函数须是线程安全的
 			if self.isClose {
 				self.onNetClose(self)
 			}
@@ -254,10 +254,10 @@ func (self *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
 	}()
 	if msghandler, ok := G_HandlerMsgMap[msgID]; ok {
 		println("\nTcpMsg:", common.DebugRpcIdToName(msgID), "  len:", msg.Size())
-		self.BackBuffer.ResetHead(msg)
-		msghandler(self, msg)
-		if self.BackBuffer.BodySize() > 0 {
-			self.WriteMsg(self.BackBuffer)
+		self.backBuffer.ResetHead(msg)
+		msghandler(msg, self.backBuffer, self)
+		if self.backBuffer.BodySize() > 0 {
+			self.WriteMsg(self.backBuffer)
 		}
 	} else if rpcRecv := _FindResponse(msg.GetReqKey()); rpcRecv != nil {
 		rpcRecv(msg)

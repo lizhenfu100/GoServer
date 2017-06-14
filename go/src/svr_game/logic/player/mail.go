@@ -115,7 +115,7 @@ func (self *TMailMoudle) GetNoSendIdx() int {
 }
 func (self *TMailMoudle) DataToBuf(buf *common.NetPack, pos int) {
 	length := len(self.MailLst)
-	buf.WriteUInt32(uint32(length - pos))
+	buf.WriteUInt16(uint16(length - pos))
 	for i := pos; i < length; i++ {
 		mail := &self.MailLst[i]
 		mail.DataToBuf(buf)

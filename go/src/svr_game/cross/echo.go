@@ -8,8 +8,8 @@ import (
 
 //////////////////////////////////////////////////////////////////////
 //! 测试msg
-func Rpc_Echo(pTcpConn *tcp.TCPConn, msg *common.NetPack) {
-	fmt.Println("Rpc_Echo :", msg.ReadString())
+func Rpc_Echo(req, ack *common.NetPack, conn *tcp.TCPConn) {
+	fmt.Println("Rpc_Echo :", req.ReadString())
 
-	// pTcpConn.WriteMsg(msg)
+	// conn.WriteMsg(msg)
 }

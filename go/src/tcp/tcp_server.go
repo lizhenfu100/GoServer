@@ -133,7 +133,7 @@ func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
 			gamelog.Info("_ResetOldConn isOpen: %d", oldId)
 			newconn.Close()
 		}
-	} else {
+	} else { //服务器重启
 		gamelog.Info("_ResetOldConn to _AddNewConn: %d", oldId)
 		self._AddNewConn(newconn, oldId)
 	}
@@ -157,9 +157,9 @@ func (self *TCPServer) Close() {
 //! 模块注册
 var g_reg_conn_map = make(map[common.KeyPair]*TCPConn)
 
-func DoRegistToSvr(conn *TCPConn, data *common.NetPack) {
-	module := data.ReadString()
-	id := data.ReadInt()
+func DoRegistToSvr(req, ack *common.NetPack, conn *TCPConn) {
+	module := req.ReadString()
+	id := req.ReadInt()
 	g_reg_conn_map[common.KeyPair{module, id}] = conn
 	gamelog.Info("DoRegistToSvr: {%s %d}", module, id)
 }

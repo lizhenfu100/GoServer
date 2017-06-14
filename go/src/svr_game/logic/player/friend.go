@@ -11,7 +11,6 @@ type TFriendMoudle struct {
 	PlayerID  uint32 `bson:"_id"`
 	FriendLst []TFriend
 	ApplyLst  []TFriend
-	BlackLst  []TFriend //黑名单
 
 	owner *TPlayer
 }
@@ -38,6 +37,31 @@ func (self *TFriendMoudle) OnLogout() {
 }
 
 // -------------------------------------
+//! buf
+func (self *TFriend) DataToBuf(buf *common.NetPack) {
+	buf.WriteUInt32(self.ID)
+	buf.WriteString(self.Name)
+}
+func (self *TFriend) BufToData(buf *common.NetPack) {
+	self.ID = buf.ReadUInt32()
+	self.Name = buf.ReadString()
+}
+func (self *TFriendMoudle) DataToBuf(buf *common.NetPack) {
+	length := len(self.FriendLst)
+	buf.WriteUInt16(uint16(length))
+	for i := 0; i < length; i++ {
+		data := &self.FriendLst[i]
+		data.DataToBuf(buf)
+	}
+	length = len(self.ApplyLst)
+	buf.WriteUInt16(uint16(length))
+	for i := 0; i < length; i++ {
+		data := &self.ApplyLst[i]
+		data.DataToBuf(buf)
+	}
+}
+
+// -------------------------------------
 // -- API
 func (self *TFriendMoudle) FindFriend(pid uint32) *TFriend {
 	length := len(self.FriendLst)
@@ -55,9 +79,6 @@ func (self *TFriendMoudle) RecvApply(pid uint32, name string) int8 {
 	}
 	if self.InFriendLst(pid) >= 0 {
 		return -2
-	}
-	if self.InBlackLst(pid) >= 0 {
-		return -3
 	}
 	data := TFriend{pid, name}
 	self.ApplyLst = append(self.ApplyLst, data)
@@ -87,9 +108,6 @@ func (self *TFriendMoudle) AddFriend(pid uint32, name string) int8 {
 	if self.InFriendLst(pid) >= 0 {
 		return -2
 	}
-	if self.InBlackLst(pid) >= 0 {
-		return -3
-	}
 	data := TFriend{pid, name}
 	self.FriendLst = append(self.FriendLst, data)
 	dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"friendlst": data}})
@@ -103,23 +121,8 @@ func (self *TFriendMoudle) DelFriend(pid uint32) {
 		self.FriendLst = append(self.FriendLst[:i], self.FriendLst[i+1:]...)
 	}
 }
-func (self *TFriendMoudle) AddBlack(pid uint32, name string) {
-	if self.InBlackLst(pid) >= 0 {
-		return
-	}
-	data := TFriend{pid, name}
-	self.BlackLst = append(self.BlackLst, data)
-	dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"blacklst": data}})
-}
-func (self *TFriendMoudle) DelBlack(pid uint32) {
-	if i := self.InBlackLst(pid); i >= 0 {
-		ptr := &self.BlackLst[i]
-		dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
-			"blacklst": bson.M{"id": ptr.ID}}})
-		self.BlackLst = append(self.BlackLst[:i], self.BlackLst[i+1:]...)
-	}
-}
 
+// -------------------------------------
 //! 辅助函数
 func (self *TFriendMoudle) InApplyLst(pid uint32) int {
 	for i := 0; i < len(self.ApplyLst); i++ {
@@ -137,43 +140,36 @@ func (self *TFriendMoudle) InFriendLst(pid uint32) int {
 	}
 	return -1
 }
-func (self *TFriendMoudle) InBlackLst(pid uint32) int {
-	for i := 0; i < len(self.BlackLst); i++ {
-		if pid == self.BlackLst[i].ID {
-			return i
-		}
-	}
-	return -1
-}
 
-//! buf
-func (self *TFriend) DataToBuf(buf *common.NetPack) {
-	buf.WriteUInt32(self.ID)
-	buf.WriteString(self.Name)
+// -------------------------------------
+//! rpc
+func Rpc_Friend_List(req, ack *common.NetPack, ptr interface{}) {
+	player := ptr.(*TPlayer)
+	player.Friend.DataToBuf(ack)
 }
-func (self *TFriend) BufToData(buf *common.NetPack) {
-	self.ID = buf.ReadUInt32()
-	self.Name = buf.ReadString()
+func Rpc_Friend_Apply(req, ack *common.NetPack, ptr interface{}) {
+	destPid := req.ReadUInt32()
+
+	AsyncNotifyPlayer(destPid, func(destPtr *TPlayer) {
+		player := ptr.(*TPlayer)
+		destPtr.Friend.RecvApply(player.PlayerID, player.Name)
+	})
 }
-func (self *TFriendMoudle) DataToBuf(buf *common.NetPack) {
-	length := len(self.FriendLst)
-	buf.WriteUInt16(uint16(length))
-	for i := 0; i < length; i++ {
-		data := &self.FriendLst[i]
-		data.DataToBuf(buf)
-	}
+func Rpc_Friend_Agree(req, ack *common.NetPack, ptr interface{}) {
+	pos := req.ReadByte()
 
-	length = len(self.ApplyLst)
-	buf.WriteUInt16(uint16(length))
-	for i := 0; i < length; i++ {
-		data := &self.ApplyLst[i]
-		data.DataToBuf(buf)
-	}
+	player := ptr.(*TPlayer)
+	player.Friend.Agree(pos)
+}
+func Rpc_Friend_Refuse(req, ack *common.NetPack, ptr interface{}) {
+	pos := req.ReadByte()
 
-	length = len(self.BlackLst)
-	buf.WriteUInt16(uint16(length))
-	for i := 0; i < length; i++ {
-		data := &self.BlackLst[i]
-		data.DataToBuf(buf)
-	}
+	player := ptr.(*TPlayer)
+	player.Friend.Refuse(pos)
+}
+func Rpc_Friend_Del(req, ack *common.NetPack, ptr interface{}) {
+	pid := req.ReadUInt32()
+
+	player := ptr.(*TPlayer)
+	player.Friend.DelFriend(pid)
 }

@@ -21,8 +21,8 @@ import (
 )
 
 type (
-	TcpHandle        func(*tcp.TCPConn, *common.NetPack)
 	HttpHandle       func(http.ResponseWriter, *http.Request)
+	TcpHandle        func(*common.NetPack, *common.NetPack, *tcp.TCPConn)
 	HttpPlayerHandle func(*common.NetPack, *common.NetPack, interface{})
 )
 

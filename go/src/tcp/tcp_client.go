@@ -63,8 +63,8 @@ func (self *TCPClient) Close() {
 	self.TcpConn.Close()
 	self.TcpConn = nil
 }
-func OnSvrAcceptConn(conn *TCPConn, data *common.NetPack) {
+func OnSvrAcceptConn(req, ack *common.NetPack, conn *TCPConn) {
 	client := conn.UserPtr.(*TCPClient)
-	connId := data.ReadUInt32()
+	connId := req.ReadUInt32()
 	client.firstBuf.SetPos(0, connId)
 }

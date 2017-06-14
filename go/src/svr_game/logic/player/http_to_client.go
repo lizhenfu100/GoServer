@@ -27,7 +27,7 @@ const (
 )
 
 func BeforeRecvHttpMsg(pid uint32) interface{} {
-	if player := _FindPlayerInCache(pid); player != nil {
+	if player := _FindInCache(pid); player != nil {
 		player._HandleAsyncNotify()
 		player.Mail.SendSvrMailAll()
 		return player

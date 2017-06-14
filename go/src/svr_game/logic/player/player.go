@@ -130,7 +130,7 @@ func (self *TPlayer) OnLogout() {
 	G_Auto_Write_DB.UnRegister(self)
 
 	// 延时30s后再删，提升重连效率
-	time.AfterFunc(30*time.Second, func() {
+	time.AfterFunc(30*time.Second, func() { //Notice:AfterFunc是在另一线程执行，所以调的函数须是线程安全的
 		if !self.isOnlie {
 			go self.WriteAllToDB()
 			DelPlayerCache(self.PlayerID)
@@ -144,17 +144,40 @@ func _WritePlayerToDB(ptr interface{}) {
 }
 
 //! for other player write my data
-func AsyncNotifyPlayer(id uint32, handler func(*TPlayer)) {
-	if player := _FindPlayerInCache(id); player != nil {
+func AsyncNotifyPlayer(pid uint32, handler func(*TPlayer)) {
+	if player := _FindInCache(pid); player != nil {
 		player.AsyncNotify(handler)
 	}
 }
 func (self *TPlayer) AsyncNotify(handler func(*TPlayer)) {
-	select {
-	case self.askchan <- handler:
-	default:
-		gamelog.Warn("Player askChan is full !!!")
-		return
+	if self.isOnlie {
+		select {
+		case self.askchan <- handler:
+		default:
+			gamelog.Warn("Player askChan is full !!!")
+			return
+		}
+	} else { //TODO:zhouf: 如何安全方便的修改离线玩家数据
+
+		//准备将离线的操作转给mainloop，这样所有离线玩家就都在一个chan里处理了
+		//要是中途玩家上线，mainloop的chan里还有他的操作没处理完怎么整！？囧~
+		//mainloop设计成map<pid, chan>，玩家上线时，检测自己的chan有效否，等它处理完？
+
+		//gen_server
+		//将某个独立模块的所有操作扔进gen_server，外界只读(有滞后性)
+		//会加大代码量，每个操作都得转一次到chan
+		//【Notice】可能gen_server里还有修改操作，且玩家已下线，会重新读到内存，此时修改完毕后须及时入库
+
+		//设计统一的接口，编辑离线数据，也很麻烦呐		//准备将离线的操作转给mainloop，这样所有离线玩家就都在一个chan里处理了
+		//要是中途玩家上线，mainloop的chan里还有他的操作没处理完怎么整！？囧~
+		//mainloop设计成map<pid, chan>，玩家上线时，检测自己的chan有效否，等它处理完？
+
+		//gen_server
+		//将某个独立模块的所有操作扔进gen_server，外界只读(有滞后性)
+		//会加大代码量，每个操作都得转一次到chan
+		//【Notice】可能gen_server里还有修改操作，且玩家已下线，会重新读到内存，此时修改完毕后须及时入库
+
+		//设计统一的接口，编辑离线数据，也很麻烦呐
 	}
 }
 func (self *TPlayer) _HandleAsyncNotify() {

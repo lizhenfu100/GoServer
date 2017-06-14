@@ -17,8 +17,9 @@ package player
 import (
 	"common"
 	"dbmgo"
-	"gopkg.in/mgo.v2/bson"
 	"time"
+
+	"gopkg.in/mgo.v2/bson"
 )
 
 const (
@@ -96,7 +97,7 @@ func (self *TChatMoudle) GetNoSendIdx() int {
 }
 func (self *TChatMoudle) DataToBuf(buf *common.NetPack, pos int) {
 	length := len(self.ChatLst)
-	buf.WriteUInt32(uint32(length - pos))
+	buf.WriteUInt16(uint16(length - pos))
 	for i := pos; i < length; i++ {
 		data := &self.ChatLst[i]
 		data.DataToBuf(buf)
