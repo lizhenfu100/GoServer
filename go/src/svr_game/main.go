@@ -11,7 +11,6 @@ import (
 	"svr_game/center"
 	"svr_game/cross"
 	"svr_game/logic"
-	"svr_game/logic/msg"
 	"svr_game/logic/player"
 	"svr_game/sdk"
 )
@@ -76,8 +75,8 @@ func InitConf() {
 
 	netConfig.RegTcpHandler(map[string]netConfig.TcpHandle{
 		//! Cross
-		"rpc_echo":       cross.Rpc_Echo,
-		"rpc_battle_ack": player.Rpc_Battle_Ack,
+		"rpc_echo":            cross.Rpc_Echo,
+		"rpc_game_battle_ack": player.Rpc_Battle_Ack,
 	})
 	netConfig.RegHttpSystemHandler(map[string]netConfig.HttpHandle{
 		//! Center
@@ -88,17 +87,16 @@ func InitConf() {
 	})
 	netConfig.RegHttpPlayerHandler(map[string]netConfig.HttpPlayerHandle{
 		//! Client
-		"battle_echo":       msg.Rpc_Client2Battle_Echo,
-		"rpc_test_mongodb":  msg.Rpc_test_mongodb,
-		"rpc_login":         player.Rpc_Player_Login,
-		"rpc_logout":        player.Rpc_Player_Logout,
-		"rpc_player_create": player.Rpc_Player_Create,
-		"rpc_battle_begin":  player.Rpc_Battle_Begin,
-		"rpc_friend_list":   player.Rpc_Friend_List,
-		"rpc_friend_apply":  player.Rpc_Friend_Apply,
-		"rpc_friend_agree":  player.Rpc_Friend_Agree,
-		"rpc_friend_refuse": player.Rpc_Friend_Refuse,
-		"rpc_friend_del":    player.Rpc_Friend_Del,
+		"rpc_game_login":              player.Rpc_Player_Login,
+		"rpc_game_logout":             player.Rpc_Player_Logout,
+		"rpc_game_player_create":      player.Rpc_Player_Create,
+		"rpc_game_battle_begin":       player.Rpc_Battle_Begin,
+		"rpc_game_probe_login_battle": player.Rpc_Probe_Login_Battle,
+		"rpc_game_friend_list":        player.Rpc_Friend_List,
+		"rpc_game_friend_apply":       player.Rpc_Friend_Apply,
+		"rpc_game_friend_agree":       player.Rpc_Friend_Agree,
+		"rpc_game_friend_refuse":      player.Rpc_Friend_Refuse,
+		"rpc_game_friend_del":         player.Rpc_Friend_Del,
 	})
 	netConfig.G_Before_Recv_Player_Http = player.BeforeRecvHttpMsg
 	netConfig.G_After_Recv_Player_Http = player.AfterRecvHttpMsg

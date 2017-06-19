@@ -102,7 +102,7 @@ func Rpc_Login_GameSvr(req, ack *common.NetPack, ptr interface{}) {
 		api.SendToGame(svrId, "login_token", buf.DataPtr)
 	}
 }
-func Handle_Login_Success(w http.ResponseWriter, r *http.Request) {
+func Handle_Login_Game_Success(w http.ResponseWriter, r *http.Request) {
 	//! 接收信息
 	req := common.NewByteBufferLen(int(r.ContentLength))
 	r.Body.Read(req.DataPtr)

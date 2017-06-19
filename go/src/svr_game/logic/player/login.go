@@ -46,7 +46,7 @@ func Rpc_Player_Login(req, ack *common.NetPack, ptr interface{}) {
 			buf := common.NewByteBufferCap(8)
 			buf.WriteUInt32(accountId)
 			buf.WriteUInt32(uint32(netConfig.G_Local_SvrID))
-			api.SendToCenter("login_success", buf.DataPtr)
+			api.SendToCenter("rpc_center_login_game_success", buf.DataPtr)
 		}
 	}
 }

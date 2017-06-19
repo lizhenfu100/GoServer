@@ -50,14 +50,12 @@ func (self *TFriendMoudle) DataToBuf(buf *common.NetPack) {
 	length := len(self.FriendLst)
 	buf.WriteUInt16(uint16(length))
 	for i := 0; i < length; i++ {
-		data := &self.FriendLst[i]
-		data.DataToBuf(buf)
+		self.FriendLst[i].DataToBuf(buf)
 	}
 	length = len(self.ApplyLst)
 	buf.WriteUInt16(uint16(length))
 	for i := 0; i < length; i++ {
-		data := &self.ApplyLst[i]
-		data.DataToBuf(buf)
+		self.ApplyLst[i].DataToBuf(buf)
 	}
 }
 
@@ -80,6 +78,9 @@ func (self *TFriendMoudle) RecvApply(pid uint32, name string) int8 {
 	if self.InFriendLst(pid) >= 0 {
 		return -2
 	}
+	if self.PlayerID == pid {
+		return -3
+	}
 	data := TFriend{pid, name}
 	self.ApplyLst = append(self.ApplyLst, data)
 	dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"applylst": data}})
@@ -90,10 +91,16 @@ func (self *TFriendMoudle) Agree(i byte) {
 		return
 	}
 	ptr := &self.ApplyLst[i]
-	dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
-		"applylst": bson.M{"id": ptr.ID}}})
-	self.AddFriend(ptr.ID, ptr.Name)
+
+	if self.AddFriend(ptr.ID, ptr.Name) >= 0 {
+		dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
+			"applylst": bson.M{"id": ptr.ID}}})
+	}
 	self.ApplyLst = append(self.ApplyLst[:i], self.ApplyLst[i+1:]...)
+
+	AsyncNotifyPlayer(ptr.ID, func(player *TPlayer) {
+		player.Friend.AddFriend(self.PlayerID, self.owner.Name)
+	})
 }
 func (self *TFriendMoudle) Refuse(i byte) {
 	if i >= byte(len(self.ApplyLst)) {

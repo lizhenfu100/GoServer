@@ -93,6 +93,7 @@ func DebugRpcIdToName(id uint16) string {
 			return v.Name
 		}
 	}
+	println("!!! msgId:", id, " isn't in rpc.csv  !!!\n")
 	return "nil"
 }
 func RpcNameToId(rpc string) uint16 {

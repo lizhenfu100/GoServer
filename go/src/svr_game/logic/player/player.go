@@ -143,6 +143,7 @@ func _WritePlayerToDB(ptr interface{}) {
 	}
 }
 
+//////////////////////////////////////////////////////////////////////
 //! for other player write my data
 func AsyncNotifyPlayer(pid uint32, handler func(*TPlayer)) {
 	if player := _FindInCache(pid); player != nil {
@@ -188,5 +189,19 @@ func (self *TPlayer) _HandleAsyncNotify() {
 		default:
 			return
 		}
+	}
+}
+
+//////////////////////////////////////////////////////////////////////
+//! 访问玩家部分数据，包括离线的
+func GetPlayerBaseData(pid uint32) *TPlayerBase {
+	if player := _FindInCache(pid); player != nil {
+		return &player.TPlayerBase
+	} else {
+		ptr := new(TPlayerBase)
+		if dbmgo.Find("Player", "_id", pid, ptr) {
+			return ptr
+		}
+		return nil
 	}
 }

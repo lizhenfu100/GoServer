@@ -55,8 +55,9 @@ func Rpc_Battle_Begin(req, ack *common.NetPack, ptr interface{}) {
 	for i := byte(0); i < cnt; i++ {
 		pid := req.ReadUInt32()
 		if player := _FindInCache(pid); player != nil {
-			// pack player battle data
 			battleMsg.WriteUInt32(pid)
+			// pack player battle data
+			battleMsg.WriteString(player.Name)
 
 			//重新匹配战斗服
 			player.Battle.loginBattleMsg.Clear()
@@ -65,7 +66,7 @@ func Rpc_Battle_Begin(req, ack *common.NetPack, ptr interface{}) {
 			return
 		}
 	}
-	battleMsg.SetRpc("rpc_relay_battle_data")
+	battleMsg.SetRpc("rpc_cross_relay_battle_data")
 	api.SendToCross(battleMsg)
 	ack.WriteInt8(1)
 }
@@ -75,13 +76,11 @@ func Rpc_Battle_Ack(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	cnt := req.ReadByte()
 	for i := byte(0); i < cnt; i++ {
 		pid := req.ReadUInt32()
-		idx := req.ReadUInt32() //战斗服分配的玩家内存索引
 		//通知client登录战斗服
 		AsyncNotifyPlayer(pid, func(player *TPlayer) {
 			buf := player.Battle.loginBattleMsg
 			buf.WriteString(battleSvrIP)
 			buf.WriteUInt16(battleSvrPort)
-			buf.WriteUInt32(idx)
 		})
 	}
 }

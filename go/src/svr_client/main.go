@@ -12,7 +12,7 @@ import (
 	//"msg/sdk_msg"
 
 	//"svr_client/api"
-	"svr_game/logic/player"
+	//"svr_game/logic/player"
 )
 
 func main() {
@@ -67,11 +67,6 @@ func test() {
 	// http.PostReq(sdkAddr+"sdk_recharge_success", buf2)
 
 	time.Sleep(2 * time.Second)
-	// gameRpc.CallRpc("rpc_test_mongodb", func(buf *common.NetPack) {
-	// 	buf.WriteByte(1)
-	// }, func(backBuf *common.NetPack) {
-
-	// })
 
 	//向center取游戏服务器列表
 	accountName := "zhoumf"
@@ -81,7 +76,7 @@ func test() {
 	gamesvrPort := uint16(0)
 	logintoken := uint32(0)
 
-	centerRpc.CallRpc("rpc_reg_account", func(buf *common.NetPack) {
+	centerRpc.CallRpc("rpc_center_reg_account", func(buf *common.NetPack) {
 		buf.WriteString(accountName)
 		buf.WriteString(password)
 	}, func(backBuf *common.NetPack) {
@@ -89,7 +84,7 @@ func test() {
 		fmt.Println("errCode1:", errCode1)
 	})
 
-	centerRpc.CallRpc("rpc_login_gamesvr", func(buf *common.NetPack) {
+	centerRpc.CallRpc("rpc_center_login_gamesvr", func(buf *common.NetPack) {
 		buf.WriteString(accountName)
 		buf.WriteString(password)
 		buf.WriteInt(1) //gamesvrId
@@ -105,15 +100,8 @@ func test() {
 		}
 	})
 
-	//向游戏服发战斗数据，后台game转到battle
-	gameRpc.CallRpc("battle_echo", func(buf *common.NetPack) {
-		buf.WriteString("client-game-battle")
-	}, func(backBuf *common.NetPack) {
-
-	})
-
 	//登录
-	gameRpc.CallRpc("rpc_login", func(buf *common.NetPack) {
+	gameRpc.CallRpc("rpc_game_login", func(buf *common.NetPack) {
 		buf.WriteUInt32(accountId)
 		buf.WriteUInt32(logintoken)
 	}, func(backBuf *common.NetPack) {
@@ -122,7 +110,7 @@ func test() {
 			gameRpc.PlayerId = backBuf.ReadUInt32()
 		} else if errCode3 == -2 {
 			//创建新角色
-			gameRpc.CallRpc("rpc_player_create", func(buf *common.NetPack) {
+			gameRpc.CallRpc("rpc_game_player_create", func(buf *common.NetPack) {
 				buf.WriteUInt32(accountId)
 				buf.WriteString("zhoumf")
 			}, func(backBuf *common.NetPack) {
@@ -133,29 +121,8 @@ func test() {
 		}
 	})
 
-	// 测试
-	gameRpc.CallRpc("rpc_test_mongodb", func(buf *common.NetPack) {
-		buf.WriteByte(17)
-	}, func(backBuf *common.NetPack) {
-		fmt.Println("BodySize: ", backBuf.BodySize())
-
-		// 读逻辑回包
-
-		// http svr send data
-		bit := backBuf.ReadUInt32()
-		fmt.Println("PackSendBit", bit)
-		if common.GetBit32(bit, player.Bit_Mail_Lst) {
-			cnt := backBuf.ReadUInt32()
-			for i := uint32(0); i < cnt; i++ {
-				var mail player.TMail
-				mail.BufToData(backBuf)
-				fmt.Println(mail)
-			}
-		}
-	})
-
 	//登出
-	// gameRpc.CallRpc("rpc_logout", func(buf *common.NetPack) {
+	// gameRpc.CallRpc("rpc_game_logout", func(buf *common.NetPack) {
 	// }, func(backBuf *common.NetPack) {
 	// })
 

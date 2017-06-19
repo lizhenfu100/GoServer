@@ -42,12 +42,20 @@ func AfterRecvHttpMsg(ptr interface{}, buf *common.NetPack) {
 	buf.WriteUInt32(bit)
 	//! 再写数据块
 	if pos := player.Mail.GetNoSendIdx(); pos >= 0 {
-		player.Mail.DataToBuf(buf, pos)
+		//player.Mail.DataToBuf(buf, pos)
 		common.SetBit32(&bit, Bit_Mail_Lst, true)
 	}
 	if pos := player.Chat.GetNoSendIdx(); pos >= 0 {
-		player.Chat.DataToBuf(buf, pos)
+		//player.Chat.DataToBuf(buf, pos)
 		common.SetBit32(&bit, Bit_Chat_Info, true)
+	}
+	if len(player.Friend.ApplyLst) > 0 {
+		length := uint16(len(player.Friend.ApplyLst))
+		buf.WriteUInt16(length)
+		for i := uint16(0); i < length; i++ {
+			player.Friend.ApplyLst[i].DataToBuf(buf)
+		}
+		common.SetBit32(&bit, Bit_Friend_Apply, true)
 	}
 	//! 最后重置位标记
 	fmt.Println("PackSendBit", bit)
