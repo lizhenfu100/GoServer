@@ -13,6 +13,13 @@ type TMailMoudle struct {
 	MailLst   []TMail
 	SvrMailId uint32 //已收到的全服邮件索引位
 
+	/* OverWatch ECS ---- Component只含数据，System只有操作
+	、按照ECS思路，TMailMoudle视作邮件数据，下面的函数是一个MailSystem
+	、MailSystem很可能不止需要TMailMoudle，还会用到其它模块的东东，比如好友、网络通信模块
+	、所以加了 owner *TPlayer ，需要时去调用其它模块
+	、代码上看，就引入了一整结构，破坏封装 (每个模块都有可能改别人关心的数据，造成影响传递)
+	、ECS将数据组织成 Component ，各个 System 自己声明要关注的 Component ，还能指定 readonly ，简洁干净多了
+	*/
 	owner        *TPlayer
 	clientMailId uint32 //已发给client的
 }

@@ -63,8 +63,11 @@ func _HandleHttpPlayerMsg(w http.ResponseWriter, r *http.Request) {
 
 	msgId := req.GetOpCode()
 	pid := req.GetReqIdx()
-	println("\nHttpMsg:", common.DebugRpcIdToName(msgId), "len:", req.Size(), "  playerId:", pid)
 
+	//心跳包太碍眼了
+	if msgId != 10026 {
+		println("\nHttpMsg:", common.DebugRpcIdToName(msgId), "len:", req.Size(), "  playerId:", pid)
+	}
 	if handler, ok := g_http_player_handler[msgId]; ok {
 
 		var player interface{}

@@ -18,6 +18,9 @@ func MainLoop() {
 
 		player.G_Auto_Write_DB.RunSevice(time_elapse)
 
-		time.Sleep(100 * time.Millisecond)
+		//TODO:zhoumf: 用类似ServiceList优化AFK检查
+		player.CheckAFK()
+
+		time.Sleep(1000 * time.Millisecond)
 	}
 }

@@ -36,11 +36,17 @@ import (
 	"common"
 	"dbmgo"
 	"gamelog"
+	"sync/atomic"
 	"time"
 )
 
 var (
 	G_Auto_Write_DB = common.NewServicePatch(_WritePlayerToDB, 15*60*1000)
+)
+
+const (
+	Idle_Max_Second       = 10
+	Reconnect_Wait_Second = 30
 )
 
 type MoudleInterface interface {
@@ -62,6 +68,7 @@ type TPlayer struct {
 	moudles []MoudleInterface
 	askchan chan func(*TPlayer)
 	isOnlie bool
+	idleSec uint32
 	//db data
 	TPlayerBase
 	Mail   TMailMoudle
@@ -115,14 +122,15 @@ func (self *TPlayer) WriteAllToDB() {
 		}
 	}
 }
-func (self *TPlayer) OnLogin() {
+func (self *TPlayer) Login() {
 	self.isOnlie = true
+	atomic.SwapUint32(&self.idleSec, 0)
 	for _, v := range self.moudles {
 		v.OnLogin()
 	}
 	G_Auto_Write_DB.Register(self)
 }
-func (self *TPlayer) OnLogout() {
+func (self *TPlayer) Logout() {
 	self.isOnlie = false
 	for _, v := range self.moudles {
 		v.OnLogout()
@@ -130,16 +138,34 @@ func (self *TPlayer) OnLogout() {
 	G_Auto_Write_DB.UnRegister(self)
 
 	// 延时30s后再删，提升重连效率
-	time.AfterFunc(30*time.Second, func() { //Notice:AfterFunc是在另一线程执行，所以调的函数须是线程安全的
-		if !self.isOnlie {
-			go self.WriteAllToDB()
-			DelPlayerCache(self.PlayerID)
+	time.AfterFunc(Reconnect_Wait_Second*time.Second, func() { //Notice:AfterFunc是在另一线程执行，所以调的函数须是线程安全的
+		ptr := self //闭包，引用指针，直接self.isOnlie是值传递
+		if !ptr.isOnlie {
+			gamelog.Info("Pid(%d) Delete", ptr.PlayerID)
+			go ptr.WriteAllToDB()
+			DelPlayerCache(ptr.PlayerID)
 		}
 	})
 }
 func _WritePlayerToDB(ptr interface{}) {
 	if player, ok := ptr.(*TPlayer); ok {
 		player.WriteAllToDB()
+	}
+}
+func CheckAFK() { //测试代码：临时全服遍历
+	for _, v := range g_player_cache {
+		if v.isOnlie {
+			_CheckAFK(v)
+		}
+	}
+}
+func _CheckAFK(ptr interface{}) {
+	if player, ok := ptr.(*TPlayer); ok && player.isOnlie {
+		atomic.AddUint32(&player.idleSec, 1)
+		if player.idleSec > Idle_Max_Second {
+			gamelog.Info("Pid(%d) AFK", player.PlayerID)
+			player.Logout()
+		}
 	}
 }
 

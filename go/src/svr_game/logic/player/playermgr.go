@@ -12,6 +12,7 @@ var (
 )
 
 //! 多线程架构，玩家内存，只能他自己直接修改，别人须转给他后间接改(异步)
+//! 其它玩家拿到指针，只允许 readonly
 func _FindInCache(id uint32) *TPlayer {
 	g_player_mutex.RLock()
 	ret := g_player_cache[id]

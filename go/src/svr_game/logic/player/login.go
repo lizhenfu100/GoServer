@@ -36,7 +36,7 @@ func Rpc_Player_Login(req, ack *common.NetPack, ptr interface{}) {
 		if player == nil {
 			ack.WriteInt8(-2) //notify client to create new player
 		} else {
-			player.OnLogin()
+			player.Login()
 			fmt.Println("Player_Login:\n", player)
 			ack.WriteInt8(1)
 			ack.WriteUInt32(player.PlayerID)
@@ -54,7 +54,7 @@ func Rpc_Player_Logout(req, ack *common.NetPack, ptr interface{}) {
 
 	player := ptr.(*TPlayer)
 
-	player.OnLogout()
+	player.Logout()
 }
 func Rpc_Player_Create(req, ack *common.NetPack, ptr interface{}) {
 	//req: accountId, playerName
@@ -65,9 +65,11 @@ func Rpc_Player_Create(req, ack *common.NetPack, ptr interface{}) {
 	if player := AddNewPlayer(accountId, playerName); player != nil {
 		gamelog.Info("Create NewPlayer: accountId(%d) name(%s) pid(%d)",
 			accountId, playerName, player.PlayerID)
-		player.OnLogin()
+		player.Login()
 		ack.WriteUInt32(player.PlayerID)
 	} else {
 		ack.WriteUInt32(0)
 	}
+}
+func Rpc_Heart_Beat(req, ack *common.NetPack, ptr interface{}) {
 }

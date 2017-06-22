@@ -32,18 +32,21 @@ func (self *TBattleMoudle) InitAndInsert(player *TPlayer) {
 	self.owner = player
 	dbmgo.InsertSync("Battle", self)
 
-	self.loginBattleMsg = common.NewByteBufferCap(32)
+	self._InitTempData()
 }
 func (self *TBattleMoudle) WriteToDB() { dbmgo.UpdateSync("Battle", self.PlayerID, self) }
 func (self *TBattleMoudle) LoadFromDB(player *TPlayer) {
 	dbmgo.Find("Battle", "_id", player.PlayerID, self)
 	self.owner = player
 
-	self.loginBattleMsg = common.NewByteBufferCap(32)
+	self._InitTempData()
 }
 func (self *TBattleMoudle) OnLogin() {
 }
 func (self *TBattleMoudle) OnLogout() {
+}
+func (self *TBattleMoudle) _InitTempData() {
+	self.loginBattleMsg = common.NewByteBufferCap(32)
 }
 
 // -------------------------------------
@@ -58,6 +61,8 @@ func Rpc_Battle_Begin(req, ack *common.NetPack, ptr interface{}) {
 			battleMsg.WriteUInt32(pid)
 			// pack player battle data
 			battleMsg.WriteString(player.Name)
+
+			//TODO:zhouf: 通知队友，开等待界面
 
 			//重新匹配战斗服
 			player.Battle.loginBattleMsg.Clear()
@@ -92,6 +97,7 @@ func Rpc_Probe_Login_Battle(req, ack *common.NetPack, ptr interface{}) {
 		ack.WriteInt8(1)
 		ack.WriteBuf(msg.DataPtr)
 		msg.Clear()
+	} else {
+		ack.WriteInt8(-1)
 	}
-	ack.WriteInt8(-1)
 }

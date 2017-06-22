@@ -90,6 +90,7 @@ func InitConf() {
 		"rpc_game_login":              player.Rpc_Player_Login,
 		"rpc_game_logout":             player.Rpc_Player_Logout,
 		"rpc_game_player_create":      player.Rpc_Player_Create,
+		"rpc_game_heart_beat":         player.Rpc_Heart_Beat,
 		"rpc_game_battle_begin":       player.Rpc_Battle_Begin,
 		"rpc_game_probe_login_battle": player.Rpc_Probe_Login_Battle,
 		"rpc_game_friend_list":        player.Rpc_Friend_List,
@@ -97,6 +98,11 @@ func InitConf() {
 		"rpc_game_friend_agree":       player.Rpc_Friend_Agree,
 		"rpc_game_friend_refuse":      player.Rpc_Friend_Refuse,
 		"rpc_game_friend_del":         player.Rpc_Friend_Del,
+		"rpc_game_create_team":        player.Rpc_Create_Team,
+		"rpc_game_exit_team":          player.Rpc_Exit_Team,
+		"rpc_game_invite_friend":      player.Rpc_Invite_Friend,
+		"rpc_game_agree_join_team":    player.Rpc_Agree_Join_Team,
+		"rpc_game_get_team_info":      player.Rpc_Get_Team_Info,
 	})
 	netConfig.G_Before_Recv_Player_Http = player.BeforeRecvHttpMsg
 	netConfig.G_After_Recv_Player_Http = player.AfterRecvHttpMsg

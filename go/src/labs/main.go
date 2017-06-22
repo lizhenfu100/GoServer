@@ -23,6 +23,15 @@ func main() {
 	// }
 
 	//test_reload_csv()
+	lst := new([]int)
+	lst1 := lst
+	lst2 := lst
+	*lst = append(*lst, 23)
+	fmt.Println(lst, lst1, lst2)
+
+	team := *lst
+	*lst = append(team, 1)
+	fmt.Println(lst, lst1, lst2)
 
 	time.Sleep(100 * time.Second)
 }

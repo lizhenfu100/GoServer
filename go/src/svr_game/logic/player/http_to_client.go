@@ -17,17 +17,21 @@ package player
 import (
 	"common"
 	"fmt"
+	"sync/atomic"
 )
 
 //TODO:zhoumf: 这里可以优化为红点提示，然后client打开界面时再请求相应模块数据
 const (
-	Bit_Mail_Lst     = 0
-	Bit_Chat_Info    = 1
-	Bit_Friend_Apply = 2
+	Bit_Mail_Lst      = 0
+	Bit_Chat_Info     = 1
+	Bit_Friend_Apply  = 2
+	Bit_Invite_Friend = 3
+	Bit_Team_Update   = 4
 )
 
 func BeforeRecvHttpMsg(pid uint32) interface{} {
 	if player := _FindInCache(pid); player != nil {
+		atomic.SwapUint32(&player.idleSec, 0)
 		player._HandleAsyncNotify()
 		player.Mail.SendSvrMailAll()
 		return player
@@ -37,27 +41,38 @@ func BeforeRecvHttpMsg(pid uint32) interface{} {
 func AfterRecvHttpMsg(ptr interface{}, buf *common.NetPack) {
 	player := ptr.(*TPlayer)
 
-	bit, bitPosInBuf := uint32(0), buf.Size()
+	bit, bitPosInBody := uint32(0), buf.BodySize()
 	//! 先写位标记
 	buf.WriteUInt32(bit)
 	//! 再写数据块
 	if pos := player.Mail.GetNoSendIdx(); pos >= 0 {
-		//player.Mail.DataToBuf(buf, pos)
 		common.SetBit32(&bit, Bit_Mail_Lst, true)
+		//player.Mail.DataToBuf(buf, pos)
 	}
 	if pos := player.Chat.GetNoSendIdx(); pos >= 0 {
-		//player.Chat.DataToBuf(buf, pos)
 		common.SetBit32(&bit, Bit_Chat_Info, true)
+		//player.Chat.DataToBuf(buf, pos)
 	}
 	if len(player.Friend.ApplyLst) > 0 {
+		common.SetBit32(&bit, Bit_Friend_Apply, true)
 		length := uint16(len(player.Friend.ApplyLst))
 		buf.WriteUInt16(length)
 		for i := uint16(0); i < length; i++ {
 			player.Friend.ApplyLst[i].DataToBuf(buf)
 		}
-		common.SetBit32(&bit, Bit_Friend_Apply, true)
+	}
+	if player.Friend.inviteMsg.Size() > 0 { //被别人邀请
+		common.SetBit32(&bit, Bit_Invite_Friend, true)
+		buf.WriteBuf(player.Friend.inviteMsg.DataPtr)
+		player.Friend.inviteMsg.Clear()
+	}
+	if player.Friend.isTeamChange {
+		common.SetBit32(&bit, Bit_Team_Update, true)
+		player.Friend.isTeamChange = false
 	}
 	//! 最后重置位标记
-	fmt.Println("PackSendBit", bit)
-	buf.SetPos(bitPosInBuf, bit)
+	buf.SetPos(bitPosInBody, bit)
+	if bit > 0 {
+		fmt.Println("pid:", player.PlayerID, "PackSendBit", bit, buf)
+	}
 }

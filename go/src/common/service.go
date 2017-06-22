@@ -1,6 +1,6 @@
 package common
 
-type TChanObj struct {
+type ServiceObj struct {
 	pObj  interface{}
 	isReg bool
 }
@@ -10,18 +10,18 @@ type ServicePatch struct {
 	kTimeAll  int // msec
 	runPos    int
 	obj_lst   []interface{}
-	writeChan chan TChanObj
+	writeChan chan ServiceObj
 }
 
 func NewServicePatch(fun func(interface{}), timeAllMsec int) *ServicePatch {
 	ptr := new(ServicePatch)
 	ptr.callback = fun
 	ptr.kTimeAll = timeAllMsec
-	ptr.writeChan = make(chan TChanObj, 64)
+	ptr.writeChan = make(chan ServiceObj, 64)
 	return ptr
 }
-func (self *ServicePatch) UnRegister(pObj interface{}) { self.writeChan <- TChanObj{pObj, false} }
-func (self *ServicePatch) Register(pObj interface{})   { self.writeChan <- TChanObj{pObj, true} }
+func (self *ServicePatch) UnRegister(pObj interface{}) { self.writeChan <- ServiceObj{pObj, false} }
+func (self *ServicePatch) Register(pObj interface{})   { self.writeChan <- ServiceObj{pObj, true} }
 func (self *ServicePatch) RunSevice(timelapse int) {
 	for {
 		select {
