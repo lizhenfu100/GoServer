@@ -23,6 +23,7 @@ type TBattleMoudle struct {
 
 	owner          *TPlayer
 	loginBattleMsg *common.ByteBuffer
+	isShowWaitUI   bool
 }
 
 // -------------------------------------
@@ -52,28 +53,29 @@ func (self *TBattleMoudle) _InitTempData() {
 // -------------------------------------
 // -- API
 func Rpc_Battle_Begin(req, ack *common.NetPack, ptr interface{}) {
+	self := ptr.(*TPlayer)
+	if self.pTeam == nil || self.pTeam.lst[0] != self {
+		return
+	}
 	battleMsg := common.NewNetPackCap(32)
-	cnt := req.ReadByte()
-	battleMsg.WriteByte(cnt)
-	for i := byte(0); i < cnt; i++ {
-		pid := req.ReadUInt32()
-		if player := _FindInCache(pid); player != nil {
-			battleMsg.WriteUInt32(pid)
-			// pack player battle data
-			battleMsg.WriteString(player.Name)
+	battleMsg.WriteByte(byte(len(self.pTeam.lst)))
+	for _, ptr := range self.pTeam.lst {
+		battleMsg.WriteUInt32(ptr.PlayerID)
+		// pack player battle data
+		battleMsg.WriteString(ptr.Name)
 
-			//TODO:zhouf: 通知队友，开等待界面
+		//重新匹配战斗服
+		ptr.Battle.loginBattleMsg.Clear()
 
-			//重新匹配战斗服
-			player.Battle.loginBattleMsg.Clear()
-		} else {
-			ack.WriteInt8(-1)
-			return
+		// 通知队员，开等待界面
+		if ptr != self {
+			ptr.AsyncNotify(func(p *TPlayer) {
+				p.Battle.isShowWaitUI = true
+			})
 		}
 	}
 	battleMsg.SetRpc("rpc_cross_relay_battle_data")
 	api.SendToCross(battleMsg)
-	ack.WriteInt8(1)
 }
 func Rpc_Battle_Ack(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	battleSvrIP := req.ReadString()
@@ -96,7 +98,7 @@ func Rpc_Probe_Login_Battle(req, ack *common.NetPack, ptr interface{}) {
 	if msg.Size() > 0 {
 		ack.WriteInt8(1)
 		ack.WriteBuf(msg.DataPtr)
-		msg.Clear()
+		player.Battle.loginBattleMsg.Clear()
 	} else {
 		ack.WriteInt8(-1)
 	}

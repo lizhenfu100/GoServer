@@ -104,3 +104,14 @@ func (self *TChatMoudle) DataToBuf(buf *common.NetPack, pos int) {
 		self.clientChatPos = i
 	}
 }
+
+// -------------------------------------
+// -- rpc
+func Rpc_Send_Chat_Msg(req, ack *common.NetPack, ptr interface{}) {
+	self := ptr.(*TPlayer)
+	if self.pTeam == nil {
+		return
+	}
+	str := req.ReadString()
+	self.pTeam.chatLst = append(self.pTeam.chatLst, TeamChat{self.PlayerID, self.Name, str})
+}

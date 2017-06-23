@@ -69,6 +69,7 @@ type TPlayer struct {
 	askchan chan func(*TPlayer)
 	isOnlie bool
 	idleSec uint32
+	pTeam   *TeamData
 	//db data
 	TPlayerBase
 	Mail   TMailMoudle
@@ -135,15 +136,17 @@ func (self *TPlayer) Logout() {
 	for _, v := range self.moudles {
 		v.OnLogout()
 	}
+	self.ExitTeam()
+
 	G_Auto_Write_DB.UnRegister(self)
 
 	// 延时30s后再删，提升重连效率
 	time.AfterFunc(Reconnect_Wait_Second*time.Second, func() { //Notice:AfterFunc是在另一线程执行，所以调的函数须是线程安全的
-		ptr := self //闭包，引用指针，直接self.isOnlie是值传递
-		if !ptr.isOnlie {
-			gamelog.Info("Pid(%d) Delete", ptr.PlayerID)
-			go ptr.WriteAllToDB()
-			DelPlayerCache(ptr.PlayerID)
+		//ptr := self //闭包，引用指针，直接self.isOnlie是值传递
+		if !self.isOnlie {
+			gamelog.Info("Pid(%d) Delete", self.PlayerID)
+			go self.WriteAllToDB()
+			DelPlayerCache(self.PlayerID)
 		}
 	})
 }

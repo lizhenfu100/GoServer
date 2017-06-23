@@ -13,10 +13,8 @@ type TFriendMoudle struct {
 	FriendLst []TFriend
 	ApplyLst  []TFriend
 
-	owner        *TPlayer
-	inviteMsg    *common.ByteBuffer
-	pTeamInfo    *[]*TPlayerBase //同一队伍的人引用同一地址，但仅队长能操作数据，别人只读
-	isTeamChange bool
+	owner     *TPlayer
+	inviteMsg *common.ByteBuffer
 }
 type TFriend struct {
 	ID   uint32
@@ -42,7 +40,6 @@ func (self *TFriendMoudle) LoadFromDB(player *TPlayer) {
 func (self *TFriendMoudle) OnLogin() {
 }
 func (self *TFriendMoudle) OnLogout() {
-	self.ExitTeam()
 }
 func (self *TFriendMoudle) _InitTempData() {
 	self.inviteMsg = common.NewByteBufferCap(32)
@@ -197,123 +194,16 @@ func Rpc_Friend_Del(req, ack *common.NetPack, ptr interface{}) {
 
 // -------------------------------------
 //! 组队相关
-func Rpc_Create_Team(req, ack *common.NetPack, ptr interface{}) {
-	self := ptr.(*TPlayer)
-
-	lst := make([]*TPlayerBase, 0, 5)
-	lst = append(lst, &self.TPlayerBase)
-	self.Friend.pTeamInfo = &lst
-}
-func Rpc_Exit_Team(req, ack *common.NetPack, ptr interface{}) {
-	self := ptr.(*TPlayer)
-	self.Friend.ExitTeam()
-}
-func Rpc_Get_Team_Info(req, ack *common.NetPack, ptr interface{}) {
-	self := ptr.(*TPlayer)
-	fmt.Println("Team_Info", self.Friend.pTeamInfo)
-	if self.Friend.pTeamInfo == nil {
-		ack.WriteByte(0)
-	} else {
-		ack.WriteByte(byte(len(*self.Friend.pTeamInfo)))
-		for _, p := range *self.Friend.pTeamInfo {
-			ack.WriteUInt32(p.PlayerID)
-			ack.WriteString(p.Name)
-		}
-	}
-}
-func Rpc_Invite_Friend(req, ack *common.NetPack, ptr interface{}) { //邀请别人
-	destPid := req.ReadUInt32()
-	self := ptr.(*TPlayer)
-
-	AsyncNotifyPlayer(destPid, func(dest *TPlayer) {
-		dest.Friend.BeInvitedBy(&self.TPlayerBase)
-	})
-}
-func Rpc_Agree_Join_Team(req, ack *common.NetPack, ptr interface{}) { //同意加队
-	self := ptr.(*TPlayer)
-
-	if self.Friend.pTeamInfo != nil {
-		ack.WriteByte(0)
-		return
-	}
-	destPid := req.ReadUInt32()
-	if dest := _FindInCache(destPid); dest != nil && dest.Friend.pTeamInfo != nil {
-		self.Friend.pTeamInfo = dest.Friend.pTeamInfo //! readonly
-
-		fmt.Println("Join_Team", self.Friend.pTeamInfo)
-		// 下发队伍信息
-		team := *self.Friend.pTeamInfo
-		ack.WriteByte(byte(len(team)))
-		for _, p := range team {
-			ack.WriteUInt32(p.PlayerID)
-			ack.WriteString(p.Name)
-		}
-
-		// 通知队长，加自己
-		dest.AsyncNotify(func(p *TPlayer) {
-			p.Friend.JoinToMyTeam(&self.TPlayerBase)
-		})
-	} else {
-		ack.WriteByte(0)
-	}
-}
-func (self *TFriendMoudle) BeInvitedBy(pBase *TPlayerBase) {
-	if self.pTeamInfo != nil { //已组队，邀请无效
-		fmt.Println(self.PlayerID, "is already in team", self.pTeamInfo)
+func (self *TFriendMoudle) BeInvitedBy(p *TPlayer) {
+	if self.owner.pTeam != nil { //已组队，邀请无效
+		fmt.Println(self.PlayerID, "is already in team", self.owner.pTeam)
 		return
 	}
 	if self.inviteMsg.Size() == 0 {
 		self.inviteMsg.WriteUInt32(0) //邀请的人数
 	}
-	self.inviteMsg.WriteUInt32(pBase.PlayerID)
-	self.inviteMsg.WriteString(pBase.Name)
+	self.inviteMsg.WriteUInt32(p.PlayerID)
+	self.inviteMsg.WriteString(p.Name)
 	cnt := self.inviteMsg.GetPos(0)
 	self.inviteMsg.SetPos(0, cnt+1)
-}
-func (self *TFriendMoudle) JoinToMyTeam(pBase *TPlayerBase) {
-	if self.pTeamInfo == nil {
-		return
-	}
-	fmt.Println("JoinToMyTeam", self.pTeamInfo)
-	// 广播给其它队友
-	for _, v := range *self.pTeamInfo {
-		AsyncNotifyPlayer(v.PlayerID, func(dest *TPlayer) {
-			dest.Friend.isTeamChange = true
-		})
-	}
-	*self.pTeamInfo = append(*self.pTeamInfo, pBase)
-}
-func (self *TFriendMoudle) _ExitFromMyTeam(destPid uint32) {
-	if self.pTeamInfo == nil {
-		return
-	}
-	team := self.pTeamInfo
-	for i := 0; i < len(*team); i++ {
-		pid := (*team)[i].PlayerID
-		if pid == destPid {
-			*team = append((*team)[:i], (*team)[i+1:]...)
-			i--
-		} else {
-			// 广播给其它队友
-			AsyncNotifyPlayer(pid, func(ptr *TPlayer) {
-				ptr.Friend.isTeamChange = true
-			})
-		}
-	}
-}
-func (self *TFriendMoudle) ExitTeam() {
-	if self.pTeamInfo == nil {
-		return
-	}
-	fmt.Println("ExitTeam", self.pTeamInfo)
-
-	captainPid := (*self.pTeamInfo)[0].PlayerID
-	if self.PlayerID == captainPid {
-		self._ExitFromMyTeam(self.PlayerID)
-	} else {
-		AsyncNotifyPlayer(captainPid, func(dest *TPlayer) {
-			dest.Friend._ExitFromMyTeam(self.PlayerID)
-		})
-	}
-	self.pTeamInfo = nil
 }

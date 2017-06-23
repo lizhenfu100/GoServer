@@ -27,6 +27,7 @@ const (
 	Bit_Friend_Apply  = 2
 	Bit_Invite_Friend = 3
 	Bit_Team_Update   = 4
+	Bit_Show_UI_Wait  = 5
 )
 
 func BeforeRecvHttpMsg(pid uint32) interface{} {
@@ -66,9 +67,13 @@ func AfterRecvHttpMsg(ptr interface{}, buf *common.NetPack) {
 		buf.WriteBuf(player.Friend.inviteMsg.DataPtr)
 		player.Friend.inviteMsg.Clear()
 	}
-	if player.Friend.isTeamChange {
+	if player.pTeam != nil && player.pTeam.isChange {
 		common.SetBit32(&bit, Bit_Team_Update, true)
-		player.Friend.isTeamChange = false
+		player.pTeam.isChange = false
+	}
+	if player.Battle.isShowWaitUI {
+		common.SetBit32(&bit, Bit_Show_UI_Wait, true)
+		player.Battle.isShowWaitUI = false
 	}
 	//! 最后重置位标记
 	buf.SetPos(bitPosInBody, bit)
