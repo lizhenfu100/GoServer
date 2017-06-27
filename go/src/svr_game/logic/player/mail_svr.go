@@ -20,7 +20,7 @@ func InitSvrMailLst() {
 }
 func CreateSvrMail(title, from, content string, items ...common.IntPair) {
 	id := dbmgo.GetNextIncId("SvrMailId")
-	pMail := &TMail{id, time.Now().Unix(), title, from, content, 0, items}
+	pMail := &TMail{id, 0, time.Now().Unix(), title, from, content, 0, items}
 	dbmgo.InsertToDB("MailSvr", pMail)
 
 	g_mail_mutex.Lock()

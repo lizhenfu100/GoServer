@@ -15,6 +15,8 @@
 
 	5、对gc友好，gc执行时临时对象池中的某个对象值仅被该池引用，那么它可能会在gc时被回收
 
+	6、原生的sync.Pool有个较大的问题：我们不能自由控制Pool中元素的数量，放进Pool中的对象每次GC发生时可能都会被清理掉
+
 * @ author 达达
 * @ date 2016-7-23
 ************************************************************************/
@@ -59,11 +61,11 @@ func NewSyncPool(minSize, maxSize, factor int) *SyncPool {
 }
 
 // Alloc try alloc a []byte from internal slab class if no free chunk in slab class Alloc will make one.
-func (pool *SyncPool) Alloc(size int) []byte {
-	if size <= pool.maxSize {
-		for i := 0; i < len(pool.classesSize); i++ {
-			if pool.classesSize[i] >= size {
-				mem := pool.classes[i].Get().([]byte) //sync.Pool.Get()返回interface{}
+func (self *SyncPool) Alloc(size int) []byte {
+	if size <= self.maxSize {
+		for i := 0; i < len(self.classesSize); i++ {
+			if self.classesSize[i] >= size {
+				mem := self.classes[i].Get().([]byte) //sync.Pool.Get()返回interface{}
 				return mem[:size]
 			}
 		}
@@ -72,11 +74,11 @@ func (pool *SyncPool) Alloc(size int) []byte {
 }
 
 // Free release a []byte that alloc from Pool.Alloc.
-func (pool *SyncPool) Free(mem []byte) {
-	if size := cap(mem); size <= pool.maxSize {
-		for i := 0; i < len(pool.classesSize); i++ {
-			if pool.classesSize[i] >= size {
-				pool.classes[i].Put(mem)
+func (self *SyncPool) Free(mem []byte) {
+	if size := cap(mem); size <= self.maxSize {
+		for i := 0; i < len(self.classesSize); i++ {
+			if self.classesSize[i] >= size {
+				self.classes[i].Put(mem)
 				return
 			}
 		}

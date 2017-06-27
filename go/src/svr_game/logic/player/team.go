@@ -10,7 +10,7 @@ type TeamData struct {
 	lst      []*TPlayer
 	isChange bool
 	chatLst  []TeamChat
-	chatPos  map[uint32]int //已发给client的索引
+	chatPos  map[uint32]int //要发给client的索引位
 }
 type TeamChat struct {
 	pid  uint32
@@ -132,4 +132,42 @@ func (self *TPlayer) ExitTeam() {
 		})
 	}
 	self.pTeam = nil
+}
+
+// -------------------------------------
+//! 聊天
+func Rpc_Send_Team_Chat(req, ack *common.NetPack, ptr interface{}) {
+	self := ptr.(*TPlayer)
+	pid := self.PlayerID
+	if self.pTeam == nil {
+		return
+	}
+	str := req.ReadString()
+	self.pTeam.chatLst = append(self.pTeam.chatLst, TeamChat{pid, self.Name, str})
+
+	if pos := self.pTeam.GetNoSendIdx(pid); pos >= 0 {
+		self.pTeam.DataToBuf(ack, pid)
+	}
+}
+func (self *TeamData) GetNoSendIdx(pid uint32) int {
+	pos := self.chatPos[pid]
+	length := len(self.chatLst)
+	if length > pos {
+		return pos
+	} else {
+		return -1
+	}
+}
+func (self *TeamData) DataToBuf(buf *common.NetPack, pid uint32) {
+	//下发从pos起始的内容
+	pos := self.chatPos[pid]
+	length := len(self.chatLst)
+	buf.WriteUInt16(uint16(length - pos))
+	for i := pos; i < length; i++ {
+		v := &self.chatLst[i]
+		buf.WriteUInt32(v.pid)
+		buf.WriteString(v.name)
+		buf.WriteString(v.str)
+	}
+	self.chatPos[pid] = length
 }

@@ -7,6 +7,7 @@
 
 * @ 几种更新方式
 	UpdateToDB("Player", bson.M{"_id": playerID}, bson.M{"$set": bson.M{
+		"moudle.data": self.data,
 		"goods":    self.Goods,
 		"resetday": self.ResetDay}})
 	UpdateToDB("Player", bson.M{"_id": playerID}, bson.M{"$inc": bson.M{"logincnt": 1}})

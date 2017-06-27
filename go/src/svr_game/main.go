@@ -103,6 +103,12 @@ func InitConf() {
 		"rpc_game_invite_friend":      player.Rpc_Invite_Friend,
 		"rpc_game_agree_join_team":    player.Rpc_Agree_Join_Team,
 		"rpc_game_get_team_info":      player.Rpc_Get_Team_Info,
+		"rpc_game_send_team_chat":     player.Rpc_Send_Team_Chat,
+		"rpc_game_get_mail":           player.Rpc_Get_Mail,
+		"rpc_game_read_mail":          player.Rpc_Read_Mail,
+		"rpc_game_del_mail":           player.Rpc_Del_Mail,
+		"rpc_game_take_mail_item":     player.Rpc_Take_Mail_Item,
+		"rpc_game_take_all_mail_item": player.Rpc_Take_All_Mail_Item,
 	})
 	netConfig.G_Before_Recv_Player_Http = player.BeforeRecvHttpMsg
 	netConfig.G_After_Recv_Player_Http = player.AfterRecvHttpMsg

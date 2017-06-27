@@ -31,8 +31,8 @@ type TChatMoudle struct {
 	PlayerID uint32 `bson:"_id"`
 	ChatLst  []TChat
 
-	owner         *TPlayer
-	clientChatPos int //已发给client的
+	owner     *TPlayer
+	noSendPos int
 }
 type TChat struct {
 	FromPid uint32
@@ -45,20 +45,18 @@ type TChat struct {
 func (self *TChatMoudle) InitAndInsert(player *TPlayer) {
 	self.PlayerID = player.PlayerID
 	self.owner = player
-	self.clientChatPos = -1
 	dbmgo.InsertSync("Chat", self)
 }
 func (self *TChatMoudle) WriteToDB() { dbmgo.UpdateSync("Chat", self.PlayerID, self) }
 func (self *TChatMoudle) LoadFromDB(player *TPlayer) {
 	dbmgo.Find("Chat", "_id", player.PlayerID, self)
 	self.owner = player
-	self.clientChatPos = -1
 }
 func (self *TChatMoudle) OnLogin() {
-	self.clientChatPos = -1
+	self.noSendPos = 0
 }
 func (self *TChatMoudle) OnLogout() {
-	self.clientChatPos = -1
+	self.noSendPos = 0
 }
 
 // -------------------------------------
@@ -68,7 +66,11 @@ func (self *TChatMoudle) CreateMsg(formPid uint32, content string) *TChat {
 
 	if len(self.ChatLst) >= Max_Save_Chat_Msg_Cnt {
 		self.ChatLst = append(self.ChatLst[Del_Head_Chat_Msg_Cnt:], *ptr)
-		self.clientChatPos -= Del_Head_Chat_Msg_Cnt
+		if self.noSendPos > Del_Head_Chat_Msg_Cnt {
+			self.noSendPos -= Del_Head_Chat_Msg_Cnt
+		} else {
+			self.noSendPos = 0
+		}
 		dbmgo.UpdateToDB("Chat", bson.M{"_id": self.PlayerID}, bson.M{"$set": bson.M{"chatlst": self.ChatLst}})
 	} else {
 		self.ChatLst = append(self.ChatLst, *ptr)
@@ -87,31 +89,18 @@ func (self *TChat) BufToData(buf *common.NetPack) {
 	self.Time = buf.ReadInt64()
 }
 func (self *TChatMoudle) GetNoSendIdx() int {
-	length := len(self.ChatLst)
-	for i := 0; i < length; i++ {
-		if i > self.clientChatPos {
-			return i
-		}
+	if len(self.ChatLst) > self.noSendPos {
+		return self.noSendPos
+	} else {
+		return -1
 	}
-	return -1
 }
-func (self *TChatMoudle) DataToBuf(buf *common.NetPack, pos int) {
+func (self *TChatMoudle) DataToBuf(buf *common.NetPack) {
 	length := len(self.ChatLst)
-	buf.WriteUInt16(uint16(length - pos))
-	for i := pos; i < length; i++ {
+	buf.WriteUInt16(uint16(length - self.noSendPos))
+	for i := self.noSendPos; i < length; i++ {
 		data := &self.ChatLst[i]
 		data.DataToBuf(buf)
-		self.clientChatPos = i
 	}
-}
-
-// -------------------------------------
-// -- rpc
-func Rpc_Send_Chat_Msg(req, ack *common.NetPack, ptr interface{}) {
-	self := ptr.(*TPlayer)
-	if self.pTeam == nil {
-		return
-	}
-	str := req.ReadString()
-	self.pTeam.chatLst = append(self.pTeam.chatLst, TeamChat{self.PlayerID, self.Name, str})
+	self.noSendPos = length
 }

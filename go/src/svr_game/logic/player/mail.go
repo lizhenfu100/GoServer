@@ -25,6 +25,7 @@ type TMailMoudle struct {
 }
 type TMail struct {
 	ID      uint32 `bson:"_id"`
+	Pid     uint32
 	Time    int64
 	Title   string
 	From    string
@@ -46,27 +47,32 @@ func (self *TMailMoudle) LoadFromDB(player *TPlayer) {
 	self.owner = player
 }
 func (self *TMailMoudle) OnLogin() {
+	//TODO:zhoumf: 删除过期已读邮件
 	self.clientMailId = 0
 }
 func (self *TMailMoudle) OnLogout() {
-	self.clientMailId = 0
 }
 
 // -------------------------------------
 // -- API
-func (self *TMailMoudle) CreateMail(title, from, content string, items ...common.IntPair) *TMail {
+func (self *TMailMoudle) CreateMail(pid uint32, title, from, content string, items ...common.IntPair) *TMail {
 	id := dbmgo.GetNextIncId("MailId")
-	pMail := &TMail{id, time.Now().Unix(), title, from, content, 0, items}
+	pMail := &TMail{id, pid, time.Now().Unix(), title, from, content, 0, items}
 	self.MailLst = append(self.MailLst, *pMail)
 	dbmgo.UpdateToDB("Mail", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"maillst": pMail}})
 	return pMail
 }
 func (self *TMailMoudle) DelMail(id uint32) {
 	for i := 0; i < len(self.MailLst); i++ {
-		if self.MailLst[i].ID == id {
+		mail := &self.MailLst[i]
+		if mail.ID == id {
+			if mail.IsRead == 0 && len(mail.Items) > 0 {
+				//TODO: 给奖励
+			}
 			self.MailLst = append(self.MailLst[:i], self.MailLst[i+1:]...)
 			dbmgo.UpdateToDB("Mail", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
 				"maillst": bson.M{"id": id}}})
+			return
 		}
 	}
 }
@@ -80,10 +86,11 @@ func (self *TMailMoudle) DelMailRead() {
 		"maillst": bson.M{"isread": 1}}})
 }
 
-// buf := common.NewNetPack()
-// MailToBuf(&buf.ByteBuffer)
+// -------------------------------------
+//! buf
 func (self *TMail) DataToBuf(buf *common.NetPack) {
 	buf.WriteUInt32(self.ID)
+	buf.WriteUInt32(self.Pid)
 	buf.WriteInt64(self.Time)
 	buf.WriteString(self.Title)
 	buf.WriteString(self.From)
@@ -99,6 +106,7 @@ func (self *TMail) DataToBuf(buf *common.NetPack) {
 }
 func (self *TMail) BufToData(buf *common.NetPack) {
 	self.ID = buf.ReadUInt32()
+	self.Pid = buf.ReadUInt32()
 	self.Time = buf.ReadInt64()
 	self.Title = buf.ReadString()
 	self.From = buf.ReadString()
@@ -128,4 +136,58 @@ func (self *TMailMoudle) DataToBuf(buf *common.NetPack, pos int) {
 		mail.DataToBuf(buf)
 		self.clientMailId = mail.ID
 	}
+}
+
+// -------------------------------------
+//! rpc
+func Rpc_Get_Mail(req, ack *common.NetPack, ptr interface{}) {
+	self := ptr.(*TPlayer)
+	pos := 0 //pos := self.Mail.GetNoSendIdx()
+	if pos >= 0 {
+		ack.WriteInt8(1)
+		self.Mail.DataToBuf(ack, pos)
+	} else {
+		ack.WriteInt8(-1)
+	}
+}
+func Rpc_Read_Mail(req, ack *common.NetPack, ptr interface{}) {
+	self := ptr.(*TPlayer)
+	id := req.ReadUInt32()
+	for i := 0; i < len(self.Mail.MailLst); i++ {
+		mail := &self.Mail.MailLst[i]
+		if mail.ID == id && len(mail.Items) == 0 {
+			mail.IsRead = 1
+			return
+		}
+	}
+}
+func Rpc_Del_Mail(req, ack *common.NetPack, ptr interface{}) {
+	self := ptr.(*TPlayer)
+	id := req.ReadUInt32()
+	self.Mail.DelMail(id)
+}
+func Rpc_Take_Mail_Item(req, ack *common.NetPack, ptr interface{}) {
+	self := ptr.(*TPlayer)
+	id := req.ReadUInt32()
+	for i := 0; i < len(self.Mail.MailLst); i++ {
+		mail := &self.Mail.MailLst[i]
+		if mail.ID == id && len(mail.Items) > 0 {
+			mail.IsRead = 1
+			//TODO: 给奖励
+			return
+		}
+	}
+}
+func Rpc_Take_All_Mail_Item(req, ack *common.NetPack, ptr interface{}) {
+	self := ptr.(*TPlayer)
+	self.Mail.CreateMail(0, "测试", "zhoumf", "content")
+	for i := 0; i < len(self.Mail.MailLst); i++ {
+		mail := &self.Mail.MailLst[i]
+		if len(mail.Items) > 0 {
+			//TODO: 给奖励
+			self.Mail.MailLst = append(self.Mail.MailLst[:i], self.Mail.MailLst[i+1:]...)
+			i--
+		}
+	}
+	self.Mail.DataToBuf(ack, 0)
 }

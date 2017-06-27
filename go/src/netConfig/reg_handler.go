@@ -58,6 +58,8 @@ func _HandleHttpPlayerMsg(w http.ResponseWriter, r *http.Request) {
 	req := common.NewNetPackLen(int(r.ContentLength) - common.PACK_HEADER_SIZE)
 	r.Body.Read(req.DataPtr)
 
+	//TODO:zhoumf: 验证消息安全性，防改包
+
 	//! 创建回复
 	ack := common.NewNetPackCap(128)
 
