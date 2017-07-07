@@ -41,8 +41,14 @@ import (
 )
 
 var (
-	G_Auto_Write_DB = common.NewServicePatch(_WritePlayerToDB, 15*60*1000)
+	G_Service_Write_DB  *common.ServicePatch
+	G_Service_Check_AFK *common.ServiceList
 )
+
+func InitService() {
+	G_Service_Write_DB = common.NewServicePatch(_WritePlayerToDB, 15*60*1000)
+	G_Service_Check_AFK = common.NewServiceList(_CheckAFK, 1000)
+}
 
 const (
 	Idle_Max_Second       = 10
@@ -129,7 +135,8 @@ func (self *TPlayer) Login() {
 	for _, v := range self.moudles {
 		v.OnLogin()
 	}
-	G_Auto_Write_DB.Register(self)
+	G_Service_Write_DB.Register(self)
+	G_Service_Check_AFK.Register(self)
 }
 func (self *TPlayer) Logout() {
 	self.isOnlie = false
@@ -138,11 +145,11 @@ func (self *TPlayer) Logout() {
 	}
 	self.ExitTeam()
 
-	G_Auto_Write_DB.UnRegister(self)
+	G_Service_Write_DB.UnRegister(self)
+	G_Service_Check_AFK.UnRegister(self)
 
 	// 延时30s后再删，提升重连效率
 	time.AfterFunc(Reconnect_Wait_Second*time.Second, func() { //Notice:AfterFunc是在另一线程执行，所以调的函数须是线程安全的
-		//ptr := self //闭包，引用指针，直接self.isOnlie是值传递
 		if !self.isOnlie {
 			gamelog.Info("Pid(%d) Delete", self.PlayerID)
 			go self.WriteAllToDB()
@@ -153,13 +160,6 @@ func (self *TPlayer) Logout() {
 func _WritePlayerToDB(ptr interface{}) {
 	if player, ok := ptr.(*TPlayer); ok {
 		player.WriteAllToDB()
-	}
-}
-func CheckAFK() { //测试代码：临时全服遍历
-	for _, v := range g_player_cache {
-		if v.isOnlie {
-			_CheckAFK(v)
-		}
 	}
 }
 func _CheckAFK(ptr interface{}) {

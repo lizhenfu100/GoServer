@@ -49,7 +49,6 @@ func AfterRecvHttpMsg(ptr interface{}, buf *common.NetPack) {
 	//! 再写数据块
 	if pos := self.Mail.GetNoSendIdx(); pos >= 0 {
 		common.SetBit32(&bit, Bit_Mail_Lst, true)
-		//self.Mail.DataToBuf(buf, pos)
 		//界面红点提示
 	}
 	if pos := self.Chat.GetNoSendIdx(); pos >= 0 {

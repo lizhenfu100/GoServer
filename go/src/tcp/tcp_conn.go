@@ -275,12 +275,13 @@ func (self *TCPConn) CallRpc(rpc string, sendFun func(*common.NetPack)) uint64 {
 		gamelog.Error("Server and Client have the same Rpc[%s]", rpc)
 		return 0
 	}
-	self.sendBuffer.ClearBody()
 	self.sendBuffer.SetOpCode(msgID)
 	self.sendBuffer.SetReqIdx(_GetNextReqIdx())
+	ret := self.sendBuffer.GetReqKey()
 	sendFun(self.sendBuffer)
 	self.WriteMsg(self.sendBuffer)
-	return self.sendBuffer.GetReqKey()
+	self.sendBuffer.Clear()
+	return ret
 }
 func (self *TCPConn) CallRpc2(rpc string, sendFun, recvFun func(*common.NetPack)) {
 	reqKey := self.CallRpc(rpc, sendFun)

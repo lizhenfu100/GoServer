@@ -16,10 +16,8 @@ func MainLoop() {
 		timeNow = time.Now().UnixNano() / int64(time.Millisecond)
 		time_elapse = int(timeNow - timeOld)
 
-		player.G_Auto_Write_DB.RunSevice(time_elapse)
-
-		//TODO:zhoumf: 用类似ServiceList优化AFK检查
-		player.CheckAFK()
+		player.G_Service_Write_DB.RunSevice(time_elapse)
+		player.G_Service_Check_AFK.RunSevice(timeNow)
 
 		time.Sleep(1000 * time.Millisecond)
 	}

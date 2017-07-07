@@ -8,6 +8,10 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+const (
+	Read_Mail_Delete_Time = 24 * 3600 * 7
+)
+
 type TMailMoudle struct {
 	PlayerID  uint32 `bson:"_id"`
 	MailLst   []TMail
@@ -47,7 +51,14 @@ func (self *TMailMoudle) LoadFromDB(player *TPlayer) {
 	self.owner = player
 }
 func (self *TMailMoudle) OnLogin() {
-	//TODO:zhoumf: 删除过期已读邮件
+	// 删除过期已读邮件
+	timenow := time.Now().Unix()
+	for i := 0; i < len(self.MailLst); i++ {
+		if self.MailLst[i].IsRead == 1 && timenow >= self.MailLst[i].Time+Read_Mail_Delete_Time {
+			self.MailLst = append(self.MailLst[:i], self.MailLst[i+1:]...)
+			i--
+		}
+	}
 	self.clientMailId = 0
 }
 func (self *TMailMoudle) OnLogout() {
@@ -180,7 +191,7 @@ func Rpc_Take_Mail_Item(req, ack *common.NetPack, ptr interface{}) {
 }
 func Rpc_Take_All_Mail_Item(req, ack *common.NetPack, ptr interface{}) {
 	self := ptr.(*TPlayer)
-	self.Mail.CreateMail(0, "测试", "zhoumf", "content")
+	//self.Mail.CreateMail(0, "测试", "zhoumf", "content")
 	for i := 0; i < len(self.Mail.MailLst); i++ {
 		mail := &self.Mail.MailLst[i]
 		if len(mail.Items) > 0 {
