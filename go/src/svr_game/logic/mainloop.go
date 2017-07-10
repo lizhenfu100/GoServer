@@ -9,6 +9,7 @@ import (
 func MainLoop() {
 	// init func list
 	player.InitSvrMailLst()
+	player.InitService()
 
 	timeNow, timeOld, time_elapse := time.Now().UnixNano()/int64(time.Millisecond), int64(0), 0
 	for {

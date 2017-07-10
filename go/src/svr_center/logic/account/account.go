@@ -89,9 +89,11 @@ func Rpc_Login_GameSvr(req, ack *common.NetPack, ptr interface{}) {
 	} else if netConfig.GetNetCfg("game", &svrId) == nil {
 		ack.WriteInt8(-4) //forbidded_account
 	} else {
+		addr := netConfig.GetAddr("game", &svrId)
 		ack.WriteInt8(1)
 		ack.WriteUInt32(account.AccountID)
-		netConfig.WriteAddr(ack, "game", &svrId)
+		ack.WriteString(addr.IP)
+		ack.WriteUInt16(addr.Port)
 
 		//生成一个临时token，发给gamesvr、client，用以登录验证
 		token := G_AccountMgr.CreateLoginToken()

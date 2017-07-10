@@ -63,42 +63,34 @@ func Rpc_Invite_Friend(req, ack *common.NetPack, ptr interface{}) { //邀请别�
 func Rpc_Agree_Join_Team(req, ack *common.NetPack, ptr interface{}) { //同意加队
 	self := ptr.(*TPlayer)
 	if self.pTeam != nil {
-		ack.WriteByte(0)
 		return
 	}
 	destPid := req.ReadUInt32()
 	if captain := _FindInCache(destPid); captain != nil && captain.pTeam != nil { //! readonly
-		self.pTeam = captain.pTeam
 
-		fmt.Println("Join_Team", self.pTeam)
-		// 下发队伍信息
-		ack.WriteByte(byte(len(self.pTeam.lst)))
-		for _, p := range self.pTeam.lst {
-			ack.WriteUInt32(p.PlayerID)
-			ack.WriteString(p.Name)
-		}
+		fmt.Println("Agree_Join_Team", captain.pTeam)
 
 		// 通知队长，加自己
 		captain.AsyncNotify(func(p *TPlayer) {
 			p.JoinToMyTeam(self)
 		})
-	} else {
-		ack.WriteByte(0)
 	}
 }
 func (self *TPlayer) JoinToMyTeam(dest *TPlayer) {
 	fmt.Println("JoinToMyTeam", self.pTeam)
-	if self.pTeam == nil {
+	if self.pTeam == nil || dest.pTeam != nil {
 		return
 	}
-	for _, v := range self.pTeam.lst { // 广播给其它队友
+	self.pTeam.lst = append(self.pTeam.lst, dest)
+	dest.pTeam = self.pTeam
+
+	for _, v := range self.pTeam.lst {
 		v.AsyncNotify(func(p *TPlayer) {
 			if p.pTeam != nil {
 				p.pTeam.isChange = true
 			}
 		})
 	}
-	self.pTeam.lst = append(self.pTeam.lst, dest)
 }
 func (self *TPlayer) _ExitFromMyTeam(destPid uint32) {
 	if self.pTeam == nil {
