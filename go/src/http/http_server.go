@@ -53,7 +53,7 @@ func _doRegistToSvr(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
 	}()
 }
-func FindRegModuleAddr(module string, id int) string {
+func FindRegModuleAddr(module string, id int) string { //"http://%s:%d/"
 	if v, ok := g_reg_addr_map[common.KeyPair{module, id}]; ok {
 		return v
 	}

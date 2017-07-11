@@ -167,7 +167,7 @@ func ParseRefCsvBySlice(records [][]string, pSlice interface{}) { // slice可减
 		}
 	}
 }
-func _parseHead(record []string) (ret int64) { // 不读的列：没命名/前缀"(c)"
+func _parseHead(record []string) (ret int64) { // 不读的列：没命名/前缀"_"
 	length := len(record)
 	if length > 64 {
 		fmt.Printf("csv column is over to 64 !!!")

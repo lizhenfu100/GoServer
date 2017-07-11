@@ -86,22 +86,22 @@ func Rpc_Login_GameSvr(req, ack *common.NetPack, ptr interface{}) {
 		ack.WriteInt8(-2) //forbidded_account
 	} else if password != account.Password {
 		ack.WriteInt8(-3) //invalid_password
-	} else if netConfig.GetNetCfg("game", &svrId) == nil {
-		ack.WriteInt8(-4) //forbidded_account
 	} else {
-		addr := netConfig.GetAddr("game", &svrId)
-		ack.WriteInt8(1)
-		ack.WriteUInt32(account.AccountID)
-		ack.WriteString(addr.IP)
-		ack.WriteUInt16(addr.Port)
-
-		//生成一个临时token，发给gamesvr、client，用以登录验证
-		token := G_AccountMgr.CreateLoginToken()
-		ack.WriteUInt32(token)
-		buf := common.NewByteBufferCap(8)
-		buf.WriteUInt32(account.AccountID)
-		buf.WriteUInt32(token)
-		api.SendToGame(svrId, "login_token", buf.DataPtr)
+		if ip, port := netConfig.GetIpPort("game", svrId); port <= 0 {
+			ack.WriteInt8(-4) //invalid_svrid
+		} else {
+			ack.WriteInt8(1)
+			ack.WriteUInt32(account.AccountID)
+			ack.WriteString(ip)
+			ack.WriteUInt16(port)
+			//生成一个临时token，发给gamesvr、client，用以登录验证
+			token := G_AccountMgr.CreateLoginToken()
+			ack.WriteUInt32(token)
+			buf := common.NewByteBufferCap(8)
+			buf.WriteUInt32(account.AccountID)
+			buf.WriteUInt32(token)
+			api.SendToGame(svrId, "login_token", buf.DataPtr)
+		}
 	}
 }
 func Handle_Login_Game_Success(w http.ResponseWriter, r *http.Request) {

@@ -44,10 +44,6 @@ type TNetConfig struct {
 	Maxconn    int
 	ConnectLst []string // 待连接的模块名
 }
-type Addr struct {
-	IP   string
-	Port uint16
-}
 
 var G_SvrNetCfg []TNetConfig = nil //见配表conf_net.csv
 
@@ -62,14 +58,14 @@ func GetNetCfg(module string, pSvrID *int) *TNetConfig { //负ID表示自动找�
 	print(fmt.Sprintf("{%s %d}: have none SvrNetCfg!!!\n", module, *pSvrID))
 	return nil
 }
-func GetAddr(module string, pSvrID *int) (ret Addr) {
-	if cfg := GetNetCfg(module, pSvrID); cfg != nil {
-		ret.IP = cfg.IP
+func GetIpPort(module string, id int) (ip string, port uint16) {
+	if cfg := GetNetCfg(module, &id); cfg != nil {
 		if cfg.HttpPort > 0 {
-			ret.Port = uint16(cfg.HttpPort)
+			port = uint16(cfg.HttpPort)
 		} else {
-			ret.Port = uint16(cfg.TcpPort)
+			port = uint16(cfg.TcpPort)
 		}
+		ip = cfg.IP
 	}
 	return
 }
