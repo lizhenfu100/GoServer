@@ -8,16 +8,14 @@ import (
 )
 
 type TCPClient struct {
-	Addr            string
-	PendingWriteNum int
-	TcpConn         *TCPConn
-	OnConnect       func(*TCPConn)
-	firstBuf        *common.NetPack // 连接建立后的第一个包，上报connId、密钥等
+	Addr      string
+	TcpConn   *TCPConn
+	OnConnect func(*TCPConn)
+	firstBuf  *common.NetPack // 连接建立后的第一个包，上报connId、密钥等
 }
 
 func (self *TCPClient) ConnectToSvr(addr, srcModule string, srcID int) {
 	self.Addr = addr
-	self.PendingWriteNum = 32
 	self.firstBuf = common.NewNetPackLen(4)
 
 	go self.connectRoutine(srcModule, srcID) //会断线后自动重连
@@ -51,7 +49,7 @@ func (self *TCPClient) connect() bool {
 		return false
 	}
 	if self.TcpConn == nil {
-		self.TcpConn = newTCPConn(conn, self.PendingWriteNum, nil)
+		self.TcpConn = newTCPConn(conn, nil)
 		self.TcpConn.UserPtr = self
 	} else {
 		//断线重连的新连接标记得重置，否则tcpConn.readRoutine.readLoop会直接break

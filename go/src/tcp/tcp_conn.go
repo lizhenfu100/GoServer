@@ -71,6 +71,7 @@ const (
 	G_Msg_Size_Max    = 1024
 	G_MsgId_Regist    = 60000
 	G_MsgId_SvrAccept = 60001
+	Write_Chan_Cap    = 32
 )
 
 var (
@@ -97,11 +98,11 @@ type TCPConn struct {
 	backBuffer *common.NetPack
 }
 
-func newTCPConn(conn net.Conn, pendingWriteNum int, callback func(*TCPConn)) *TCPConn {
+func newTCPConn(conn net.Conn, callback func(*TCPConn)) *TCPConn {
 	self := new(TCPConn)
 	self.ResetConn(conn)
 	self.onNetClose = callback
-	self.writeChan = make(chan []byte, pendingWriteNum)
+	self.writeChan = make(chan []byte, Write_Chan_Cap)
 	self.sendBuffer = common.NewNetPackCap(128)
 	self.backBuffer = common.NewNetPackCap(128)
 	return self

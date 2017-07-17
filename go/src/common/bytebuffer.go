@@ -64,11 +64,8 @@ func (self *ByteBuffer) WriteFloat(v float32) {
 }
 func (self *ByteBuffer) WriteString(v string) {
 	bytes := []byte(v)
-	length := len(bytes)
-	self.WriteUInt16(uint16(length))
-	for i := 0; i < length; i++ {
-		self.WriteByte(bytes[i])
-	}
+	self.WriteUInt16(uint16(len(bytes)))
+	self.WriteBuf(bytes)
 }
 func (self *ByteBuffer) WriteBuf(v []byte) {
 	self.DataPtr = append(self.DataPtr, v...)

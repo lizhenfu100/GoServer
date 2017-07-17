@@ -10,22 +10,20 @@ import (
 )
 
 type TCPServer struct {
-	Addr            string
-	MaxConnNum      int
-	PendingWriteNum int
-	autoConnId      uint32
-	connmap         map[uint32]*TCPConn
-	listener        net.Listener
-	mutexConns      sync.Mutex
-	wgLn            sync.WaitGroup
-	wgConns         sync.WaitGroup
+	Addr       string
+	MaxConnNum int
+	autoConnId uint32
+	connmap    map[uint32]*TCPConn
+	listener   net.Listener
+	mutexConns sync.Mutex
+	wgLn       sync.WaitGroup
+	wgConns    sync.WaitGroup
 }
 
 func NewTcpServer(addr string, maxconn int) {
 	svr := new(TCPServer)
 	svr.Addr = addr //"ip:port"，ip可缺省
 	svr.MaxConnNum = maxconn
-	svr.PendingWriteNum = 32
 	svr.init()
 	svr.run()
 	svr.Close()
@@ -35,10 +33,6 @@ func (self *TCPServer) init() bool {
 	if err != nil {
 		gamelog.Error("TCPServer Init failed  error :%s", err.Error())
 		return false
-	}
-	if self.PendingWriteNum <= 0 {
-		self.PendingWriteNum = 32
-		gamelog.Info("Invalid PendingWriteNum, reset to %d", self.PendingWriteNum)
 	}
 	self.listener = ln
 	self.connmap = make(map[uint32]*TCPConn)
@@ -98,7 +92,7 @@ func (self *TCPServer) _AddNewConn(conn net.Conn, connId uint32) {
 		return
 	}
 	self.wgConns.Add(1)
-	tcpConn := newTCPConn(conn, self.PendingWriteNum,
+	tcpConn := newTCPConn(conn,
 		func(this *TCPConn) {
 			self.mutexConns.Lock()
 			delete(self.connmap, connId)
