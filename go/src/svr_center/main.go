@@ -52,11 +52,9 @@ func InitConf() {
 	}
 	common.LoadAllCsv()
 
-	netConfig.RegHttpSystemHandler(map[string]netConfig.HttpHandle{
+	netConfig.RegHttpRpc(map[string]netConfig.HttpRpc{
 		//! Gamesvr
 		"rpc_center_login_game_success": account.Handle_Login_Game_Success,
-	})
-	netConfig.RegHttpPlayerHandler(map[string]netConfig.HttpPlayerHandle{
 		//! Client
 		"rpc_center_reg_account":            account.Rpc_Reg_Account,
 		"rpc_center_change_password":        account.Rpc_Change_Password,

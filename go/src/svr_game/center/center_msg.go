@@ -2,7 +2,6 @@ package center
 
 import (
 	"common"
-	"net/http"
 )
 
 var (
@@ -11,11 +10,7 @@ var (
 
 //////////////////////////////////////////////////////////////////////
 //!
-func Handle_Login_Token(w http.ResponseWriter, r *http.Request) {
-	//! 接收信息
-	req := common.NewByteBufferLen(int(r.ContentLength))
-	r.Body.Read(req.DataPtr)
-
+func Handle_Login_Token(req, ack *common.NetPack) {
 	id := req.ReadUInt32()
 	token := req.ReadUInt32()
 

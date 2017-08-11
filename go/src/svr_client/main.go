@@ -42,8 +42,6 @@ func test() {
 	centerAddr := netConfig.GetHttpAddr("center", -1)
 	fmt.Println("---", gameAddr)
 	fmt.Println("---", centerAddr)
-	gameRpc := http.NewClientRpc(gameAddr, 0)
-	centerRpc := http.NewClientRpc(centerAddr, 0)
 
 	//向游戏服请求充值
 	// var msg1 sdk_msg.Msg_create_recharge_order_Req
@@ -76,7 +74,7 @@ func test() {
 	gamesvrPort := uint16(0)
 	logintoken := uint32(0)
 
-	centerRpc.CallRpc("rpc_center_reg_account", func(buf *common.NetPack) {
+	http.CallRpc(centerAddr, "rpc_center_reg_account", func(buf *common.NetPack) {
 		buf.WriteString(accountName)
 		buf.WriteString(password)
 	}, func(backBuf *common.NetPack) {
@@ -84,7 +82,7 @@ func test() {
 		fmt.Println("errCode1:", errCode1)
 	})
 
-	centerRpc.CallRpc("rpc_center_login_gamesvr", func(buf *common.NetPack) {
+	http.CallRpc(centerAddr, "rpc_center_login_gamesvr", func(buf *common.NetPack) {
 		buf.WriteString(accountName)
 		buf.WriteString(password)
 		buf.WriteInt(1) //gamesvrId
@@ -101,7 +99,8 @@ func test() {
 	})
 
 	//登录
-	gameRpc.CallRpc("rpc_game_login", func(buf *common.NetPack) {
+	gameRpc := http.NewPlayerRpc(gameAddr, 0)
+	http.CallRpc(gameAddr, "rpc_game_login", func(buf *common.NetPack) {
 		buf.WriteUInt32(accountId)
 		buf.WriteUInt32(logintoken)
 	}, func(backBuf *common.NetPack) {
@@ -110,7 +109,7 @@ func test() {
 			gameRpc.PlayerId = backBuf.ReadUInt32()
 		} else if errCode3 == -2 {
 			//创建新角色
-			gameRpc.CallRpc("rpc_game_player_create", func(buf *common.NetPack) {
+			http.CallRpc(gameAddr, "rpc_game_player_create", func(buf *common.NetPack) {
 				buf.WriteUInt32(accountId)
 				buf.WriteString("zhoumf")
 			}, func(backBuf *common.NetPack) {

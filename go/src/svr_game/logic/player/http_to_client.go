@@ -31,7 +31,7 @@ const (
 	Bit_Team_Chat     = 6
 )
 
-func BeforeRecvHttpMsg(pid uint32) interface{} {
+func BeforeRecvNetMsg(pid uint32) interface{} {
 	if player := _FindInCache(pid); player != nil {
 		atomic.SwapUint32(&player.idleSec, 0)
 		player._HandleAsyncNotify()
@@ -40,7 +40,7 @@ func BeforeRecvHttpMsg(pid uint32) interface{} {
 	}
 	return nil
 }
-func AfterRecvHttpMsg(ptr interface{}, buf *common.NetPack) {
+func AfterRecvNetMsg(ptr interface{}, buf *common.NetPack) {
 	self := ptr.(*TPlayer)
 	pid := self.PlayerID
 	bit, bitPosInBody := uint32(0), buf.BodySize()

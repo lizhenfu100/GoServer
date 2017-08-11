@@ -13,5 +13,5 @@ func Rpc_Echo(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	fmt.Println("Rpc_Echo :", req.ReadString())
 
 	// conn.WriteMsg(req)
-	api.SendToBattle(1, req)
+	api.GetBattleConn(1).WriteMsg(req)
 }

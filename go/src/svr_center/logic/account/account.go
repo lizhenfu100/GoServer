@@ -3,7 +3,6 @@ package account
 import (
 	"common"
 	"dbmgo"
-	"net/http"
 	"netConfig"
 	"svr_center/api"
 	"time"
@@ -23,7 +22,7 @@ type TAccount struct {
 }
 
 //处理用户账户注册请求
-func Rpc_Reg_Account(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_Reg_Account(req, ack *common.NetPack) {
 	name := req.ReadString()
 	password := req.ReadString()
 
@@ -33,7 +32,7 @@ func Rpc_Reg_Account(req, ack *common.NetPack, ptr interface{}) {
 		ack.WriteInt8(-1)
 	}
 }
-func Rpc_Change_Password(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_Change_Password(req, ack *common.NetPack) {
 	name := req.ReadString()
 	oldpassword := req.ReadString()
 	newpassword := req.ReadString()
@@ -44,7 +43,7 @@ func Rpc_Change_Password(req, ack *common.NetPack, ptr interface{}) {
 		ack.WriteInt8(-1)
 	}
 }
-func Rpc_GetGameSvr_Lst(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_GetGameSvr_Lst(req, ack *common.NetPack) {
 	cfgLst := api.GetRegGamesvrCfgLst()
 	ack.WriteByte(byte(len(cfgLst)))
 	for _, v := range cfgLst {
@@ -58,7 +57,7 @@ func Rpc_GetGameSvr_Lst(req, ack *common.NetPack, ptr interface{}) {
 		}
 	}
 }
-func Rpc_GetGameSvr_LastLogin(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_GetGameSvr_LastLogin(req, ack *common.NetPack) {
 	name := req.ReadString()
 
 	account := G_AccountMgr.GetAccountByName(name)
@@ -74,7 +73,7 @@ func Rpc_GetGameSvr_LastLogin(req, ack *common.NetPack, ptr interface{}) {
 		}
 	}
 }
-func Rpc_Login_GameSvr(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_Login_GameSvr(req, ack *common.NetPack) {
 	name := req.ReadString()
 	password := req.ReadString()
 	svrId := req.ReadInt()
@@ -97,18 +96,15 @@ func Rpc_Login_GameSvr(req, ack *common.NetPack, ptr interface{}) {
 			//生成一个临时token，发给gamesvr、client，用以登录验证
 			token := G_AccountMgr.CreateLoginToken()
 			ack.WriteUInt32(token)
-			buf := common.NewByteBufferCap(8)
-			buf.WriteUInt32(account.AccountID)
-			buf.WriteUInt32(token)
-			api.SendToGame(svrId, "login_token", buf.DataPtr)
+
+			api.CallRpcGame(svrId, "login_token", func(buf *common.NetPack) {
+				buf.WriteUInt32(account.AccountID)
+				buf.WriteUInt32(token)
+			}, nil)
 		}
 	}
 }
-func Handle_Login_Game_Success(w http.ResponseWriter, r *http.Request) {
-	//! 接收信息
-	req := common.NewByteBufferLen(int(r.ContentLength))
-	r.Body.Read(req.DataPtr)
-
+func Handle_Login_Game_Success(req, ack *common.NetPack) {
 	accountId := req.ReadUInt32()
 	svrId := req.ReadUInt32()
 

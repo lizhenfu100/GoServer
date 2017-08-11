@@ -23,25 +23,6 @@ import (
 )
 
 //////////////////////////////////////////////////////////////////////
-//! rpc
-type ClientRpc struct {
-	Url      string
-	PlayerId uint32
-}
-
-func NewClientRpc(addr string, pid uint32) *ClientRpc {
-	return &ClientRpc{addr + "client_rpc", pid}
-}
-func (self *ClientRpc) CallRpc(rpc string, sendFun, recvFun func(*common.NetPack)) {
-	buf := common.NewNetPackCap(64)
-	buf.SetRpc(rpc)
-	buf.SetReqIdx(self.PlayerId)
-	sendFun(buf)
-	b := PostReq(self.Url, buf.DataPtr)
-	recvFun(common.NewNetPack(b))
-}
-
-//////////////////////////////////////////////////////////////////////
 //! 底层接口，业务层一般用不到
 func PostReq(url string, b []byte) []byte {
 	ack, err := http.Post(url, "text/HTML", bytes.NewReader(b))
@@ -56,6 +37,7 @@ func PostReq(url string, b []byte) []byte {
 	}
 }
 
+//////////////////////////////////////////////////////////////////////
 //! 模块注册
 type Msg_Regist_To_HttpSvr struct {
 	Addr   string

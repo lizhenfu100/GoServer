@@ -5,6 +5,7 @@ import (
 	"conf"
 	"dbmgo"
 	"gamelog"
+	"http"
 	"netConfig"
 	"strconv"
 
@@ -73,23 +74,26 @@ func InitConf() {
 	}
 	common.LoadAllCsv()
 
-	netConfig.RegTcpHandler(map[string]netConfig.TcpHandle{
+	netConfig.RegTcpRpc(map[string]netConfig.TcpHandle{
 		//! Cross
 		"rpc_echo":            cross.Rpc_Echo,
 		"rpc_game_battle_ack": player.Rpc_Battle_Ack,
 	})
-	netConfig.RegHttpSystemHandler(map[string]netConfig.HttpHandle{
-		//! Center
-		"login_token": center.Handle_Login_Token,
+	netConfig.RegHttpHandler(map[string]netConfig.HttpHandle{
 		//! SDK
 		"create_recharge_order": sdk.Handle_Create_Recharge_Order,
 		"sdk_recharge_success":  sdk.Handle_Recharge_Success,
 	})
-	netConfig.RegHttpPlayerHandler(map[string]netConfig.HttpPlayerHandle{
+	netConfig.RegHttpRpc(map[string]netConfig.HttpRpc{
+		//! Center
+		"login_token": center.Handle_Login_Token,
 		//! Client
-		"rpc_game_login":              player.Rpc_Player_Login,
+		"rpc_game_login":         player.Rpc_Player_Login,
+		"rpc_game_player_create": player.Rpc_Player_Create,
+	})
+	netConfig.RegHttpPlayerRpc(map[string]netConfig.HttpPlayerRpc{
+		//! Player
 		"rpc_game_logout":             player.Rpc_Player_Logout,
-		"rpc_game_player_create":      player.Rpc_Player_Create,
 		"rpc_game_heart_beat":         player.Rpc_Heart_Beat,
 		"rpc_game_battle_begin":       player.Rpc_Battle_Begin,
 		"rpc_game_probe_login_battle": player.Rpc_Probe_Login_Battle,
@@ -110,6 +114,6 @@ func InitConf() {
 		"rpc_game_take_mail_item":     player.Rpc_Take_Mail_Item,
 		"rpc_game_take_all_mail_item": player.Rpc_Take_All_Mail_Item,
 	})
-	netConfig.G_Before_Recv_Player_Http = player.BeforeRecvHttpMsg
-	netConfig.G_After_Recv_Player_Http = player.AfterRecvHttpMsg
+	http.G_Before_Recv_Player = player.BeforeRecvNetMsg
+	http.G_After_Recv_Player = player.AfterRecvNetMsg
 }

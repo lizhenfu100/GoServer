@@ -94,7 +94,7 @@ type TCPConn struct {
 	isClose    bool //isClose标记仅在ResetConn、Close中设置，其它地方只读
 	onNetClose func(*TCPConn)
 	UserPtr    interface{}
-	sendBuffer *common.NetPack
+	sendBuffer *common.NetPack //for rpc
 	backBuffer *common.NetPack
 }
 
@@ -239,7 +239,7 @@ func (self *TCPConn) readRoutine() {
 			break
 		}
 
-		//TODO:zhoumf: 消息加密、验证有效性，不通过即踢掉
+		//FIXME: 消息加密、验证有效性，不通过即踢掉
 
 		self.msgDispatcher(packet.GetOpCode(), packet)
 	}
@@ -270,25 +270,23 @@ func (self *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
 
 //////////////////////////////////////////////////////////////////////
 //! rpc 【非线程安全的】只给Player用
-func (self *TCPConn) CallRpc(rpc string, sendFun func(*common.NetPack)) uint64 {
+func (self *TCPConn) CallRpcUnsafe(rpc string, sendFun, recvFun func(*common.NetPack)) {
 	msgID := common.RpcNameToId(rpc)
 	if _, ok := G_HandlerMsgMap[msgID]; ok {
 		gamelog.Error("Server and Client have the same Rpc[%s]", rpc)
-		return 0
+		return
 	}
 	self.sendBuffer.SetOpCode(msgID)
 	self.sendBuffer.SetReqIdx(_GetNextReqIdx())
-	ret := self.sendBuffer.GetReqKey()
 	sendFun(self.sendBuffer)
 	self.WriteMsg(self.sendBuffer)
 	self.sendBuffer.Clear()
-	return ret
+
+	if recvFun != nil {
+		_InsertResponse(self.sendBuffer.GetReqKey(), recvFun)
+	}
 }
-func (self *TCPConn) CallRpc2(rpc string, sendFun, recvFun func(*common.NetPack)) {
-	reqKey := self.CallRpc(rpc, sendFun)
-	_InsertResponse(reqKey, recvFun)
-}
-func (self *TCPConn) CallRpcSafe(rpc string, sendFun, recvFun func(*common.NetPack)) {
+func (self *TCPConn) CallRpc(rpc string, sendFun, recvFun func(*common.NetPack)) {
 	msgID := common.RpcNameToId(rpc)
 	if _, ok := G_HandlerMsgMap[msgID]; ok {
 		gamelog.Error("Server and Client have the same Rpc[%s]", rpc)
@@ -299,7 +297,10 @@ func (self *TCPConn) CallRpcSafe(rpc string, sendFun, recvFun func(*common.NetPa
 	buf.SetReqIdx(_GetNextReqIdx())
 	sendFun(buf)
 	self.WriteMsg(buf)
-	_InsertResponse(buf.GetReqKey(), recvFun)
+
+	if recvFun != nil {
+		_InsertResponse(buf.GetReqKey(), recvFun)
+	}
 }
 func _FindResponse(reqKey uint64) func(*common.NetPack) {
 	g_rw_lock.RLock()

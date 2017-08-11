@@ -57,25 +57,24 @@ func Rpc_Battle_Begin(req, ack *common.NetPack, ptr interface{}) {
 	if self.pTeam == nil || self.pTeam.lst[0] != self {
 		return
 	}
-	battleMsg := common.NewNetPackCap(32)
-	battleMsg.WriteByte(byte(len(self.pTeam.lst)))
-	for _, ptr := range self.pTeam.lst {
-		battleMsg.WriteUInt32(ptr.PlayerID)
-		// pack player battle data
-		battleMsg.WriteString(ptr.Name)
+	api.CallRpcCross("rpc_cross_relay_battle_data", func(buf *common.NetPack) {
+		buf.WriteByte(byte(len(self.pTeam.lst)))
+		for _, ptr := range self.pTeam.lst {
+			buf.WriteUInt32(ptr.PlayerID)
+			// pack player battle data
+			buf.WriteString(ptr.Name)
 
-		//重新匹配战斗服
-		ptr.Battle.loginBattleMsg.Clear()
+			//重新匹配战斗服
+			ptr.Battle.loginBattleMsg.Clear()
 
-		// 通知队员，开等待界面
-		if ptr != self {
-			ptr.AsyncNotify(func(p *TPlayer) {
-				p.Battle.isShowWaitUI = true
-			})
+			// 通知队员，开等待界面
+			if ptr != self {
+				ptr.AsyncNotify(func(p *TPlayer) {
+					p.Battle.isShowWaitUI = true
+				})
+			}
 		}
-	}
-	battleMsg.SetRpc("rpc_cross_relay_battle_data")
-	api.SendToCross(battleMsg)
+	}, nil)
 }
 func Rpc_Battle_Ack(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	battleSvrIP := req.ReadString()

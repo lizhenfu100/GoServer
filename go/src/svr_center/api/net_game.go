@@ -1,6 +1,7 @@
 package api
 
 import (
+	"common"
 	"http"
 	"netConfig"
 )
@@ -9,14 +10,14 @@ var (
 	g_cache_game_addr = make(map[int]string)
 )
 
-// strKey = "sdk_recharge_info"
-func SendToGame(svrId int, strKey string, buf []byte) []byte {
+// rpc = "sdk_recharge_info"
+func CallRpcGame(svrId int, rpc string, sendFun, recvFun func(*common.NetPack)) {
 	addr, ok := g_cache_game_addr[svrId]
 	if false == ok {
 		addr = netConfig.GetHttpAddr("game", svrId)
 		g_cache_game_addr[svrId] = addr
 	}
-	return http.PostReq(addr+strKey, buf)
+	http.CallRpc(addr, rpc, sendFun, recvFun)
 }
 func GetRegGamesvrCfgLst() (ret []*netConfig.TNetConfig) {
 	ids := http.GetRegModuleIDs("game")

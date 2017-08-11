@@ -40,6 +40,11 @@ import (
 	"time"
 )
 
+const (
+	Idle_Max_Second       = 30
+	Reconnect_Wait_Second = 60
+)
+
 var (
 	G_Service_Write_DB  *common.ServicePatch
 	G_Service_Check_AFK *common.ServiceList
@@ -49,11 +54,6 @@ func InitService() {
 	G_Service_Write_DB = common.NewServicePatch(_WritePlayerToDB, 15*60*1000)
 	G_Service_Check_AFK = common.NewServiceList(_CheckAFK, 1000)
 }
-
-const (
-	Idle_Max_Second       = 10
-	Reconnect_Wait_Second = 30
-)
 
 type MoudleInterface interface {
 	InitAndInsert(*TPlayer)
@@ -148,8 +148,9 @@ func (self *TPlayer) Logout() {
 	G_Service_Write_DB.UnRegister(self)
 	G_Service_Check_AFK.UnRegister(self)
 
-	// 延时30s后再删，提升重连效率
-	time.AfterFunc(Reconnect_Wait_Second*time.Second, func() { //Notice:AfterFunc是在另一线程执行，所以调的函数须是线程安全的
+	//Notice: AfterFunc是在另一线程执行，所以传入函数必须线程安全
+	time.AfterFunc(Reconnect_Wait_Second*time.Second, func() {
+		// 延时30s后再删，提升重连效率
 		if !self.isOnlie {
 			gamelog.Info("Pid(%d) Delete", self.PlayerID)
 			go self.WriteAllToDB()
@@ -187,7 +188,7 @@ func (self *TPlayer) AsyncNotify(handler func(*TPlayer)) {
 			gamelog.Warn("Player askChan is full !!!")
 			return
 		}
-	} else { //TODO:zhouf: 如何安全方便的修改离线玩家数据
+	} else { //TODO:zhoumf: 如何安全方便的修改离线玩家数据
 
 		//准备将离线的操作转给mainloop，这样所有离线玩家就都在一个chan里处理了
 		//要是中途玩家上线，mainloop的chan里还有他的操作没处理完怎么整！？囧~

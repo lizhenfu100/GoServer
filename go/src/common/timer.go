@@ -87,7 +87,7 @@ func (self *Timer) _OnTimerFunc(now int64) {
 	}
 	self.Unlock()
 
-	//TODO：funcLst遍历优化
+	//FIXME：funcLst遍历优化
 	isDelete := false
 	for i := 0; i < len(self.funcLst); i++ { // 这里得用len()，每次迭代都算长度，因为可能删除
 		data := &self.funcLst[i]

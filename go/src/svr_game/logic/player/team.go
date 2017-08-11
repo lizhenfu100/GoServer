@@ -23,14 +23,12 @@ type TeamChat struct {
 func Rpc_Create_Team(req, ack *common.NetPack, ptr interface{}) {
 	self := ptr.(*TPlayer)
 
-	if self.pTeam == nil {
-		self.pTeam = &TeamData{
-			lst:     []*TPlayer{self},
-			chatPos: make(map[uint32]int),
-		}
-		ack.WriteInt8(1)
-	} else {
-		ack.WriteInt8(-1)
+	if self.pTeam != nil {
+		self.ExitTeam()
+	}
+	self.pTeam = &TeamData{
+		lst:     []*TPlayer{self},
+		chatPos: make(map[uint32]int),
 	}
 }
 func Rpc_Exit_Team(req, ack *common.NetPack, ptr interface{}) {

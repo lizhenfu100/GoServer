@@ -11,6 +11,9 @@ var (
 	g_cache_battle_conn = make(map[int]*tcp.TCPConn)
 )
 
+func CallRpcBattle(svrID int, rpc string, sendFun, recvFun func(*common.NetPack)) {
+	GetBattleConn(svrID).CallRpc(rpc, sendFun, recvFun)
+}
 func GetBattleConn(svrID int) *tcp.TCPConn {
 	conn, _ := g_cache_battle_conn[svrID]
 	if conn == nil || conn.IsClose() {
@@ -19,4 +22,3 @@ func GetBattleConn(svrID int) *tcp.TCPConn {
 	}
 	return conn
 }
-func SendToBattle(svrID int, msg *common.NetPack) { GetBattleConn(svrID).WriteMsg(msg) }

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"common"
 	"http"
 	"netConfig"
 )
@@ -9,10 +10,9 @@ var (
 	g_cache_center_addr string
 )
 
-// strKey = "create_recharge_order"
-func SendToCenter(strKey string, buf []byte) []byte {
+func CallRpcCenter(rpc string, sendFun, recvFun func(*common.NetPack)) {
 	if g_cache_center_addr == "" {
 		g_cache_center_addr = netConfig.GetHttpAddr("center", -1)
 	}
-	return http.PostReq(g_cache_center_addr+strKey, buf)
+	http.CallRpc(g_cache_center_addr, rpc, sendFun, recvFun)
 }

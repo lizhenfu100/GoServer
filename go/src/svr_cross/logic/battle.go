@@ -29,11 +29,11 @@ func Rpc_Relay_Battle_Data(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		return
 	}
 	// 转给Battle进程
-	api.GetBattleConn(svrId).CallRpcSafe("rpc_battle_handle_player_data", func(buf *common.NetPack) {
+	api.CallRpcBattle(svrId, "rpc_battle_handle_player_data", func(buf *common.NetPack) {
 		buf.WriteBuf(req.Body())
 	}, func(backBuf *common.NetPack) {
-		// playerCnt := backBuf.ReadUInt32() //选中战斗服的已有人数
-		// g_battle_player_cnt[svrId] = playerCnt
+		playerCnt := backBuf.ReadUInt32() //选中战斗服的已有人数
+		g_battle_player_cnt[svrId] = playerCnt
 
 		//【Notice：异步回调里不能用非线程安全的数据，直接用ack回复错的】
 		print("--- send addr to game ---\n")
@@ -42,7 +42,7 @@ func Rpc_Relay_Battle_Data(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		gameMsg.SetRpc("rpc_game_battle_ack")
 		gameMsg.WriteString(ip)
 		gameMsg.WriteUInt16(port)
-		gameMsg.WriteBuf(backBuf.Body()) //[]<pid>
+		gameMsg.WriteBuf(backBuf.LeftBuf()) //[]<pid>
 		conn.WriteMsg(gameMsg)
 	})
 }

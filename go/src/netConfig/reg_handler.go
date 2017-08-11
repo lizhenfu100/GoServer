@@ -16,77 +16,42 @@ package netConfig
 
 import (
 	"common"
-	"net/http"
+	"http"
+	nhttp "net/http"
 	"tcp"
 )
 
 type (
-	HttpHandle       func(http.ResponseWriter, *http.Request)
-	TcpHandle        func(*common.NetPack, *common.NetPack, *tcp.TCPConn)
-	HttpPlayerHandle func(*common.NetPack, *common.NetPack, interface{})
+	TcpHandle     func(req, ack *common.NetPack, conn *tcp.TCPConn)
+	HttpHandle    func(w nhttp.ResponseWriter, r *nhttp.Request)
+	HttpRpc       func(req, ack *common.NetPack)
+	HttpPlayerRpc func(req, ack *common.NetPack, p interface{})
 )
 
-var (
-	g_http_player_handler = make(map[uint16]HttpPlayerHandle)
-
-	//! 需要主动发给client的数据，每回通信时捎带过去
-	G_Before_Recv_Player_Http func(uint32) interface{}
-	G_After_Recv_Player_Http  func(interface{}, *common.NetPack)
-)
-
-func RegTcpHandler(tcpLst map[string]TcpHandle) {
+func RegTcpRpc(tcpLst map[string]TcpHandle) {
 	for k, v := range tcpLst {
 		tcp.G_HandlerMsgMap[common.RpcNameToId(k)] = v
 	}
 }
 
-//! 后台各系统间的数据传输格式可能有多种，比如Json，所以接口参数是原始http的
-func RegHttpSystemHandler(httpLst map[string]HttpHandle) {
+func RegHttpHandler(httpLst map[string]HttpHandle) {
 	for k, v := range httpLst {
-		http.HandleFunc("/"+k, v)
+		nhttp.HandleFunc("/"+k, v)
 	}
 }
-func RegHttpPlayerHandler(httpLst map[string]HttpPlayerHandle) {
-	http.HandleFunc("/client_rpc", _HandleHttpPlayerMsg)
 
+//! 封装成NetPack的模块间通信；若需要其它传输格式(如Json)直接调http.HandleFunc(rpcname, func)注册
+func RegHttpRpc(httpLst map[string]HttpRpc) {
 	for k, v := range httpLst {
-		g_http_player_handler[common.RpcNameToId(k)] = v
+		http.G_HandlerMap[common.RpcNameToId(k)] = v
 	}
+	http.RegHandleRpc()
 }
-func _HandleHttpPlayerMsg(w http.ResponseWriter, r *http.Request) {
-	//! 接收信息
-	req := common.NewNetPackLen(int(r.ContentLength) - common.PACK_HEADER_SIZE)
-	r.Body.Read(req.DataPtr)
 
-	//TODO:zhoumf: 验证消息安全性，防改包
-
-	//! 创建回复
-	ack := common.NewNetPackCap(128)
-
-	msgId := req.GetOpCode()
-	pid := req.GetReqIdx()
-
-	//心跳包太碍眼了
-	if msgId != 10026 {
-		println("\nHttpMsg:", common.DebugRpcIdToName(msgId), "len:", req.Size(), "  playerId:", pid)
+//! 访问玩家数据的消息，要求该玩家已经登录，否则不处理
+func RegHttpPlayerRpc(httpLst map[string]HttpPlayerRpc) {
+	for k, v := range httpLst {
+		http.G_PlayerHandlerMap[common.RpcNameToId(k)] = v
 	}
-	if handler, ok := g_http_player_handler[msgId]; ok {
-
-		var player interface{}
-		if G_Before_Recv_Player_Http != nil {
-			player = G_Before_Recv_Player_Http(pid)
-		}
-
-		handler(req, ack, player)
-
-		if G_After_Recv_Player_Http != nil && player != nil {
-			G_After_Recv_Player_Http(player, ack)
-		}
-
-		if ack.BodySize() > 0 {
-			w.Write(ack.DataPtr)
-		}
-	} else {
-		println("\n===> HttpMsg:", common.DebugRpcIdToName(msgId), "Not Regist!!!")
-	}
+	http.RegHandlePlayerRpc()
 }

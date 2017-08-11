@@ -23,7 +23,7 @@ import (
 	"svr_game/center"
 )
 
-func Rpc_Player_Login(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_Player_Login(req, ack *common.NetPack) {
 	//req: accountId, token(账号服生成的登录验证码)
 	//ack: playerId, data
 	accountId := req.ReadUInt32()
@@ -43,10 +43,10 @@ func Rpc_Player_Login(req, ack *common.NetPack, ptr interface{}) {
 			ack.WriteString(player.Name)
 
 			// notify svr_center login success
-			buf := common.NewByteBufferCap(8)
-			buf.WriteUInt32(accountId)
-			buf.WriteUInt32(uint32(netConfig.G_Local_SvrID))
-			api.SendToCenter("rpc_center_login_game_success", buf.DataPtr)
+			api.CallRpcCenter("rpc_center_login_game_success", func(buf *common.NetPack) {
+				buf.WriteUInt32(accountId)
+				buf.WriteUInt32(uint32(netConfig.G_Local_SvrID))
+			}, nil)
 		}
 	}
 }
@@ -56,7 +56,7 @@ func Rpc_Player_Logout(req, ack *common.NetPack, ptr interface{}) {
 
 	player.Logout()
 }
-func Rpc_Player_Create(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_Player_Create(req, ack *common.NetPack) {
 	//req: accountId, playerName
 	//ack: playerId
 	accountId := req.ReadUInt32()

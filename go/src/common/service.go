@@ -53,11 +53,9 @@ func (self *ServicePatch) _doUnRegister(pObj interface{}) {
 	}
 }
 func (self *ServicePatch) _runSevice(timelapse int) {
-	// Notice: 中途可能增删，长度会变，每次算len安全
-	// totalCnt := len(self.obj_lst)
-	// if totalCnt <= 0 {
-	// 	return
-	// }
+	if len(self.obj_lst) <= 0 {
+		return
+	}
 	//! 单位时长里要处理的个数，可能大于列表中obj总数，比如服务器卡顿很久，得追帧
 	self.timeWait += timelapse
 	runCnt := self.timeWait * len(self.obj_lst) / self.kTimeAll

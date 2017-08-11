@@ -55,7 +55,7 @@ func InitConf() {
 	}
 	common.LoadAllCsv()
 
-	netConfig.RegTcpHandler(map[string]netConfig.TcpHandle{
+	netConfig.RegTcpRpc(map[string]netConfig.TcpHandle{
 		"rpc_echo": logic.Rpc_Echo,
 	})
 }

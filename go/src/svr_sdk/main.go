@@ -45,7 +45,7 @@ func InitConf() {
 	}
 	common.LoadAllCsv()
 
-	netConfig.RegHttpSystemHandler(map[string]netConfig.HttpHandle{
+	netConfig.RegHttpHandler(map[string]netConfig.HttpHandle{
 		//! From Gamesvr
 		"create_recharge_order": logic.HandSvr_CreateRechargeOrder,
 

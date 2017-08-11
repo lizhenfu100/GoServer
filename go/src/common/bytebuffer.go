@@ -28,7 +28,8 @@ func (self *ByteBuffer) Clear() {
 	self.DataPtr = self.DataPtr[:0]
 	self.ReadPos = 0
 }
-func (self *ByteBuffer) Size() int { return len(self.DataPtr) }
+func (self *ByteBuffer) Size() int       { return len(self.DataPtr) }
+func (self *ByteBuffer) LeftBuf() []byte { return self.DataPtr[self.ReadPos:] }
 
 //! Write
 func (self *ByteBuffer) WriteByte(v byte) {

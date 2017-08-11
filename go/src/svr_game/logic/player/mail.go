@@ -29,7 +29,6 @@ type TMailMoudle struct {
 }
 type TMail struct {
 	ID      uint32 `bson:"_id"`
-	Pid     uint32
 	Time    int64
 	Title   string
 	From    string
@@ -66,9 +65,9 @@ func (self *TMailMoudle) OnLogout() {
 
 // -------------------------------------
 // -- API
-func (self *TMailMoudle) CreateMail(pid uint32, title, from, content string, items ...common.IntPair) *TMail {
+func (self *TMailMoudle) CreateMail(title, from, content string, items ...common.IntPair) *TMail {
 	id := dbmgo.GetNextIncId("MailId")
-	pMail := &TMail{id, pid, time.Now().Unix(), title, from, content, 0, items}
+	pMail := &TMail{id, time.Now().Unix(), title, from, content, 0, items}
 	self.MailLst = append(self.MailLst, *pMail)
 	dbmgo.UpdateToDB("Mail", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"maillst": pMail}})
 	return pMail
@@ -101,7 +100,6 @@ func (self *TMailMoudle) DelMailRead() {
 //! buf
 func (self *TMail) DataToBuf(buf *common.NetPack) {
 	buf.WriteUInt32(self.ID)
-	buf.WriteUInt32(self.Pid)
 	buf.WriteInt64(self.Time)
 	buf.WriteString(self.Title)
 	buf.WriteString(self.From)
@@ -117,7 +115,6 @@ func (self *TMail) DataToBuf(buf *common.NetPack) {
 }
 func (self *TMail) BufToData(buf *common.NetPack) {
 	self.ID = buf.ReadUInt32()
-	self.Pid = buf.ReadUInt32()
 	self.Time = buf.ReadInt64()
 	self.Title = buf.ReadString()
 	self.From = buf.ReadString()
