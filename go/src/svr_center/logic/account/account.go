@@ -97,7 +97,7 @@ func Rpc_Login_GameSvr(req, ack *common.NetPack) {
 			token := G_AccountMgr.CreateLoginToken()
 			ack.WriteUInt32(token)
 
-			api.CallRpcGame(svrId, "login_token", func(buf *common.NetPack) {
+			api.CallRpcGame(svrId, "rpc_game_login_token", func(buf *common.NetPack) {
 				buf.WriteUInt32(account.AccountID)
 				buf.WriteUInt32(token)
 			}, nil)

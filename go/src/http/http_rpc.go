@@ -99,9 +99,6 @@ func _HandlePlayerRpc(w http.ResponseWriter, r *http.Request) {
 	//FIXME: http通信中途安全性不够，能修改client net pack里的pid，进而操作别人数据
 	//FIXME: 账号服登录验证后下发给client的token，client应该保留，附在每个HttpReq里，防止恶意窜改他人数据
 
-	//TODO: 登录消息、创建新角色，挪至RegHttpSystemHandler里处理
-	//TODO: RegHttpPlayerHandler里的消息，要求pid对应的player，已在后台缓存中，否则踢掉，重新登录
-
 	msgId := req.GetOpCode()
 	pid := req.GetReqIdx()
 

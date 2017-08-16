@@ -125,7 +125,9 @@ func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
 			oldconn.writeRoutine()
 		} else {
 			gamelog.Info("_ResetOldConn isOpen: %d", oldId)
-			newconn.Close()
+			// newconn.Close()
+			self.autoConnId++
+			self._AddNewConn(newconn, self.autoConnId)
 		}
 	} else { //服务器重启
 		gamelog.Info("_ResetOldConn to _AddNewConn: %d", oldId)

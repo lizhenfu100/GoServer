@@ -241,11 +241,14 @@ func (self *TCPConn) readRoutine() {
 
 		//FIXME: 消息加密、验证有效性，不通过即踢掉
 
-		self.msgDispatcher(packet.GetOpCode(), packet)
+		//【Notice: 目前是在io线程直接调消息响应函数(多线程处理玩家操作)，玩家之间互改数据须考虑竞态问题(可用actor模式解决)】
+		//【Notice: 若友好支持玩家强交互，可将packet放入主逻辑循环的消息队列(SafeQueue)】
+		self.msgDispatcher(packet)
 	}
 	self.Close()
 }
-func (self *TCPConn) msgDispatcher(msgID uint16, msg *common.NetPack) {
+func (self *TCPConn) msgDispatcher(msg *common.NetPack) {
+	msgID := msg.GetOpCode()
 	defer func() {
 		if r := recover(); r != nil {
 			if _, ok := r.(runtime.Error); ok {

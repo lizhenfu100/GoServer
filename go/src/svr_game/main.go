@@ -86,7 +86,7 @@ func InitConf() {
 	})
 	netConfig.RegHttpRpc(map[string]netConfig.HttpRpc{
 		//! Center
-		"login_token": center.Handle_Login_Token,
+		"rpc_game_login_token": center.Rpc_Login_Token,
 		//! Client
 		"rpc_game_login":         player.Rpc_Player_Login,
 		"rpc_game_player_create": player.Rpc_Player_Create,

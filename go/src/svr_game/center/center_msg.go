@@ -10,7 +10,7 @@ var (
 
 //////////////////////////////////////////////////////////////////////
 //!
-func Handle_Login_Token(req, ack *common.NetPack) {
+func Rpc_Login_Token(req, ack *common.NetPack) {
 	id := req.ReadUInt32()
 	token := req.ReadUInt32()
 

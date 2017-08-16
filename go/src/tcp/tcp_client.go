@@ -8,19 +8,20 @@ import (
 )
 
 type TCPClient struct {
-	Addr      string
+	addr      string
+	connId    uint32
 	TcpConn   *TCPConn
 	OnConnect func(*TCPConn)
-	firstBuf  *common.NetPack // 连接建立后的第一个包，上报connId、密钥等
 }
 
 func (self *TCPClient) ConnectToSvr(addr, srcModule string, srcID int) {
-	self.Addr = addr
-	self.firstBuf = common.NewNetPackLen(4)
-
+	self.addr = addr
 	go self.connectRoutine(srcModule, srcID) //会断线后自动重连
 }
 func (self *TCPClient) connectRoutine(srcModule string, srcID int) {
+	firstMsg := common.NewNetPackCap(32)
+	firstMsg.WriteUInt32(self.connId) //上报connId
+	//firstMsg.WriteString(key)    	//上报密匙
 	regMsg := common.NewNetPackCap(32)
 	regMsg.SetOpCode(G_MsgId_Regist)
 	regMsg.WriteString(srcModule)
@@ -32,7 +33,7 @@ func (self *TCPClient) connectRoutine(srcModule string, srcID int) {
 			}
 			go self.TcpConn.readRoutine()
 			//Notice: 这里不能用CallRpc，非线程安全的
-			self.TcpConn.WriteMsg(self.firstBuf)
+			self.TcpConn.WriteMsg(firstMsg)
 			self.TcpConn.WriteMsg(regMsg)
 			self.TcpConn.writeRoutine() //goroutine会阻塞在这里
 		}
@@ -40,9 +41,9 @@ func (self *TCPClient) connectRoutine(srcModule string, srcID int) {
 	}
 }
 func (self *TCPClient) connect() bool {
-	conn, err := net.Dial("tcp", self.Addr)
+	conn, err := net.Dial("tcp", self.addr)
 	if err != nil {
-		fmt.Printf("connect to %s error :%s \n", self.Addr, err.Error())
+		fmt.Printf("connect to %s error :%s \n", self.addr, err.Error())
 		return false
 	}
 	if conn == nil {
@@ -62,7 +63,6 @@ func (self *TCPClient) Close() {
 	self.TcpConn = nil
 }
 func OnSvrAcceptConn(req, ack *common.NetPack, conn *TCPConn) {
-	client := conn.UserPtr.(*TCPClient)
-	connId := req.ReadUInt32()
-	client.firstBuf.SetPos(0, connId)
+	self := conn.UserPtr.(*TCPClient)
+	self.connId = req.ReadUInt32()
 }
