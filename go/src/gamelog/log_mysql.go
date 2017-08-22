@@ -1,8 +1,9 @@
 package gamelog
 
 import (
-	"common"
+	"bytes"
 	"database/sql"
+	"encoding/gob"
 	"fmt"
 	"time"
 	// _ "go-sql-driver/mysql" //下载并安装mysql驱动
@@ -95,8 +96,10 @@ func (self *TMysqlLog) Write(data1, data2 [][]byte) {
 }
 func _transaction(stmt *sql.Stmt, pdata []byte) {
 	// 将buf解析为结构体
+	buf := bytes.NewBuffer(pdata)
+	dec := gob.NewDecoder(buf)
 	var req MSG_SvrLogData
-	if common.ToStruct(pdata, &req) != nil {
+	if dec.Decode(&req) != nil {
 		Error("MysqlLog::Transaction : Message Reader Error!!!!")
 		return
 	}

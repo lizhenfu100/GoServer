@@ -13,6 +13,8 @@
 package common
 
 import (
+	"gamelog"
+	"runtime/debug"
 	"sync"
 	"time"
 )
@@ -117,7 +119,6 @@ func (self *Timer) _OnTimerFunc(now int64) {
 
 //////////////////////////////////////////////////////////////////////
 // API
-//////////////////////////////////////////////////////////////////////
 func NewHourTimer(interval time.Duration) *Timer {
 	return _Newimer(interval * time.Hour)
 }
@@ -171,4 +172,44 @@ func (self *Timer) AddTimeFunc_S(delaySec int64, cdSec, runSec int, handler Time
 		}
 	}
 	self.addLst = append(self.addLst, TimerFunc{cdSec, INT_MAX, nextDealTime, handler})
+}
+
+//////////////////////////////////////////////////////////////////////
+// 定时器：多线程写，单线程读
+type TimerChan struct {
+	timerChan chan func()
+}
+
+func NewTimer(chanSize int) *TimerChan {
+	self := new(TimerChan)
+	self.timerChan = make(chan func(), chanSize)
+	return self
+}
+
+/*
+	t := AfterFunc()
+	t.Stop()
+*/
+func (self *TimerChan) AfterFunc(d time.Duration, callback func()) *time.Timer {
+	safeFun := func() {
+		defer func() {
+			if r := recover(); r != nil {
+				gamelog.Error("recover Timer:%v %s", r, debug.Stack())
+			}
+		}()
+		callback()
+	}
+	return time.AfterFunc(d, func() {
+		self.timerChan <- safeFun
+	})
+}
+func (self *TimerChan) Refresh() {
+	for {
+		select {
+		case cb := <-self.timerChan:
+			cb()
+		default:
+			break
+		}
+	}
 }

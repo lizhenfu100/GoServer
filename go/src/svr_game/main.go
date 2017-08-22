@@ -74,6 +74,10 @@ func InitConf() {
 	}
 	common.LoadAllCsv()
 
+	// for k, v := range netConfig.G_SvrNetCfg {
+	// 	fmt.Println(k, v)
+	// }
+
 	netConfig.RegTcpRpc(map[string]netConfig.TcpHandle{
 		//! Cross
 		"rpc_echo":            cross.Rpc_Echo,

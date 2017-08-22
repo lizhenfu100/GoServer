@@ -2,6 +2,7 @@ package tcp
 
 import (
 	"common"
+	"encoding/binary"
 	"gamelog"
 	"io"
 	"net"
@@ -66,16 +67,13 @@ func (self *TCPServer) run() {
 	}
 }
 func (self *TCPServer) _HandleAcceptConn(conn net.Conn) {
-	// 收第一个包，客户端上报connId、密钥等
-	firstBufSize := 4
-	buf := make([]byte, 2+common.PACK_HEADER_SIZE+firstBufSize)
+	buf := make([]byte, 2+4) //Notice：收第一个包，客户端上报connId
 	if _, err := io.ReadFull(conn, buf); err != nil {
 		conn.Close()
 		gamelog.Error("RecvFirstPack: %s", err.Error())
 		return
 	}
-	firstBuf := common.NewNetPack(buf[2:])
-	connId := firstBuf.GetPos(0)
+	connId := binary.LittleEndian.Uint32(buf[2:])
 	gamelog.Info("_HandleAcceptConn: %d", connId)
 
 	if connId > 0 {

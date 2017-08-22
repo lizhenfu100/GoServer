@@ -2,24 +2,38 @@
 * @ 反射解析表结构
 * @ brief
 	1、表数据格式：
-			数  值：1234
-			字符串：zhoumf
-			数值对：(24|1)(11|1)...
-			数  组：10|20|30...
+			数  值：	1234
+			字符串：	zhoumf
+			数  组：	[10,20,30]  [[1,2], [2,3]]
+			数值对：	同结构体				旧格式：(24|1)(11|1)...
+			结构体：	{"ID": 233, "Cnt": 1}	新格式：Json
+			Map： 		{"key1": 1, "key2": 2}  //转换为JSON的Object，key必须是string
 
-	2、首次出现的有效行(非注释的)，即为表头
+			物品权重表，可配成两列：[]IntPair + []int
 
-	3、行列注释："#"开头的行，没命名/前缀"_"的列    有些列仅client显示用的
-
-	4、使用方式如下：
+	2、代码数据格式
 			type TTestCsv struct { // 字段须与csv表格的顺序一致
-				ID     int
-				Des    string
-				Item   IntPair
-				Card   []IntPair
-				ArrInt []int
-				ArrStr []string
+				Num  int
+				Str  string
+				Arr1 []int
+				Arr2 []string
+				Arr3 [][]int
+				St   struct {
+					ID  int
+					Cnt int
+				}
+				Sts []struct {
+					ID  int
+					Cnt int
+				}
+				M map[string]int
 			}
+
+	3、首次出现的有效行(非注释的)，即为表头
+
+	4、行列注释："#"开头的行，没命名/前缀"_"的列    有些列仅client显示用的
+
+	5、使用方式：
 			var G_MapCsv map[int]*TTestCsv = nil  	// map结构读表，首列作Key
 			var G_SliceCsv []TTestCsv = nil 		// 数组结构读表，注册【&G_SliceCsv】到G_Csv_Map
 
@@ -27,7 +41,6 @@
 				"test": &G_MapCsv,
 				// "test": &G_SliceCsv,
 			}
-}
 * @ author zhoumf
 * @ date 2016-6-22
 ***********************************************************************/
@@ -35,12 +48,14 @@ package common
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -67,8 +82,8 @@ var G_Csv_Map map[string]interface{} = nil
 func LoadAllCsv() {
 	pattern := GetExePath() + "csv/*.csv"
 	names, err := filepath.Glob(pattern)
-	if err != nil {
-		fmt.Printf("LoadAllCsv error : %s", err.Error())
+	if err != nil || len(names) == 0 {
+		fmt.Printf("LoadAllCsv error : %s\n", err.Error())
 	}
 	for _, name := range names {
 		_LoadOneCsv(name)
@@ -82,31 +97,31 @@ func _LoadOneCsv(name string) {
 	file, err := os.Open(name)
 	defer file.Close()
 	if err != nil {
-		fmt.Printf("LoadCsv Open() error : %s", err.Error())
+		fmt.Printf("LoadCsv Open() error : %s\n", err.Error())
 		return
 	}
 
 	fstate, err := file.Stat()
 	if err != nil {
-		fmt.Printf("LoadCsv Stat() error : %s", err.Error())
+		fmt.Printf("LoadCsv Stat() error : %s\n", err.Error())
 		return
 	}
 	if fstate.IsDir() == true {
-		fmt.Printf("LoadCsv is dir : %s", name)
+		fmt.Printf("LoadCsv is dir : %s\n", name)
 		return
 	}
 
 	csvReader := csv.NewReader(file)
 	records, err := csvReader.ReadAll()
 	if err != nil {
-		fmt.Printf("LoadCsv ReadAll() error : %s", err.Error())
+		fmt.Printf("LoadCsv ReadAll() error : %s\n", err.Error())
 		return
 	}
 
 	if ptr, ok := G_Csv_Map[strings.TrimSuffix(fstate.Name(), ".csv")]; ok {
 		ParseRefCsv(records, ptr)
 	} else {
-		fmt.Printf("Csv not regist in G_Csv_Map: %s", name)
+		fmt.Printf("Csv not regist in G_Csv_Map: %s\n", name)
 	}
 }
 
@@ -117,7 +132,7 @@ func ParseRefCsv(records [][]string, ptr interface{}) {
 	case reflect.Slice:
 		ParseRefCsvBySlice(records, ptr)
 	default:
-		fmt.Printf("Csv Type Error: TypeName:%s", reflect.TypeOf(ptr).Elem().String())
+		fmt.Printf("Csv Type Error: TypeName:%s\n", reflect.TypeOf(ptr).Elem().String())
 
 	}
 }
@@ -170,7 +185,7 @@ func ParseRefCsvBySlice(records [][]string, pSlice interface{}) { // slice可减
 func _parseHead(record []string) (ret int64) { // 不读的列：没命名/前缀"_"
 	length := len(record)
 	if length > 64 {
-		fmt.Printf("csv column is over to 64 !!!")
+		fmt.Printf("csv column is over to 64 !!!\n")
 	}
 	for i := 0; i < length; i++ {
 		if record[i] == "" || strings.Index(record[i], "_") == 0 {
@@ -194,36 +209,42 @@ func _parseData(record []string, nilFlag int64, data reflect.Value) {
 		}
 
 		switch field.Kind() {
-		case reflect.Int:
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			{
-				field.SetInt(int64(CheckAtoiName(s)))
+				if v, err := strconv.ParseInt(s, 0, field.Type().Bits()); err == nil {
+					field.SetInt(v)
+				}
+			}
+		case reflect.Float32, reflect.Float64:
+			{
+				if v, err := strconv.ParseFloat(s, field.Type().Bits()); err == nil {
+					field.SetFloat(v)
+				}
 			}
 		case reflect.String:
 			{
 				field.SetString(s)
 			}
-		case reflect.Struct:
+		case reflect.Struct, reflect.Map:
 			{
-				vec := ParseStringToPair(s)
-				field.Set(reflect.ValueOf(vec[0]))
+				if err := json.Unmarshal([]byte(s), field.Addr().Interface()); err != nil {
+					fmt.Errorf("Csv Parse Error: (content=%v): %v", s, err)
+				}
 			}
 		case reflect.Slice:
 			{
 				switch field.Type().Elem().Kind() {
-				case reflect.Int:
-					{
-						vec := ParseStringToArrInt(s)
-						field.Set(reflect.ValueOf(vec))
-					}
 				case reflect.String:
 					{
-						vec := strings.Split(s, "|")
+						sFix := strings.Trim(strings.TrimSpace(s), "[]")
+						vec := strings.Split(sFix, ",")
 						field.Set(reflect.ValueOf(vec))
 					}
-				case reflect.Struct:
+				case reflect.Int, reflect.Struct, reflect.Slice:
 					{
-						vec := ParseStringToPair(s)
-						field.Set(reflect.ValueOf(vec))
+						if err := json.Unmarshal([]byte(s), field.Addr().Interface()); err != nil {
+							fmt.Errorf("Csv Parse Error: (content=%v): %v", s, err)
+						}
 					}
 				default:
 					{
@@ -233,7 +254,7 @@ func _parseData(record []string, nilFlag int64, data reflect.Value) {
 			}
 		default:
 			{
-				fmt.Printf("Csv Type Error: TypeName:%s", data.Field(i).Type().String())
+				fmt.Printf("Csv Type Error: TypeName:%s\n", data.Field(i).Type().String())
 			}
 		}
 	}

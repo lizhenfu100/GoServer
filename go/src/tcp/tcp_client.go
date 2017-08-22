@@ -2,6 +2,7 @@ package tcp
 
 import (
 	"common"
+	"encoding/binary"
 	"fmt"
 	"net"
 	"time"
@@ -19,9 +20,6 @@ func (self *TCPClient) ConnectToSvr(addr, srcModule string, srcID int) {
 	go self.connectRoutine(srcModule, srcID) //会断线后自动重连
 }
 func (self *TCPClient) connectRoutine(srcModule string, srcID int) {
-	firstMsg := common.NewNetPackCap(32)
-	firstMsg.WriteUInt32(self.connId) //上报connId
-	//firstMsg.WriteString(key)    	//上报密匙
 	regMsg := common.NewNetPackCap(32)
 	regMsg.SetOpCode(G_MsgId_Regist)
 	regMsg.WriteString(srcModule)
@@ -33,7 +31,9 @@ func (self *TCPClient) connectRoutine(srcModule string, srcID int) {
 			}
 			go self.TcpConn.readRoutine()
 			//Notice: 这里不能用CallRpc，非线程安全的
-			self.TcpConn.WriteMsg(firstMsg)
+			firstMsg := make([]byte, 2+4)
+			binary.LittleEndian.PutUint32(firstMsg[2:], self.connId) //上报connId
+			self.TcpConn.WriteBuf(firstMsg)
 			self.TcpConn.WriteMsg(regMsg)
 			self.TcpConn.writeRoutine() //goroutine会阻塞在这里
 		}
