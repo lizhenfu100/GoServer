@@ -3,6 +3,7 @@ package common
 import (
 	"bufio"
 	"fmt"
+	"gamelog"
 	"os"
 	"runtime"
 	"strconv"
@@ -11,7 +12,9 @@ import (
 
 type CommandHandler func(args []string) bool
 
-var G_HandlerMap = make(map[string]CommandHandler, 20)
+var G_HandlerMap = map[string]CommandHandler{
+	"setloglevel": HandCmd_SetLogLevel,
+}
 
 func StartConsole() {
 	go consoleroutine()
@@ -48,7 +51,22 @@ func consoleroutine() {
 		}
 	}
 }
-
 func RegConsoleCmd(cmd string, mh CommandHandler) {
 	G_HandlerMap[cmd] = mh
+}
+
+//////////////////////////////////////////////////////////////////////
+//! 命令行函数
+func HandCmd_SetLogLevel(args []string) bool {
+	if len(args) < 2 {
+		gamelog.Error("Lack of param")
+		return false
+	}
+	level, err := strconv.Atoi(args[1])
+	if err != nil {
+		gamelog.Error("HandCmd_SetLogLevel => Invalid param:%s", args[1])
+		return false
+	}
+	gamelog.SetLevel(level)
+	return true
 }

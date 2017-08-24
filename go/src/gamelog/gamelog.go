@@ -2,29 +2,21 @@ package gamelog
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
 var (
-	G_CurPath string
-
-	g_logDir = GetExePath() + "log\\"
+	g_logDir = GetExeDir() + "log\\"
 
 	G_AsyncLog *AsyncLog
 )
 
 //////////////////////////////////////////////////////////////////////
 // 辅助函数
-func GetExePath() string {
-	if len(G_CurPath) <= 0 {
-		file, _ := exec.LookPath(os.Args[0])
-		G_CurPath, _ = filepath.Abs(file)
-		G_CurPath = string(G_CurPath[0 : 1+strings.LastIndex(G_CurPath, "\\")])
-	}
-	return G_CurPath
+func GetExeDir() string {
+	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	return dir + "\\"
 }
 func IsDirExists(path string) bool {
 	fi, err := os.Stat(path)
@@ -33,7 +25,6 @@ func IsDirExists(path string) bool {
 	} else {
 		return fi.IsDir()
 	}
-
 	return true
 }
 

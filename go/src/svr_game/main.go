@@ -26,7 +26,6 @@ func main() {
 
 	//开启控制台窗口，可以接受一些调试命令
 	common.StartConsole()
-	common.RegConsoleCmd("setloglevel", HandCmd_SetLogLevel)
 	common.RegConsoleCmd("MakeFriends", HandCmd_MakeFriends)
 
 	InitConf()
@@ -37,15 +36,6 @@ func main() {
 	if netConfig.CreateNetSvr("game", 1) == false {
 		gamelog.Error("----Game NetSvr Failed-----")
 	}
-}
-func HandCmd_SetLogLevel(args []string) bool {
-	level, err := strconv.Atoi(args[1])
-	if err != nil {
-		gamelog.Error("HandCmd_SetLogLevel => Invalid param:%s", args[1])
-		return false
-	}
-	gamelog.SetLevel(level)
-	return true
 }
 func HandCmd_MakeFriends(args []string) bool {
 	pid1, err1 := strconv.Atoi(args[1])

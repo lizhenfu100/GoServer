@@ -52,36 +52,16 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
 )
 
-func GetExePath() string {
-	file, _ := exec.LookPath(os.Args[0])
-	path, _ := filepath.Abs(file)
-	path = string(path[0 : 1+strings.LastIndex(path, "\\")])
-	return path
-}
-func IsDirExists(path string) bool {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return os.IsExist(err)
-	} else {
-		return fi.IsDir()
-	}
-	return true
-}
-
-//////////////////////////////////////////////////////////////////////
-// 载入策划配表
 var G_Csv_Map map[string]interface{} = nil
 
 func LoadAllCsv() {
-	pattern := GetExePath() + "csv/*.csv"
-	names, err := filepath.Glob(pattern)
+	names, err := filepath.Glob("csv/*.csv")
 	if err != nil || len(names) == 0 {
 		fmt.Printf("LoadAllCsv error : %s\n", err.Error())
 	}
@@ -90,7 +70,7 @@ func LoadAllCsv() {
 	}
 }
 func ReloadCsv(csvName string) {
-	name := fmt.Sprintf("%scsv/%s.csv", GetExePath(), csvName)
+	name := fmt.Sprintf("%scsv/%s.csv", GetExeDir(), csvName)
 	_LoadOneCsv(name)
 }
 func _LoadOneCsv(name string) {

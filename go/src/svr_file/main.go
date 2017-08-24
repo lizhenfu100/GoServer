@@ -4,15 +4,12 @@ import (
 	"common"
 	"gamelog"
 	"netConfig"
-
-	"svr_sdk/logic"
+	"svr_file/logic"
 )
 
-// 1 开一个http server
-// 2 读取gamesvr list配置表，取得各游戏服的地址 —— 能够根据svrId往各游戏服推送数据
 func main() {
 	//初始化日志系统
-	gamelog.InitLogger("sdk")
+	gamelog.InitLogger("file")
 	gamelog.SetLevel(0)
 
 	//设置mongodb的服务器地址
@@ -23,9 +20,9 @@ func main() {
 
 	InitConf()
 
-	gamelog.Warn("----Sdk Server Start-----")
-	if netConfig.CreateNetSvr("sdk", 0) == false {
-		gamelog.Error("----Sdk NetSvr Failed-----")
+	gamelog.Warn("----File Server Start-----")
+	if netConfig.CreateNetSvr("file", 0) == false {
+		gamelog.Error("----File NetSvr Failed-----")
 	}
 }
 func InitConf() {
@@ -36,10 +33,11 @@ func InitConf() {
 	common.LoadAllCsv()
 
 	netConfig.RegHttpHandler(map[string]netConfig.HttpHandle{
-		//! From Gamesvr
-		"create_recharge_order": logic.HandSvr_CreateRechargeOrder,
-
-		//! From 第三方
-		"sdk_recharge_success": logic.HandSdk_RechargeSuccess,
+		"":       logic.Handle_File_Download,
+		"upload": logic.Handle_File_Upload,
+	})
+	netConfig.RegHttpRpc(map[string]netConfig.HttpRpc{
+		//! Client
+		"rpc_update_file_list": logic.Rpc_Update_File_List,
 	})
 }

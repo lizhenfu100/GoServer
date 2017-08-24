@@ -5,8 +5,6 @@ import (
 	//"fmt"
 	"gamelog"
 	"netConfig"
-	//"os"
-	"strconv"
 
 	"svr_battle/logic"
 )
@@ -26,7 +24,6 @@ func main() {
 
 	//开启控制台窗口，可以接受一些调试命令
 	common.StartConsole()
-	common.RegConsoleCmd("setloglevel", HandCmd_SetLogLevel)
 
 	InitConf()
 
@@ -34,19 +31,6 @@ func main() {
 	if netConfig.CreateNetSvr("battle", svrID) == false {
 		gamelog.Error("----Battle NetSvr Failed[%d]-----", svrID)
 	}
-}
-func HandCmd_SetLogLevel(args []string) bool {
-	if len(args) < 2 {
-		gamelog.Error("Lack of param")
-		return false
-	}
-	level, err := strconv.Atoi(args[1])
-	if err != nil {
-		gamelog.Error("HandCmd_SetLogLevel Error : Invalid param :%s", args[1])
-		return false
-	}
-	gamelog.SetLevel(level)
-	return true
 }
 func InitConf() {
 	common.G_Csv_Map = map[string]interface{}{

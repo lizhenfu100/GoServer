@@ -76,7 +76,7 @@ func GetRegModuleIDs(module string) (ret []int) {
 
 //! 采用追加方式，同个“远程服务”的地址，会被最新追加的覆盖掉
 var (
-	g_svraddr_path = common.GetExePath() + "reg_addr.csv"
+	g_svraddr_path = common.GetExeDir() + "reg_addr.csv"
 )
 
 func LoadSvrAddrCsv() {
