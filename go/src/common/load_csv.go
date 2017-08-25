@@ -74,31 +74,14 @@ func ReloadCsv(csvName string) {
 	_LoadOneCsv(name)
 }
 func _LoadOneCsv(name string) {
-	file, err := os.Open(name)
-	defer file.Close()
+	records, err := LoadCsv(name)
 	if err != nil {
-		fmt.Printf("LoadCsv Open() error : %s\n", err.Error())
+		fmt.Printf("LoadCsv error : %s\n", err.Error())
 		return
 	}
+	filename := string(name[strings.LastIndex(name, "\\")+1:])
 
-	fstate, err := file.Stat()
-	if err != nil {
-		fmt.Printf("LoadCsv Stat() error : %s\n", err.Error())
-		return
-	}
-	if fstate.IsDir() == true {
-		fmt.Printf("LoadCsv is dir : %s\n", name)
-		return
-	}
-
-	csvReader := csv.NewReader(file)
-	records, err := csvReader.ReadAll()
-	if err != nil {
-		fmt.Printf("LoadCsv ReadAll() error : %s\n", err.Error())
-		return
-	}
-
-	if ptr, ok := G_Csv_Map[strings.TrimSuffix(fstate.Name(), ".csv")]; ok {
+	if ptr, ok := G_Csv_Map[strings.TrimSuffix(filename, ".csv")]; ok {
 		ParseRefCsv(records, ptr)
 	} else {
 		fmt.Printf("Csv not regist in G_Csv_Map: %s\n", name)
@@ -111,9 +94,10 @@ func ParseRefCsv(records [][]string, ptr interface{}) {
 		ParseRefCsvByMap(records, ptr)
 	case reflect.Slice:
 		ParseRefCsvBySlice(records, ptr)
+	case reflect.Struct:
+		ParseRefCsvByStruct(records, ptr)
 	default:
 		fmt.Printf("Csv Type Error: TypeName:%s\n", reflect.TypeOf(ptr).Elem().String())
-
 	}
 }
 func ParseRefCsvByMap(records [][]string, pMap interface{}) {
@@ -162,6 +146,14 @@ func ParseRefCsvBySlice(records [][]string, pSlice interface{}) { // slice可减
 		}
 	}
 }
+func ParseRefCsvByStruct(records [][]string, pStruct interface{}) {
+	for _, v := range records {
+		if strings.Index(v[0], "#") == -1 { // "#"起始的不读
+			st := reflect.ValueOf(pStruct).Elem()
+			SetField(st.FieldByName(v[0]), v[1])
+		}
+	}
+}
 func _parseHead(record []string) (ret int64) { // 不读的列：没命名/前缀"_"
 	length := len(record)
 	if length > 64 {
@@ -187,55 +179,57 @@ func _parseData(record []string, nilFlag int64, data reflect.Value) {
 		if s == "" { // 没填的就不必解析了，跳过，idx还是要自增哟
 			continue
 		}
-
-		switch field.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			{
-				if v, err := strconv.ParseInt(s, 0, field.Type().Bits()); err == nil {
-					field.SetInt(v)
+		SetField(field, s)
+	}
+}
+func SetField(field reflect.Value, s string) {
+	switch field.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		{
+			if v, err := strconv.ParseInt(s, 0, field.Type().Bits()); err == nil {
+				field.SetInt(v)
+			}
+		}
+	case reflect.Float32, reflect.Float64:
+		{
+			if v, err := strconv.ParseFloat(s, field.Type().Bits()); err == nil {
+				field.SetFloat(v)
+			}
+		}
+	case reflect.String:
+		{
+			field.SetString(s)
+		}
+	case reflect.Struct, reflect.Map:
+		{
+			if err := json.Unmarshal([]byte(s), field.Addr().Interface()); err != nil {
+				fmt.Errorf("Field Parse Error: (content=%v): %v", s, err)
+			}
+		}
+	case reflect.Slice:
+		{
+			switch field.Type().Elem().Kind() {
+			case reflect.String:
+				{
+					sFix := strings.Trim(strings.Replace(s, " ", "", -1), "[]")
+					vec := strings.Split(sFix, ",")
+					field.Set(reflect.ValueOf(vec))
 				}
-			}
-		case reflect.Float32, reflect.Float64:
-			{
-				if v, err := strconv.ParseFloat(s, field.Type().Bits()); err == nil {
-					field.SetFloat(v)
-				}
-			}
-		case reflect.String:
-			{
-				field.SetString(s)
-			}
-		case reflect.Struct, reflect.Map:
-			{
-				if err := json.Unmarshal([]byte(s), field.Addr().Interface()); err != nil {
-					fmt.Errorf("Csv Parse Error: (content=%v): %v", s, err)
-				}
-			}
-		case reflect.Slice:
-			{
-				switch field.Type().Elem().Kind() {
-				case reflect.String:
-					{
-						sFix := strings.Trim(strings.TrimSpace(s), "[]")
-						vec := strings.Split(sFix, ",")
-						field.Set(reflect.ValueOf(vec))
-					}
-				case reflect.Int, reflect.Struct, reflect.Slice:
-					{
-						if err := json.Unmarshal([]byte(s), field.Addr().Interface()); err != nil {
-							fmt.Errorf("Csv Parse Error: (content=%v): %v", s, err)
-						}
-					}
-				default:
-					{
-						fmt.Printf("Csv Type Error: TypeName:%s", data.Field(i).Type().String())
+			case reflect.Int, reflect.Struct, reflect.Slice:
+				{
+					if err := json.Unmarshal([]byte(s), field.Addr().Interface()); err != nil {
+						fmt.Errorf("Field Parse Error: (content=%v): %v", s, err)
 					}
 				}
+			default:
+				{
+					fmt.Printf("Field Type Error: TypeName:%s", field.Type().String())
+				}
 			}
-		default:
-			{
-				fmt.Printf("Csv Type Error: TypeName:%s\n", data.Field(i).Type().String())
-			}
+		}
+	default:
+		{
+			fmt.Printf("Field Type Error: TypeName:%s\n", field.Type().String())
 		}
 	}
 }

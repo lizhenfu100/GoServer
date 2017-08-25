@@ -10,14 +10,17 @@ func GetExeDir() string {
 	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	return dir + "\\"
 }
-func IsDirExists(path string) bool {
+func IsDirExist(path string) bool {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return os.IsExist(err)
 	} else {
 		return fi.IsDir()
 	}
-	return true
+}
+func IsExist(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil || os.IsExist(err)
 }
 
 //! 返回的文件名，都是相对exe的

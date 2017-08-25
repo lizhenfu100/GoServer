@@ -18,7 +18,7 @@ func GetExeDir() string {
 	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	return dir + "\\"
 }
-func IsDirExists(path string) bool {
+func IsDirExist(path string) bool {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return os.IsExist(err)
@@ -32,7 +32,7 @@ func IsDirExists(path string) bool {
 //
 func InitLogger(name string) {
 	var err error = nil
-	if !IsDirExists(g_logDir) {
+	if !IsDirExist(g_logDir) {
 		err = os.MkdirAll(g_logDir, os.ModePerm)
 	}
 	if err != nil {

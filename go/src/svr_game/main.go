@@ -2,7 +2,6 @@ package main
 
 import (
 	"common"
-	"conf"
 	"dbmgo"
 	"gamelog"
 	"http"
@@ -21,14 +20,16 @@ func main() {
 	gamelog.InitLogger("game")
 	gamelog.SetLevel(0)
 
+	InitConf()
+
 	//设置mongodb的服务器地址
-	dbmgo.Init(conf.GameDbAddr, conf.GameDbName)
+	var id int
+	cfg := netConfig.GetNetCfg("db_game", &id)
+	dbmgo.Init(cfg.IP, cfg.TcpPort, cfg.SvrName)
 
 	//开启控制台窗口，可以接受一些调试命令
 	common.StartConsole()
 	common.RegConsoleCmd("MakeFriends", HandCmd_MakeFriends)
-
-	InitConf()
 
 	go logic.MainLoop()
 

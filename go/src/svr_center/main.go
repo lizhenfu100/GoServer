@@ -2,7 +2,6 @@ package main
 
 import (
 	"common"
-	"conf"
 	"dbmgo"
 	"gamelog"
 	"netConfig"
@@ -15,13 +14,15 @@ func main() {
 	gamelog.InitLogger("center")
 	gamelog.SetLevel(0)
 
+	InitConf()
+
 	//设置mongodb的服务器地址
-	dbmgo.Init(conf.AccountDbAddr, conf.AccountDbName)
+	var id int
+	cfg := netConfig.GetNetCfg("db_account", &id)
+	dbmgo.Init(cfg.IP, cfg.TcpPort, cfg.SvrName)
 
 	//开启控制台窗口，可以接受一些调试命令
 	common.StartConsole()
-
-	InitConf()
 
 	account.G_AccountMgr.Init()
 

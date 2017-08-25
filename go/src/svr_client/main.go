@@ -2,20 +2,37 @@ package main
 
 import (
 	"common"
-	"conf"
-	"dbmgo"
+	"strings"
+	// "conf"
+	// "dbmgo"
 	"fmt"
 	"gamelog"
 	"http"
 	"netConfig"
 	"time"
 	//"msg/sdk_msg"
-
 	//"svr_client/api"
 	//"svr_game/logic/player"
+	"io"
+	nhttp "net/http"
+	"os"
+	"os/exec"
+	"strconv"
+
+	"path/filepath"
 )
 
 func main() {
+	fmt.Println(strings.Trim("patch/table.csv", "patch"))
+	fmt.Println(os.Args, "\n", common.GetExeDir(), "\n", filepath.Dir(os.Args[0]), "\n")
+	fmt.Println(exec.LookPath(os.Args[0]))
+
+	names, err := filepath.Glob("api/*.go")
+	fmt.Println("----", names, err)
+
+	names, err = common.WalkDir("csv", "")
+	fmt.Println("----", names, err)
+
 	common.G_Csv_Map = map[string]interface{}{
 		"conf_net": &netConfig.G_SvrNetCfg,
 		"rpc":      &common.G_RpcCsv,
@@ -26,17 +43,39 @@ func main() {
 	gamelog.InitLogger("client")
 	gamelog.SetLevel(0)
 
-	dbmgo.Init(conf.GameDbAddr, conf.GameDbName)
+	//dbmgo.Init(conf.GameDbAddr, conf.GameDbName)
 
 	// for k, v := range netConfig.G_SvrNetCfg {
 	// 	fmt.Println(k, v)
 	// }
 	netConfig.CreateNetSvr("client", 0)
 
+	Download()
+
 	test()
 	time.Sleep(100 * time.Second)
 }
 
+func Download() {
+	f, err := os.OpenFile("D:/file.csv", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	stat, err := f.Stat() //获取文件状态
+	if err != nil {
+		panic(err)
+	} //把文件指针指到文件末，当然你说为何不直接用 O_APPEND 模式打开，没错是可以。我这里只是试验。
+	url := "http://127.0.0.1:7040/table.csv"
+
+	req, _ := nhttp.NewRequest("GET", url, nil)
+	req.Header.Set("Range", "bytes="+strconv.FormatInt(stat.Size(), 10)+"-")
+	resp, err := nhttp.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	written, err := io.Copy(f, resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	println("written: ", written)
+}
 func test() {
 	gameAddr := netConfig.GetHttpAddr("game", -1)
 	centerAddr := netConfig.GetHttpAddr("center", -1)

@@ -24,6 +24,7 @@
 package dbmgo
 
 import (
+	"fmt"
 	"gamelog"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -35,9 +36,9 @@ var (
 	g_database   *mgo.Database
 )
 
-func Init(addr, dbname string) {
+func Init(ip string, port int, dbname string) {
 	var err error
-	g_db_session, err = mgo.Dial(addr)
+	g_db_session, err = mgo.Dial(fmt.Sprintf("%s:%d", ip, port))
 	if err != nil {
 		gamelog.Error(err.Error())
 		panic("Mongodb Init Failed " + err.Error())
@@ -47,9 +48,9 @@ func Init(addr, dbname string) {
 	go _DBProcess()
 	_init_inc_ids()
 }
-func InitWithUser(addr, dbname, username, password string) {
+func InitWithUser(ip string, port int, dbname, username, password string) {
 	pInfo := &mgo.DialInfo{
-		Addrs:     []string{addr},
+		Addrs:     []string{fmt.Sprintf("%s:%d", ip, port)},
 		Timeout:   5 * time.Second,
 		Username:  username,
 		Password:  password,
