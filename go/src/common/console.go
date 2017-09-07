@@ -17,7 +17,7 @@ var G_HandlerMap = map[string]CommandHandler{
 }
 
 func StartConsole() {
-	go consoleroutine()
+	//go consoleroutine() //线上环境，是在后台执行，无须控制台相关功能
 }
 func consoleroutine() {
 	command := make([]byte, 1024)

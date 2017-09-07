@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	g_logDir = GetExeDir() + "log\\"
+	g_logDir = GetExeDir() + "log/"
 
 	G_AsyncLog *AsyncLog
 )
@@ -16,7 +16,7 @@ var (
 // 辅助函数
 func GetExeDir() string {
 	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-	return dir + "\\"
+	return dir + "/"
 }
 func IsDirExist(path string) bool {
 	fi, err := os.Stat(path)

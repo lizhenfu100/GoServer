@@ -35,7 +35,7 @@ func InitConf() {
 	for k, v := range netConfig.G_SvrNetCfg {
 		fmt.Println(k, v)
 	}
-	fmt.Println(conf.SvrCfg)
+	fmt.Println("SvrCfg: ", conf.SvrCfg)
 
 	netConfig.RegHttpHandler(map[string]netConfig.HttpHandle{
 		"":       logic.Handle_File_Download,

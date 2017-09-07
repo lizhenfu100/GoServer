@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -79,29 +80,31 @@ func (self *TCPServer) _HandleAcceptConn(conn net.Conn) {
 	if connId > 0 {
 		self._ResetOldConn(conn, connId)
 	} else {
-		self.autoConnId++
-		self._AddNewConn(conn, self.autoConnId)
+		self._AddNewConn(conn)
 	}
 }
-func (self *TCPServer) _AddNewConn(conn net.Conn, connId uint32) {
+func (self *TCPServer) _AddNewConn(conn net.Conn) {
 	if len(self.connmap) >= self.MaxConnNum {
 		conn.Close()
 		gamelog.Error("too many connections(%d/%d)", len(self.connmap), self.MaxConnNum)
 		return
 	}
+
+	connId := atomic.AddUint32(&self.autoConnId, 1)
+
 	self.wgConns.Add(1)
 	tcpConn := newTCPConn(conn,
 		func(this *TCPConn) {
 			self.mutexConns.Lock()
 			delete(self.connmap, connId)
 			self.mutexConns.Unlock()
-			gamelog.Info("Disconnect: UserPtr:%v, ConnNum: %d, DelConnId: %d", this.UserPtr, len(self.connmap), connId)
+			gamelog.Info("Disconnect: UserPtr:%v, DelConnId: %d, ConnCnt: %d", this.UserPtr, connId, len(self.connmap))
 			self.wgConns.Done()
 		})
 	self.mutexConns.Lock()
 	self.connmap[connId] = tcpConn
 	self.mutexConns.Unlock()
-	gamelog.Info("Connect From: %s,  ConnNum: %d, AddConnId: %d", conn.RemoteAddr().String(), len(self.connmap), connId)
+	gamelog.Info("Connect From: %s, AddConnId: %d, ConnCnt: %d", conn.RemoteAddr().String(), connId, len(self.connmap))
 
 	go tcpConn.readRoutine()
 	// 通知client，连接被接收，下发connId、密钥等
@@ -124,12 +127,11 @@ func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
 		} else {
 			gamelog.Info("_ResetOldConn isOpen: %d", oldId)
 			// newconn.Close()
-			self.autoConnId++
-			self._AddNewConn(newconn, self.autoConnId)
+			self._AddNewConn(newconn)
 		}
 	} else { //服务器重启
 		gamelog.Info("_ResetOldConn to _AddNewConn: %d", oldId)
-		self._AddNewConn(newconn, oldId)
+		self._AddNewConn(newconn)
 	}
 }
 func (self *TCPServer) Close() {

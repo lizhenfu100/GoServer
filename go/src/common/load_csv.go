@@ -79,9 +79,7 @@ func _LoadOneCsv(name string) {
 		fmt.Printf("LoadCsv error : %s\n", err.Error())
 		return
 	}
-	filename := string(name[strings.LastIndex(name, "\\")+1:])
-
-	if ptr, ok := G_Csv_Map[strings.TrimSuffix(filename, ".csv")]; ok {
+	if ptr, ok := G_Csv_Map[strings.TrimSuffix(filepath.Base(name), ".csv")]; ok {
 		ParseRefCsv(records, ptr)
 	} else {
 		fmt.Printf("Csv not regist in G_Csv_Map: %s\n", name)
