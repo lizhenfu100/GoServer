@@ -12,11 +12,11 @@ type NetPack struct {
 }
 type TRpcCsv struct {
 	Name     string
-	ID       int
+	ID       uint16
 	IsClient int //是否Client实现的rpc
 }
 
-var G_RpcCsv map[string]*TRpcCsv
+var G_RpcCsv []TRpcCsv
 
 func NewNetPackCap(capacity int) *NetPack {
 	pack := new(NetPack)
@@ -61,7 +61,7 @@ func (self *NetPack) SetOpCode(id uint16) {
 	self.DataPtr[OPCODE_INDEX] = byte(id)
 	self.DataPtr[OPCODE_INDEX+1] = byte(id >> 8)
 }
-func (self *NetPack) GetOpCode() uint16 {
+func (self *NetPack) GetOpCode() (ret uint16) {
 	return uint16(self.DataPtr[OPCODE_INDEX+1])<<8 | uint16(self.DataPtr[OPCODE_INDEX])
 }
 func (self *NetPack) SetFromTyp(typ uint8) {
@@ -86,24 +86,3 @@ func (self *NetPack) GetReqIdx() (ret uint32) {
 //! Set
 func (self *NetPack) SetPos(pos int, v uint32) { self.ByteBuffer.SetPos(PACK_HEADER_SIZE+pos, v) }
 func (self *NetPack) GetPos(pos int) uint32    { return self.ByteBuffer.GetPos(PACK_HEADER_SIZE + pos) }
-
-//! rpc
-func DebugRpcIdToName(id uint16) string {
-	for _, v := range G_RpcCsv {
-		if v.ID == int(id) {
-			return v.Name
-		}
-	}
-	println("!!! msgId:", id, " isn't in rpc.csv  !!!\n")
-	return "nil"
-}
-func RpcNameToId(rpc string) uint16 {
-	if csv, ok := G_RpcCsv[rpc]; ok {
-		return uint16(csv.ID)
-	}
-	print("!!!  " + rpc + " isn't in rpc.csv  !!!\n")
-	return 0
-}
-func (self *NetPack) SetRpc(name string) {
-	self.SetOpCode(RpcNameToId(name))
-}

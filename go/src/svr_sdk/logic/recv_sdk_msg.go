@@ -23,7 +23,7 @@ import (
 	"svr_sdk/api"
 )
 
-func HandSdk_RechargeSuccess(w http.ResponseWriter, r *http.Request) {
+func Rpc_sdk_recharge_success(w http.ResponseWriter, r *http.Request) {
 	gamelog.Info("message: %s", r.URL.String())
 
 	//! 接收信息
@@ -34,7 +34,7 @@ func HandSdk_RechargeSuccess(w http.ResponseWriter, r *http.Request) {
 	var req sdk_msg.SDKMsg_recharge_result
 	err := json.Unmarshal(buffer, &req)
 	if err != nil {
-		gamelog.Error("HandSdk_RechargeSuccess unmarshal fail. Error: %s", err.Error())
+		gamelog.Error("Rpc_Recharge_Success unmarshal fail. Error: %s", err.Error())
 		return
 	}
 
@@ -60,6 +60,6 @@ func HandSdk_RechargeSuccess(w http.ResponseWriter, r *http.Request) {
 		gamesvrReq.PlayerID = req.PlayerID
 		gamesvrReq.ChargeCsvID = pOrder.chargeCsvID
 		gamesvrReq.RMB = req.RMB
-		api.SendToGame(pOrder.GamesvrID, "sdk_recharge_success", &gamesvrReq)
+		api.SendToGame(pOrder.GamesvrID, "rpc_game_recharge_success", &gamesvrReq)
 	}
 }

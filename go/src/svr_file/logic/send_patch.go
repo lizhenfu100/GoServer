@@ -34,7 +34,7 @@ var (
 	g_file_upload = http.FileServer(http.Dir("upload"))
 )
 
-func Handle_File_Download(w http.ResponseWriter, r *http.Request) {
+func Rpc_file_download(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(r.Method, "url down path: "+r.URL.Path)
 	if common.IsExist("patch" + r.URL.Path) {
 		g_file_patch.ServeHTTP(w, r)
@@ -42,7 +42,7 @@ func Handle_File_Download(w http.ResponseWriter, r *http.Request) {
 		g_file_upload.ServeHTTP(w, r)
 	}
 }
-func Handle_File_Upload(w http.ResponseWriter, r *http.Request) {
+func Rpc_file_upload(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(r.Method, "url up path: "+r.URL.Path)
 	r.ParseMultipartForm(1024 * 1024)
 	file, handler, err := r.FormFile("file")
@@ -58,7 +58,7 @@ func Handle_File_Upload(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 		return
 	}
-	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0666)
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -67,16 +67,16 @@ func Handle_File_Upload(w http.ResponseWriter, r *http.Request) {
 
 	io.Copy(f, file)
 }
-func Rpc_Update_File_List(req, ack *common.NetPack) {
+func Rpc_file_update_list(req, ack *common.NetPack) {
 	version := req.ReadString()
-	if strings.Compare(version, conf.SvrCfg.Version) < 0 {
+	if strings.Compare(version, conf.SvrCsv.Version) < 0 {
 		//下发 patch 目录下的文件列表
 		names, _ := common.WalkDir("patch", "")
 		ack.WriteUInt16(uint16(len(names)))
 		for _, v := range names {
 			ack.WriteString(strings.Trim(v, "patch"))
 		}
-		ack.WriteString(conf.SvrCfg.Version)
+		ack.WriteString(conf.SvrCsv.Version)
 	} else {
 		ack.WriteUInt16(0)
 	}

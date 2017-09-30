@@ -3,6 +3,7 @@ package logic
 import (
 	"common"
 	"gamelog"
+	"generate/rpc/enum"
 	"netConfig"
 	"sort"
 	"svr_cross/api"
@@ -21,15 +22,17 @@ var (
 
 //////////////////////////////////////////////////////////////////////
 //!
-func Rpc_Relay_Battle_Data(req, ack *common.NetPack, conn *tcp.TCPConn) {
+func Rpc_cross_relay_battle_data(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	svrId := _SelectBattleSvrId()
 	if svrId == 0 {
 		//FIXME:无空闲战斗服时，自动执行脚本，开新战斗服(怎么开?)
 		gamelog.Error("!!! svr_battle is full !!!")
 		return
 	}
+	println("--- select battle: ", svrId)
+
 	// 转给Battle进程
-	api.CallRpcBattle(svrId, "rpc_battle_handle_player_data", func(buf *common.NetPack) {
+	api.CallRpcBattle(svrId, enum.Rpc_battle_handle_player_data, func(buf *common.NetPack) {
 		buf.WriteBuf(req.Body())
 	}, func(backBuf *common.NetPack) {
 		playerCnt := backBuf.ReadUInt32() //选中战斗服的已有人数
@@ -39,7 +42,7 @@ func Rpc_Relay_Battle_Data(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		print("--- send addr to game ---\n")
 		ip, port := netConfig.GetIpPort("battle", svrId)
 		gameMsg := common.NewNetPackCap(256)
-		gameMsg.SetRpc("rpc_game_battle_ack")
+		gameMsg.SetOpCode(enum.Rpc_game_battle_ack)
 		gameMsg.WriteString(ip)
 		gameMsg.WriteUInt16(port)
 		gameMsg.WriteBuf(backBuf.LeftBuf()) //[]<pid>
@@ -49,7 +52,7 @@ func Rpc_Relay_Battle_Data(req, ack *common.NetPack, conn *tcp.TCPConn) {
 func _SelectBattleSvrId() int {
 	//moba类的，应该有个专门的匹配服，供自由玩家【快速】组房间
 	//io向的，允许中途加入，应尽量分配到人多的战斗服
-	ids := tcp.GetRegModuleIDs("battle")
+	ids := netConfig.GetRegModuleIDs("battle")
 	sort.Ints(ids)
 	//1、优先在各个服务器分配一定人数
 	for i := 0; i < len(ids); i++ {

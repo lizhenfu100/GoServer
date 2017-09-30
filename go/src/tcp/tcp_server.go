@@ -4,6 +4,7 @@ import (
 	"common"
 	"encoding/binary"
 	"gamelog"
+	"generate/rpc/enum"
 	"io"
 	"net"
 	"sync"
@@ -109,7 +110,7 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 	go tcpConn.readRoutine()
 	// 通知client，连接被接收，下发connId、密钥等
 	acceptMsg := common.NewNetPackCap(32)
-	acceptMsg.SetOpCode(G_MsgId_SvrAccept)
+	acceptMsg.SetOpCode(enum.Rpc_svr_accept)
 	acceptMsg.WriteUInt32(connId)
 	tcpConn.WriteMsg(acceptMsg)
 	tcpConn.writeRoutine()

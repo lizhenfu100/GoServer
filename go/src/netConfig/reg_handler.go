@@ -22,36 +22,36 @@ import (
 )
 
 type (
-	TcpHandle     func(req, ack *common.NetPack, conn *tcp.TCPConn)
+	TcpRpc        func(req, ack *common.NetPack, conn *tcp.TCPConn)
 	HttpHandle    func(w nhttp.ResponseWriter, r *nhttp.Request)
 	HttpRpc       func(req, ack *common.NetPack)
 	HttpPlayerRpc func(req, ack *common.NetPack, p interface{})
 )
 
-func RegTcpRpc(tcpLst map[string]TcpHandle) {
+func RegTcpRpc(tcpLst map[uint16]TcpRpc) {
 	for k, v := range tcpLst {
-		tcp.G_HandlerMsgMap[common.RpcNameToId(k)] = v
+		tcp.G_HandlerMsgMap[k] = v
 	}
+}
+
+//! 封装成NetPack的模块间通信；若需要其它传输格式(如Json)直接调http.HandleFunc(rpcname, func)注册
+func RegHttpRpc(httpLst map[uint16]HttpRpc) {
+	for k, v := range httpLst {
+		http.G_HandlerMap[k] = v
+	}
+	http.RegHandleRpc()
+}
+
+//! 访问玩家数据的消息，要求该玩家已经登录，否则不处理
+func RegHttpPlayerRpc(httpLst map[uint16]HttpPlayerRpc) {
+	for k, v := range httpLst {
+		http.G_PlayerHandlerMap[k] = v
+	}
+	http.RegHandlePlayerRpc()
 }
 
 func RegHttpHandler(httpLst map[string]HttpHandle) {
 	for k, v := range httpLst {
 		nhttp.HandleFunc("/"+k, v)
 	}
-}
-
-//! 封装成NetPack的模块间通信；若需要其它传输格式(如Json)直接调http.HandleFunc(rpcname, func)注册
-func RegHttpRpc(httpLst map[string]HttpRpc) {
-	for k, v := range httpLst {
-		http.G_HandlerMap[common.RpcNameToId(k)] = v
-	}
-	http.RegHandleRpc()
-}
-
-//! 访问玩家数据的消息，要求该玩家已经登录，否则不处理
-func RegHttpPlayerRpc(httpLst map[string]HttpPlayerRpc) {
-	for k, v := range httpLst {
-		http.G_PlayerHandlerMap[common.RpcNameToId(k)] = v
-	}
-	http.RegHandlePlayerRpc()
 }

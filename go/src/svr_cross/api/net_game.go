@@ -10,8 +10,8 @@ var (
 	g_cache_game_conn = make(map[int]*tcp.TCPConn)
 )
 
-func CallRpcGame(svrID int, rpc string, sendFun, recvFun func(*common.NetPack)) {
-	GetGameConn(svrID).CallRpc(rpc, sendFun, recvFun)
+func CallRpcGame(svrID int, rid uint16, sendFun, recvFun func(*common.NetPack)) {
+	GetGameConn(svrID).CallRpc(rid, sendFun, recvFun)
 }
 func GetGameConn(svrId int) *tcp.TCPConn {
 	conn, _ := g_cache_game_conn[svrId]

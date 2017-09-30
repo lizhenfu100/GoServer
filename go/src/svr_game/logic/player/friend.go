@@ -25,18 +25,18 @@ type TFriend struct {
 // -- 框架接口
 func (self *TFriendMoudle) InitAndInsert(player *TPlayer) {
 	self.PlayerID = player.PlayerID
+	dbmgo.InsertToDB("Friend", self)
 	self.owner = player
-	dbmgo.InsertSync("Friend", self)
-
+	self._InitTempData()
+}
+func (self *TFriendMoudle) LoadFromDB(player *TPlayer) {
+	if !dbmgo.Find("Friend", "_id", player.PlayerID, self) {
+		self.InitAndInsert(player)
+	}
+	self.owner = player
 	self._InitTempData()
 }
 func (self *TFriendMoudle) WriteToDB() { dbmgo.UpdateSync("Friend", self.PlayerID, self) }
-func (self *TFriendMoudle) LoadFromDB(player *TPlayer) {
-	dbmgo.Find("Friend", "_id", player.PlayerID, self)
-	self.owner = player
-
-	self._InitTempData()
-}
 func (self *TFriendMoudle) OnLogin() {
 }
 func (self *TFriendMoudle) OnLogout() {
@@ -161,11 +161,11 @@ func (self *TFriendMoudle) InFriendLst(pid uint32) int {
 
 // -------------------------------------
 //! 加好友
-func Rpc_Friend_List(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_game_friend_list(req, ack *common.NetPack, ptr interface{}) {
 	player := ptr.(*TPlayer)
 	player.Friend.DataToBuf(ack)
 }
-func Rpc_Friend_Apply(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_game_friend_apply(req, ack *common.NetPack, ptr interface{}) {
 	destPid := req.ReadUInt32()
 	self := ptr.(*TPlayer)
 
@@ -173,19 +173,19 @@ func Rpc_Friend_Apply(req, ack *common.NetPack, ptr interface{}) {
 		destPtr.Friend.RecvApply(self.PlayerID, self.Name)
 	})
 }
-func Rpc_Friend_Agree(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_game_friend_agree(req, ack *common.NetPack, ptr interface{}) {
 	pid := req.ReadUInt32()
 
 	player := ptr.(*TPlayer)
 	player.Friend.Agree(pid)
 }
-func Rpc_Friend_Refuse(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_game_friend_refuse(req, ack *common.NetPack, ptr interface{}) {
 	pid := req.ReadUInt32()
 
 	player := ptr.(*TPlayer)
 	player.Friend.Refuse(pid)
 }
-func Rpc_Friend_Del(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_game_friend_del(req, ack *common.NetPack, ptr interface{}) {
 	pid := req.ReadUInt32()
 
 	player := ptr.(*TPlayer)

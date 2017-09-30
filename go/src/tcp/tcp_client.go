@@ -4,6 +4,7 @@ import (
 	"common"
 	"encoding/binary"
 	"fmt"
+	"generate/rpc/enum"
 	"net"
 	"time"
 )
@@ -21,7 +22,7 @@ func (self *TCPClient) ConnectToSvr(addr, srcModule string, srcID int) {
 }
 func (self *TCPClient) connectRoutine(srcModule string, srcID int) {
 	regMsg := common.NewNetPackCap(32)
-	regMsg.SetOpCode(G_MsgId_Regist)
+	regMsg.SetOpCode(enum.Rpc_regist)
 	regMsg.WriteString(srcModule)
 	regMsg.WriteInt(srcID)
 	for {

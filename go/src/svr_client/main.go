@@ -13,6 +13,7 @@ import (
 	//"msg/sdk_msg"
 	//"svr_client/api"
 	//"svr_game/logic/player"
+	"generate/rpc/enum"
 	"io"
 	nhttp "net/http"
 	"os"
@@ -50,7 +51,7 @@ func main() {
 	// }
 	netConfig.CreateNetSvr("client", 0)
 
-	Download()
+	// Download()
 
 	test()
 	time.Sleep(100 * time.Second)
@@ -78,9 +79,9 @@ func Download() {
 }
 func test() {
 	gameAddr := netConfig.GetHttpAddr("game", -1)
-	centerAddr := netConfig.GetHttpAddr("center", -1)
+	loginAddr := netConfig.GetHttpAddr("login", -1)
 	fmt.Println("---", gameAddr)
-	fmt.Println("---", centerAddr)
+	fmt.Println("---", loginAddr)
 
 	//向游戏服请求充值
 	// var msg1 sdk_msg.Msg_create_recharge_order_Req
@@ -113,7 +114,7 @@ func test() {
 	gamesvrPort := uint16(0)
 	logintoken := uint32(0)
 
-	http.CallRpc(centerAddr, "rpc_center_reg_account", func(buf *common.NetPack) {
+	http.CallRpc(loginAddr, enum.Rpc_login_reg_account, func(buf *common.NetPack) {
 		buf.WriteString(accountName)
 		buf.WriteString(password)
 	}, func(backBuf *common.NetPack) {
@@ -121,10 +122,10 @@ func test() {
 		fmt.Println("errCode1:", errCode1)
 	})
 
-	http.CallRpc(centerAddr, "rpc_center_login_gamesvr", func(buf *common.NetPack) {
+	http.CallRpc(loginAddr, enum.Rpc_login_account_login, func(buf *common.NetPack) {
+		buf.WriteInt(1) //gamesvrId
 		buf.WriteString(accountName)
 		buf.WriteString(password)
-		buf.WriteInt(1) //gamesvrId
 	}, func(backBuf *common.NetPack) {
 		errCode2 := backBuf.ReadInt8()
 		if errCode2 > 0 {
@@ -139,7 +140,7 @@ func test() {
 
 	//登录
 	gameRpc := http.NewPlayerRpc(gameAddr, 0)
-	http.CallRpc(gameAddr, "rpc_game_login", func(buf *common.NetPack) {
+	http.CallRpc(gameAddr, enum.Rpc_game_login, func(buf *common.NetPack) {
 		buf.WriteUInt32(accountId)
 		buf.WriteUInt32(logintoken)
 	}, func(backBuf *common.NetPack) {
@@ -148,7 +149,7 @@ func test() {
 			gameRpc.PlayerId = backBuf.ReadUInt32()
 		} else if errCode3 == -2 {
 			//创建新角色
-			http.CallRpc(gameAddr, "rpc_game_player_create", func(buf *common.NetPack) {
+			http.CallRpc(gameAddr, enum.Rpc_game_player_create, func(buf *common.NetPack) {
 				buf.WriteUInt32(accountId)
 				buf.WriteString("zhoumf")
 			}, func(backBuf *common.NetPack) {
@@ -160,7 +161,7 @@ func test() {
 	})
 
 	//登出
-	// gameRpc.CallRpc("rpc_game_logout", func(buf *common.NetPack) {
+	// gameRpc.CallRpc(enum.Rpc_game_logout, func(buf *common.NetPack) {
 	// }, func(backBuf *common.NetPack) {
 	// })
 

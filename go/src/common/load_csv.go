@@ -82,7 +82,7 @@ func _LoadOneCsv(name string) {
 	if ptr, ok := G_Csv_Map[strings.TrimSuffix(filepath.Base(name), ".csv")]; ok {
 		ParseRefCsv(records, ptr)
 	} else {
-		fmt.Printf("Csv not regist in G_Csv_Map: %s\n", name)
+		fmt.Printf("%s not regist in G_Csv_Map\n", name)
 	}
 }
 
@@ -126,8 +126,7 @@ func ParseRefCsvBySlice(records [][]string, pSlice interface{}) { // slice可减
 	slice := reflect.ValueOf(pSlice).Elem() // 这里slice是nil
 	typ := reflect.TypeOf(pSlice).Elem()
 
-	// 表的数组，从1起始
-	total, idx := _GetRecordsValidCnt(records), 1
+	total, idx := _GetRecordsValidCnt(records), 0
 	slice.Set(reflect.MakeSlice(typ, total, total))
 
 	bParsedName, nilFlag := false, int64(0)
@@ -188,6 +187,12 @@ func SetField(field reflect.Value, s string) {
 				field.SetInt(v)
 			}
 		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		{
+			if v, err := strconv.ParseUint(s, 0, field.Type().Bits()); err == nil {
+				field.SetUint(v)
+			}
+		}
 	case reflect.Float32, reflect.Float64:
 		{
 			if v, err := strconv.ParseFloat(s, field.Type().Bits()); err == nil {
@@ -237,7 +242,7 @@ func _GetRecordsValidCnt(records [][]string) (ret int) {
 			ret++
 		}
 	}
-	return ret
+	return ret - 1 //减掉表头那一行
 }
 
 //////////////////////////////////////////////////////////////////////

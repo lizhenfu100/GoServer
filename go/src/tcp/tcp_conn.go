@@ -58,9 +58,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"gamelog"
+	"generate/rpc/enum"
 	"io"
 	"net"
-	"runtime"
 	"runtime/debug"
 	"sync"
 	"sync/atomic"
@@ -68,16 +68,14 @@ import (
 )
 
 const (
-	G_Msg_Size_Max    = 1024
-	G_MsgId_Regist    = 60000
-	G_MsgId_SvrAccept = 60001
-	Write_Chan_Cap    = 32
+	G_Msg_Size_Max = 1024
+	Write_Chan_Cap = 32
 )
 
 var (
 	G_HandlerMsgMap = map[uint16]func(*common.NetPack, *common.NetPack, *TCPConn){
-		G_MsgId_Regist:    DoRegistToSvr,
-		G_MsgId_SvrAccept: OnSvrAcceptConn,
+		enum.Rpc_regist:     DoRegistToSvr,
+		enum.Rpc_svr_accept: OnSvrAcceptConn,
 	}
 	g_rpc_response = make(map[uint64]func(*common.NetPack))
 	g_auto_req_idx = uint32(0)
@@ -251,13 +249,11 @@ func (self *TCPConn) msgDispatcher(msg *common.NetPack) {
 	msgID := msg.GetOpCode()
 	defer func() {
 		if r := recover(); r != nil {
-			if _, ok := r.(runtime.Error); ok {
-				gamelog.Error("recover msgID:%d %s", msgID, debug.Stack())
-			}
+			gamelog.Error("recover msgId:%d\n%v: %s", msgID, r, debug.Stack())
 		}
 	}()
 	if msghandler, ok := G_HandlerMsgMap[msgID]; ok {
-		println("\nTcpMsg:", common.DebugRpcIdToName(msgID), "  len:", msg.Size())
+		println("\nTcpMsgId:", msgID, "  len:", msg.Size())
 		self.backBuffer.ResetHead(msg)
 		msghandler(msg, self.backBuffer, self)
 		if self.backBuffer.BodySize() > 0 {
@@ -271,12 +267,11 @@ func (self *TCPConn) msgDispatcher(msg *common.NetPack) {
 	}
 }
 
-//////////////////////////////////////////////////////////////////////
+// ------------------------------------------------------------
 //! rpc 【非线程安全的】只给Player用
-func (self *TCPConn) CallRpcUnsafe(rpc string, sendFun, recvFun func(*common.NetPack)) {
-	msgID := common.RpcNameToId(rpc)
+func (self *TCPConn) CallRpcUnsafe(msgID uint16, sendFun, recvFun func(*common.NetPack)) {
 	if _, ok := G_HandlerMsgMap[msgID]; ok {
-		gamelog.Error("Server and Client have the same Rpc[%s]", rpc)
+		gamelog.Error("Server and Client have the same Rpc[%d]", msgID)
 		return
 	}
 	self.sendBuffer.SetOpCode(msgID)
@@ -289,10 +284,9 @@ func (self *TCPConn) CallRpcUnsafe(rpc string, sendFun, recvFun func(*common.Net
 		_InsertResponse(self.sendBuffer.GetReqKey(), recvFun)
 	}
 }
-func (self *TCPConn) CallRpc(rpc string, sendFun, recvFun func(*common.NetPack)) {
-	msgID := common.RpcNameToId(rpc)
+func (self *TCPConn) CallRpc(msgID uint16, sendFun, recvFun func(*common.NetPack)) {
 	if _, ok := G_HandlerMsgMap[msgID]; ok {
-		gamelog.Error("Server and Client have the same Rpc[%s]", rpc)
+		gamelog.Error("Server and Client have the same Rpc[%d]", msgID)
 		return
 	}
 	buf := common.NewNetPackCap(128)

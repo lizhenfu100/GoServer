@@ -1,5 +1,5 @@
 package conf
 
-var SvrCfg struct {
+var SvrCsv struct {
 	Version string
 }

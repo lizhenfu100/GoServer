@@ -11,9 +11,9 @@ var (
 	g_cache_cross_conn *tcp.TCPConn
 )
 
-func CallRpcCross(rpc string, sendFun, recvFun func(*common.NetPack)) {
+func CallRpcCross(rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	if g_cache_cross_conn == nil || g_cache_cross_conn.IsClose() {
 		g_cache_cross_conn = netConfig.GetTcpConn("cross", -1)
 	}
-	g_cache_cross_conn.CallRpc(rpc, sendFun, recvFun)
+	g_cache_cross_conn.CallRpc(rid, sendFun, recvFun)
 }

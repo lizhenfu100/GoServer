@@ -52,7 +52,7 @@ func _RegistToSvr(destAddr, srcAddr, srcModule string, srcID int) {
 	pMsg := &Msg_Regist_To_HttpSvr{srcAddr, srcModule, srcID}
 	buf, _ := common.ToBytes(pMsg)
 	for {
-		http.DefaultClient.Timeout = 2 * time.Second
+		http.DefaultClient.Timeout = 3 * time.Second
 		if PostReq(destAddr+"reg_to_svr", buf) == nil {
 			time.Sleep(3 * time.Second)
 		} else {

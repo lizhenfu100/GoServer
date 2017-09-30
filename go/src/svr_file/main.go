@@ -5,6 +5,7 @@ import (
 	"conf"
 	"fmt"
 	"gamelog"
+	"generate/rpc/enum"
 	"netConfig"
 	"svr_file/logic"
 )
@@ -20,14 +21,14 @@ func main() {
 	common.StartConsole()
 
 	fmt.Println("----File Server Start-----")
-	if netConfig.CreateNetSvr("file", 0) == false {
+	if !netConfig.CreateNetSvr("file", 0) {
 		gamelog.Error("----File NetSvr Failed-----")
 	}
 }
 func InitConf() {
 	common.G_Csv_Map = map[string]interface{}{
 		"conf_net": &netConfig.G_SvrNetCfg,
-		"conf_svr": &conf.SvrCfg,
+		"conf_svr": &conf.SvrCsv,
 		"rpc":      &common.G_RpcCsv,
 	}
 	common.LoadAllCsv()
@@ -35,14 +36,14 @@ func InitConf() {
 	for k, v := range netConfig.G_SvrNetCfg {
 		fmt.Println(k, v)
 	}
-	fmt.Println("SvrCfg: ", conf.SvrCfg)
+	fmt.Println("SvrCsv: ", conf.SvrCsv)
 
 	netConfig.RegHttpHandler(map[string]netConfig.HttpHandle{
-		"":       logic.Handle_File_Download,
-		"upload": logic.Handle_File_Upload,
+		"":       logic.Rpc_file_download,
+		"upload": logic.Rpc_file_upload,
 	})
-	netConfig.RegHttpRpc(map[string]netConfig.HttpRpc{
+	netConfig.RegHttpRpc(map[uint16]netConfig.HttpRpc{
 		//! Client
-		"rpc_update_file_list": logic.Rpc_Update_File_List,
+		enum.Rpc_file_update_list: logic.Rpc_file_update_list,
 	})
 }

@@ -99,7 +99,7 @@ func Find(table, key string, value, pData interface{}) bool {
 	err := coll.Find(bson.M{key: value}).One(pData)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			gamelog.Warn("Not Find table: %s  find: %s:%v", table, key, value)
+			gamelog.Info("Not Find table: %s  find: %s:%v", table, key, value)
 		} else {
 			gamelog.Error3("Find error: %v \r\ntable: %s \r\nfind: %s:%v \r\n",
 				err.Error(), table, key, value)
@@ -125,7 +125,7 @@ func FindAll(table string, search bson.M, pSlice interface{}) {
 	err := coll.Find(search).All(pSlice)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			gamelog.Warn("Not Find table: %s  findall: %v", table, search)
+			gamelog.Info("Not Find table: %s  findall: %v", table, search)
 		} else {
 			gamelog.Error3("FindAll error: %v \r\ntable: %s \r\nfindall: %v \r\n",
 				err.Error(), table, search)
@@ -146,7 +146,7 @@ func _find_sort(table, sortKey string, cnt int, pList interface{}) {
 	err := query.All(pList)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			gamelog.Warn("Not Find")
+			gamelog.Info("Not Find")
 		} else {
 			gamelog.Error3("Find_Sort error: %v \r\ntable: %s \r\nsort: %s \r\nlimit: %d\r\n",
 				err.Error(), table, sortKey, cnt)

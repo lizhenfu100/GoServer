@@ -31,7 +31,6 @@ type TChatMoudle struct {
 	PlayerID uint32 `bson:"_id"`
 	ChatLst  []TChat
 
-	owner     *TPlayer
 	noSendPos int
 }
 type TChat struct {
@@ -44,14 +43,14 @@ type TChat struct {
 // -- 框架接口
 func (self *TChatMoudle) InitAndInsert(player *TPlayer) {
 	self.PlayerID = player.PlayerID
-	self.owner = player
-	dbmgo.InsertSync("Chat", self)
+	dbmgo.InsertToDB("Chat", self)
+}
+func (self *TChatMoudle) LoadFromDB(player *TPlayer) {
+	if !dbmgo.Find("Chat", "_id", player.PlayerID, self) {
+		self.InitAndInsert(player)
+	}
 }
 func (self *TChatMoudle) WriteToDB() { dbmgo.UpdateSync("Chat", self.PlayerID, self) }
-func (self *TChatMoudle) LoadFromDB(player *TPlayer) {
-	dbmgo.Find("Chat", "_id", player.PlayerID, self)
-	self.owner = player
-}
 func (self *TChatMoudle) OnLogin() {
 	self.noSendPos = 0
 }

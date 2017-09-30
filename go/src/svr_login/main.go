@@ -5,25 +5,24 @@ import (
 	"gamelog"
 	"netConfig"
 
-	_ "generate/rpc/cross"
+	_ "generate/rpc/login"
 )
 
 func main() {
 	//初始化日志系统
-	gamelog.InitLogger("cross")
+	gamelog.InitLogger("login")
 	gamelog.SetLevel(0)
 
 	InitConf()
 
 	//设置mongodb的服务器地址
-	// mongodb.Init(conf.GameDbAddr)
 
 	//开启控制台窗口，可以接受一些调试命令
 	common.StartConsole()
 
-	gamelog.Warn("----Cross Server Start-----")
-	if !netConfig.CreateNetSvr("cross", 0) {
-		gamelog.Error("----Cross NetSvr Failed-----")
+	gamelog.Warn("----Login Server Start-----")
+	if !netConfig.CreateNetSvr("login", 0) {
+		gamelog.Error("----Login NetSvr Failed-----")
 	}
 }
 func InitConf() {

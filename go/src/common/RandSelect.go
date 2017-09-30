@@ -2,6 +2,7 @@ package common
 
 import (
 	"math/rand"
+	"time"
 )
 
 type RandItem struct {
@@ -60,4 +61,15 @@ func RandShuffle(slice []int) {
 		slice[i] = temp
 		slice[ri] = slice[i]
 	}
+}
+
+//生成随机字符串
+func RandString(length int) string {
+	bytes := []byte("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	result := make([]byte, length)
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := 0; i < length; i++ {
+		result[i] = bytes[r.Intn(len(bytes))]
+	}
+	return string(result)
 }

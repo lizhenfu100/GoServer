@@ -13,6 +13,7 @@ package player
 import (
 	"common"
 	"dbmgo"
+	"generate/rpc/enum"
 	"svr_game/api"
 	"tcp"
 	// "gopkg.in/mgo.v2/bson"
@@ -21,7 +22,6 @@ import (
 type TBattleMoudle struct {
 	PlayerID uint32 `bson:"_id"`
 
-	owner          *TPlayer
 	loginBattleMsg *common.ByteBuffer
 	isShowWaitUI   bool
 }
@@ -30,18 +30,16 @@ type TBattleMoudle struct {
 // -- 框架接口
 func (self *TBattleMoudle) InitAndInsert(player *TPlayer) {
 	self.PlayerID = player.PlayerID
-	self.owner = player
-	dbmgo.InsertSync("Battle", self)
-
+	dbmgo.InsertToDB("Battle", self)
+	self._InitTempData()
+}
+func (self *TBattleMoudle) LoadFromDB(player *TPlayer) {
+	if !dbmgo.Find("Battle", "_id", player.PlayerID, self) {
+		self.InitAndInsert(player)
+	}
 	self._InitTempData()
 }
 func (self *TBattleMoudle) WriteToDB() { dbmgo.UpdateSync("Battle", self.PlayerID, self) }
-func (self *TBattleMoudle) LoadFromDB(player *TPlayer) {
-	dbmgo.Find("Battle", "_id", player.PlayerID, self)
-	self.owner = player
-
-	self._InitTempData()
-}
 func (self *TBattleMoudle) OnLogin() {
 }
 func (self *TBattleMoudle) OnLogout() {
@@ -51,13 +49,13 @@ func (self *TBattleMoudle) _InitTempData() {
 }
 
 // -------------------------------------
-// -- API
-func Rpc_Battle_Begin(req, ack *common.NetPack, ptr interface{}) {
+// -- Rpc
+func Rpc_game_battle_begin(req, ack *common.NetPack, ptr interface{}) {
 	self := ptr.(*TPlayer)
 	if self.pTeam == nil || self.pTeam.lst[0] != self {
 		return
 	}
-	api.CallRpcCross("rpc_cross_relay_battle_data", func(buf *common.NetPack) {
+	api.CallRpcCross(enum.Rpc_cross_relay_battle_data, func(buf *common.NetPack) {
 		buf.WriteByte(byte(len(self.pTeam.lst)))
 		for _, ptr := range self.pTeam.lst {
 			buf.WriteUInt32(ptr.PlayerID)
@@ -76,7 +74,7 @@ func Rpc_Battle_Begin(req, ack *common.NetPack, ptr interface{}) {
 		}
 	}, nil)
 }
-func Rpc_Battle_Ack(req, ack *common.NetPack, conn *tcp.TCPConn) {
+func Rpc_game_battle_ack(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	battleSvrIP := req.ReadString()
 	battleSvrPort := req.ReadUInt16()
 	cnt := req.ReadByte()
@@ -90,7 +88,7 @@ func Rpc_Battle_Ack(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		})
 	}
 }
-func Rpc_Probe_Login_Battle(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_game_probe_login_battle(req, ack *common.NetPack, ptr interface{}) {
 	player := ptr.(*TPlayer)
 
 	msg := player.Battle.loginBattleMsg

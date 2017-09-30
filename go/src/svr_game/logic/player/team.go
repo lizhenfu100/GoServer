@@ -20,7 +20,7 @@ type TeamChat struct {
 
 // -------------------------------------
 //! 组队相关
-func Rpc_Create_Team(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_game_create_team(req, ack *common.NetPack, ptr interface{}) {
 	self := ptr.(*TPlayer)
 
 	if self.pTeam != nil {
@@ -31,11 +31,11 @@ func Rpc_Create_Team(req, ack *common.NetPack, ptr interface{}) {
 		chatPos: make(map[uint32]int),
 	}
 }
-func Rpc_Exit_Team(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_game_exit_team(req, ack *common.NetPack, ptr interface{}) {
 	self := ptr.(*TPlayer)
 	self.ExitTeam()
 }
-func Rpc_Get_Team_Info(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_game_get_team_info(req, ack *common.NetPack, ptr interface{}) {
 	self := ptr.(*TPlayer)
 	fmt.Println("Team_Info", self.pTeam)
 	if self.pTeam == nil {
@@ -48,7 +48,7 @@ func Rpc_Get_Team_Info(req, ack *common.NetPack, ptr interface{}) {
 		}
 	}
 }
-func Rpc_Invite_Friend(req, ack *common.NetPack, ptr interface{}) { //邀请别人
+func Rpc_game_invite_friend(req, ack *common.NetPack, ptr interface{}) { //邀请别人
 	self := ptr.(*TPlayer)
 	if self.pTeam == nil {
 		return
@@ -58,13 +58,13 @@ func Rpc_Invite_Friend(req, ack *common.NetPack, ptr interface{}) { //邀请别�
 		dest.Friend.BeInvitedBy(self)
 	})
 }
-func Rpc_Agree_Join_Team(req, ack *common.NetPack, ptr interface{}) { //同意加队
+func Rpc_game_agree_join_team(req, ack *common.NetPack, ptr interface{}) { //同意加队
 	self := ptr.(*TPlayer)
 	if self.pTeam != nil {
 		return
 	}
 	destPid := req.ReadUInt32()
-	if captain := _FindInCache(destPid); captain != nil && captain.pTeam != nil { //! readonly
+	if captain := FindPlayerInCache(destPid); captain != nil && captain.pTeam != nil { //! readonly
 
 		fmt.Println("Agree_Join_Team", captain.pTeam)
 
@@ -126,7 +126,7 @@ func (self *TPlayer) ExitTeam() {
 
 // -------------------------------------
 //! 聊天
-func Rpc_Send_Team_Chat(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_game_send_team_chat(req, ack *common.NetPack, ptr interface{}) {
 	self := ptr.(*TPlayer)
 	pid := self.PlayerID
 	if self.pTeam == nil {

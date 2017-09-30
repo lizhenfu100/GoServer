@@ -5,7 +5,7 @@ import (
 	"gamelog"
 	"netConfig"
 
-	"svr_sdk/logic"
+	_ "generate/rpc/sdk"
 )
 
 // 1 开一个http server
@@ -15,16 +15,10 @@ func main() {
 	gamelog.InitLogger("sdk")
 	gamelog.SetLevel(0)
 
-	//设置mongodb的服务器地址
-	// mongodb.Init(conf.GameDbAddr)
-
-	//开启控制台窗口，可以接受一些调试命令
-	common.StartConsole()
-
 	InitConf()
 
 	gamelog.Warn("----Sdk Server Start-----")
-	if netConfig.CreateNetSvr("sdk", 0) == false {
+	if !netConfig.CreateNetSvr("sdk", 0) {
 		gamelog.Error("----Sdk NetSvr Failed-----")
 	}
 }
@@ -34,12 +28,4 @@ func InitConf() {
 		"rpc":      &common.G_RpcCsv,
 	}
 	common.LoadAllCsv()
-
-	netConfig.RegHttpHandler(map[string]netConfig.HttpHandle{
-		//! From Gamesvr
-		"create_recharge_order": logic.HandSvr_CreateRechargeOrder,
-
-		//! From 第三方
-		"sdk_recharge_success": logic.HandSdk_RechargeSuccess,
-	})
 }

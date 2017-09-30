@@ -24,7 +24,7 @@ type TMailMoudle struct {
 	、代码上看，就引入了一整结构，破坏封装 (每个模块都有可能改别人关心的数据，造成影响传递)
 	、ECS将数据组织成 Component ，各个 System 自己声明要关注的 Component ，还能指定 readonly ，简洁干净多了
 	*/
-	owner        *TPlayer
+	// owner        *TPlayer
 	clientMailId uint32 //已发给client的
 }
 type TMail struct {
@@ -41,14 +41,14 @@ type TMail struct {
 // -- 框架接口
 func (self *TMailMoudle) InitAndInsert(player *TPlayer) {
 	self.PlayerID = player.PlayerID
-	self.owner = player
-	dbmgo.InsertSync("Mail", self)
+	dbmgo.InsertToDB("Mail", self)
+}
+func (self *TMailMoudle) LoadFromDB(player *TPlayer) {
+	if !dbmgo.Find("Mail", "_id", player.PlayerID, self) {
+		self.InitAndInsert(player)
+	}
 }
 func (self *TMailMoudle) WriteToDB() { dbmgo.UpdateSync("Mail", self.PlayerID, self) }
-func (self *TMailMoudle) LoadFromDB(player *TPlayer) {
-	dbmgo.Find("Mail", "_id", player.PlayerID, self)
-	self.owner = player
-}
 func (self *TMailMoudle) OnLogin() {
 	// 删除过期已读邮件
 	timenow := time.Now().Unix()
@@ -148,7 +148,7 @@ func (self *TMailMoudle) DataToBuf(buf *common.NetPack, pos int) {
 
 // -------------------------------------
 //! rpc
-func Rpc_Get_Mail(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_game_get_mail(req, ack *common.NetPack, ptr interface{}) {
 	self := ptr.(*TPlayer)
 	pos := 0 //pos := self.Mail.GetNoSendIdx()
 	if pos >= 0 {
@@ -158,7 +158,7 @@ func Rpc_Get_Mail(req, ack *common.NetPack, ptr interface{}) {
 		ack.WriteInt8(-1)
 	}
 }
-func Rpc_Read_Mail(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_game_read_mail(req, ack *common.NetPack, ptr interface{}) {
 	self := ptr.(*TPlayer)
 	id := req.ReadUInt32()
 	for i := 0; i < len(self.Mail.MailLst); i++ {
@@ -169,12 +169,12 @@ func Rpc_Read_Mail(req, ack *common.NetPack, ptr interface{}) {
 		}
 	}
 }
-func Rpc_Del_Mail(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_game_del_mail(req, ack *common.NetPack, ptr interface{}) {
 	self := ptr.(*TPlayer)
 	id := req.ReadUInt32()
 	self.Mail.DelMail(id)
 }
-func Rpc_Take_Mail_Item(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_game_take_mail_item(req, ack *common.NetPack, ptr interface{}) {
 	self := ptr.(*TPlayer)
 	id := req.ReadUInt32()
 	for i := 0; i < len(self.Mail.MailLst); i++ {
@@ -186,7 +186,7 @@ func Rpc_Take_Mail_Item(req, ack *common.NetPack, ptr interface{}) {
 		}
 	}
 }
-func Rpc_Take_All_Mail_Item(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_game_take_all_mail_item(req, ack *common.NetPack, ptr interface{}) {
 	self := ptr.(*TPlayer)
 	//self.Mail.CreateMail(0, "测试", "zhoumf", "content")
 	for i := 0; i < len(self.Mail.MailLst); i++ {

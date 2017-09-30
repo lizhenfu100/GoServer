@@ -12,8 +12,9 @@ package http
 import (
 	"common"
 	"encoding/binary"
-	//"fmt"
+	"gamelog"
 	"net/http"
+	"runtime/debug"
 )
 
 const (
@@ -31,9 +32,9 @@ var (
 
 //////////////////////////////////////////////////////////////////////
 //! system rpc
-func CallRpc(addr string, rpc string, sendFun, recvFun func(*common.NetPack)) {
+func CallRpc(addr string, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	buf := common.NewNetPackCap(64)
-	buf.SetRpc(rpc)
+	buf.SetOpCode(rid)
 	sendFun(buf)
 	b := PostReq(addr+"client_rpc", buf.DataPtr)
 	if recvFun != nil {
@@ -52,13 +53,19 @@ func _HandleRpc(w http.ResponseWriter, r *http.Request) {
 
 	msgId := req.GetOpCode()
 
+	defer func() {
+		if r := recover(); r != nil {
+			gamelog.Error("recover msgId:%d\n%v: %s", msgId, r, debug.Stack())
+		}
+	}()
+
 	if handler, ok := G_HandlerMap[msgId]; ok {
 
 		handler(req, ack)
 
 		common.CompressInto(ack.DataPtr, w)
 	} else {
-		println("\n===> Http HandleRpc:", common.DebugRpcIdToName(msgId), "Not Regist!!!")
+		println("\n===> Http HandleRpc:", msgId, "Not Regist!!!")
 		//fmt.Println(req)
 	}
 }
@@ -73,9 +80,9 @@ type PlayerRpc struct {
 func NewPlayerRpc(addr string, pid uint32) *PlayerRpc {
 	return &PlayerRpc{addr + "player_rpc", pid}
 }
-func (self *PlayerRpc) CallRpc(rpc string, sendFun, recvFun func(*common.NetPack)) {
+func (self *PlayerRpc) CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	buf := common.NewNetPackCap(64)
-	buf.SetRpc(rpc)
+	buf.SetOpCode(rid)
 	buf.SetReqIdx(self.PlayerId)
 	sendFun(buf)
 	b := PostReq(self.Url, buf.DataPtr)
@@ -102,9 +109,15 @@ func _HandlePlayerRpc(w http.ResponseWriter, r *http.Request) {
 	msgId := req.GetOpCode()
 	pid := req.GetReqIdx()
 
+	defer func() {
+		if r := recover(); r != nil {
+			gamelog.Error("recover msgId:%d\n%v: %s", msgId, r, debug.Stack())
+		}
+	}()
+
 	//心跳包太碍眼了
 	if msgId != 10026 {
-		println("\nHttpMsg:", common.DebugRpcIdToName(msgId), "len:", req.Size(), "  playerId:", pid)
+		println("\nHttpMsg:", msgId, "len:", req.Size(), "  playerId:", pid)
 	}
 	if handler, ok := G_PlayerHandlerMap[msgId]; ok {
 		var player interface{}
@@ -112,6 +125,7 @@ func _HandlePlayerRpc(w http.ResponseWriter, r *http.Request) {
 			player = G_Before_Recv_Player(pid)
 		}
 		if player == nil {
+			println("===> pid:", pid, " isn't in memcache, please relogin")
 			flag := make([]byte, 4) //重登录标记
 			binary.LittleEndian.PutUint32(flag, Client_ReLogin_Flag)
 			w.Write(flag)
@@ -127,7 +141,7 @@ func _HandlePlayerRpc(w http.ResponseWriter, r *http.Request) {
 		common.CompressInto(ack.DataPtr, w)
 
 	} else {
-		println("\n===> Http HandlePlayerRpc:", common.DebugRpcIdToName(msgId), "Not Regist!!!")
+		println("\n===> Http HandlePlayerRpc:", msgId, "Not Regist!!!")
 	}
 }
 func _RecvHttpSvrData(buf *common.NetPack) {

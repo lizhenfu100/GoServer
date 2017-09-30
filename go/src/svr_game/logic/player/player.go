@@ -41,7 +41,7 @@ import (
 )
 
 const (
-	Idle_Max_Second       = 30
+	Idle_Max_Second       = 60
 	Reconnect_Wait_Second = 60
 )
 
@@ -82,6 +82,7 @@ type TPlayer struct {
 	Friend TFriendMoudle
 	Chat   TChatMoudle
 	Battle TBattleMoudle
+	Save   TSaveClient
 }
 
 func _NewPlayer() *TPlayer {
@@ -92,15 +93,16 @@ func _NewPlayer() *TPlayer {
 		&player.Friend,
 		&player.Chat,
 		&player.Battle,
+		&player.Save,
 	}
 	player.askchan = make(chan func(*TPlayer), 128)
 	return player
 }
 func _NewPlayerInDB(accountId uint32, id uint32, name string) *TPlayer {
 	player := _NewPlayer()
-	if dbmgo.Find("Account", "name", name, player) {
-		return nil
-	}
+	// if dbmgo.Find("Player", "name", name, player) { //禁止重名
+	// 	return nil
+	// }
 	player.AccountID = accountId
 	player.PlayerID = id
 	player.Name = name
@@ -131,6 +133,7 @@ func (self *TPlayer) WriteAllToDB() {
 }
 func (self *TPlayer) Login() {
 	self.isOnlie = true
+	self.LoginTime = time.Now().Unix()
 	atomic.SwapUint32(&self.idleSec, 0)
 	for _, v := range self.moudles {
 		v.OnLogin()
@@ -140,6 +143,7 @@ func (self *TPlayer) Login() {
 }
 func (self *TPlayer) Logout() {
 	self.isOnlie = false
+	self.LogoutTime = time.Now().Unix()
 	for _, v := range self.moudles {
 		v.OnLogout()
 	}
@@ -154,7 +158,7 @@ func (self *TPlayer) Logout() {
 		if !self.isOnlie {
 			gamelog.Info("Pid(%d) Delete", self.PlayerID)
 			go self.WriteAllToDB()
-			DelPlayerCache(self.PlayerID)
+			DelPlayerCache(self)
 		}
 	})
 }
@@ -176,7 +180,7 @@ func _CheckAFK(ptr interface{}) {
 //////////////////////////////////////////////////////////////////////
 //! for other player write my data
 func AsyncNotifyPlayer(pid uint32, handler func(*TPlayer)) {
-	if player := _FindInCache(pid); player != nil {
+	if player := FindPlayerInCache(pid); player != nil {
 		player.AsyncNotify(handler)
 	}
 }
@@ -191,15 +195,6 @@ func (self *TPlayer) AsyncNotify(handler func(*TPlayer)) {
 	} else { //TODO:zhoumf: 如何安全方便的修改离线玩家数据
 
 		//准备将离线的操作转给mainloop，这样所有离线玩家就都在一个chan里处理了
-		//要是中途玩家上线，mainloop的chan里还有他的操作没处理完怎么整！？囧~
-		//mainloop设计成map<pid, chan>，玩家上线时，检测自己的chan有效否，等它处理完？
-
-		//gen_server
-		//将某个独立模块的所有操作扔进gen_server，外界只读(有滞后性)
-		//会加大代码量，每个操作都得转一次到chan
-		//【Notice】可能gen_server里还有修改操作，且玩家已下线，会重新读到内存，此时修改完毕后须及时入库
-
-		//设计统一的接口，编辑离线数据，也很麻烦呐		//准备将离线的操作转给mainloop，这样所有离线玩家就都在一个chan里处理了
 		//要是中途玩家上线，mainloop的chan里还有他的操作没处理完怎么整！？囧~
 		//mainloop设计成map<pid, chan>，玩家上线时，检测自己的chan有效否，等它处理完？
 
@@ -225,7 +220,7 @@ func (self *TPlayer) _HandleAsyncNotify() {
 //////////////////////////////////////////////////////////////////////
 //! 访问玩家部分数据，包括离线的
 func GetPlayerBaseData(pid uint32) *TPlayerBase {
-	if player := _FindInCache(pid); player != nil {
+	if player := FindPlayerInCache(pid); player != nil {
 		return &player.TPlayerBase
 	} else {
 		ptr := new(TPlayerBase)

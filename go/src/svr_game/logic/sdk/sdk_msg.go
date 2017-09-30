@@ -22,7 +22,7 @@ import (
 
 //! 消息处理函数
 //
-func Handle_Create_Recharge_Order(w http.ResponseWriter, r *http.Request) {
+func Rpc_game_create_recharge_order(w http.ResponseWriter, r *http.Request) {
 	gamelog.Info("message: %s", r.URL.String())
 
 	//! 接收信息
@@ -33,7 +33,7 @@ func Handle_Create_Recharge_Order(w http.ResponseWriter, r *http.Request) {
 	var req sdk_msg.Msg_create_recharge_order_Req
 	err := json.Unmarshal(buffer, &req)
 	if err != nil {
-		gamelog.Error("Handle_Create_Recharge_Order unmarshal fail. Error: %s", err.Error())
+		gamelog.Error("Rpc_Create_Recharge_Order unmarshal fail. Error: %s", err.Error())
 		return
 	}
 
@@ -63,7 +63,7 @@ func Handle_Create_Recharge_Order(w http.ResponseWriter, r *http.Request) {
 	sdkReq.Channel = req.Channel
 	sdkReq.PlatformEnum = req.PlatformEnum
 	sdkReq.ChargeCsvID = req.ChargeCsvID
-	if backBuf := api.SendToSdk("create_recharge_order", &sdkReq); backBuf != nil {
+	if backBuf := api.SendToSdk("rpc_sdk_notify_recharge_order", &sdkReq); backBuf != nil {
 		json.Unmarshal(backBuf, &sdkAck)
 		//TODO：将SDKMsg_create_recharge_order_Ack中的数据，写入response
 	}
@@ -71,7 +71,7 @@ func Handle_Create_Recharge_Order(w http.ResponseWriter, r *http.Request) {
 	// 回复client，client会将订单信息发给第三方
 	response.RetCode = 0
 }
-func Handle_Recharge_Success(w http.ResponseWriter, r *http.Request) {
+func Rpc_game_recharge_success(w http.ResponseWriter, r *http.Request) {
 	gamelog.Info("message: %s", r.URL.String())
 
 	//! 接收信息
@@ -82,7 +82,7 @@ func Handle_Recharge_Success(w http.ResponseWriter, r *http.Request) {
 	var req sdk_msg.Msg_recharge_success
 	err := json.Unmarshal(buffer, &req)
 	if err != nil {
-		gamelog.Error("Handle_Recharge_Success unmarshal fail. Error: %s", err.Error())
+		gamelog.Error("Rpc_Recharge_Success unmarshal fail. Error: %s", err.Error())
 		return
 	}
 
@@ -94,7 +94,7 @@ func Handle_Recharge_Success(w http.ResponseWriter, r *http.Request) {
 	// 充值到账，增加钻石数量
 	// var player *TPlayer = GetPlayerByID(req.PlayerID)
 	// if player == nil {
-	// 	gamelog.Error("Handle_Recharge_Success GetPlayerByID nil! Invalid Player ID:%d, ChargeCsvID:%d, RMB:%d", req.PlayerID, req.ChargeCsvID, req.RMB)
+	// 	gamelog.Error("Rpc_Recharge_Success GetPlayerByID nil! Invalid Player ID:%d, ChargeCsvID:%d, RMB:%d", req.PlayerID, req.ChargeCsvID, req.RMB)
 	// 	return
 	// }
 	// player.HandChargeRenMinBi(req.RMB, req.ChargeCsvID)

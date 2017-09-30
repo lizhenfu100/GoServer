@@ -11,6 +11,7 @@
 package logic
 
 import (
+	"common"
 	"encoding/json"
 	"fmt"
 	"gamelog"
@@ -18,7 +19,9 @@ import (
 	"net/http"
 )
 
-func HandSvr_CreateRechargeOrder(w http.ResponseWriter, r *http.Request) {
+func Rpc_sdk_echo(req, ack *common.NetPack) {
+}
+func Rpc_sdk_notify_recharge_order(w http.ResponseWriter, r *http.Request) {
 	gamelog.Info("message: %s", r.URL.String())
 
 	//! 接收信息
@@ -29,7 +32,7 @@ func HandSvr_CreateRechargeOrder(w http.ResponseWriter, r *http.Request) {
 	var req sdk_msg.SDKMsg_create_recharge_order_Req
 	err := json.Unmarshal(buffer, &req)
 	if err != nil {
-		gamelog.Error("HandSvr_CreateRechargeOrder unmarshal fail. Error: %s", err.Error())
+		gamelog.Error("Rpc_Notify_Recharge_Order unmarshal fail. Error: %s", err.Error())
 		return
 	}
 

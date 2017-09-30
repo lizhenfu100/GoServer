@@ -2,9 +2,8 @@ package account
 
 import (
 	"common"
+	"common/format"
 	"dbmgo"
-	"netConfig"
-	"svr_center/api"
 	"time"
 
 	"gopkg.in/mgo.v2/bson"
@@ -16,105 +15,84 @@ type TAccount struct {
 	Password    string //密码
 	CreateTime  int64
 	LoginTime   int64
-	LoginCount  uint32
-	LoginSvrID  uint32
 	IsForbidden bool //是否禁用
+
+	BindInfo map[string]string //邮箱、手机、微信号
+
+	// GameList []int //登录过的游戏svrId列表，svrId格式：前四位-游戏种类ID、后四位-区服ID
 }
 
-//处理用户账户注册请求
-func Rpc_Reg_Account(req, ack *common.NetPack) {
+func (self *TAccount) Login(passwd string) (errcode int8) {
+	if self == nil {
+		errcode = -1 //not_exist
+	} else if passwd != self.Password {
+		errcode = -2 //invalid_password
+	} else if self.IsForbidden {
+		errcode = -3 //forbidded_account
+	} else {
+		errcode = 1
+
+		self.LoginTime = time.Now().Unix()
+		dbmgo.UpdateToDB("Account", bson.M{"_id": self.AccountID}, bson.M{"$set": bson.M{"logintime": self.LoginTime}})
+
+		time.AfterFunc(15*time.Minute, func() {
+			G_AccountMgr.DelToCache(self)
+		})
+	}
+	return
+}
+
+// -------------------------------------
+// 注册、登录
+func Rpc_center_reg_account(req, ack *common.NetPack) {
 	name := req.ReadString()
 	password := req.ReadString()
 
-	if account := G_AccountMgr.AddNewAccount(name, password); account != nil {
+	if !format.CheckAccount(name) {
+		ack.WriteInt8(-1)
+	} else if !format.CheckPasswd(password) {
+		ack.WriteInt8(-2)
+	} else if account := G_AccountMgr.AddNewAccount(name, password); account != nil {
 		ack.WriteInt8(1)
 	} else {
-		ack.WriteInt8(-1)
+		ack.WriteInt8(-3)
 	}
 }
-func Rpc_Change_Password(req, ack *common.NetPack) {
+func Rpc_center_check_account(req, ack *common.NetPack) {
+	name := req.ReadString()
+
+	if !format.CheckAccount(name) {
+		ack.WriteInt8(-1)
+		return
+	}
+	var account TAccount
+	if ok := dbmgo.Find("Account", "name", name, &account); ok {
+		ack.WriteInt8(-2)
+	} else {
+		ack.WriteInt8(1)
+	}
+}
+func Rpc_center_change_password(req, ack *common.NetPack) {
 	name := req.ReadString()
 	oldpassword := req.ReadString()
 	newpassword := req.ReadString()
 
-	if ok := G_AccountMgr.ResetPassword(name, oldpassword, newpassword); ok {
-		ack.WriteInt8(1)
-	} else {
+	if !format.CheckPasswd(newpassword) {
 		ack.WriteInt8(-1)
-	}
-}
-func Rpc_GetGameSvr_Lst(req, ack *common.NetPack) {
-	cfgLst := api.GetRegGamesvrCfgLst()
-	ack.WriteByte(byte(len(cfgLst)))
-	for _, v := range cfgLst {
-		ack.WriteUInt32(uint32(v.SvrID))
-		ack.WriteString(v.SvrName)
-		ack.WriteString(v.OutIP)
-		if v.HttpPort > 0 {
-			ack.WriteUInt16(uint16(v.HttpPort))
-		} else {
-			ack.WriteUInt16(uint16(v.TcpPort))
-		}
-	}
-}
-func Rpc_GetGameSvr_LastLogin(req, ack *common.NetPack) {
-	name := req.ReadString()
-
-	account := G_AccountMgr.GetAccountByName(name)
-	if account == nil {
-		ack.WriteInt8(-1) //not_exist
-	} else {
+	} else if ok := G_AccountMgr.ResetPassword(name, oldpassword, newpassword); ok {
 		ack.WriteInt8(1)
-		ack.WriteUInt32(account.LoginSvrID)
-
-		svrId := int(account.LoginSvrID)
-		if cfg := netConfig.GetNetCfg("game", &svrId); cfg != nil {
-			ack.WriteString(cfg.SvrName)
-		}
+	} else {
+		ack.WriteInt8(-2)
 	}
 }
-func Rpc_Login_GameSvr(req, ack *common.NetPack) {
+func Rpc_center_account_login(req, ack *common.NetPack) {
 	name := req.ReadString()
-	password := req.ReadString()
-	svrId := req.ReadInt()
+	passwd := req.ReadString()
 
 	account := G_AccountMgr.GetAccountByName(name)
-	if account == nil {
-		ack.WriteInt8(-1) //not_exist
-	} else if account.IsForbidden {
-		ack.WriteInt8(-2) //forbidded_account
-	} else if password != account.Password {
-		ack.WriteInt8(-3) //invalid_password
-	} else {
-		if ip, port := netConfig.GetIpPort("game", svrId); port <= 0 {
-			ack.WriteInt8(-4) //invalid_svrid
-		} else {
-			ack.WriteInt8(1)
-			ack.WriteUInt32(account.AccountID)
-			ack.WriteString(ip)
-			ack.WriteUInt16(port)
-			//生成一个临时token，发给gamesvr、client，用以登录验证
-			token := G_AccountMgr.CreateLoginToken()
-			ack.WriteUInt32(token)
-
-			api.CallRpcGame(svrId, "rpc_game_login_token", func(buf *common.NetPack) {
-				buf.WriteUInt32(account.AccountID)
-				buf.WriteUInt32(token)
-			}, nil)
-		}
-	}
-}
-func Handle_Login_Game_Success(req, ack *common.NetPack) {
-	accountId := req.ReadUInt32()
-	svrId := req.ReadUInt32()
-
-	if account := G_AccountMgr.GetAccountById(accountId); account != nil {
-		account.LoginCount++
-		account.LoginSvrID = svrId
-		account.LoginTime = time.Now().Unix()
-		dbmgo.UpdateToDB("Account", bson.M{"_id": accountId}, bson.M{"$set": bson.M{
-			"loginsvrid": svrId,
-			"logincount": account.LoginCount,
-			"logintime":  account.LoginTime}})
+	errcode := account.Login(passwd)
+	ack.WriteInt8(errcode)
+	if errcode > 0 {
+		ack.WriteUInt32(account.AccountID)
 	}
 }

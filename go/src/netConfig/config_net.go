@@ -144,15 +144,23 @@ func GetTcpConn(destModule string, destSvrID int) *tcp.TCPConn { //Notice：应�
 		selfCfg := GetLocalNetCfg()
 		for _, v := range selfCfg.ConnectLst {
 			if v == destModule {
-				// game(c) - battle(s)
+				// game(c) - cross(s)
 				return G_Cfg_Remote_TcpConn[common.KeyPair{destModule, destSvrID}].TcpConn
 			}
 		}
 	} else {
 		return nil
 	}
-	// battle(s) - game(c)
+	// cross(s) - game(c)
 	return tcp.FindRegModuleConn(destModule, destSvrID)
+}
+func GetRegModuleIDs(module string) (ret []int) {
+	selfCfg := GetLocalNetCfg()
+	if selfCfg.HttpPort > 0 {
+		return http.GetRegModuleIDs(module)
+	} else {
+		return tcp.GetRegModuleIDs(module)
+	}
 }
 
 // 已验证：此函数失败，resp是nil，那resp.Body.Close()就不能无脑调了

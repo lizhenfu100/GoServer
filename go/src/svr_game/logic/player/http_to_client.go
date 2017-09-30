@@ -32,7 +32,7 @@ const (
 )
 
 func BeforeRecvNetMsg(pid uint32) interface{} {
-	if player := _FindInCache(pid); player != nil {
+	if player := FindPlayerInCache(pid); player != nil {
 		atomic.SwapUint32(&player.idleSec, 0)
 		player._HandleAsyncNotify()
 		player.Mail.SendSvrMailAll()

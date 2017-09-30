@@ -6,6 +6,7 @@ import (
 	"gamelog"
 	"netConfig"
 
+	_ "generate/rpc/center"
 	"svr_center/logic/account"
 )
 
@@ -27,7 +28,7 @@ func main() {
 	account.G_AccountMgr.Init()
 
 	gamelog.Warn("----Center Server Start-----")
-	if netConfig.CreateNetSvr("center", 0) == false {
+	if !netConfig.CreateNetSvr("center", 0) {
 		gamelog.Error("----Center NetSvr Failed-----")
 	}
 }
@@ -37,15 +38,4 @@ func InitConf() {
 		"rpc":      &common.G_RpcCsv,
 	}
 	common.LoadAllCsv()
-
-	netConfig.RegHttpRpc(map[string]netConfig.HttpRpc{
-		//! Gamesvr
-		"rpc_center_login_game_success": account.Handle_Login_Game_Success,
-		//! Client
-		"rpc_center_reg_account":            account.Rpc_Reg_Account,
-		"rpc_center_change_password":        account.Rpc_Change_Password,
-		"rpc_center_get_gamesvr_lst":        account.Rpc_GetGameSvr_Lst,
-		"rpc_center_get_gamesvr_last_login": account.Rpc_GetGameSvr_LastLogin,
-		"rpc_center_login_gamesvr":          account.Rpc_Login_GameSvr,
-	})
 }

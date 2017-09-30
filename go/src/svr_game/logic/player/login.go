@@ -1,7 +1,7 @@
 /***********************************************************************
 * @ 玩家登录
 * @ brief
-	1、验证相关，可放登录服(目前在Center)做，减缓游戏服压力，比如：
+	1、验证相关，放登录服，减缓游戏服压力，比如：
 		、每个账号在同一区服，只允许建一个或几个角色
 		、角色名不能跟别人重复（要查找整张表呀）
 
@@ -16,20 +16,20 @@ package player
 
 import (
 	"common"
+	"common/format"
 	"fmt"
 	"gamelog"
-	"netConfig"
-	"svr_game/api"
-	"svr_game/center"
 )
 
-func Rpc_Player_Login(req, ack *common.NetPack) {
+// -------------------------------------
+// -- 玩家登录
+func Rpc_game_login(req, ack *common.NetPack) {
 	//req: accountId, token(账号服生成的登录验证码)
 	//ack: playerId, data
 	accountId := req.ReadUInt32()
 	token := req.ReadUInt32()
 
-	if !center.CheckLoginToken(accountId, token) {
+	if !CheckLoginToken(accountId, token) {
 		ack.WriteInt8(-1)
 	} else {
 		player := FindWithDB_AccountId(accountId)
@@ -41,28 +41,23 @@ func Rpc_Player_Login(req, ack *common.NetPack) {
 			ack.WriteInt8(1)
 			ack.WriteUInt32(player.PlayerID)
 			ack.WriteString(player.Name)
-
-			// notify svr_center login success
-			api.CallRpcCenter("rpc_center_login_game_success", func(buf *common.NetPack) {
-				buf.WriteUInt32(accountId)
-				buf.WriteUInt32(uint32(netConfig.G_Local_SvrID))
-			}, nil)
 		}
 	}
 }
-func Rpc_Player_Logout(req, ack *common.NetPack, ptr interface{}) {
-
+func Rpc_game_logout(req, ack *common.NetPack, ptr interface{}) {
 	player := ptr.(*TPlayer)
-
 	player.Logout()
 }
-func Rpc_Player_Create(req, ack *common.NetPack) {
-	//req: accountId, playerName
-	//ack: playerId
+func Rpc_game_player_create(req, ack *common.NetPack) {
 	accountId := req.ReadUInt32()
+	token := req.ReadUInt32()
 	playerName := req.ReadString()
 
-	if player := AddNewPlayer(accountId, playerName); player != nil {
+	if !CheckLoginToken(accountId, token) { //token验证
+		ack.WriteUInt32(0)
+	} else if !format.CheckName(playerName) { //名字不合格
+		ack.WriteUInt32(0)
+	} else if player := AddNewPlayer(accountId, playerName); player != nil {
 		gamelog.Info("Create NewPlayer: accountId(%d) name(%s) pid(%d)",
 			accountId, playerName, player.PlayerID)
 		player.Login()
@@ -71,5 +66,24 @@ func Rpc_Player_Create(req, ack *common.NetPack) {
 		ack.WriteUInt32(0)
 	}
 }
-func Rpc_Heart_Beat(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_game_heart_beat(req, ack *common.NetPack, ptr interface{}) {
+}
+
+// -------------------------------------
+// -- 后台账号验证
+var (
+	g_account_login_token = make(map[uint32]uint32)
+)
+
+func Rpc_game_login_token(req, ack *common.NetPack) {
+	id := req.ReadUInt32()
+	token := req.ReadUInt32()
+
+	g_account_login_token[id] = token
+}
+func CheckLoginToken(accountId, token uint32) bool {
+	if value, ok := g_account_login_token[accountId]; ok {
+		return token == value
+	}
+	return false
 }
