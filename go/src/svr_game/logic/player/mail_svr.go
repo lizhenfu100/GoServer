@@ -26,15 +26,10 @@ func CreateSvrMail(title, from, content string, items ...common.IntPair) {
 	g_mail_mutex.Lock()
 	g_svr_mail = append(g_svr_mail, *pMail)
 	g_mail_mutex.Unlock()
-
-	// 遍历全服，太不可控了
-	// ForEachOnlinePlayer(func(player *TPlayer) {
-	// 	player.Mail.SendSvrMail(pMail)
-	// })
 }
 func (self *TMailMoudle) SendSvrMail(pData *TMail) bool {
 	if pData.ID <= self.SvrMailId {
-		return false // received
+		return false
 	}
 	self.SvrMailId = pData.ID
 	self.MailLst = append(self.MailLst, *pData)

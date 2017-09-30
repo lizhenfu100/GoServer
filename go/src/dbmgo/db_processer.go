@@ -47,25 +47,25 @@ func _DBProcess() {
 	}
 }
 func UpdateToDB(table string, search, stuff bson.M) {
-	var param TDB_Param
-	param.isAll = false
-	param.table = table
-	param.search = search
-	param.stuff = stuff
-	g_param_chan <- &param
+	g_param_chan <- &TDB_Param{
+		isAll:  false,
+		table:  table,
+		search: search,
+		stuff:  stuff,
+	}
 }
 func UpdateToDBAll(table string, search, stuff bson.M) {
-	var param TDB_Param
-	param.isAll = true
-	param.table = table
-	param.search = search
-	param.stuff = stuff
-	g_param_chan <- &param
+	g_param_chan <- &TDB_Param{
+		isAll:  true,
+		table:  table,
+		search: search,
+		stuff:  stuff,
+	}
 }
 func InsertToDB(table string, pData interface{}) {
-	var param TDB_Param
-	param.isInsert = true
-	param.table = table
-	param.pData = pData
-	g_param_chan <- &param
+	g_param_chan <- &TDB_Param{
+		isInsert: true,
+		table:    table,
+		pData:    pData,
+	}
 }

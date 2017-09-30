@@ -33,8 +33,7 @@ func Check(player *player.TPlayer, ids ...int) bool {
 
 func _during_time(player *player.TPlayer, val1, val2 int) bool {
 	now := time.Now()
-	timeNow := now.Unix()
-	yearNow := now.Year()
+	timeNow, yearNow := now.Unix(), now.Year()
 	var time1, time2 int64
 	if tt, err := time.Parse("20060102150405", fmt.Sprintf("%d%d", yearNow, val1)); err == nil {
 		time1 = tt.Unix()

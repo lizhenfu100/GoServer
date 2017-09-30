@@ -2,9 +2,8 @@ package dbmgo
 
 import (
 	"common"
-	"sync"
-
 	"gopkg.in/mgo.v2/bson"
+	"sync"
 )
 
 var (
