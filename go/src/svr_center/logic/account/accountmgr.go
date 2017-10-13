@@ -8,10 +8,6 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-const (
-	Login_Active_Time = 30 * 24 * 3600 //一个月内登录过的，算活跃玩家
-)
-
 type TAccountMgr struct {
 	sync.RWMutex
 	NameToPtr map[string]*TAccount
@@ -23,9 +19,9 @@ var G_AccountMgr TAccountMgr
 func (self *TAccountMgr) Init() {
 	self.IdToPtr = make(map[uint32]*TAccount, 5000)
 	self.NameToPtr = make(map[string]*TAccount, 5000)
-	//只载入活跃玩家
+	//只载入一个月内登录过的
 	var accountLst []TAccount
-	dbmgo.FindAll("Account", bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - Login_Active_Time}}, &accountLst)
+	dbmgo.FindAll("Account", bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - 30*24*3600}}, &accountLst)
 	for i := 0; i < len(accountLst); i++ {
 		self.AddToCache(&accountLst[i])
 	}

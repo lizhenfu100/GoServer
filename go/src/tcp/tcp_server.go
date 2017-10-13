@@ -4,7 +4,7 @@ import (
 	"common"
 	"encoding/binary"
 	"gamelog"
-	"generate/rpc/enum"
+	"generate_out/rpc/enum"
 	"io"
 	"net"
 	"sync"

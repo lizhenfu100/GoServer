@@ -14,12 +14,12 @@ const (
 )
 
 type Func struct {
-	Pack string
+	Pack string //package
 	Name string
 }
 type RpcInfo struct {
-	Svr           string
-	Moudles       map[string]bool
+	Svr           string          //服务器名
+	Moudles       map[string]bool //package
 	TcpRpc        []Func
 	HttpRpc       []Func
 	HttpPlayerRpc []Func
@@ -54,7 +54,7 @@ func generatRpcRegist(svr string) {
 }
 
 // -------------------------------------
-// -- 提取包名、Rpc函数名
+// -- 提取 package、RpcFunc
 func getPackage(s string) string {
 	if ok, _ := regexp.MatchString(`^package \w+$`, s); ok {
 		reg := regexp.MustCompile(`\w+`)
@@ -84,9 +84,9 @@ func getHttpPlayerRpc(s string) string {
 	return ""
 }
 func getHttpHandle(s string) string {
-	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+ http.ResponseWriter, \w+ \*http.Request\) \{$`, s); ok {
-		reg := regexp.MustCompile(`Rpc_\w+`)
-		return reg.FindAllString(s, -1)[0]
+	if ok, _ := regexp.MatchString(`^func Http_\w+\(\w+ http.ResponseWriter, \w+ \*http.Request\) \{$`, s); ok {
+		reg := regexp.MustCompile(`Http_\w+`)
+		return reg.FindAllString(s, -1)[0][5:]
 	}
 	return ""
 }
@@ -99,7 +99,7 @@ const codeRegistTemplate = `
 package rpc
 import (
 	"netConfig"
-	"generate/rpc/enum"
+	"generate_out/rpc/enum"
 	{{range $k, $_ := .Moudles}}
 	{{if eq $k "logic"}}
 	"svr_{{$.Svr}}/{{$k}}"{{else}}
@@ -120,7 +120,7 @@ func init() {
 	})
 	netConfig.RegHttpHandler(map[string]netConfig.HttpHandle{
 		{{range .HttpHandle}}
-		"{{.Name}}": {{.Pack}}.{{.Name}},{{end}}
+		"{{.Name}}": {{.Pack}}.Http_{{.Name}},{{end}}
 	})
 }
 `

@@ -2,7 +2,7 @@ package logic
 
 import (
 	"common"
-	"generate/rpc/enum"
+	"generate_out/rpc/enum"
 	"netConfig"
 	"svr_login/api"
 	"sync/atomic"

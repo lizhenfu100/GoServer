@@ -1,13 +1,13 @@
 package activity
 
 import (
-	"common"
+	"common/timer"
 	"time"
 )
 
 var (
 	G_GlobalActivity TGlobalActivity
-	g_act_timer      *common.Timer
+	g_act_timer      *timer.Timer
 )
 
 type TGlobalActivity struct {
@@ -46,8 +46,8 @@ func (self *TGlobalActivity) Init() {
 	self.CheckActivityAdd()   //! 检测表中是否有新增活动
 	self.UpdateActivityTime() //! 活动开启/结束时间
 
-	g_act_timer = common.NewHourTimer(24)
-	g_act_timer.AddTimeFunc(common.GetTodayLeftSec(), common.OneDay_SecCnt, -1, self)
+	g_act_timer = timer.NewHourTimer(24)
+	g_act_timer.AddTimeFunc(timer.GetTodayLeftSec(), timer.OneDay_SecCnt, -1, self)
 }
 func (self *TGlobalActivity) CheckActivityAdd() {
 	for _, csv := range G_ActivityCsv {

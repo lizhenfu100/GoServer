@@ -14,7 +14,7 @@ var (
 	g_mail_mutex sync.RWMutex
 )
 
-func InitSvrMailLst() {
+func InitSvrMailDB() {
 	//只读一个月内的
 	dbmgo.FindAll("MailSvr", bson.M{"time": bson.M{"$gt": time.Now().Unix() - 30*24*3600}}, &g_svr_mail)
 }

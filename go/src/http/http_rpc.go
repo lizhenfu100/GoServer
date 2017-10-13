@@ -13,6 +13,7 @@ import (
 	"common"
 	"encoding/binary"
 	"gamelog"
+	"generate_out/rpc/enum"
 	"net/http"
 	"runtime/debug"
 )
@@ -22,8 +23,8 @@ const (
 )
 
 var (
-	G_HandlerMap       = make(map[uint16]func(req, ack *common.NetPack))
-	G_PlayerHandlerMap = make(map[uint16]func(req, ack *common.NetPack, p interface{}))
+	G_HandleFunc       [enum.Rpc_enum_cnt]func(req, ack *common.NetPack)
+	G_PlayerHandleFunc [enum.Rpc_enum_cnt]func(req, ack *common.NetPack, p interface{})
 
 	//! 需要主动发给玩家的数据，每回通信时捎带过去
 	G_Before_Recv_Player func(uint32) interface{}
@@ -50,23 +51,18 @@ func _HandleRpc(w http.ResponseWriter, r *http.Request) {
 
 	//! 创建回复
 	ack := common.NewNetPackCap(128)
-
 	msgId := req.GetOpCode()
-
 	defer func() {
 		if r := recover(); r != nil {
 			gamelog.Error("recover msgId:%d\n%v: %s", msgId, r, debug.Stack())
 		}
 	}()
 
-	if handler, ok := G_HandlerMap[msgId]; ok {
-
+	if handler := G_HandleFunc[msgId]; handler != nil {
 		handler(req, ack)
-
 		common.CompressInto(ack.DataPtr, w)
 	} else {
 		println("\n===> Http HandleRpc:", msgId, "Not Regist!!!")
-		//fmt.Println(req)
 	}
 }
 
@@ -93,6 +89,9 @@ func (self *PlayerRpc) CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack
 	}
 	_RecvHttpSvrData(recvBuf) //服务器主动下发的数据
 }
+func _RecvHttpSvrData(buf *common.NetPack) {
+	//对应于 http_to_client.go
+}
 func RegHandlePlayerRpc() { http.HandleFunc("/player_rpc", _HandlePlayerRpc) }
 func _HandlePlayerRpc(w http.ResponseWriter, r *http.Request) {
 	//! 接收信息
@@ -101,49 +100,39 @@ func _HandlePlayerRpc(w http.ResponseWriter, r *http.Request) {
 
 	//! 创建回复
 	ack := common.NewNetPackCap(128)
-
-	//FIXME: 验证消息安全性，防改包
-	//FIXME: http通信中途安全性不够，能修改client net pack里的pid，进而操作别人数据
-	//FIXME: 账号服登录验证后下发给client的token，client应该保留，附在每个HttpReq里，防止恶意窜改他人数据
-
 	msgId := req.GetOpCode()
 	pid := req.GetReqIdx()
-
 	defer func() {
 		if r := recover(); r != nil {
 			gamelog.Error("recover msgId:%d\n%v: %s", msgId, r, debug.Stack())
 		}
 	}()
+	//FIXME: 验证消息安全性，防改包
+	//FIXME: http通信中途安全性不够，能修改client net pack里的pid，进而操作别人数据
+	//FIXME: 账号服登录验证后下发给client的token，client应该保留，附在每个HttpReq里，防止恶意窜改他人数据
 
-	//心跳包太碍眼了
-	if msgId != 10026 {
-		println("\nHttpMsg:", msgId, "len:", req.Size(), "  playerId:", pid)
+	if msgId != enum.Rpc_game_heart_beat {
+		gamelog.Debug("HttpMsg:%d, len:%d, playerId:%d", msgId, req.Size(), pid)
 	}
-	if handler, ok := G_PlayerHandlerMap[msgId]; ok {
+	if handler := G_PlayerHandleFunc[msgId]; handler != nil {
 		var player interface{}
 		if G_Before_Recv_Player != nil {
 			player = G_Before_Recv_Player(pid)
 		}
 		if player == nil {
-			println("===> pid:", pid, " isn't in memcache, please relogin")
+			gamelog.Debug("===> pid:%d isn't in memcache, please relogin", pid)
 			flag := make([]byte, 4) //重登录标记
 			binary.LittleEndian.PutUint32(flag, Client_ReLogin_Flag)
 			w.Write(flag)
 			return
 		}
-
 		handler(req, ack, player)
 
 		if G_After_Recv_Player != nil && player != nil {
 			G_After_Recv_Player(player, ack)
 		}
-
 		common.CompressInto(ack.DataPtr, w)
-
 	} else {
 		println("\n===> Http HandlePlayerRpc:", msgId, "Not Regist!!!")
 	}
-}
-func _RecvHttpSvrData(buf *common.NetPack) {
-	//对应于 http_to_client.go
 }

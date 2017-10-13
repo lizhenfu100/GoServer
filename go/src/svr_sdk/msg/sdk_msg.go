@@ -1,4 +1,4 @@
-package sdk_msg
+package msg
 
 type Msg_create_recharge_order_Req struct { // 消息：/create_recharge_order
 	SessionKey string
@@ -12,6 +12,7 @@ type Msg_create_recharge_order_Req struct { // 消息：/create_recharge_order
 type Msg_create_recharge_order_Ack struct {
 	RetCode int
 }
+
 type Msg_recharge_success struct { // 消息：/sdk_recharge_success
 	PlayerID    int32
 	ChargeCsvID int //充值表ID

@@ -1,11 +1,11 @@
 package common
 
 import (
+	"bufio"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
-	"bufio"
-	"io"
 )
 
 func GetExeDir() string {

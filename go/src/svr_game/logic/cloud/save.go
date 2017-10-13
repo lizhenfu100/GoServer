@@ -19,6 +19,7 @@ package cloud
 
 import (
 	"common"
+	"common/math"
 	"dbmgo"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -56,7 +57,7 @@ func Rpc_game_upload_save_data(req, ack *common.NetPack) {
 	self.MAC = mac
 	self.ChangeTimes = times
 	self.JsonData = data
-	self.PublicKey = int32(common.RandBetween(0xff, 0xfffffff))
+	self.PublicKey = int32(math.RandBetween(0xff, 0xfffffff))
 
 	ack.WriteInt32(self.PublicKey) //新公钥
 
@@ -79,7 +80,7 @@ func Rpc_game_download_save_data(req, ack *common.NetPack) {
 		return
 	}
 
-	self.PublicKey = int32(common.RandBetween(0xff, 0xfffffff))
+	self.PublicKey = int32(math.RandBetween(0xff, 0xfffffff))
 	dbmgo.UpdateToDB("CloudArchive", bson.M{"_id": self.MAC}, bson.M{"$set": bson.M{"publickey": self.PublicKey}})
 
 	ack.WriteInt32(self.PublicKey) //新公钥

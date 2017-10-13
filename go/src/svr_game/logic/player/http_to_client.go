@@ -17,7 +17,7 @@ package player
 
 import (
 	"common"
-	"fmt"
+	"gamelog"
 	"sync/atomic"
 )
 
@@ -45,6 +45,7 @@ func AfterRecvNetMsg(ptr interface{}, buf *common.NetPack) {
 	pid := self.PlayerID
 	bit, bitPosInBody := uint32(0), buf.BodySize()
 	//! 先写位标记
+	buf.WriteUInt8(0xFF)
 	buf.WriteUInt32(bit)
 	//! 再写数据块
 	if pos := self.Mail.GetNoSendIdx(); pos >= 0 {
@@ -85,6 +86,6 @@ func AfterRecvNetMsg(ptr interface{}, buf *common.NetPack) {
 	//! 最后重置位标记
 	buf.SetPos(bitPosInBody, bit)
 	if bit > 0 {
-		fmt.Println("pid:", pid, "PackSendBit", bit, buf)
+		gamelog.Debug("pid(%d), PackSendBit(%b) %v", pid, bit, buf)
 	}
 }

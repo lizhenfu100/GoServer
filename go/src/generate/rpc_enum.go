@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"common"
-	"fmt"
 	"os"
 	"text/template"
 )
@@ -13,21 +12,29 @@ const (
 	K_EnumFileName = "generate_rpc_enum"
 )
 
+type TRpcCsv struct {
+	Name     string
+	ID       uint16
+	IsClient int //是否Client实现的rpc
+}
+
 func generatRpcEnum() {
+	var rpcList []TRpcCsv
 	common.G_Csv_Map = map[string]interface{}{
-		"rpc": &common.G_RpcCsv,
+		"rpc": &rpcList,
 	}
 	common.LoadAllCsv()
+	rpcList = append(rpcList, TRpcCsv{"rpc_enum_cnt", uint16(len(rpcList))+1, 1})
 
 	autoIncId := uint16(1)
-	for i := 0; i < len(common.G_RpcCsv); i++ {
-		csv := &common.G_RpcCsv[i]
+	for i := 0; i < len(rpcList); i++ {
+		csv := &rpcList[i]
 		csv.ID = autoIncId
 		autoIncId++
 	}
-	makeEnumFile_C(common.G_RpcCsv)
-	makeEnumFile_Go(common.G_RpcCsv)
-	makeEnumFile_CSharp(common.G_RpcCsv)
+	makeEnumFile_C(rpcList)
+	makeEnumFile_Go(rpcList)
+	makeEnumFile_CSharp(rpcList)
 }
 
 // -------------------------------------
@@ -69,12 +76,7 @@ func makeEnumFile_Go(data interface{}) {
 	defer f.Close()
 	f.Write(bf.Bytes())
 }
-func RpcNameCapitalize(rpc string) string {
-	if len(rpc) < 1 {
-		fmt.Println("----", rpc)
-	}
-	return "R" + rpc[1:]
-}
+func RpcNameCapitalize(rpc string) string { return "R" + rpc[1:] }
 
 // -------------------------------------
 // -- 填充模板 c++
@@ -91,9 +93,9 @@ const codeEnumTemplate2 = `
 enum RpcEnum:uint16 {
     Rpc_Enum
 };
-inline const char* RpcIdToName(uint32 id) {
+inline const char* RpcIdToName(int id) {
 #ifdef _DEBUG
-    static std::map<uint32, const char*> g_rpc_name;
+    static std::map<int, const char*> g_rpc_name;
     if (g_rpc_name.empty()) {
 #undef _Declare
 #define _Declare(k, v) g_rpc_name[v] = #k;

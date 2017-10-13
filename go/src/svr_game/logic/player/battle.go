@@ -13,7 +13,7 @@ package player
 import (
 	"common"
 	"dbmgo"
-	"generate/rpc/enum"
+	"generate_out/rpc/enum"
 	"svr_game/api"
 	"tcp"
 	// "gopkg.in/mgo.v2/bson"

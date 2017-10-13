@@ -5,7 +5,7 @@ import (
 	"gamelog"
 	"netConfig"
 
-	_ "generate/rpc/cross"
+	_ "generate_out/rpc/cross"
 )
 
 func main() {
@@ -29,7 +29,6 @@ func main() {
 func InitConf() {
 	common.G_Csv_Map = map[string]interface{}{
 		"conf_net": &netConfig.G_SvrNetCfg,
-		"rpc":      &common.G_RpcCsv,
 	}
 	common.LoadAllCsv()
 }

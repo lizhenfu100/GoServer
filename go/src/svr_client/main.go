@@ -13,14 +13,13 @@ import (
 	//"msg/sdk_msg"
 	//"svr_client/api"
 	//"svr_game/logic/player"
-	"generate/rpc/enum"
+	"generate_out/rpc/enum"
 	"io"
 	nhttp "net/http"
 	"os"
 	"os/exec"
-	"strconv"
-
 	"path/filepath"
+	"strconv"
 )
 
 func main() {
@@ -36,7 +35,6 @@ func main() {
 
 	common.G_Csv_Map = map[string]interface{}{
 		"conf_net": &netConfig.G_SvrNetCfg,
-		"rpc":      &common.G_RpcCsv,
 	}
 	common.LoadAllCsv()
 

@@ -70,7 +70,7 @@ func InsertSync(table string, pData interface{}) bool {
 	coll := g_database.C(table)
 	err := coll.Insert(pData)
 	if err != nil {
-		gamelog.Error3("InsertSync error: %v \r\ntable: %s \r\n", err.Error(), table)
+		gamelog.Error("InsertSync error: %v \r\ntable: %s \r\n", err.Error(), table)
 		return false
 	}
 	return true
@@ -79,7 +79,7 @@ func UpdateSync(table string, id, pData interface{}) bool {
 	coll := g_database.C(table)
 	err := coll.UpdateId(id, pData)
 	if err != nil {
-		gamelog.Error3("UpdateSync error: %v \r\ntable: %s \r\nid: %v \r\ndata: %v \r\n",
+		gamelog.Error("UpdateSync error: %v \r\ntable: %s \r\nid: %v \r\ndata: %v \r\n",
 			err.Error(), table, id, pData)
 		return false
 	}
@@ -89,7 +89,7 @@ func RemoveSync(table string, search bson.M) bool {
 	coll := g_database.C(table)
 	err := coll.Remove(search)
 	if err != nil {
-		gamelog.Error3("RemoveSync error: %v \r\ntable: %s \r\nsearch: %v \r\n", err.Error(), table, search)
+		gamelog.Error("RemoveSync error: %v \r\ntable: %s \r\nsearch: %v \r\n", err.Error(), table, search)
 		return false
 	}
 	return true
@@ -101,7 +101,7 @@ func Find(table, key string, value, pData interface{}) bool {
 		if err == mgo.ErrNotFound {
 			gamelog.Info("Not Find table: %s  find: %s:%v", table, key, value)
 		} else {
-			gamelog.Error3("Find error: %v \r\ntable: %s \r\nfind: %s:%v \r\n",
+			gamelog.Error("Find error: %v \r\ntable: %s \r\nfind: %s:%v \r\n",
 				err.Error(), table, key, value)
 		}
 		return false
@@ -127,7 +127,7 @@ func FindAll(table string, search bson.M, pSlice interface{}) {
 		if err == mgo.ErrNotFound {
 			gamelog.Info("Not Find table: %s  findall: %v", table, search)
 		} else {
-			gamelog.Error3("FindAll error: %v \r\ntable: %s \r\nfindall: %v \r\n",
+			gamelog.Error("FindAll error: %v \r\ntable: %s \r\nfindall: %v \r\n",
 				err.Error(), table, search)
 		}
 	}
@@ -148,7 +148,7 @@ func _find_sort(table, sortKey string, cnt int, pList interface{}) {
 		if err == mgo.ErrNotFound {
 			gamelog.Info("Not Find")
 		} else {
-			gamelog.Error3("Find_Sort error: %v \r\ntable: %s \r\nsort: %s \r\nlimit: %d\r\n",
+			gamelog.Error("Find_Sort error: %v \r\ntable: %s \r\nsort: %s \r\nlimit: %d\r\n",
 				err.Error(), table, sortKey, cnt)
 		}
 	}

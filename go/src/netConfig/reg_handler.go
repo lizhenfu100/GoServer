@@ -30,14 +30,14 @@ type (
 
 func RegTcpRpc(tcpLst map[uint16]TcpRpc) {
 	for k, v := range tcpLst {
-		tcp.G_HandlerMsgMap[k] = v
+		tcp.G_HandleFunc[k] = v
 	}
 }
 
 //! 封装成NetPack的模块间通信；若需要其它传输格式(如Json)直接调http.HandleFunc(rpcname, func)注册
 func RegHttpRpc(httpLst map[uint16]HttpRpc) {
 	for k, v := range httpLst {
-		http.G_HandlerMap[k] = v
+		http.G_HandleFunc[k] = v
 	}
 	http.RegHandleRpc()
 }
@@ -45,7 +45,7 @@ func RegHttpRpc(httpLst map[uint16]HttpRpc) {
 //! 访问玩家数据的消息，要求该玩家已经登录，否则不处理
 func RegHttpPlayerRpc(httpLst map[uint16]HttpPlayerRpc) {
 	for k, v := range httpLst {
-		http.G_PlayerHandlerMap[k] = v
+		http.G_PlayerHandleFunc[k] = v
 	}
 	http.RegHandlePlayerRpc()
 }

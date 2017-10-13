@@ -7,24 +7,22 @@ import (
 	"time"
 )
 
-const (
-	Login_Active_Time = 30 * 24 * 3600 //一个月内登录过的，算活跃玩家
-)
-
 var (
 	g_player_mutex  sync.RWMutex
 	g_player_cache  = make(map[uint32]*TPlayer, 5000)
 	g_account_cache = make(map[uint32]*TPlayer, 5000)
 )
 
-func LoadActivePlayerFormDB() {
-	//只载入活跃玩家
+func InitDB() {
+	//只载入一个月内登录过的
 	var playerLst []TPlayer
-	dbmgo.FindAll("Player", bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - Login_Active_Time}}, &playerLst)
+	dbmgo.FindAll("Player", bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - 30*24*3600}}, &playerLst)
 	for i := 0; i < len(playerLst); i++ {
 		AddPlayerCache(&playerLst[i])
 	}
 	println("load active player form db: ", len(playerLst))
+
+	InitSvrMailDB()
 }
 
 //! 多线程架构，玩家内存，只能他自己直接修改，别人须转给他后间接改(异步)

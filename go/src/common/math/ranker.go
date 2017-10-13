@@ -6,7 +6,7 @@
 * @ author zhoumf
 * @ date 2017-9-30
 ***********************************************************************/
-package common
+package math
 
 import (
 	"fmt"

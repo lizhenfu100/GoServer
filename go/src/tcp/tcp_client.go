@@ -4,7 +4,7 @@ import (
 	"common"
 	"encoding/binary"
 	"fmt"
-	"generate/rpc/enum"
+	"generate_out/rpc/enum"
 	"net"
 	"time"
 )

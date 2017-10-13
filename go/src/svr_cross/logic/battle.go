@@ -3,7 +3,7 @@ package logic
 import (
 	"common"
 	"gamelog"
-	"generate/rpc/enum"
+	"generate_out/rpc/enum"
 	"netConfig"
 	"sort"
 	"svr_cross/api"

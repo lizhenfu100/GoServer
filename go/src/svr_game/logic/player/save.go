@@ -20,7 +20,7 @@ package player
 import (
 	"common"
 	"dbmgo"
-	"generate/rpc/enum"
+	"generate_out/rpc/enum"
 	"netConfig"
 	"svr_game/api"
 )

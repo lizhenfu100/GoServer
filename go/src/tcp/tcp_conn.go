@@ -58,7 +58,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"gamelog"
-	"generate/rpc/enum"
+	"generate_out/rpc/enum"
 	"io"
 	"net"
 	"runtime/debug"
@@ -73,7 +73,7 @@ const (
 )
 
 var (
-	G_HandlerMsgMap = map[uint16]func(*common.NetPack, *common.NetPack, *TCPConn){
+	G_HandleFunc = [enum.Rpc_enum_cnt]func(*common.NetPack, *common.NetPack, *TCPConn){
 		enum.Rpc_regist:     DoRegistToSvr,
 		enum.Rpc_svr_accept: OnSvrAcceptConn,
 	}
@@ -190,6 +190,7 @@ LOOP:
 				gamelog.Error("WriteRoutine Flush error: %s", err.Error())
 				break LOOP
 			}
+			//FIXME: 这里能不能加句 sleep(10ms)，让包更易积累，合并发送；不加的话，调度权就完全依赖golang了，其实只要不是写一个包就唤醒一次，问题不大
 			//! block
 			buf := <-self.writeChan
 			if self._WriteFull(buf) != nil {
@@ -252,8 +253,8 @@ func (self *TCPConn) msgDispatcher(msg *common.NetPack) {
 			gamelog.Error("recover msgId:%d\n%v: %s", msgID, r, debug.Stack())
 		}
 	}()
-	if msghandler, ok := G_HandlerMsgMap[msgID]; ok {
-		println("\nTcpMsgId:", msgID, "  len:", msg.Size())
+	if msghandler := G_HandleFunc[msgID]; msghandler != nil {
+		gamelog.Debug("TcpMsgId:%d, len:%d", msgID, msg.Size())
 		self.backBuffer.ResetHead(msg)
 		msghandler(msg, self.backBuffer, self)
 		if self.backBuffer.BodySize() > 0 {
@@ -270,7 +271,7 @@ func (self *TCPConn) msgDispatcher(msg *common.NetPack) {
 // ------------------------------------------------------------
 //! rpc 【非线程安全的】只给Player用
 func (self *TCPConn) CallRpcUnsafe(msgID uint16, sendFun, recvFun func(*common.NetPack)) {
-	if _, ok := G_HandlerMsgMap[msgID]; ok {
+	if G_HandleFunc[msgID] != nil {
 		gamelog.Error("Server and Client have the same Rpc[%d]", msgID)
 		return
 	}
@@ -285,7 +286,7 @@ func (self *TCPConn) CallRpcUnsafe(msgID uint16, sendFun, recvFun func(*common.N
 	}
 }
 func (self *TCPConn) CallRpc(msgID uint16, sendFun, recvFun func(*common.NetPack)) {
-	if _, ok := G_HandlerMsgMap[msgID]; ok {
+	if G_HandleFunc[msgID] != nil {
 		gamelog.Error("Server and Client have the same Rpc[%d]", msgID)
 		return
 	}

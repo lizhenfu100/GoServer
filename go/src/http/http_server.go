@@ -80,11 +80,10 @@ var (
 )
 
 func LoadSvrAddrCsv() {
-	records, err := common.LoadCsv(g_svraddr_path)
+	records, err := common.ReadCsv(g_svraddr_path)
 	if err != nil {
 		return
 	}
-
 	var (
 		module string
 		svrID  int

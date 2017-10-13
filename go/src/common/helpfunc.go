@@ -9,6 +9,7 @@ type KeyPair struct {
 	ID   int
 }
 
+// -------------------------------------
 //! 数组封装
 type (
 	IntLst    []int
@@ -59,3 +60,6 @@ func (self *UInt32Lst) Swap(i, j uint32) {
 	(*self)[i] = (*self)[j]
 	(*self)[j] = temp
 }
+
+// -------------------------------------
+//

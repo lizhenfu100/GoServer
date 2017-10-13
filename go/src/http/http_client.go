@@ -32,7 +32,7 @@ func PostReq(url string, b []byte) []byte {
 		ack.Body.Close()
 		return backBuf
 	} else {
-		gamelog.Error3("PostReq url: %s \r\nerr: %s \r\n", url, err.Error())
+		gamelog.Error("PostReq url: %s \r\nerr: %s \r\n", url, err.Error())
 		return nil
 	}
 }

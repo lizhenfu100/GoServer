@@ -10,7 +10,7 @@
 * @ author zhoumf
 * @ date 2016-6-29
 ***********************************************************************/
-package common
+package timer
 
 import (
 	"gamelog"

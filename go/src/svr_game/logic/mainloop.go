@@ -7,18 +7,13 @@ import (
 )
 
 func MainLoop() {
-	// init func list
-	player.InitSvrMailLst()
-	player.InitService()
-
 	timeNow, timeOld, time_elapse := time.Now().UnixNano()/int64(time.Millisecond), int64(0), 0
 	for {
 		timeOld = timeNow
 		timeNow = time.Now().UnixNano() / int64(time.Millisecond)
 		time_elapse = int(timeNow - timeOld)
 
-		player.G_Service_Write_DB.RunSevice(time_elapse)
-		player.G_Service_Check_AFK.RunSevice(timeNow)
+		player.G_ServiceMgr.RunAllService(time_elapse, timeNow)
 
 		time.Sleep(1000 * time.Millisecond)
 	}

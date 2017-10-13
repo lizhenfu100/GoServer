@@ -1,8 +1,8 @@
-package common
+package service
 
 type ServiceObj struct {
 	pObj  interface{}
-	isReg bool
+	isReg bool //注册或注销对象
 }
 
 // -------------------------------------
@@ -25,7 +25,7 @@ func NewServicePatch(fun func(interface{}), timeAllMsec int) *ServicePatch {
 }
 func (self *ServicePatch) UnRegister(pObj interface{}) { self.writeChan <- ServiceObj{pObj, false} }
 func (self *ServicePatch) Register(pObj interface{})   { self.writeChan <- ServiceObj{pObj, true} }
-func (self *ServicePatch) RunSevice(timelapse int) {
+func (self *ServicePatch) RunSevice(timelapse int, timenow int64) {
 	for {
 		select {
 		case data := <-self.writeChan:
@@ -78,76 +78,5 @@ func (self *ServicePatch) _runSevice(timelapse int) {
 			self.runPos = 0
 		}
 		self.callback(ptr)
-	}
-}
-
-// -------------------------------------
-// --
-type TimePair struct {
-	time int64
-	ptr  interface{}
-}
-type ServiceList struct {
-	callback  func(interface{})
-	runPos    int
-	cdMs      int
-	obj_lst   []TimePair
-	writeChan chan ServiceObj
-}
-
-func NewServiceList(fun func(interface{}), cdMs int) *ServiceList {
-	ptr := new(ServiceList)
-	ptr.cdMs = cdMs
-	ptr.callback = fun
-	ptr.writeChan = make(chan ServiceObj, 64)
-	return ptr
-}
-func (self *ServiceList) UnRegister(pObj interface{}) { self.writeChan <- ServiceObj{pObj, false} }
-func (self *ServiceList) Register(pObj interface{})   { self.writeChan <- ServiceObj{pObj, true} }
-func (self *ServiceList) RunSevice(timenow int64) {
-	for {
-		select {
-		case data := <-self.writeChan:
-			if data.isReg {
-				self._doRegister(data.pObj)
-			} else {
-				self._doUnRegister(data.pObj)
-			}
-		default:
-			self._runSevice(timenow)
-			return
-		}
-	}
-}
-func (self *ServiceList) _doRegister(pObj interface{}) {
-	self.obj_lst = append(self.obj_lst, TimePair{0, pObj})
-}
-func (self *ServiceList) _doUnRegister(pObj interface{}) {
-	for i, it := range self.obj_lst {
-		if it.ptr == pObj {
-			self.obj_lst = append(self.obj_lst[:i], self.obj_lst[i+1:]...)
-			if i < self.runPos {
-				self.runPos--
-			}
-			return
-		}
-	}
-}
-func (self *ServiceList) _runSevice(timenow int64) {
-	for self.runPos != len(self.obj_lst) {
-		it := &self.obj_lst[self.runPos]
-		if it.time <= timenow {
-			runPtr := it.ptr
-			self.callback(it.ptr) //里头可能删掉自己，it指向改变
-			if it.ptr == runPtr {
-				it.time = timenow + int64(self.cdMs)
-			}
-			self.runPos++
-			if self.runPos == len(self.obj_lst) { //到末尾了，回到队头
-				self.runPos = 0
-			}
-		} else {
-			break
-		}
 	}
 }

@@ -5,7 +5,7 @@
 * @ author zhoumf
 * @ date 2017-5-11
 ***********************************************************************/
-package common
+package timer
 
 import (
 	"time"

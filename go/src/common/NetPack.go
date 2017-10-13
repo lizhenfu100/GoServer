@@ -10,13 +10,6 @@ const (
 type NetPack struct {
 	ByteBuffer
 }
-type TRpcCsv struct {
-	Name     string
-	ID       uint16
-	IsClient int //是否Client实现的rpc
-}
-
-var G_RpcCsv []TRpcCsv
 
 func NewNetPackCap(capacity int) *NetPack {
 	pack := new(NetPack)

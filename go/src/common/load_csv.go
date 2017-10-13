@@ -66,17 +66,17 @@ func LoadAllCsv() {
 		fmt.Printf("LoadAllCsv error : %s\n", err.Error())
 	}
 	for _, name := range names {
-		_LoadOneCsv(name)
+		LoadOneCsv(name)
 	}
 }
 func ReloadCsv(csvName string) {
 	name := fmt.Sprintf("%scsv/%s.csv", GetExeDir(), csvName)
-	_LoadOneCsv(name)
+	LoadOneCsv(name)
 }
-func _LoadOneCsv(name string) {
-	records, err := LoadCsv(name)
+func LoadOneCsv(name string) {
+	records, err := ReadCsv(name)
 	if err != nil {
-		fmt.Printf("LoadCsv error : %s\n", err.Error())
+		fmt.Printf("ReadCsv error : %s\n", err.Error())
 		return
 	}
 	if ptr, ok := G_Csv_Map[strings.TrimSuffix(filepath.Base(name), ".csv")]; ok {
@@ -86,6 +86,8 @@ func _LoadOneCsv(name string) {
 	}
 }
 
+// -------------------------------------
+// 反射解析
 func ParseRefCsv(records [][]string, ptr interface{}) {
 	switch reflect.TypeOf(ptr).Elem().Kind() {
 	case reflect.Map:
@@ -245,9 +247,9 @@ func _GetRecordsValidCnt(records [][]string) (ret int) {
 	return ret - 1 //减掉表头那一行
 }
 
-//////////////////////////////////////////////////////////////////////
-//
-func LoadCsv(path string) ([][]string, error) {
+// -------------------------------------
+// 读写csv文件
+func ReadCsv(path string) ([][]string, error) {
 	file, err := os.Open(path)
 	defer file.Close()
 	if err != nil {
@@ -259,7 +261,7 @@ func LoadCsv(path string) ([][]string, error) {
 		return nil, err
 	}
 	if fstate.IsDir() {
-		return nil, errors.New("LoadCsv is dir!")
+		return nil, errors.New("ReadCsv is dir!")
 	}
 
 	csvReader := csv.NewReader(file)

@@ -33,29 +33,34 @@
 package player
 
 import (
-	"common"
+	"common/service"
 	"dbmgo"
 	"gamelog"
 	"sync/atomic"
 	"time"
 )
 
+var (
+	G_ServiceMgr service.ServiceMgr
+)
+
 const (
 	Idle_Max_Second       = 60
 	Reconnect_Wait_Second = 60
+
+	//须与ServiceMgr初始化顺序一致
+	Service_Write_DB  = 0
+	Service_Check_AFK = 1
 )
 
-var (
-	G_Service_Write_DB  *common.ServicePatch
-	G_Service_Check_AFK *common.ServiceList
-)
-
-func InitService() {
-	G_Service_Write_DB = common.NewServicePatch(_WritePlayerToDB, 15*60*1000)
-	G_Service_Check_AFK = common.NewServiceList(_CheckAFK, 1000)
+func init() {
+	G_ServiceMgr = service.ServiceMgr{[]service.IService{
+		service.NewServicePatch(_Service_Write_DB, 15*60*1000),
+		service.NewServiceVec(_Service_Check_AFK, 1000),
+	}}
 }
 
-type MoudleInterface interface {
+type iMoudle interface {
 	InitAndInsert(*TPlayer)
 	LoadFromDB(*TPlayer)
 	WriteToDB()
@@ -71,7 +76,7 @@ type TPlayerBase struct {
 }
 type TPlayer struct {
 	//temp data
-	moudles []MoudleInterface
+	moudles []iMoudle
 	askchan chan func(*TPlayer)
 	isOnlie bool
 	idleSec uint32
@@ -88,7 +93,7 @@ type TPlayer struct {
 func _NewPlayer() *TPlayer {
 	player := new(TPlayer)
 	//! regist
-	player.moudles = []MoudleInterface{
+	player.moudles = []iMoudle{
 		&player.Mail,
 		&player.Friend,
 		&player.Chat,
@@ -138,8 +143,9 @@ func (self *TPlayer) Login() {
 	for _, v := range self.moudles {
 		v.OnLogin()
 	}
-	G_Service_Write_DB.Register(self)
-	G_Service_Check_AFK.Register(self)
+
+	G_ServiceMgr.Register(Service_Write_DB, self)
+	G_ServiceMgr.Register(Service_Check_AFK, self)
 }
 func (self *TPlayer) Logout() {
 	self.isOnlie = false
@@ -149,8 +155,8 @@ func (self *TPlayer) Logout() {
 	}
 	self.ExitTeam()
 
-	G_Service_Write_DB.UnRegister(self)
-	G_Service_Check_AFK.UnRegister(self)
+	G_ServiceMgr.UnRegister(Service_Write_DB, self)
+	G_ServiceMgr.UnRegister(Service_Check_AFK, self)
 
 	//Notice: AfterFunc是在另一线程执行，所以传入函数必须线程安全
 	time.AfterFunc(Reconnect_Wait_Second*time.Second, func() {
@@ -162,12 +168,12 @@ func (self *TPlayer) Logout() {
 		}
 	})
 }
-func _WritePlayerToDB(ptr interface{}) {
+func _Service_Write_DB(ptr interface{}) {
 	if player, ok := ptr.(*TPlayer); ok {
 		player.WriteAllToDB()
 	}
 }
-func _CheckAFK(ptr interface{}) {
+func _Service_Check_AFK(ptr interface{}) {
 	if player, ok := ptr.(*TPlayer); ok && player.isOnlie {
 		atomic.AddUint32(&player.idleSec, 1)
 		if player.idleSec > Idle_Max_Second {

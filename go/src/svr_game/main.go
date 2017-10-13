@@ -8,7 +8,7 @@ import (
 	"netConfig"
 	"strconv"
 
-	_ "generate/rpc/game"
+	_ "generate_out/rpc/game"
 	"svr_game/logic"
 	"svr_game/logic/player"
 )
@@ -25,7 +25,7 @@ func main() {
 	cfg := netConfig.GetNetCfg("db_game", &id)
 	dbmgo.Init(cfg.IP, cfg.TcpPort, cfg.SvrName)
 
-	player.LoadActivePlayerFormDB()
+	player.InitDB()
 
 	//开启控制台窗口，可以接受一些调试命令
 	common.StartConsole()
@@ -61,7 +61,6 @@ func HandCmd_MakeFriends(args []string) bool {
 func InitConf() {
 	common.G_Csv_Map = map[string]interface{}{
 		"conf_net": &netConfig.G_SvrNetCfg,
-		"rpc":      &common.G_RpcCsv,
 	}
 	common.LoadAllCsv()
 

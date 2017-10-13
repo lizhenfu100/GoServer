@@ -5,7 +5,7 @@ import (
 	"conf"
 	"fmt"
 	"gamelog"
-	"generate/rpc/enum"
+	"generate_out/rpc/enum"
 	"netConfig"
 	"svr_file/logic"
 )
@@ -29,7 +29,6 @@ func InitConf() {
 	common.G_Csv_Map = map[string]interface{}{
 		"conf_net": &netConfig.G_SvrNetCfg,
 		"conf_svr": &conf.SvrCsv,
-		"rpc":      &common.G_RpcCsv,
 	}
 	common.LoadAllCsv()
 

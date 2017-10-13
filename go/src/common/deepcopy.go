@@ -5,6 +5,7 @@ import (
 	"reflect"
 )
 
+// reflect.DeepEqual(x, y)
 func deepCopy(dst, src reflect.Value) {
 	switch src.Kind() {
 	case reflect.Interface:
@@ -49,26 +50,21 @@ func deepCopy(dst, src reflect.Value) {
 		dst.Set(src)
 	}
 }
-
 func DeepCopy(dst, src interface{}) {
-	typeDst := reflect.TypeOf(dst)
-	typeSrc := reflect.TypeOf(src)
+	typeDst, typeSrc := reflect.TypeOf(dst), reflect.TypeOf(src)
 	if typeDst != typeSrc {
 		panic("DeepCopy: " + typeDst.String() + " != " + typeSrc.String())
 	}
 	if typeSrc.Kind() != reflect.Ptr {
 		panic("DeepCopy: pass arguments by address")
 	}
-
 	valueDst := reflect.ValueOf(dst).Elem()
 	valueSrc := reflect.ValueOf(src).Elem()
 	if !valueDst.IsValid() || !valueSrc.IsValid() {
 		panic("DeepCopy: invalid arguments")
 	}
-
 	deepCopy(valueDst, valueSrc)
 }
-
 func DeepClone(v interface{}) interface{} {
 	dst := reflect.New(reflect.TypeOf(v)).Elem()
 	deepCopy(dst, reflect.ValueOf(v))

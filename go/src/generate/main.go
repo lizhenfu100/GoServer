@@ -8,7 +8,7 @@ import (
 
 const (
 	K_SvrDir = "../src/svr_"
-	K_OutDir = "../src/generate/rpc/"
+	K_OutDir = "../src/generate_out/rpc/"
 )
 
 func main() {
