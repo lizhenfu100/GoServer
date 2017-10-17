@@ -1,3 +1,19 @@
+/***********************************************************************
+* @ 生成 rpc enum
+* @ brief
+	1、“生成rpc注册代码”，记录途中提取到的Rpc函数名
+
+	2、解析 generate_out/rpc/enum/generate_rpc_enum.go，得到 Rpc 枚举表
+
+	3、遍历Rpc函数名，同枚举比对，有新函数时才追加枚举，保障兼容性、编译友好性
+
+* @ 手动指定枚举顺序
+	、编辑 generate_rpc_enum.go 删除尾部其它枚举，再次生成即可
+	、开头几个 Rpc 是系统保留的，供底层使用，不要删除
+
+* @ author zhoumf
+* @ date 2017-10-17
+***********************************************************************/
 package main
 
 import (
@@ -11,6 +27,8 @@ import (
 const (
 	K_EnumOutDir     = K_OutDir + "enum/"
 	K_EnumFileName   = "generate_rpc_enum"
+	K_EnumOutDir_C   = "../../CXServer/src/common/enum/"
+	K_EnumOutDir_CS  = "../../GameClient/Assets/RGScript/generate/"
 	K_RpcFuncFile_C  = "../../CXServer/src/rpc/RpcEnum.h"
 	K_RpcFuncFile_CS = "../../GameClient/Assets/RGScript/Net/Player/Player.cs"
 )
@@ -78,10 +96,16 @@ func generatRpcEnum() {
 
 	collectOldEnum() //当前枚举，将新增RpcFunc加入后重新生成
 
+	haveNewRpc := false
 	for _, name := range g_rpc_func {
 		if isNewRpc(name) {
 			g_rpc_enum = append(g_rpc_enum, TRpcEunm{Name: name})
+			haveNewRpc = true
 		}
+	}
+	if !haveNewRpc { //没有新rpc，就不改动文件了，编译更友好
+		print("no new rpc, don't change enum.h\n")
+		return
 	}
 	g_rpc_enum = append(g_rpc_enum, TRpcEunm{"RpcEnumCnt", uint16(len(g_rpc_enum)) + 1})
 
@@ -181,12 +205,11 @@ func makeEnumFile_C(data interface{}) {
 		panic(err.Error())
 		return
 	}
-	dir := K_EnumOutDir + "cpp/"
-	if err = os.MkdirAll(dir, 0777); err != nil {
+	if err = os.MkdirAll(K_EnumOutDir_C, 0777); err != nil {
 		panic(err.Error())
 		return
 	}
-	f, err := os.OpenFile(dir+filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	f, err := os.OpenFile(K_EnumOutDir_C+filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		panic(err.Error())
 		return
@@ -218,12 +241,11 @@ func makeEnumFile_CSharp(data interface{}) {
 		panic(err.Error())
 		return
 	}
-	dir := K_EnumOutDir + "cs/"
-	if err = os.MkdirAll(dir, 0777); err != nil {
+	if err = os.MkdirAll(K_EnumOutDir_CS, 0777); err != nil {
 		panic(err.Error())
 		return
 	}
-	f, err := os.OpenFile(dir+filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	f, err := os.OpenFile(K_EnumOutDir_CS+filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		panic(err.Error())
 		return
