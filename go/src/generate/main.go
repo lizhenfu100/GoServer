@@ -12,12 +12,22 @@ const (
 )
 
 func main() {
+	ptr := generatRpcRegist("center")
+	collectRpc_Go(ptr)
+	ptr = generatRpcRegist("cross")
+	collectRpc_Go(ptr)
+	ptr = generatRpcRegist("game")
+	collectRpc_Go(ptr)
+	ptr = generatRpcRegist("login")
+	collectRpc_Go(ptr)
+	ptr = generatRpcRegist("sdk")
+	collectRpc_Go(ptr)
+	ptr = generatRpcRegist("file")
+	collectRpc_Go(ptr)
+
+	collectRpc_C()
+	collectRpc_CSharp()
 	generatRpcEnum()
-	generatRpcRegist("center")
-	generatRpcRegist("cross")
-	generatRpcRegist("game")
-	generatRpcRegist("login")
-	generatRpcRegist("sdk")
 
 	if r := recover(); r != nil {
 		fmt.Printf("%v: %s", r, debug.Stack())

@@ -26,7 +26,7 @@ type RpcInfo struct {
 	HttpHandle    []Func
 }
 
-func generatRpcRegist(svr string) {
+func generatRpcRegist(svr string) *RpcInfo {
 	names, _ := common.WalkDir(K_SvrDir+svr, ".go")
 	pinfo := &RpcInfo{Svr: svr, Moudles: make(map[string]bool)}
 	for _, v := range names {
@@ -51,6 +51,7 @@ func generatRpcRegist(svr string) {
 		})
 	}
 	pinfo.makeFile(svr)
+	return pinfo
 }
 
 // -------------------------------------

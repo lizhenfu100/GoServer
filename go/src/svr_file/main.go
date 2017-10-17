@@ -5,9 +5,10 @@ import (
 	"conf"
 	"fmt"
 	"gamelog"
-	"generate_out/rpc/enum"
 	"netConfig"
 	"svr_file/logic"
+
+	_ "generate_out/rpc/file"
 )
 
 func main() {
@@ -40,9 +41,5 @@ func InitConf() {
 	netConfig.RegHttpHandler(map[string]netConfig.HttpHandle{
 		"":       logic.Rpc_file_download,
 		"upload": logic.Rpc_file_upload,
-	})
-	netConfig.RegHttpRpc(map[uint16]netConfig.HttpRpc{
-		//! Client
-		enum.Rpc_file_update_list: logic.Rpc_file_update_list,
 	})
 }

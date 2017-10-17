@@ -1,11 +1,12 @@
 package safe
 
 import (
+	"common"
 	"sync"
 )
 
 type BlockList struct {
-	list  []*NetPack
+	list  []*common.NetPack
 	mutex sync.Mutex
 	cond  *sync.Cond
 }
@@ -15,13 +16,13 @@ func NewBlockList() *BlockList {
 	self.cond = sync.NewCond(&self.mutex)
 	return self
 }
-func (self *BlockList) Add(p *NetPack) {
+func (self *BlockList) Add(p *common.NetPack) {
 	self.mutex.Lock()
 	self.list = append(self.list, p)
 	self.mutex.Unlock()
 	self.cond.Signal()
 }
-func (self *BlockList) Del(p *NetPack) {
+func (self *BlockList) Del(p *common.NetPack) {
 	self.mutex.Lock()
 	defer self.mutex.Unlock()
 	for i, v := range self.list {
@@ -31,7 +32,7 @@ func (self *BlockList) Del(p *NetPack) {
 		}
 	}
 }
-func (self *BlockList) MoveToStack(list *[]*NetPack) {
+func (self *BlockList) MoveToStack(list *[]*common.NetPack) {
 	self.mutex.Lock()
 	for len(self.list) == 0 {
 		self.cond.Wait()

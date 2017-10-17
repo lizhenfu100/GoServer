@@ -4,37 +4,96 @@ import (
 	"bytes"
 	"common"
 	"os"
+	"regexp"
 	"text/template"
 )
 
 const (
-	K_EnumOutDir   = K_OutDir + "enum/"
-	K_EnumFileName = "generate_rpc_enum"
+	K_EnumOutDir     = K_OutDir + "enum/"
+	K_EnumFileName   = "generate_rpc_enum"
+	K_RpcFuncFile_C  = "../../CXServer/src/rpc/RpcEnum.h"
+	K_RpcFuncFile_CS = "../../GameClient/Assets/RGScript/Net/Player/Player.cs"
 )
 
-type TRpcCsv struct {
-	Name     string
-	ID       uint16
-	IsClient int //是否Client实现的rpc
+type TRpcEunm struct {
+	Name string
+	ID   uint16
 }
 
-func generatRpcEnum() {
-	var rpcList []TRpcCsv
-	common.G_Csv_Map = map[string]interface{}{
-		"rpc": &rpcList,
+// -------------------------------------
+// 收集各处的 Rpc 函数名，小写开头
+var (
+	g_rpc_enum []TRpcEunm
+	g_rpc_func []string
+)
+
+func collectRpc_Go(info *RpcInfo) {
+	for _, v := range info.TcpRpc {
+		g_rpc_func = append(g_rpc_func, "r"+v.Name[1:])
 	}
-	common.LoadAllCsv()
-	rpcList = append(rpcList, TRpcCsv{"rpc_enum_cnt", uint16(len(rpcList))+1, 1})
+	for _, v := range info.HttpRpc {
+		g_rpc_func = append(g_rpc_func, "r"+v.Name[1:])
+	}
+	for _, v := range info.HttpPlayerRpc {
+		g_rpc_func = append(g_rpc_func, "r"+v.Name[1:])
+	}
+}
+func collectRpc_C() {
+	reg := regexp.MustCompile(`rpc_\w+`)
+	common.ReadLine(K_RpcFuncFile_C, func(line string) {
+		if result := reg.FindAllString(line, -1); result != nil {
+			g_rpc_func = append(g_rpc_func, result[0])
+		}
+	})
+}
+func collectRpc_CSharp() {
+	reg := regexp.MustCompile(`rpc_\w+`)
+	common.ReadLine(K_RpcFuncFile_CS, func(line string) {
+		if ok, _ := regexp.MatchString(`^public void rpc_.+`, line); ok {
+			g_rpc_func = append(g_rpc_func, reg.FindAllString(line, -1)[0])
+		}
+	})
+}
+func collectOldEnum() {
+	reg := regexp.MustCompile(`Rpc_\w+`)
+	common.ReadLine(K_EnumOutDir+K_EnumFileName+".go", func(line string) {
+		if result := reg.FindAllString(line, -1); result != nil {
+			rpcname := "r" + result[0][1:]
+			g_rpc_enum = append(g_rpc_enum, TRpcEunm{Name: rpcname})
+		}
+	})
+}
+func isNewRpc(name string) bool { //新名字的rpc才生成枚举
+	for _, v := range g_rpc_enum {
+		if v.Name == name {
+			return false
+		}
+	}
+	return true
+}
+
+// -------------------------------------
+// 生成枚举代码
+func generatRpcEnum() {
+
+	collectOldEnum() //当前枚举，将新增RpcFunc加入后重新生成
+
+	for _, name := range g_rpc_func {
+		if isNewRpc(name) {
+			g_rpc_enum = append(g_rpc_enum, TRpcEunm{Name: name})
+		}
+	}
+	g_rpc_enum = append(g_rpc_enum, TRpcEunm{"RpcEnumCnt", uint16(len(g_rpc_enum)) + 1})
 
 	autoIncId := uint16(1)
-	for i := 0; i < len(rpcList); i++ {
-		csv := &rpcList[i]
+	for i := 0; i < len(g_rpc_enum); i++ {
+		csv := &g_rpc_enum[i]
 		csv.ID = autoIncId
 		autoIncId++
 	}
-	makeEnumFile_C(rpcList)
-	makeEnumFile_Go(rpcList)
-	makeEnumFile_CSharp(rpcList)
+	makeEnumFile_C(g_rpc_enum)
+	makeEnumFile_Go(g_rpc_enum)
+	makeEnumFile_CSharp(g_rpc_enum)
 }
 
 // -------------------------------------
@@ -95,13 +154,13 @@ enum RpcEnum:uint16 {
 };
 inline const char* RpcIdToName(int id) {
 #ifdef _DEBUG
-    static std::map<int, const char*> g_rpc_name;
-    if (g_rpc_name.empty()) {
+    static std::map<int, const char*> g_rpc_func;
+    if (g_rpc_func.empty()) {
 #undef _Declare
-#define _Declare(k, v) g_rpc_name[v] = #k;
+#define _Declare(k, v) g_rpc_func[v] = #k;
         Rpc_Enum
     }
-    return g_rpc_name[id];
+    return g_rpc_func[id];
 #else
     static char str[16];
     sprintf(str, "%d", id);

@@ -4,8 +4,7 @@ import (
 	"common"
 	"dbmgo"
 	"time"
-
-	"gopkg.in/mgo.v2/bson"
+	//"gopkg.in/mgo.v2/bson"
 )
 
 const (
@@ -52,10 +51,9 @@ func (self *TMailMoudle) WriteToDB() { dbmgo.UpdateSync("Mail", self.PlayerID, s
 func (self *TMailMoudle) OnLogin() {
 	// 删除过期已读邮件
 	timenow := time.Now().Unix()
-	for i := 0; i < len(self.MailLst); i++ {
+	for i := len(self.MailLst) - 1; i >= 0; i-- { //倒过来遍历，删除就安全的
 		if self.MailLst[i].IsRead == 1 && timenow >= self.MailLst[i].Time+Read_Mail_Delete_Time {
 			self.MailLst = append(self.MailLst[:i], self.MailLst[i+1:]...)
-			i--
 		}
 	}
 	self.clientMailId = 0
@@ -69,31 +67,17 @@ func (self *TMailMoudle) CreateMail(title, from, content string, items ...common
 	id := dbmgo.GetNextIncId("MailId")
 	pMail := &TMail{id, time.Now().Unix(), title, from, content, 0, items}
 	self.MailLst = append(self.MailLst, *pMail)
-	dbmgo.UpdateToDB("Mail", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"maillst": pMail}})
+	//dbmgo.UpdateToDB("Mail", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"maillst": pMail}})
 	return pMail
 }
-func (self *TMailMoudle) DelMail(id uint32) {
-	for i := 0; i < len(self.MailLst); i++ {
-		mail := &self.MailLst[i]
-		if mail.ID == id {
-			if mail.IsRead == 0 && len(mail.Items) > 0 {
-				//TODO: 给奖励
-			}
-			self.MailLst = append(self.MailLst[:i], self.MailLst[i+1:]...)
-			dbmgo.UpdateToDB("Mail", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
-				"maillst": bson.M{"id": id}}})
-			return
-		}
-	}
-}
 func (self *TMailMoudle) DelMailRead() {
-	for i := 0; i < len(self.MailLst); i++ {
+	for i := len(self.MailLst) - 1; i >= 0; i-- { //倒过来遍历，删除就安全的
 		if self.MailLst[i].IsRead == 1 {
 			self.MailLst = append(self.MailLst[:i], self.MailLst[i+1:]...)
 		}
 	}
-	dbmgo.UpdateToDB("Mail", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
-		"maillst": bson.M{"isread": 1}}})
+	//dbmgo.UpdateToDB("Mail", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
+	//	"maillst": bson.M{"isread": 1}}})
 }
 
 // -------------------------------------
@@ -149,20 +133,19 @@ func (self *TMailMoudle) DataToBuf(buf *common.NetPack, pos int) {
 // -------------------------------------
 //! rpc
 func Rpc_game_get_mail(req, ack *common.NetPack, ptr interface{}) {
-	self := ptr.(*TPlayer)
-	pos := 0 //pos := self.Mail.GetNoSendIdx()
-	if pos >= 0 {
+	self := ptr.(*TPlayer).Mail
+	if pos := self.GetNoSendIdx(); pos >= 0 {
 		ack.WriteInt8(1)
-		self.Mail.DataToBuf(ack, pos)
+		self.DataToBuf(ack, pos)
 	} else {
 		ack.WriteInt8(-1)
 	}
 }
 func Rpc_game_read_mail(req, ack *common.NetPack, ptr interface{}) {
-	self := ptr.(*TPlayer)
+	self := ptr.(*TPlayer).Mail
 	id := req.ReadUInt32()
-	for i := 0; i < len(self.Mail.MailLst); i++ {
-		mail := &self.Mail.MailLst[i]
+	for i := 0; i < len(self.MailLst); i++ {
+		mail := &self.MailLst[i]
 		if mail.ID == id && len(mail.Items) == 0 {
 			mail.IsRead = 1
 			return
@@ -170,15 +153,24 @@ func Rpc_game_read_mail(req, ack *common.NetPack, ptr interface{}) {
 	}
 }
 func Rpc_game_del_mail(req, ack *common.NetPack, ptr interface{}) {
-	self := ptr.(*TPlayer)
+	self := ptr.(*TPlayer).Mail
 	id := req.ReadUInt32()
-	self.Mail.DelMail(id)
+	for i := len(self.MailLst) - 1; i >= 0; i-- { //倒过来遍历，删除就安全的
+		mail := &self.MailLst[i]
+		if mail.ID == id {
+			if mail.IsRead == 0 && len(mail.Items) > 0 {
+				//TODO: 给奖励
+			}
+			self.MailLst = append(self.MailLst[:i], self.MailLst[i+1:]...)
+			return
+		}
+	}
 }
 func Rpc_game_take_mail_item(req, ack *common.NetPack, ptr interface{}) {
-	self := ptr.(*TPlayer)
+	self := ptr.(*TPlayer).Mail
 	id := req.ReadUInt32()
-	for i := 0; i < len(self.Mail.MailLst); i++ {
-		mail := &self.Mail.MailLst[i]
+	for i := 0; i < len(self.MailLst); i++ {
+		mail := &self.MailLst[i]
 		if mail.ID == id && len(mail.Items) > 0 {
 			mail.IsRead = 1
 			//TODO: 给奖励
@@ -187,15 +179,14 @@ func Rpc_game_take_mail_item(req, ack *common.NetPack, ptr interface{}) {
 	}
 }
 func Rpc_game_take_all_mail_item(req, ack *common.NetPack, ptr interface{}) {
-	self := ptr.(*TPlayer)
+	self := ptr.(*TPlayer).Mail
 	//self.Mail.CreateMail(0, "测试", "zhoumf", "content")
-	for i := 0; i < len(self.Mail.MailLst); i++ {
-		mail := &self.Mail.MailLst[i]
+	for i := len(self.MailLst) - 1; i >= 0; i-- { //倒过来遍历，删除就安全的
+		mail := &self.MailLst[i]
 		if len(mail.Items) > 0 {
 			//TODO: 给奖励
-			self.Mail.MailLst = append(self.Mail.MailLst[:i], self.Mail.MailLst[i+1:]...)
-			i--
+			self.MailLst = append(self.MailLst[:i], self.MailLst[i+1:]...)
 		}
 	}
-	self.Mail.DataToBuf(ack, 0)
+	self.DataToBuf(ack, 0)
 }

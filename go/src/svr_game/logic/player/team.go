@@ -10,7 +10,7 @@ type TeamData struct {
 	lst      []*TPlayer
 	isChange bool
 	chatLst  []TeamChat
-	chatPos  map[uint32]int //要发给client的索引位
+	chatPos  map[uint32]int //要发给pid的索引位
 }
 type TeamChat struct {
 	pid  uint32
@@ -48,7 +48,7 @@ func Rpc_game_get_team_info(req, ack *common.NetPack, ptr interface{}) {
 		}
 	}
 }
-func Rpc_game_invite_friend(req, ack *common.NetPack, ptr interface{}) { //邀请别人
+func Rpc_game_invite_friend(req, ack *common.NetPack, ptr interface{}) {
 	self := ptr.(*TPlayer)
 	if self.pTeam == nil {
 		return
@@ -58,7 +58,7 @@ func Rpc_game_invite_friend(req, ack *common.NetPack, ptr interface{}) { //邀�
 		dest.Friend.BeInvitedBy(self)
 	})
 }
-func Rpc_game_agree_join_team(req, ack *common.NetPack, ptr interface{}) { //同意加队
+func Rpc_game_agree_join_team(req, ack *common.NetPack, ptr interface{}) {
 	self := ptr.(*TPlayer)
 	if self.pTeam != nil {
 		return
@@ -94,11 +94,10 @@ func (self *TPlayer) _ExitFromMyTeam(destPid uint32) {
 	if self.pTeam == nil {
 		return
 	}
-	for i := 0; i < len(self.pTeam.lst); i++ {
+	for i := len(self.pTeam.lst) - 1; i >= 0; i-- { //倒过来遍历，删除就安全的
 		ptr := self.pTeam.lst[i]
 		if ptr.PlayerID == destPid {
 			self.pTeam.lst = append(self.pTeam.lst[:i], self.pTeam.lst[i+1:]...)
-			i--
 		} else {
 			ptr.AsyncNotify(func(p *TPlayer) { // 广播给其它队友
 				if p.pTeam != nil {

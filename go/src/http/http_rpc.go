@@ -23,8 +23,8 @@ const (
 )
 
 var (
-	G_HandleFunc       [enum.Rpc_enum_cnt]func(req, ack *common.NetPack)
-	G_PlayerHandleFunc [enum.Rpc_enum_cnt]func(req, ack *common.NetPack, p interface{})
+	G_HandleFunc       [enum.RpcEnumCnt]func(req, ack *common.NetPack)
+	G_PlayerHandleFunc [enum.RpcEnumCnt]func(req, ack *common.NetPack, p interface{})
 
 	//! 需要主动发给玩家的数据，每回通信时捎带过去
 	G_Before_Recv_Player func(uint32) interface{}

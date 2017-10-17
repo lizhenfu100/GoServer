@@ -4,8 +4,7 @@ import (
 	"common"
 	"dbmgo"
 	"fmt"
-
-	"gopkg.in/mgo.v2/bson"
+	// "gopkg.in/mgo.v2/bson"
 )
 
 type TFriendMoudle struct {
@@ -92,7 +91,7 @@ func (self *TFriendMoudle) RecvApply(pid uint32, name string) int8 {
 	}
 	data := TFriend{pid, name}
 	self.ApplyLst = append(self.ApplyLst, data)
-	dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"applylst": data}})
+	//dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"applylst": data}})
 	return 0
 }
 func (self *TFriendMoudle) Agree(pid uint32) {
@@ -103,8 +102,8 @@ func (self *TFriendMoudle) Agree(pid uint32) {
 	ptr := &self.ApplyLst[i]
 
 	if self.AddFriend(ptr.ID, ptr.Name) >= 0 {
-		dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
-			"applylst": bson.M{"id": ptr.ID}}})
+		//dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
+		//	"applylst": bson.M{"id": ptr.ID}}})
 	}
 	self.ApplyLst = append(self.ApplyLst[:i], self.ApplyLst[i+1:]...)
 
@@ -117,9 +116,9 @@ func (self *TFriendMoudle) Refuse(pid uint32) {
 	if i < 0 {
 		return
 	}
-	ptr := &self.ApplyLst[i]
-	dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
-		"applylst": bson.M{"id": ptr.ID}}})
+	//ptr := &self.ApplyLst[i]
+	//dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
+	//	"applylst": bson.M{"id": ptr.ID}}})
 	self.ApplyLst = append(self.ApplyLst[:i], self.ApplyLst[i+1:]...)
 }
 func (self *TFriendMoudle) AddFriend(pid uint32, name string) int8 {
@@ -128,14 +127,14 @@ func (self *TFriendMoudle) AddFriend(pid uint32, name string) int8 {
 	}
 	data := TFriend{pid, name}
 	self.FriendLst = append(self.FriendLst, data)
-	dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"friendlst": data}})
+	//dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"friendlst": data}})
 	return 0
 }
 func (self *TFriendMoudle) DelFriend(pid uint32) {
 	if i := self.InFriendLst(pid); i >= 0 {
-		ptr := &self.FriendLst[i]
-		dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
-			"friendlst": bson.M{"id": ptr.ID}}})
+		//ptr := &self.FriendLst[i]
+		//dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
+		//	"friendlst": bson.M{"id": ptr.ID}}})
 		self.FriendLst = append(self.FriendLst[:i], self.FriendLst[i+1:]...)
 	}
 }

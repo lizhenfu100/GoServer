@@ -73,7 +73,7 @@ const (
 )
 
 var (
-	G_HandleFunc = [enum.Rpc_enum_cnt]func(*common.NetPack, *common.NetPack, *TCPConn){
+	G_HandleFunc = [enum.RpcEnumCnt]func(*common.NetPack, *common.NetPack, *TCPConn){
 		enum.Rpc_regist:     DoRegistToSvr,
 		enum.Rpc_svr_accept: OnSvrAcceptConn,
 	}
