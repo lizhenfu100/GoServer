@@ -2,6 +2,7 @@ package tcp
 
 import (
 	"common"
+	"common/net/meta"
 	"encoding/binary"
 	"fmt"
 	"generate_out/rpc/enum"
@@ -16,26 +17,27 @@ type TCPClient struct {
 	OnConnect func(*TCPConn)
 }
 
-func (self *TCPClient) ConnectToSvr(addr, srcModule string, srcID int) {
+func Addr(ip string, port uint16) string { return fmt.Sprintf("%s:%d", ip, port) }
+
+func (self *TCPClient) ConnectToSvr(addr string, meta *meta.Meta) {
 	self.addr = addr
-	go self.connectRoutine(srcModule, srcID) //会断线后自动重连
+	go self.connectRoutine(meta) //会断线后自动重连
 }
-func (self *TCPClient) connectRoutine(srcModule string, srcID int) {
+func (self *TCPClient) connectRoutine(meta *meta.Meta) {
 	regMsg := common.NewNetPackCap(32)
 	regMsg.SetOpCode(enum.Rpc_regist)
-	regMsg.WriteString(srcModule)
-	regMsg.WriteInt(srcID)
+	meta.DataToBuf(regMsg)
 	for {
 		if self.connect() {
+			//Notice: 这里不能用CallRpc，非线程安全的
+			firstMsg := make([]byte, 2+4) //tcp层的包，头两个字节是长度
+			binary.LittleEndian.PutUint32(firstMsg[2:], self.connId)
+			self.TcpConn.WriteBuf(firstMsg)
+			self.TcpConn.WriteMsg(regMsg)
 			if self.OnConnect != nil {
 				self.OnConnect(self.TcpConn)
 			}
 			go self.TcpConn.readRoutine()
-			//Notice: 这里不能用CallRpc，非线程安全的
-			firstMsg := make([]byte, 2+4)
-			binary.LittleEndian.PutUint32(firstMsg[2:], self.connId) //上报connId
-			self.TcpConn.WriteBuf(firstMsg)
-			self.TcpConn.WriteMsg(regMsg)
 			self.TcpConn.writeRoutine() //goroutine会阻塞在这里
 		}
 		time.Sleep(3 * time.Second)

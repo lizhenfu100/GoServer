@@ -11,9 +11,9 @@
 	3、唯一的支付SDK、唯一的账号服
 	4、唯一的Center，其它进程需在Center注册，管理后台所有进程
 
-* @ reboot
+* @ rebot
 	1、【1-1】关系中的"client"重启：game每次均会连接battle
-	2、【1-1】关系中的"server"重启：battle(tcp)重启，game的client.ConnectToSvr能检查到失败，循环重连
+	2、【1-1】关系中的"server"重启：cross(tcp)重启，game的TCPClient.connectRoutine能检查到失败，循环重连
 	3、【1-N】关系中的"N"重启：game每次均会去sdk注册
 	4、【1-N】关系中的"1"重启：http_server.go会本地存储注册地址，重启时载入
 
@@ -24,145 +24,71 @@ package netConfig
 
 import (
 	"common"
+	"common/net/meta"
 	"fmt"
 	"http"
-	"strconv"
 	"tcp"
 )
 
-// Notice：临时新增battle
-// 1、先增加battle的配置（见注释）
-// 2、执行bin/temp_svr.bat，在命令行输入"addsvrto 3"，通知game(http)来连接
-type TNetConfig struct {
-	Module     string
-	SvrID      int
-	SvrName    string
-	IP         string // 内部局域网IP
-	OutIP      string
-	TcpPort    int
-	HttpPort   int
-	Maxconn    int
-	ConnectLst []string // 待连接的模块名
-}
-
-var G_SvrNetCfg []TNetConfig = nil //见配表conf_net.csv
-
-func GetNetCfg(module string, pSvrID *int) *TNetConfig { //负ID表示自动找首个
-	for i := 0; i < len(G_SvrNetCfg); i++ {
-		cfg := &G_SvrNetCfg[i]
-		if cfg.Module == module && (*pSvrID < 0 || cfg.SvrID == *pSvrID) {
-			*pSvrID = cfg.SvrID
-			return cfg
-		}
-	}
-	print(fmt.Sprintf("{%s %d}: have none SvrNetCfg!!!\n", module, *pSvrID))
-	return nil
-}
-func GetIpPort(module string, id int) (ip string, port uint16) {
-	if cfg := GetNetCfg(module, &id); cfg != nil {
-		if cfg.HttpPort > 0 {
-			port = uint16(cfg.HttpPort)
-		} else {
-			port = uint16(cfg.TcpPort)
-		}
-		ip = cfg.IP
-	}
-	return
-}
-func GetLocalNetCfg() *TNetConfig { return GetNetCfg(G_Local_Module, &G_Local_SvrID) }
-
 var (
-	G_Cfg_Remote_TcpConn = make(map[common.KeyPair]*tcp.TCPClient) //本模块，对其它模块的tcp连接
-	G_Local_Module       string
-	G_Local_SvrID        int
+	G_Local_Meta   *meta.Meta
+	G_Client_Conns = make(map[common.KeyPair]*tcp.TCPClient) //本模块，对其它模块的tcp连接
 )
 
 func CreateNetSvr(module string, svrID int) bool {
 	//1、找到当前的配置信息
-	selfCfg := GetNetCfg(module, &svrID)
-	if selfCfg == nil {
+	G_Local_Meta = meta.GetMeta(module, svrID)
+	if G_Local_Meta == nil {
 		return false
 	}
 
-	G_Local_Module = module
-	G_Local_SvrID = svrID
-
 	//2、连接/注册其它模块
-	for _, destModule := range selfCfg.ConnectLst {
-		for i := 0; i < len(G_SvrNetCfg); i++ {
-			destCfg := &G_SvrNetCfg[i]
-			if destCfg.Module == destModule {
-				if destCfg.HttpPort > 0 {
-					http.RegistToSvr(
-						fmt.Sprintf("http://%s:%d/", destCfg.IP, destCfg.HttpPort),
-						fmt.Sprintf("http://%s:%d/", selfCfg.IP, selfCfg.HttpPort),
-						module,
-						selfCfg.SvrID)
-				} else if destCfg.TcpPort > 0 {
-					client := new(tcp.TCPClient)
-					client.ConnectToSvr(
-						fmt.Sprintf("%s:%d", destCfg.IP, destCfg.TcpPort),
-						module,
-						selfCfg.SvrID)
-					//Notice：client.ConnectToSvr是异步过程，这里返回的client.TcpConn还是空指针，不能保存*tcp.TCPConn
-					G_Cfg_Remote_TcpConn[common.KeyPair{destCfg.Module, destCfg.SvrID}] = client
-				} else {
-					fmt.Println(destCfg.Module + ": have none HttpPort|TcpPort!!!")
+	if nil == meta.GetMeta("zookeeper", -1) { //没有zookeeper节点，才依赖配置，否则依赖zookeeper的通知
+		for _, destModule := range G_Local_Meta.ConnectLst {
+			for i := 0; i < len(meta.G_SvrNets); i++ {
+				destCfg := &meta.G_SvrNets[i]
+				if destCfg.Module == destModule {
+					if destCfg.HttpPort > 0 {
+						http.RegistToSvr(
+							http.Addr(destCfg.IP, destCfg.HttpPort),
+							G_Local_Meta)
+					} else if destCfg.TcpPort > 0 {
+						client := new(tcp.TCPClient)
+						client.ConnectToSvr(
+							tcp.Addr(destCfg.IP, destCfg.TcpPort),
+							G_Local_Meta)
+						//Notice：client.ConnectToSvr是异步过程，这里返回的client.TcpConn还是空指针，不能保存*tcp.TCPConn
+						G_Client_Conns[common.KeyPair{destCfg.Module, destCfg.SvrID}] = client
+					} else {
+						fmt.Println(destCfg.Module + ": have none HttpPort|TcpPort!!!")
+					}
 				}
 			}
 		}
 	}
 
 	//3、开启本模块网络服务(Busy Loop)
-	if selfCfg.HttpPort > 0 {
-		http.NewHttpServer(":" + strconv.Itoa(selfCfg.HttpPort))
-	} else if selfCfg.TcpPort > 0 {
-		tcp.NewTcpServer(":"+strconv.Itoa(selfCfg.TcpPort), selfCfg.Maxconn)
+	if G_Local_Meta.HttpPort > 0 {
+		http.NewHttpServer(fmt.Sprintf(":%d", G_Local_Meta.HttpPort))
+	} else if G_Local_Meta.TcpPort > 0 {
+		tcp.NewTcpServer(fmt.Sprintf(":%d", G_Local_Meta.TcpPort), G_Local_Meta.Maxconn)
 	} else {
 		fmt.Println(module + ": have none HttpPort|TcpPort!!!")
+		return false
 	}
 	return true
 }
 
-func GetHttpAddr(destModule string, destSvrID int) string { //Notice：应用层cache住结果，避免每次都查找
-	if destCfg := GetNetCfg(destModule, &destSvrID); destCfg != nil {
-		selfCfg := GetLocalNetCfg()
-		for _, v := range selfCfg.ConnectLst {
-			if v == destModule && destCfg.HttpPort > 0 {
-				// game(n) - sdk(1)
-				return fmt.Sprintf("http://%s:%d/", destCfg.IP, destCfg.HttpPort)
-			}
-		}
-	} else {
-		return ""
-	}
-	// sdk(1) - game(n)
-	return http.FindRegModuleAddr(destModule, destSvrID)
-}
-func GetTcpConn(destModule string, destSvrID int) *tcp.TCPConn { //Notice：应用层cache住结果，避免每次都查找
-	if destCfg := GetNetCfg(destModule, &destSvrID); destCfg != nil {
-		selfCfg := GetLocalNetCfg()
-		for _, v := range selfCfg.ConnectLst {
-			if v == destModule {
-				// game(c) - cross(s)
-				return G_Cfg_Remote_TcpConn[common.KeyPair{destModule, destSvrID}].TcpConn
-			}
-		}
-	} else {
-		return nil
+//Notice：应用层cache住结果，避免每次都查找
+func GetTcpConn(module string, svrId int) *tcp.TCPConn {
+	if v, ok := G_Client_Conns[common.KeyPair{module, svrId}]; ok {
+		// game(c) - cross(s)
+		return v.TcpConn
 	}
 	// cross(s) - game(c)
-	return tcp.FindRegModuleConn(destModule, destSvrID)
+	return tcp.FindRegModuleConn(module, svrId)
 }
-func GetRegModuleIDs(module string) (ret []int) {
-	selfCfg := GetLocalNetCfg()
-	if selfCfg.HttpPort > 0 {
-		return http.GetRegModuleIDs(module)
-	} else {
-		return tcp.GetRegModuleIDs(module)
-	}
+func GetHttpAddr(module string, svrId int) string {
+	pMeta := meta.GetMeta(module, svrId)
+	return http.Addr(pMeta.IP, pMeta.HttpPort)
 }
-
-// 已验证：此函数失败，resp是nil，那resp.Body.Close()就不能无脑调了
-// resp, err := http.Post(url, "text/HTML", bytes.NewReader(b))
-// resp.Body.Close()

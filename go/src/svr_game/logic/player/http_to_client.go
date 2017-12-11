@@ -43,10 +43,12 @@ func BeforeRecvNetMsg(pid uint32) interface{} {
 func AfterRecvNetMsg(ptr interface{}, buf *common.NetPack) {
 	self := ptr.(*TPlayer)
 	pid := self.PlayerID
-	bit, bitPosInBody := uint32(0), buf.BodySize()
+
 	//! 先写位标记
 	buf.WriteUInt8(0xFF)
+	bit, bitPosInBody := uint32(0), buf.BodySize()
 	buf.WriteUInt32(bit)
+
 	//! 再写数据块
 	if pos := self.Mail.GetNoSendIdx(); pos >= 0 {
 		common.SetBit32(&bit, Bit_Mail_Lst, true)

@@ -85,15 +85,16 @@ var (
 )
 
 type TCPConn struct {
-	conn       net.Conn
-	reader     *bufio.Reader //包装conn减少conn.Read的io次数，见【common\net.go】
-	writer     *bufio.Writer
-	writeChan  chan []byte
-	isClose    bool //isClose标记仅在ResetConn、Close中设置，其它地方只读
-	onNetClose func(*TCPConn)
-	UserPtr    interface{}
-	sendBuffer *common.NetPack //for rpc
-	backBuffer *common.NetPack
+	conn         net.Conn
+	reader       *bufio.Reader //包装conn减少conn.Read的io次数，见【common\net.go】
+	writer       *bufio.Writer
+	writeChan    chan []byte
+	isClose      bool //isClose标记仅在ResetConn、Close中设置，其它地方只读
+	isWriteClose bool
+	onNetClose   func(*TCPConn)
+	UserPtr      interface{}
+	sendBuffer   *common.NetPack //for rpc
+	backBuffer   *common.NetPack
 }
 
 func newTCPConn(conn net.Conn, callback func(*TCPConn)) *TCPConn {
@@ -116,7 +117,9 @@ func (self *TCPConn) Close() {
 		return
 	}
 	self.conn.Close()
-	self.WriteBuf(nil) //触发writeRoutine结束
+	if !self.isWriteClose {
+		self.WriteBuf(nil) //触发writeRoutine结束
+	}
 	self.isClose = true
 
 	if self.onNetClose != nil {
@@ -155,14 +158,14 @@ func (self *TCPConn) WriteBuf(buf []byte) {
 		// close(self.writeChan) //client重连chan里的数据得保留，server都是新new的
 	}
 }
-func (self *TCPConn) _WriteFull(buf []byte) (err error) {
+func (self *TCPConn) _WriteFull(buf []byte) (err error) { //FIXME：err可能是io.ErrShortWrite，网络还是能继续工作的
 	if buf == nil {
 		return g_error_conn_close
 	}
 	var n, nn int
 	length := len(buf)
 	for n < length && err == nil {
-		nn, err = self.writer.Write(buf[n:]) //【Notice: WriteFull】bufio包装过，这里不会陷入系统调用；先缓存完chan的数据再Flush，更高效
+		nn, err = self.writer.Write(buf[n:]) //Notice：bufio包装过，这里不会陷入系统调用；先缓存完chan的数据再Flush，更高效
 		n += nn
 	}
 	if err != nil {
@@ -171,6 +174,7 @@ func (self *TCPConn) _WriteFull(buf []byte) (err error) {
 	return
 }
 func (self *TCPConn) writeRoutine() {
+	self.isWriteClose = false
 LOOP:
 	for {
 	goto_handle_chan:
@@ -199,6 +203,7 @@ LOOP:
 			goto goto_handle_chan
 		}
 	}
+	self.isWriteClose = true
 	self.Close()
 }
 func (self *TCPConn) readRoutine() {
@@ -271,10 +276,9 @@ func (self *TCPConn) msgDispatcher(msg *common.NetPack) {
 // ------------------------------------------------------------
 //! rpc 【非线程安全的】只给Player用
 func (self *TCPConn) CallRpcUnsafe(msgID uint16, sendFun, recvFun func(*common.NetPack)) {
-	if G_HandleFunc[msgID] != nil {
-		gamelog.Error("Server and Client have the same Rpc[%d]", msgID)
-		return
-	}
+	common.Assert(G_HandleFunc[msgID] == nil && self.sendBuffer.GetOpCode() == 0)
+	//gamelog.Error("[%d] Server and Client have the same Rpc or Repeat CallRpc", msgID)
+
 	self.sendBuffer.SetOpCode(msgID)
 	self.sendBuffer.SetReqIdx(_GetNextReqIdx())
 	sendFun(self.sendBuffer)
@@ -286,10 +290,9 @@ func (self *TCPConn) CallRpcUnsafe(msgID uint16, sendFun, recvFun func(*common.N
 	}
 }
 func (self *TCPConn) CallRpc(msgID uint16, sendFun, recvFun func(*common.NetPack)) {
-	if G_HandleFunc[msgID] != nil {
-		gamelog.Error("Server and Client have the same Rpc[%d]", msgID)
-		return
-	}
+	common.Assert(G_HandleFunc[msgID] == nil && self.sendBuffer.GetOpCode() == 0)
+	//gamelog.Error("[%d] Server and Client have the same Rpc or Repeat CallRpc", msgID)
+
 	buf := common.NewNetPackCap(128)
 	buf.SetOpCode(msgID)
 	buf.SetReqIdx(_GetNextReqIdx())

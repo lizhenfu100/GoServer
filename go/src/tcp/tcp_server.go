@@ -2,6 +2,7 @@ package tcp
 
 import (
 	"common"
+	"common/net/meta"
 	"encoding/binary"
 	"gamelog"
 	"generate_out/rpc/enum"
@@ -13,7 +14,7 @@ import (
 )
 
 type TCPServer struct {
-	Addr       string
+	Addr       string //"ip:port"，ip可缺省
 	MaxConnNum int
 	autoConnId uint32
 	connmap    map[uint32]*TCPConn
@@ -25,7 +26,7 @@ type TCPServer struct {
 
 func NewTcpServer(addr string, maxconn int) {
 	svr := new(TCPServer)
-	svr.Addr = addr //"ip:port"，ip可缺省
+	svr.Addr = addr
 	svr.MaxConnNum = maxconn
 	svr.init()
 	svr.run()
@@ -107,12 +108,12 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 	self.mutexConns.Unlock()
 	gamelog.Info("Connect From: %s, AddConnId: %d, ConnCnt: %d", conn.RemoteAddr().String(), connId, len(self.connmap))
 
-	go tcpConn.readRoutine()
 	// 通知client，连接被接收，下发connId、密钥等
 	acceptMsg := common.NewNetPackCap(32)
 	acceptMsg.SetOpCode(enum.Rpc_svr_accept)
 	acceptMsg.WriteUInt32(connId)
 	tcpConn.WriteMsg(acceptMsg)
+	go tcpConn.readRoutine()
 	tcpConn.writeRoutine()
 }
 func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
@@ -152,26 +153,59 @@ func (self *TCPServer) Close() {
 
 //////////////////////////////////////////////////////////////////////
 //! 模块注册
-var g_reg_conn_map = make(map[common.KeyPair]*TCPConn)
+type TRegConn struct {
+	*meta.Meta
+	Conn *TCPConn
+}
+
+var g_reg_conn_map sync.Map
 
 func DoRegistToSvr(req, ack *common.NetPack, conn *TCPConn) {
-	module := req.ReadString()
-	id := req.ReadInt()
-	g_reg_conn_map[common.KeyPair{module, id}] = conn
-	gamelog.Info("DoRegistToSvr: {%s %d}", module, id)
-}
-func FindRegModuleConn(module string, id int) *TCPConn {
-	if v, ok := g_reg_conn_map[common.KeyPair{module, id}]; ok {
-		return v
-	}
-	gamelog.Error("FindRegModuleConn nil : (%s,%d) => %v", module, id, g_reg_conn_map)
-	return nil
-}
-func GetRegModuleIDs(module string) (ret []int) {
-	for k, _ := range g_reg_conn_map {
-		if k.Name == module {
-			ret = append(ret, k.ID)
+	ptr := new(meta.Meta)
+	ptr.BufToData(req)
+
+	g_reg_conn_map.Store(common.KeyPair{ptr.Module, ptr.SvrID}, TRegConn{ptr, conn})
+	meta.AddMeta(ptr)
+
+	cb := conn.onNetClose
+	conn.onNetClose = func(this *TCPConn) {
+		if pConn := FindRegModuleConn(ptr.Module, ptr.SvrID); pConn != nil && pConn.isClose {
+			gamelog.Info("Delete Regist Svr: {%s %d}", ptr.Module, ptr.SvrID)
+			g_reg_conn_map.Delete(common.KeyPair{ptr.Module, ptr.SvrID})
+		}
+		if cb != nil {
+			cb(this)
 		}
 	}
+	gamelog.Info("DoRegistToSvr: {%s %d}", ptr.Module, ptr.SvrID)
+}
+
+func FindRegModuleConn(module string, id int) *TCPConn {
+	if v, ok := FindRegModule(module, id); ok {
+		return v.Conn
+	}
+	return nil
+}
+func FindRegModule(module string, id int) (TRegConn, bool) {
+	if v, ok := g_reg_conn_map.Load(common.KeyPair{module, id}); ok {
+		return v.(TRegConn), true
+	}
+	gamelog.Error("FindRegModuleConn nil : (%s,%d) => %v", module, id, g_reg_conn_map)
+	return TRegConn{}, false
+}
+
+func GetRegModuleIDs(module string) (ret []int) {
+	g_reg_conn_map.Range(func(k, v interface{}) bool {
+		if k.(common.KeyPair).Name == module {
+			ret = append(ret, k.(common.KeyPair).ID)
+		}
+		return true
+	})
 	return
+}
+func ForeachRegModule(f func(v TRegConn)) {
+	g_reg_conn_map.Range(func(k, v interface{}) bool {
+		f(v.(TRegConn))
+		return true
+	})
 }

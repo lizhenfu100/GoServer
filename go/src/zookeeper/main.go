@@ -1,14 +1,18 @@
 /***********************************************************************
-* @ 登录服
+* @ zookeeper
 * @ brief
-	1、作为账号服务器(svr_center)的代理，转发各svr_game请求到svr_center
+	1、每个节点都同zookeeper相连，config_net.csv仅zookeeper解析
 
-	2、管理游戏服列表 svr_game list，提供给客户端选择
+	2、其它节点启动后，主动连接zoo，zoo做两件事情：
 
-	3、登录排队逻辑
+		、查询哪些节点要连接此新节点，并告知它们新节点的meta
+
+		、告知新节点，待连接节点的meta
+
+	3、子节点缓存zookeeper下发的meta
 
 * @ author zhoumf
-* @ date 2017-10-23
+* @ date 2017-11-27
 ***********************************************************************/
 package main
 
@@ -17,13 +21,12 @@ import (
 	"common/net/meta"
 	"conf"
 	"gamelog"
-	_ "generate_out/rpc/svr_login"
+	_ "generate_out/rpc/zookeeper"
 	"netConfig"
-	"zookeeper/component"
 )
 
 const (
-	K_Module_Name  = "login"
+	K_Module_Name  = "zookeeper"
 	K_Module_SvrID = 0
 )
 
@@ -33,14 +36,9 @@ func main() {
 	gamelog.SetLevel(gamelog.Lv_Debug)
 	InitConf()
 
-	//开启控制台窗口，可以接受一些调试命令
-	common.StartConsole()
-
-	component.RegisterToZookeeper()
-
-	print("----Login Server Start-----")
+	print("----zookeeper Start-----")
 	if !netConfig.CreateNetSvr(K_Module_Name, K_Module_SvrID) {
-		print("----Login NetSvr Failed-----")
+		print("----zookeeper Failed-----")
 	}
 }
 func InitConf() {

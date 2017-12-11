@@ -41,7 +41,7 @@ func InitLogger(name string) {
 		}
 		timeStr := time.Now().Format("20060102_150405")
 		fullName := g_logDir + name + "_" + timeStr + ".log"
-		file, err := os.OpenFile(fullName, os.O_WRONLY|os.O_CREATE, 0)
+		file, err := os.OpenFile(fullName, os.O_WRONLY|os.O_CREATE, 0666)
 		if err != nil {
 			panic("InitLogger OpenFile error : " + err.Error())
 			return

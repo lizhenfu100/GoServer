@@ -12,7 +12,7 @@
 * @ author zhoumf
 * @ date 2017-5-25
 ***********************************************************************/
-package netConfig
+package register
 
 import (
 	"common"

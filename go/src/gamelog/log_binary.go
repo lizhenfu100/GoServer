@@ -17,7 +17,7 @@ func NewBinaryLog(name string) *TBinaryLog {
 	logFileName := g_logDir + name + "_" + timeStr + ".blog"
 
 	log := new(TBinaryLog)
-	log.file, err = os.OpenFile(logFileName, os.O_CREATE|os.O_APPEND, os.ModePerm)
+	log.file, err = os.OpenFile(logFileName, os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		Error("BinaryLog OpenFile:%s", err.Error())
 		return nil

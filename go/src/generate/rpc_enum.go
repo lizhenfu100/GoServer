@@ -25,9 +25,9 @@ import (
 )
 
 const (
-	K_EnumOutDir     = K_OutDir + "enum/"
+	K_EnumOutDir     = K_OutDir + "rpc/enum/"
 	K_EnumFileName   = "generate_rpc_enum"
-	K_EnumOutDir_C   = "../../CXServer/src/common/enum/"
+	K_EnumOutDir_C   = "../../CXServer/src/rpc/"
 	K_EnumOutDir_CS  = "../../GameClient/Assets/RGScript/generate/"
 	K_RpcFuncFile_C  = "../../CXServer/src/rpc/RpcEnum.h"
 	K_RpcFuncFile_CS = "../../GameClient/Assets/RGScript/Net/Player/Player.cs"

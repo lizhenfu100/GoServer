@@ -2,44 +2,48 @@ package main
 
 import (
 	"common"
+	"common/net/meta"
+	"common/net/register"
 	"conf"
-	"fmt"
 	"gamelog"
+	_ "generate_out/rpc/svr_file"
 	"netConfig"
 	"svr_file/logic"
+	"zookeeper/component"
+)
 
-	_ "generate_out/rpc/file"
+const (
+	Module_Name  = "file"
+	Module_SvrID = 0
 )
 
 func main() {
 	//初始化日志系统
-	gamelog.InitLogger("file")
-	gamelog.SetLevel(0)
-
+	gamelog.InitLogger(Module_Name)
+	gamelog.SetLevel(gamelog.Lv_Debug)
 	InitConf()
 
 	//开启控制台窗口，可以接受一些调试命令
 	common.StartConsole()
 
-	fmt.Println("----File Server Start-----")
-	if !netConfig.CreateNetSvr("file", 0) {
-		gamelog.Error("----File NetSvr Failed-----")
+	component.RegisterToZookeeper()
+
+	print("----File Server Start-----")
+	if !netConfig.CreateNetSvr(Module_Name, Module_SvrID) {
+		print("----File NetSvr Failed-----")
 	}
 }
 func InitConf() {
 	common.G_Csv_Map = map[string]interface{}{
-		"conf_net": &netConfig.G_SvrNetCfg,
+		"conf_net": &meta.G_SvrNets,
 		"conf_svr": &conf.SvrCsv,
 	}
 	common.LoadAllCsv()
 
-	for k, v := range netConfig.G_SvrNetCfg {
-		fmt.Println(k, v)
-	}
-	fmt.Println("SvrCsv: ", conf.SvrCsv)
-
-	netConfig.RegHttpHandler(map[string]netConfig.HttpHandle{
+	register.RegHttpHandler(map[string]register.HttpHandle{
 		"":       logic.Rpc_file_download,
 		"upload": logic.Rpc_file_upload,
 	})
+
+	netConfig.G_Local_Meta = meta.GetMeta(Module_Name, Module_SvrID)
 }

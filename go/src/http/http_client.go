@@ -17,6 +17,7 @@ package http
 import (
 	"bytes"
 	"common"
+	"common/net/meta"
 	"gamelog"
 	"net/http"
 	"time"
@@ -37,20 +38,17 @@ func PostReq(url string, b []byte) []byte {
 	}
 }
 
+// 已验证：此函数失败，resp是nil，那resp.Body.Close()就不能无脑调了
+// resp, err := http.Post(url, "text/HTML", bytes.NewReader(b))
+// resp.Body.Close()
+
 //////////////////////////////////////////////////////////////////////
 //! 模块注册
-type Msg_Regist_To_HttpSvr struct {
-	Addr   string
-	Module string
-	ID     int
+func RegistToSvr(destAddr string, meta *meta.Meta) {
+	go _RegistToSvr(destAddr, meta)
 }
-
-func RegistToSvr(destAddr, srcAddr, srcModule string, srcID int) {
-	go _RegistToSvr(destAddr, srcAddr, srcModule, srcID)
-}
-func _RegistToSvr(destAddr, srcAddr, srcModule string, srcID int) {
-	pMsg := &Msg_Regist_To_HttpSvr{srcAddr, srcModule, srcID}
-	buf, _ := common.ToBytes(pMsg)
+func _RegistToSvr(destAddr string, meta *meta.Meta) {
+	buf, _ := common.ToBytes(meta)
 	for {
 		http.DefaultClient.Timeout = 3 * time.Second
 		if PostReq(destAddr+"reg_to_svr", buf) == nil {

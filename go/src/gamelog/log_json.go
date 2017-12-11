@@ -20,7 +20,7 @@ func NewJsonLog(name string) *TJsonLog {
 	fullName := g_logDir + name + "_" + timeStr + ".jlog"
 
 	log := new(TJsonLog)
-	log.file, err = os.OpenFile(fullName, os.O_CREATE|os.O_APPEND, 0755)
+	log.file, err = os.OpenFile(fullName, os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		Error("JsonLog OpenFile:%v", err.Error())
 		return nil

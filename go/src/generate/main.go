@@ -7,22 +7,24 @@ import (
 )
 
 const (
-	K_SvrDir = "../src/svr_"
-	K_OutDir = "../src/generate_out/rpc/"
+	K_SvrDir = "../src/"
+	K_OutDir = "../src/generate_out/"
 )
 
 func main() {
-	ptr := generatRpcRegist("center")
+	ptr := generatRpcRegist("svr_center")
 	collectRpc_Go(ptr)
-	ptr = generatRpcRegist("cross")
+	ptr = generatRpcRegist("svr_cross")
 	collectRpc_Go(ptr)
-	ptr = generatRpcRegist("game")
+	ptr = generatRpcRegist("svr_game")
 	collectRpc_Go(ptr)
-	ptr = generatRpcRegist("login")
+	ptr = generatRpcRegist("svr_login")
 	collectRpc_Go(ptr)
-	ptr = generatRpcRegist("sdk")
+	ptr = generatRpcRegist("svr_sdk")
 	collectRpc_Go(ptr)
-	ptr = generatRpcRegist("file")
+	ptr = generatRpcRegist("svr_file")
+	collectRpc_Go(ptr)
+	ptr = generatRpcRegist("zookeeper")
 	collectRpc_Go(ptr)
 
 	collectRpc_C()

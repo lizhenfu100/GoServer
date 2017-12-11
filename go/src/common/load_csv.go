@@ -272,7 +272,7 @@ func ReadCsv(path string) ([][]string, error) {
 	return records, nil
 }
 func UpdateCsv(path string, records [][]string) error {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, os.ModePerm)
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0666)
 	defer file.Close()
 	if err != nil {
 		return err
@@ -291,7 +291,7 @@ func UpdateCsv(path string, records [][]string) error {
 	return csvWriter.WriteAll(records)
 }
 func AppendCsv(path string, record []string) error {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND, os.ModePerm)
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND, 0666)
 	defer file.Close()
 	if err != nil {
 		return err

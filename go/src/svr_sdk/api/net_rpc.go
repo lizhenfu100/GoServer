@@ -10,8 +10,9 @@ var (
 	g_cache_game_addr = make(map[int]string)
 )
 
-// strKey = "sdk_recharge_info"
-func SendToGame(svrId int, strKey string, pMsg interface{}) []byte {
+// ------------------------------------------------------------
+//! game
+func SendToGame(svrId int, strKey string, pMsg interface{}) []byte { // strKey = "sdk_recharge_info"
 	addr, ok := g_cache_game_addr[svrId]
 	if false == ok {
 		addr = netConfig.GetHttpAddr("game", svrId)

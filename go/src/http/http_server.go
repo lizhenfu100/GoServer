@@ -3,16 +3,20 @@ package http
 import (
 	"common"
 	// "net"
+	"common/net/meta"
+	"encoding/json"
 	"fmt"
 	"gamelog"
 	"net/http"
-	"strconv"
+	"sync"
 )
+
+func Addr(ip string, port uint16) string { return fmt.Sprintf("http://%s:%d/", ip, port) }
 
 //Notice：http的消息处理，是另开goroutine调用的，所以函数中可阻塞；tcp就不行了
 //Notice：正因为每条消息都是另开goroutine，若玩家连续发多条消息，服务器就是并发处理了，存在竞态……client确保应答式通信
 func NewHttpServer(addr string) error {
-	LoadSvrAddrCsv()
+	LoadCacheNetMeta()
 
 	http.HandleFunc("/reg_to_svr", _doRegistToSvr)
 
@@ -27,46 +31,50 @@ func NewHttpServer(addr string) error {
 
 //////////////////////////////////////////////////////////////////////
 //! 模块注册
-var g_reg_addr_map = make(map[common.KeyPair]string) //slice结构可能出现多次注册问题
+var g_reg_addr_map sync.Map
 
 func _doRegistToSvr(w http.ResponseWriter, r *http.Request) {
 	buffer := make([]byte, r.ContentLength)
 	r.Body.Read(buffer)
 
-	var req Msg_Regist_To_HttpSvr
-	err := common.ToStruct(buffer, &req)
+	ptr := new(meta.Meta)
+	err := common.ToStruct(buffer, ptr)
 	if err != nil {
-		fmt.Println("DoRegistToSvr common.ToStruct fail: ", err.Error())
+		gamelog.Error("DoRegistToSvr common.ToStruct fail: %s", err.Error())
 		return
 	}
-	fmt.Println("DoRegistToSvr: ", req)
+	gamelog.Info("DoRegistToSvr: %v", *ptr)
 
-	oldAddr, ok := g_reg_addr_map[common.KeyPair{req.Module, req.ID}]
-	if ok && oldAddr == req.Addr {
-		return
-	} else {
-		g_reg_addr_map[common.KeyPair{req.Module, req.ID}] = req.Addr
-		AppendSvrAddrCsv(req.Module, req.ID, req.Addr)
-	}
+	g_reg_addr_map.Store(common.KeyPair{ptr.Module, ptr.SvrID}, ptr)
+	meta.AddMeta(ptr)
+	AppendNetMeta(ptr)
 
 	defer func() {
 		w.Write([]byte("ok"))
 	}()
 }
 func FindRegModuleAddr(module string, id int) string { //"http://%s:%d/"
-	if v, ok := g_reg_addr_map[common.KeyPair{module, id}]; ok {
-		return v
+	if v, ok := g_reg_addr_map.Load(common.KeyPair{module, id}); ok {
+		ptr := v.(*meta.Meta)
+		return Addr(ptr.IP, ptr.HttpPort)
 	}
-	fmt.Println("FindRegModuleAddr nil: ", common.KeyPair{module, id}, g_reg_addr_map)
+	gamelog.Error("FindRegModuleAddr nil: {%s:%d}", module, id)
 	return ""
 }
 func GetRegModuleIDs(module string) (ret []int) {
-	for k, _ := range g_reg_addr_map {
-		if k.Name == module {
-			ret = append(ret, k.ID)
+	g_reg_addr_map.Range(func(k, v interface{}) bool {
+		if k.(common.KeyPair).Name == module {
+			ret = append(ret, k.(common.KeyPair).ID)
 		}
-	}
+		return true
+	})
 	return
+}
+func ForeachRegModule(f func(v *meta.Meta)) {
+	g_reg_addr_map.Range(func(k, v interface{}) bool {
+		f(v.(*meta.Meta))
+		return true
+	})
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -79,25 +87,22 @@ var (
 	g_svraddr_path = common.GetExeDir() + "reg_addr.csv"
 )
 
-func LoadSvrAddrCsv() {
+func LoadCacheNetMeta() {
 	records, err := common.ReadCsv(g_svraddr_path)
 	if err != nil {
 		return
 	}
-	var (
-		module string
-		svrID  int
-	)
+	var info meta.Meta
 	for i := 0; i < len(records); i++ {
-		module = records[i][0]
-		svrID, _ = strconv.Atoi(records[i][1])
+		json.Unmarshal([]byte(records[i][0]), &info)
 		//Notice：之前可能有同个key的，被后面追加的覆盖
-		g_reg_addr_map[common.KeyPair{module, svrID}] = records[i][2]
+		g_reg_addr_map.Store(common.KeyPair{info.Module, info.SvrID}, info)
 	}
+	common.UpdateCsv(g_svraddr_path, [][]string{})
 }
-func AppendSvrAddrCsv(module string, id int, addr string) {
-	record := []string{module, strconv.Itoa(id), addr}
-
+func AppendNetMeta(meta *meta.Meta) {
+	b, _ := json.Marshal(meta)
+	record := []string{string(b)}
 	err := common.AppendCsv(g_svraddr_path, record)
 	if err != nil {
 		gamelog.Error("AppendSvrAddrCsv (%v): %s", record, err.Error())

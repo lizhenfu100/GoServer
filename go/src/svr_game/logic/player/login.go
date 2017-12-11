@@ -19,6 +19,7 @@ import (
 	"common/format"
 	"fmt"
 	"gamelog"
+	"sync"
 )
 
 // -------------------------------------
@@ -72,17 +73,16 @@ func Rpc_game_heart_beat(req, ack *common.NetPack, ptr interface{}) {
 // -------------------------------------
 // -- 后台账号验证
 var (
-	g_account_login_token = make(map[uint32]uint32)
+	g_login_token sync.Map
 )
 
 func Rpc_game_login_token(req, ack *common.NetPack) {
 	id := req.ReadUInt32()
 	token := req.ReadUInt32()
-
-	g_account_login_token[id] = token
+	g_login_token.Store(id, token)
 }
-func CheckLoginToken(accountId, token uint32) bool {
-	if value, ok := g_account_login_token[accountId]; ok {
+func CheckLoginToken(id, token uint32) bool {
+	if value, ok := g_login_token.Load(id); ok {
 		return token == value
 	}
 	return false

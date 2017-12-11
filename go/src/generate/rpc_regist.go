@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	K_RegistOutDir   = K_OutDir
+	K_RegistOutDir   = K_OutDir + "rpc/"
 	K_RegistFileName = "generate_rpc.go"
 )
 
@@ -39,7 +39,7 @@ type RpcInfo struct {
 }
 
 func generatRpcRegist(svr string) *RpcInfo {
-	names, _ := common.WalkDir(K_SvrDir+svr, ".go")
+	names, _ := common.WalkDir(K_SvrDir+svr+"/logic", ".go")
 	pinfo := &RpcInfo{Svr: svr, Moudles: make(map[string]bool)}
 	for _, v := range names {
 		moudle := "" //package name
@@ -111,27 +111,27 @@ const codeRegistTemplate = `
 // Don't edit !
 package rpc
 import (
-	"netConfig"
+	"common/net/register"
 	"generate_out/rpc/enum"
 	{{range $k, $_ := .Moudles}}
 	{{if eq $k "logic"}}
-	"svr_{{$.Svr}}/{{$k}}"{{else}}
-	"svr_{{$.Svr}}/logic/{{$k}}"{{end}}{{end}}
+	"{{$.Svr}}/{{$k}}"{{else}}
+	"{{$.Svr}}/logic/{{$k}}"{{end}}{{end}}
 )
 func init() {
-	netConfig.RegTcpRpc(map[uint16]netConfig.TcpRpc{
+	register.RegTcpRpc(map[uint16]register.TcpRpc{
 		{{range .TcpRpc}}
 		enum.{{.Name}}: {{.Pack}}.{{.Name}},{{end}}
 	})
-	netConfig.RegHttpRpc(map[uint16]netConfig.HttpRpc{
+	register.RegHttpRpc(map[uint16]register.HttpRpc{
 		{{range .HttpRpc}}
 		enum.{{.Name}}: {{.Pack}}.{{.Name}},{{end}}
 	})
-	netConfig.RegHttpPlayerRpc(map[uint16]netConfig.HttpPlayerRpc{
+	register.RegHttpPlayerRpc(map[uint16]register.HttpPlayerRpc{
 		{{range .HttpPlayerRpc}}
 		enum.{{.Name}}: {{.Pack}}.{{.Name}},{{end}}
 	})
-	netConfig.RegHttpHandler(map[string]netConfig.HttpHandle{
+	register.RegHttpHandler(map[string]register.HttpHandle{
 		{{range .HttpHandle}}
 		"{{.Name}}": {{.Pack}}.Http_{{.Name}},{{end}}
 	})

@@ -1,5 +1,9 @@
 package common
 
+import (
+	"conf"
+)
+
 type IntPair struct {
 	ID  int
 	Cnt int
@@ -7,6 +11,10 @@ type IntPair struct {
 type KeyPair struct {
 	Name string `bson:"_id"`
 	ID   int
+}
+type Addr struct {
+	IP   string
+	Port uint16
 }
 
 // -------------------------------------
@@ -63,3 +71,8 @@ func (self *UInt32Lst) Swap(i, j uint32) {
 
 // -------------------------------------
 //
+func Assert(eq bool) {
+	if conf.IsDebug && !eq {
+		panic("assert")
+	}
+}

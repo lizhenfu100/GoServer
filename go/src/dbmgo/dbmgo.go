@@ -36,32 +36,33 @@ var (
 	g_database   *mgo.Database
 )
 
-func Init(ip string, port int, dbname string) {
+func Init(ip string, port uint16, dbname string) {
 	var err error
 	g_db_session, err = mgo.Dial(fmt.Sprintf("%s:%d", ip, port))
 	if err != nil {
 		gamelog.Error(err.Error())
-		panic("Mongodb Init Failed " + err.Error())
+		panic("Mongodb Init Failed:" + err.Error())
 	}
 	g_db_session.SetPoolLimit(20)
 	g_database = g_db_session.DB(dbname)
-	go _DBProcess()
 	_init_inc_ids()
+	go _DBProcess()
 }
-func InitWithUser(ip string, port int, dbname, username, password string) {
+func InitWithUser(ip string, port uint16, dbname, username, password string) {
 	pInfo := &mgo.DialInfo{
 		Addrs:     []string{fmt.Sprintf("%s:%d", ip, port)},
-		Timeout:   5 * time.Second,
+		Timeout:   10 * time.Second,
+		Database:  dbname,
 		Username:  username,
 		Password:  password,
-		PoolLimit: 20,
 	}
 	var err error
 	if g_db_session, err = mgo.DialWithInfo(pInfo); err != nil {
 		gamelog.Error(err.Error())
-		panic("Mongodb Init Failed " + err.Error())
+		panic("Mongodb Init Failed:" + err.Error())
 	}
 	g_database = g_db_session.DB(dbname)
+	_init_inc_ids()
 	go _DBProcess()
 }
 

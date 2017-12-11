@@ -6,7 +6,8 @@ import (
 	"tcp"
 )
 
-//Notice：TCPConn是对真正net.Conn的包装，发生断线重连时，会执行tcp.TCPConn.ResetConn()，所以外部缓存的tcp.TCPConn仍有效，无需更新
+// ------------------------------------------------------------
+//! battle
 var (
 	g_cache_battle_conn = make(map[int]*tcp.TCPConn)
 )

@@ -2,36 +2,45 @@ package main
 
 import (
 	"common"
+	"common/net/meta"
+	"conf"
 	"dbmgo"
 	"gamelog"
+	_ "generate_out/rpc/svr_sdk"
 	"netConfig"
 	"svr_sdk/logic"
+	"zookeeper/component"
+)
 
-	_ "generate_out/rpc/sdk"
+const (
+	K_Module_Name  = "sdk"
+	K_Module_SvrID = 0
 )
 
 func main() {
 	//初始化日志系统
-	gamelog.InitLogger("sdk")
-	gamelog.SetLevel(0)
-
+	gamelog.InitLogger(K_Module_Name)
+	gamelog.SetLevel(gamelog.Lv_Debug)
 	InitConf()
 
 	//设置mongodb的服务器地址
-	var id int
-	cfg := netConfig.GetNetCfg("db_sdk", &id)
-	dbmgo.Init(cfg.IP, cfg.TcpPort, cfg.SvrName)
-
+	pMeta := meta.GetMeta("db_sdk", -1)
+	dbmgo.InitWithUser(pMeta.IP, pMeta.TcpPort, pMeta.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
 	logic.InitDB()
 
-	gamelog.Warn("----Sdk Server Start-----")
-	if !netConfig.CreateNetSvr("sdk", 0) {
-		gamelog.Error("----Sdk NetSvr Failed-----")
+	component.RegisterToZookeeper()
+
+	print("----Sdk Server Start-----")
+	if !netConfig.CreateNetSvr(K_Module_Name, K_Module_SvrID) {
+		print("----Sdk NetSvr Failed-----")
 	}
 }
 func InitConf() {
 	common.G_Csv_Map = map[string]interface{}{
-		"conf_net": &netConfig.G_SvrNetCfg,
+		"conf_net": &meta.G_SvrNets,
+		"conf_svr": &conf.SvrCsv,
 	}
 	common.LoadAllCsv()
+
+	netConfig.G_Local_Meta = meta.GetMeta(K_Module_Name, K_Module_SvrID)
 }

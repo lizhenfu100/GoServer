@@ -21,7 +21,6 @@ import (
 	"common"
 	"dbmgo"
 	"generate_out/rpc/enum"
-	"netConfig"
 	"svr_game/api"
 )
 
@@ -76,10 +75,10 @@ func Rpc_game_get_cloud_archive(req, ack *common.NetPack) {
 
 // -------------------------------------
 // -- 辅助函数
-func _Handle_Account_To_Player(account, passwd string) (ret *TPlayer) { //Notice:(┯_┯)函数依赖http同步阻塞特性
+//Notice:(┯_┯)函数依赖http同步阻塞特性
+func _Handle_Account_To_Player(account, passwd string) (ret *TPlayer) {
 	accountId := uint32(0)
-	api.CallRpcLogin(enum.Rpc_login_account_login, func(buf *common.NetPack) {
-		buf.WriteInt(netConfig.G_Local_SvrID)
+	api.CallRpcLogin(enum.Rpc_login_get_accountid, func(buf *common.NetPack) {
 		buf.WriteString(account)
 		buf.WriteString(passwd)
 	}, func(recvBuf *common.NetPack) {
