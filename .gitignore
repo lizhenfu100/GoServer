@@ -30,6 +30,7 @@
 *.app
 *.log
 
-/go/bin/log
-/go/src/gopkg.in
-reg_addr.csv
+/pkg
+/bin/log
+/bin/reg_addr.csv
+/src/gopkg.in
