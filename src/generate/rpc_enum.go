@@ -111,8 +111,7 @@ func generatRpcEnum() {
 
 	autoIncId := uint16(1)
 	for i := 0; i < len(g_rpc_enum); i++ {
-		csv := &g_rpc_enum[i]
-		csv.ID = autoIncId
+		g_rpc_enum[i].ID = autoIncId
 		autoIncId++
 	}
 	makeEnumFile_C(g_rpc_enum)

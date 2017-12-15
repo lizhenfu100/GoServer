@@ -290,8 +290,8 @@ func (self *TCPConn) CallRpcUnsafe(msgID uint16, sendFun, recvFun func(*common.N
 	}
 }
 func (self *TCPConn) CallRpc(msgID uint16, sendFun, recvFun func(*common.NetPack)) {
-	common.Assert(G_HandleFunc[msgID] == nil && self.sendBuffer.GetOpCode() == 0)
-	//gamelog.Error("[%d] Server and Client have the same Rpc or Repeat CallRpc", msgID)
+	common.Assert(G_HandleFunc[msgID] == nil)
+	//gamelog.Error("[%d] Server and Client have the same Rpc", msgID)
 
 	buf := common.NewNetPackCap(128)
 	buf.SetOpCode(msgID)
