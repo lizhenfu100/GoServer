@@ -162,12 +162,15 @@ func (self *TPlayer) Logout() {
 	time.AfterFunc(Reconnect_Wait_Second*time.Second, func() {
 		// 延时30s后再删，提升重连效率
 		if !self.isOnlie {
-			gamelog.Info("Pid(%d) Delete", self.PlayerID)
+			gamelog.Debug("Pid(%d) Delete", self.PlayerID)
 			go self.WriteAllToDB()
 			DelPlayerCache(self)
 		}
 	})
 }
+
+// -------------------------------------
+// service
 func _Service_Write_DB(ptr interface{}) {
 	if player, ok := ptr.(*TPlayer); ok {
 		player.WriteAllToDB()
@@ -177,7 +180,7 @@ func _Service_Check_AFK(ptr interface{}) {
 	if player, ok := ptr.(*TPlayer); ok && player.isOnlie {
 		atomic.AddUint32(&player.idleSec, 1)
 		if player.idleSec > Idle_Max_Second {
-			gamelog.Info("Pid(%d) AFK", player.PlayerID)
+			gamelog.Debug("Pid(%d) AFK", player.PlayerID)
 			player.Logout()
 		}
 	}

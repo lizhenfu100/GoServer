@@ -2,6 +2,7 @@ package main
 
 import (
 	"common"
+	"common/console"
 	"common/net/meta"
 	"conf"
 	"dbmgo"
@@ -23,7 +24,12 @@ const (
 func main() {
 	//初始化日志系统
 	gamelog.InitLogger(K_Module_Name)
-	gamelog.SetLevel(gamelog.Lv_Debug)
+	if conf.IsDebug {
+		gamelog.SetLevel(gamelog.Lv_Debug)
+	} else {
+		gamelog.SetLevel(gamelog.Lv_Info)
+		go gamelog.AutoChangeFile(K_Module_Name)
+	}
 	InitConf()
 
 	//设置mongodb的服务器地址
@@ -32,8 +38,8 @@ func main() {
 	player.InitDB()
 
 	//开启控制台窗口，可以接受一些调试命令
-	common.StartConsole()
-	common.RegConsoleCmd("MakeFriends", HandCmd_MakeFriends)
+	console.StartConsole()
+	console.RegConsoleCmd("MakeFriends", HandCmd_MakeFriends)
 
 	component.RegisterToZookeeper()
 

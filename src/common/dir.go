@@ -61,3 +61,16 @@ func ReadLine(filename string, cb func(string)) error {
 	}
 	return nil
 }
+
+func CreateFile(dir, name string) (*os.File, error) {
+	if !IsDirExist(dir) {
+		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+			return nil, err
+		}
+	}
+	file, err := os.OpenFile(dir+name, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		return nil, err
+	}
+	return file, nil
+}

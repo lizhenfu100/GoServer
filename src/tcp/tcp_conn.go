@@ -177,7 +177,6 @@ func (self *TCPConn) writeRoutine() {
 	self.isWriteClose = false
 LOOP:
 	for {
-	goto_handle_chan:
 		select {
 		case buf := <-self.writeChan:
 			if self._WriteFull(buf) != nil {
@@ -200,7 +199,6 @@ LOOP:
 			if self._WriteFull(buf) != nil {
 				break LOOP
 			}
-			goto goto_handle_chan
 		}
 	}
 	self.isWriteClose = true

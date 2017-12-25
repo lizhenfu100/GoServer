@@ -147,7 +147,7 @@ func _find_sort(table, sortKey string, cnt int, pList interface{}) {
 	err := query.All(pList)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			gamelog.Info("Not Find")
+			gamelog.Info("Not Find table:%s  sortKey:%s", table, sortKey)
 		} else {
 			gamelog.Error("Find_Sort error: %v \r\ntable: %s \r\nsort: %s \r\nlimit: %d\r\n",
 				err.Error(), table, sortKey, cnt)

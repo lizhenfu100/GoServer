@@ -2,6 +2,7 @@ package main
 
 import (
 	"common"
+	"common/console"
 	"common/net/meta"
 	"conf"
 	"gamelog"
@@ -18,11 +19,15 @@ const (
 func main() {
 	//初始化日志系统
 	gamelog.InitLogger(Module_Name)
-	gamelog.SetLevel(gamelog.Lv_Debug)
+	if conf.IsDebug {
+		gamelog.SetLevel(gamelog.Lv_Debug)
+	} else {
+		gamelog.SetLevel(gamelog.Lv_Info)
+	}
 	InitConf()
 
 	//开启控制台窗口，可以接受一些调试命令
-	common.StartConsole()
+	console.StartConsole()
 
 	component.RegisterToZookeeper()
 

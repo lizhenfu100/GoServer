@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	Flush_Interval = 15 //间隔几秒写一次log
+	Flush_Interval = 15 * time.Second //间隔几秒写一次log
 )
 
 type Writer interface {
@@ -91,7 +91,7 @@ func (self *AsyncLog) _writeLoop(bufSize int) {
 }
 func (self *AsyncLog) _timeOutWrite() {
 	for {
-		time.Sleep(Flush_Interval * time.Second)
+		time.Sleep(Flush_Interval)
 		self.cond.Signal()
 	}
 }

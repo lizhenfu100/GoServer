@@ -13,18 +13,26 @@ import (
 	//"svr_client/api"
 	//"svr_game/logic/player"
 	"common/net/meta"
+	"conf"
 	"generate_out/rpc/enum"
 	"io"
 	nhttp "net/http"
 	"os"
 	"strconv"
 	"strings"
+	"zookeeper/component"
+)
+
+const (
+	Module_Name  = "client"
+	Module_SvrID = 0
 )
 
 func main() {
 	var v interface{}
 	v = uint32(10)
 	t := uint32(10)
+	println(v == t)
 
 	addr := "http://192.168.1.11:7033/"
 	idx1 := strings.Index(addr, "//") + 2
@@ -32,13 +40,17 @@ func main() {
 	println(addr[idx1:idx2])
 	println(addr[idx2+1 : len(addr)-1])
 
-	println(v == t)
-	return
-
-	gamelog.InitLogger("client") //初始化日志系统
-	gamelog.SetLevel(gamelog.Lv_Debug)
+	gamelog.InitLogger(Module_Name)
+	if conf.IsDebug {
+		gamelog.SetLevel(gamelog.Lv_Debug)
+	} else {
+		gamelog.SetLevel(gamelog.Lv_Info)
+	}
 	InitConf()
-	netConfig.CreateNetSvr("client", 0)
+
+	component.RegisterToZookeeper()
+
+	netConfig.CreateNetSvr(Module_Name, Module_SvrID)
 
 	// Download()
 	test()
@@ -52,6 +64,7 @@ func InitConf() {
 	// for k, v := range netConfig.G_SvrNetCfg {
 	// 	fmt.Println(k, v)
 	// }
+	netConfig.G_Local_Meta = meta.GetMeta(Module_Name, Module_SvrID)
 }
 
 func Download() {
@@ -75,10 +88,24 @@ func Download() {
 	println("written: ", written)
 }
 func test() {
-	gameAddr := netConfig.GetHttpAddr("game", -1)
-	loginAddr := netConfig.GetHttpAddr("login", -1)
+	gameAddr := netConfig.GetHttpAddr("game", 1)
+	loginAddr := netConfig.GetHttpAddr("login", 0)
 	fmt.Println("---", gameAddr)
 	fmt.Println("---", loginAddr)
+
+	time.Sleep(3 * time.Second)
+	crossConn := netConfig.GetTcpConn("cross", 0)
+	fmt.Println("---", crossConn)
+
+	for {
+		crossConn.CallRpc(enum.Rpc_cross_echo, func(buf *common.NetPack) {
+			buf.WriteString("zhoumf233")
+		}, func(recvBuf *common.NetPack) {
+			str := recvBuf.ReadString()
+			fmt.Print(str)
+		})
+		time.Sleep(10 * time.Millisecond)
+	}
 
 	//向游戏服请求充值
 	// var msg1 sdk_msg.Msg_create_recharge_order_Req

@@ -7,22 +7,22 @@ import (
 )
 
 var (
-	g_inc_id_mutex sync.Mutex
-	g_inc_id_map   = make(map[string]uint32)
+	g_inc_id_map sync.Map
 )
 
 func _init_inc_ids() {
 	var lst []common.KeyPair
 	FindAll("IncId", nil, &lst)
 	for _, v := range lst {
-		g_inc_id_map[v.Name] = uint32(v.ID)
+		g_inc_id_map.Store(v.Name, uint32(v.ID))
 	}
 }
-func GetNextIncId(key string) uint32 {
-	g_inc_id_mutex.Lock()
-	ret := g_inc_id_map[key] + 1
-	g_inc_id_map[key] = ret
-	g_inc_id_mutex.Unlock()
+func GetNextIncId(key string) (ret uint32) {
+	ret = 1
+	if v, ok := g_inc_id_map.Load(key); ok {
+		ret += v.(uint32)
+	}
+	g_inc_id_map.Store(key, ret)
 	if ret == 1 {
 		InsertToDB("IncId", common.KeyPair{key, 1})
 	} else {

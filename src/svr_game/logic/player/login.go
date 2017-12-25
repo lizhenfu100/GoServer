@@ -59,7 +59,7 @@ func Rpc_game_player_create(req, ack *common.NetPack) {
 	} else if !format.CheckName(playerName) { //名字不合格
 		ack.WriteUInt32(0)
 	} else if player := AddNewPlayer(accountId, playerName); player != nil {
-		gamelog.Info("Create NewPlayer: accountId(%d) name(%s) pid(%d)",
+		gamelog.Debug("Create NewPlayer: accountId(%d) name(%s) pid(%d)",
 			accountId, playerName, player.PlayerID)
 		player.Login()
 		ack.WriteUInt32(player.PlayerID)

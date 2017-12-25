@@ -77,7 +77,7 @@ func (self *TCPServer) _HandleAcceptConn(conn net.Conn) {
 		return
 	}
 	connId := binary.LittleEndian.Uint32(buf[2:])
-	gamelog.Info("_HandleAcceptConn: %d", connId)
+	gamelog.Debug("_HandleAcceptConn: %d", connId)
 
 	if connId > 0 {
 		self._ResetOldConn(conn, connId)
@@ -100,13 +100,13 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 			self.mutexConns.Lock()
 			delete(self.connmap, connId)
 			self.mutexConns.Unlock()
-			gamelog.Info("Disconnect: UserPtr:%v, DelConnId: %d, ConnCnt: %d", this.UserPtr, connId, len(self.connmap))
+			gamelog.Debug("Disconnect: UserPtr:%v, DelConnId: %d, ConnCnt: %d", this.UserPtr, connId, len(self.connmap))
 			self.wgConns.Done()
 		})
 	self.mutexConns.Lock()
 	self.connmap[connId] = tcpConn
 	self.mutexConns.Unlock()
-	gamelog.Info("Connect From: %s, AddConnId: %d, ConnCnt: %d", conn.RemoteAddr().String(), connId, len(self.connmap))
+	gamelog.Debug("Connect From: %s, AddConnId: %d, ConnCnt: %d", conn.RemoteAddr().String(), connId, len(self.connmap))
 
 	// 通知client，连接被接收，下发connId、密钥等
 	acceptMsg := common.NewNetPackCap(32)
@@ -122,17 +122,17 @@ func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
 	self.mutexConns.Unlock()
 	if oldconn != nil && ok {
 		if oldconn.isClose {
-			gamelog.Info("_ResetOldConn isClose: %d", oldId)
+			gamelog.Debug("_ResetOldConn isClose: %d", oldId)
 			oldconn.ResetConn(newconn)
 			go oldconn.readRoutine()
 			oldconn.writeRoutine()
 		} else {
-			gamelog.Info("_ResetOldConn isOpen: %d", oldId)
+			gamelog.Debug("_ResetOldConn isOpen: %d", oldId)
 			// newconn.Close()
 			self._AddNewConn(newconn)
 		}
 	} else { //服务器重启
-		gamelog.Info("_ResetOldConn to _AddNewConn: %d", oldId)
+		gamelog.Debug("_ResetOldConn to _AddNewConn: %d", oldId)
 		self._AddNewConn(newconn)
 	}
 }
@@ -148,7 +148,7 @@ func (self *TCPServer) Close() {
 	self.mutexConns.Unlock()
 
 	self.wgConns.Wait()
-	gamelog.Info("server been closed!!")
+	gamelog.Debug("server been closed!!")
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -170,14 +170,14 @@ func DoRegistToSvr(req, ack *common.NetPack, conn *TCPConn) {
 	cb := conn.onNetClose
 	conn.onNetClose = func(this *TCPConn) {
 		if pConn := FindRegModuleConn(ptr.Module, ptr.SvrID); pConn != nil && pConn.isClose {
-			gamelog.Info("Delete Regist Svr: {%s %d}", ptr.Module, ptr.SvrID)
+			gamelog.Debug("Delete Regist Svr: {%s %d}", ptr.Module, ptr.SvrID)
 			g_reg_conn_map.Delete(common.KeyPair{ptr.Module, ptr.SvrID})
 		}
 		if cb != nil {
 			cb(this)
 		}
 	}
-	gamelog.Info("DoRegistToSvr: {%s %d}", ptr.Module, ptr.SvrID)
+	gamelog.Debug("DoRegistToSvr: {%s %d}", ptr.Module, ptr.SvrID)
 }
 
 func FindRegModuleConn(module string, id int) *TCPConn {

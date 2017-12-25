@@ -43,7 +43,7 @@ func _doRegistToSvr(w http.ResponseWriter, r *http.Request) {
 		gamelog.Error("DoRegistToSvr common.ToStruct fail: %s", err.Error())
 		return
 	}
-	gamelog.Info("DoRegistToSvr: %v", *ptr)
+	gamelog.Debug("DoRegistToSvr: %v", *ptr)
 
 	g_reg_addr_map.Store(common.KeyPair{ptr.Module, ptr.SvrID}, ptr)
 	meta.AddMeta(ptr)

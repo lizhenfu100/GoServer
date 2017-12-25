@@ -1,4 +1,4 @@
-package common
+package console
 
 import (
 	"bufio"
@@ -13,7 +13,7 @@ import (
 type CommandHandler func(args []string) bool
 
 var G_HandlerMap = map[string]CommandHandler{
-	"setloglevel": HandCmd_SetLogLevel,
+	"setloglv": HandCmd_SetLogLevel,
 }
 
 func StartConsole() {
@@ -59,7 +59,7 @@ func RegConsoleCmd(cmd string, mh CommandHandler) {
 //! 命令行函数
 func HandCmd_SetLogLevel(args []string) bool {
 	if len(args) < 2 {
-		gamelog.Error("Lack of param")
+		fmt.Print("Lack of param")
 		return false
 	}
 	level, err := strconv.Atoi(args[1])

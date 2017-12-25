@@ -1,31 +1,11 @@
 package gamelog
 
 import (
+	"common"
 	"conf"
 	"os"
-	"path/filepath"
 	"time"
 )
-
-var (
-	g_logDir = GetExeDir() + "log/"
-)
-
-// -------------------------------------
-// 辅助函数
-func GetExeDir() string {
-	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-	return dir + "/"
-}
-func IsDirExist(path string) bool {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return os.IsExist(err)
-	} else {
-		return fi.IsDir()
-	}
-	return true
-}
 
 // -------------------------------------
 //
@@ -33,18 +13,10 @@ func InitLogger(name string) {
 	if conf.IsDebug {
 		InitFileLog(os.Stdout)
 	} else {
-		if !IsDirExist(g_logDir) {
-			if err := os.MkdirAll(g_logDir, os.ModePerm); err != nil {
-				panic("InitLogger error : " + err.Error())
-				return
-			}
-		}
 		timeStr := time.Now().Format("20060102_150405")
-		fullName := g_logDir + name + "_" + timeStr + ".log"
-		file, err := os.OpenFile(fullName, os.O_WRONLY|os.O_CREATE, 0666)
+		file, err := common.CreateFile(g_logDir, name+timeStr+".log")
 		if err != nil {
-			panic("InitLogger OpenFile error : " + err.Error())
-			return
+			panic("CreateFile error : " + err.Error())
 		}
 		InitFileLog(file)
 		// _initAsyncLog(name)

@@ -7,10 +7,7 @@ import (
 	"tcp"
 )
 
-//FIXME：两种构建网络通信的方式：
-//一、每个节点连上来时，下发它要主动连接的节点，再通知要连接它的那些节点
-//二、节点内部作缓存，参考api模块，无缓存时，http同步向zookeeper取 ---- “同步取”的方式可能影响业务性能
-
+//每个节点连上来时，下发它要主动连接的节点，再通知要连接它的那些节点
 func Rpc_zoo_register(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	//1、提取新节点信息
 	module := req.ReadString()

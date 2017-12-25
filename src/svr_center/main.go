@@ -2,6 +2,7 @@ package main
 
 import (
 	"common"
+	"common/console"
 	"common/net/meta"
 	"conf"
 	"dbmgo"
@@ -20,7 +21,11 @@ const (
 func main() {
 	//初始化日志系统
 	gamelog.InitLogger(K_Module_Name)
-	gamelog.SetLevel(gamelog.Lv_Debug)
+	if conf.IsDebug {
+		gamelog.SetLevel(gamelog.Lv_Debug)
+	} else {
+		gamelog.SetLevel(gamelog.Lv_Info)
+	}
 	InitConf()
 
 	//设置mongodb的服务器地址
@@ -29,7 +34,7 @@ func main() {
 	account.G_AccountMgr.Init()
 
 	//开启控制台窗口，可以接受一些调试命令
-	common.StartConsole()
+	console.StartConsole()
 
 	component.RegisterToZookeeper()
 

@@ -1,9 +1,11 @@
 package gamelog
 
 import (
+	"common"
 	"fmt"
-	"io"
 	"log"
+	"os"
+	"time"
 )
 
 const (
@@ -12,9 +14,11 @@ const (
 	Lv_Warn
 	Lv_Error
 	Lv_Fatal
+	Change_File_CD = 60 * 3600 * time.Second
 )
 
 var (
+	g_logDir   = common.GetExeDir() + "log/"
 	g_logger   *log.Logger
 	g_level    = Lv_Debug
 	g_levelStr = []string{
@@ -26,8 +30,12 @@ var (
 	}
 )
 
-func InitFileLog(out io.Writer) {
-	g_logger = log.New(out, "", log.Ldate|log.Ltime|log.Lshortfile)
+func InitFileLog(file *os.File) {
+	if g_logger == nil {
+		g_logger = log.New(file, "", log.Ldate|log.Ltime|log.Lshortfile)
+	} else {
+		g_logger.SetOutput(file)
+	}
 	if g_logger == nil {
 		panic("InitFileLog log.New == nil")
 		return
@@ -55,4 +63,18 @@ func Error(format string, v ...interface{}) { _log(Lv_Error, format, v...) }
 func Fatal(format string, v ...interface{}) {
 	_log(Lv_Fatal, format, v...)
 	panic(fmt.Sprintf(format, v...))
+}
+
+// -------------------------------------
+// 每隔一段时间，更换输出文件
+func AutoChangeFile(name string) {
+	for {
+		time.Sleep(Change_File_CD)
+		timeStr := time.Now().Format("20060102_150405")
+		file, err := common.CreateFile(g_logDir, name+timeStr+".log")
+		if err != nil {
+			panic("CreateFile error : " + err.Error())
+		}
+		InitFileLog(file)
+	}
 }
