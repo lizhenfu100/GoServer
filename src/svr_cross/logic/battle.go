@@ -20,7 +20,7 @@ var (
 	g_cur_select_idx    = -1
 )
 
-//////////////////////////////////////////////////////////////////////
+// ------------------------------------------------------------
 //! TODO：某些 rpc 需告知 Battle 来源的 GameSvrID
 func Rpc_cross_relay_battle_data(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	svrId := _SelectBattleSvrId()
@@ -47,6 +47,7 @@ func Rpc_cross_relay_battle_data(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		gameMsg.WriteUInt16(port)
 		gameMsg.WriteBuf(backBuf.LeftBuf()) //[]<pid>
 		conn.WriteMsg(gameMsg)
+		gameMsg.Free()
 	})
 }
 func _SelectBattleSvrId() int {

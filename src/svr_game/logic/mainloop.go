@@ -1,9 +1,9 @@
 package logic
 
 import (
-	"time"
-
 	"svr_game/logic/player"
+	"tcp"
+	"time"
 )
 
 func MainLoop() {
@@ -15,6 +15,8 @@ func MainLoop() {
 
 		player.G_ServiceMgr.RunAllService(time_elapse, timeNow)
 
-		time.Sleep(1000 * time.Millisecond)
+		tcp.G_RpcQueue.Update()
+
+		time.Sleep(50 * time.Millisecond)
 	}
 }

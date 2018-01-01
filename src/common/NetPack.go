@@ -8,72 +8,71 @@ const (
 )
 
 type NetPack struct {
-	ByteBuffer
+	*ByteBuffer
 }
 
 func NewNetPackCap(capacity int) *NetPack {
-	pack := new(NetPack)
-	pack.DataPtr = make([]byte, PACK_HEADER_SIZE, capacity+PACK_HEADER_SIZE)
-	pack.ReadPos = PACK_HEADER_SIZE
-	return pack
+	self := &NetPack{NewByteBufferCap(capacity)}
+	self.ReadPos = PACK_HEADER_SIZE
+	*self.buf = (*self.buf)[:PACK_HEADER_SIZE]
+	return self
 }
 func NewNetPackLen(length int) *NetPack {
-	pack := new(NetPack)
-	pack.DataPtr = make([]byte, length+PACK_HEADER_SIZE)
-	pack.ReadPos = PACK_HEADER_SIZE
-	return pack
+	self := &NetPack{NewByteBufferLen(length)}
+	self.ReadPos = PACK_HEADER_SIZE
+	return self
 }
 func NewNetPack(data []byte) *NetPack {
-	pack := new(NetPack)
-	pack.DataPtr = data
-	pack.ReadPos = PACK_HEADER_SIZE
-	return pack
-}
-func (self *NetPack) Reset(data []byte) {
-	self.DataPtr = data
+	self := &NetPack{NewByteBuffer(data)}
 	self.ReadPos = PACK_HEADER_SIZE
+	return self
 }
-func (self *NetPack) Body() []byte  { return self.DataPtr[PACK_HEADER_SIZE:] }
-func (self *NetPack) BodySize() int { return len(self.DataPtr) - PACK_HEADER_SIZE }
+
+func (self *NetPack) Body() []byte  { return (*self.buf)[PACK_HEADER_SIZE:] }
+func (self *NetPack) BodySize() int { return len(*self.buf) - PACK_HEADER_SIZE }
 func (self *NetPack) Clear() {
-	self.DataPtr = self.DataPtr[:PACK_HEADER_SIZE]
+	*self.buf = (*self.buf)[:PACK_HEADER_SIZE]
 	self.ReadPos = PACK_HEADER_SIZE
 	self.SetOpCode(0)
 }
-func (self *NetPack) ResetHead(other *NetPack) {
-	self.DataPtr = self.DataPtr[:0]
-	self.WriteBuf(other.DataPtr[:PACK_HEADER_SIZE])
+func (self *NetPack) Reset(data []byte) {
+	*self.buf = data
 	self.ReadPos = PACK_HEADER_SIZE
 }
-func (self *NetPack) GetReqKey() uint64 {
-	return uint64(self.GetOpCode())<<32 | uint64(self.GetReqIdx())
+func (self *NetPack) ResetHead(other *NetPack) {
+	*self.buf = (*self.buf)[:0]
+	self.WriteBuf((*other.buf)[:PACK_HEADER_SIZE])
+	self.ReadPos = PACK_HEADER_SIZE
 }
 
 //! head
 func (self *NetPack) SetOpCode(id uint16) {
-	self.DataPtr[OPCODE_INDEX] = byte(id)
-	self.DataPtr[OPCODE_INDEX+1] = byte(id >> 8)
+	(*self.buf)[OPCODE_INDEX] = byte(id)
+	(*self.buf)[OPCODE_INDEX+1] = byte(id >> 8)
 }
 func (self *NetPack) GetOpCode() (ret uint16) {
-	return uint16(self.DataPtr[OPCODE_INDEX+1])<<8 | uint16(self.DataPtr[OPCODE_INDEX])
+	return uint16((*self.buf)[OPCODE_INDEX+1])<<8 | uint16((*self.buf)[OPCODE_INDEX])
 }
 func (self *NetPack) SetFromTyp(typ uint8) {
-	self.DataPtr[TYPE_INDEX] = typ
+	(*self.buf)[TYPE_INDEX] = typ
 }
 func (self *NetPack) GetFromTyp() uint8 {
-	return self.DataPtr[TYPE_INDEX]
+	return (*self.buf)[TYPE_INDEX]
 }
 func (self *NetPack) SetReqIdx(idx uint32) {
-	self.DataPtr[REQ_IDX_INDEX] = byte(idx)
-	self.DataPtr[REQ_IDX_INDEX+1] = byte(idx >> 8)
-	self.DataPtr[REQ_IDX_INDEX+2] = byte(idx >> 16)
-	self.DataPtr[REQ_IDX_INDEX+3] = byte(idx >> 24)
+	(*self.buf)[REQ_IDX_INDEX] = byte(idx)
+	(*self.buf)[REQ_IDX_INDEX+1] = byte(idx >> 8)
+	(*self.buf)[REQ_IDX_INDEX+2] = byte(idx >> 16)
+	(*self.buf)[REQ_IDX_INDEX+3] = byte(idx >> 24)
 }
 func (self *NetPack) GetReqIdx() (ret uint32) {
 	for i := 0; i < 4; i++ {
-		ret |= uint32(self.DataPtr[REQ_IDX_INDEX+i]) << uint(i*8)
+		ret |= uint32((*self.buf)[REQ_IDX_INDEX+i]) << uint(i*8)
 	}
 	return
+}
+func (self *NetPack) GetReqKey() uint64 {
+	return uint64(self.GetOpCode())<<32 | uint64(self.GetReqIdx())
 }
 
 //! Set

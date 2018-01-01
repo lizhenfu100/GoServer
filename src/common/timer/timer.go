@@ -117,7 +117,7 @@ func (self *Timer) _OnTimerFunc(now int64) {
 	}
 }
 
-//////////////////////////////////////////////////////////////////////
+// ------------------------------------------------------------
 // API
 func NewHourTimer(interval time.Duration) *Timer {
 	return _Newimer(interval * time.Hour)
@@ -174,7 +174,7 @@ func (self *Timer) AddTimeFunc_S(delaySec int64, cdSec, runSec int, handler Time
 	self.addLst = append(self.addLst, TimerFunc{cdSec, INT_MAX, nextDealTime, handler})
 }
 
-//////////////////////////////////////////////////////////////////////
+// ------------------------------------------------------------
 // 定时器：多线程写，单线程读
 type TimerChan struct {
 	timerChan chan func()

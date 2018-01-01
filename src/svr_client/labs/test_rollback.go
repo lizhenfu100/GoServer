@@ -50,9 +50,8 @@ func (self *Database) Transaction(trans func() int) {
 	self.transLogs = self.transLogs[:0] //每次事务过后清空记录
 }
 
-//////////////////////////////////////////////////////////////////////
+// ------------------------------------------------------------
 //! 事务：提交、回退
-//////////////////////////////////////////////////////////////////////
 func (self *PlayerItemTransLog) Commit(db *Database) {
 	switch self.Type {
 	case INSERT:
@@ -86,9 +85,8 @@ func (self *PlayerItemTransLog) Rollback(db *Database) {
 	}
 }
 
-//////////////////////////////////////////////////////////////////////
+// ------------------------------------------------------------
 //! 数据库操作
-//////////////////////////////////////////////////////////////////////
 func (self *Database) LookupPlayerItem(id int) *PlayerItem {
 	return self.playerItem[id]
 }

@@ -31,23 +31,24 @@ var (
 	G_After_Recv_Player  func(interface{}, *common.NetPack)
 )
 
-//////////////////////////////////////////////////////////////////////
+// ------------------------------------------------------------
 //! system rpc
 func CallRpc(addr string, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	buf := common.NewNetPackCap(64)
 	buf.SetOpCode(rid)
 	sendFun(buf)
-	b := PostReq(addr+"client_rpc", buf.DataPtr)
+	b := PostReq(addr+"client_rpc", buf.Data())
 	if recvFun != nil {
 		b2 := common.Decompress(b)
 		recvFun(common.NewNetPack(b2))
 	}
+	buf.Free()
 }
 func RegHandleRpc() { http.HandleFunc("/client_rpc", _HandleRpc) }
 func _HandleRpc(w http.ResponseWriter, r *http.Request) {
 	//! 接收信息
-	req := common.NewNetPackLen(int(r.ContentLength) - common.PACK_HEADER_SIZE)
-	r.Body.Read(req.DataPtr)
+	req := common.NewNetPackLen(int(r.ContentLength))
+	r.Body.Read(req.Data())
 
 	//! 创建回复
 	ack := common.NewNetPackCap(128)
@@ -56,17 +57,18 @@ func _HandleRpc(w http.ResponseWriter, r *http.Request) {
 		if r := recover(); r != nil {
 			gamelog.Error("recover msgId:%d\n%v: %s", msgId, r, debug.Stack())
 		}
+		ack.Free()
 	}()
 
 	if handler := G_HandleFunc[msgId]; handler != nil {
 		handler(req, ack)
-		common.CompressInto(ack.DataPtr, w)
+		common.CompressInto(ack.Data(), w)
 	} else {
 		println("\n===> Http HandleRpc:", msgId, "Not Regist!!!")
 	}
 }
 
-//////////////////////////////////////////////////////////////////////
+// ------------------------------------------------------------
 //! player rpc
 type PlayerRpc struct {
 	Url      string
@@ -81,12 +83,13 @@ func (self *PlayerRpc) CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack
 	buf.SetOpCode(rid)
 	buf.SetReqIdx(self.PlayerId)
 	sendFun(buf)
-	b := PostReq(self.Url, buf.DataPtr)
+	b := PostReq(self.Url, buf.Data())
 	b2 := common.Decompress(b)
 	recvBuf := common.NewNetPack(b2)
 	if recvFun != nil {
 		recvFun(recvBuf)
 	}
+	buf.Free()
 	_RecvHttpSvrData(recvBuf) //服务器主动下发的数据
 }
 func _RecvHttpSvrData(buf *common.NetPack) {
@@ -95,8 +98,8 @@ func _RecvHttpSvrData(buf *common.NetPack) {
 func RegHandlePlayerRpc() { http.HandleFunc("/player_rpc", _HandlePlayerRpc) }
 func _HandlePlayerRpc(w http.ResponseWriter, r *http.Request) {
 	//! 接收信息
-	req := common.NewNetPackLen(int(r.ContentLength) - common.PACK_HEADER_SIZE)
-	r.Body.Read(req.DataPtr)
+	req := common.NewNetPackLen(int(r.ContentLength))
+	r.Body.Read(req.Data())
 
 	//! 创建回复
 	ack := common.NewNetPackCap(128)
@@ -106,6 +109,7 @@ func _HandlePlayerRpc(w http.ResponseWriter, r *http.Request) {
 		if r := recover(); r != nil {
 			gamelog.Error("recover msgId:%d\n%v: %s", msgId, r, debug.Stack())
 		}
+		ack.Free()
 	}()
 	//FIXME: 验证消息安全性，防改包
 	//FIXME: http通信中途安全性不够，能修改client net pack里的pid，进而操作别人数据
@@ -131,7 +135,7 @@ func _HandlePlayerRpc(w http.ResponseWriter, r *http.Request) {
 		if G_After_Recv_Player != nil && player != nil {
 			G_After_Recv_Player(player, ack)
 		}
-		common.CompressInto(ack.DataPtr, w)
+		common.CompressInto(ack.Data(), w)
 	} else {
 		println("\n===> Http HandlePlayerRpc:", msgId, "Not Regist!!!")
 	}

@@ -20,6 +20,7 @@ import (
 	"gamelog"
 	_ "generate_out/rpc/svr_login"
 	"netConfig"
+	"svr_login/logic"
 	"zookeeper/component"
 )
 
@@ -42,6 +43,8 @@ func main() {
 	console.StartConsole()
 
 	component.RegisterToZookeeper()
+
+	go logic.MainLoop()
 
 	print("----Login Server Start-----")
 	if !netConfig.CreateNetSvr(K_Module_Name, K_Module_SvrID) {

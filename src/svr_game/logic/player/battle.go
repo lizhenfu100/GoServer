@@ -94,7 +94,7 @@ func Rpc_game_probe_login_battle(req, ack *common.NetPack, ptr interface{}) {
 	msg := player.Battle.loginBattleMsg
 	if msg.Size() > 0 {
 		ack.WriteInt8(1)
-		ack.WriteBuf(msg.DataPtr)
+		ack.WriteBuf(msg.Data())
 		player.Battle.loginBattleMsg.Clear()
 	} else {
 		ack.WriteInt8(-1)

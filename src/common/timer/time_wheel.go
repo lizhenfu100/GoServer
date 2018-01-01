@@ -22,7 +22,7 @@ var (
 	WHEEL_CAP  [WHEEL_NUM]uint
 )
 
-//////////////////////////////////////////////////////////////////////
+// ------------------------------------------------------------
 // node
 type TimerNode struct {
 	prev     *TimerNode
@@ -51,7 +51,7 @@ func (self *TimerNode) _Callback() {
 	self.callback()
 }
 
-//////////////////////////////////////////////////////////////////////
+// ------------------------------------------------------------/
 // wheel
 type Wheel struct {
 	//每个slot维护的node链表为一个环，如此可以简化插入删除的操作
@@ -73,7 +73,7 @@ func (self *Wheel) GetCurSlot() *TimerNode {
 }
 func (self *Wheel) size() uint { return uint(len(self.slots)) }
 
-//////////////////////////////////////////////////////////////////////
+// ------------------------------------------------------------
 // manager
 var G_TimerMgr = _NewTimerMgr()
 

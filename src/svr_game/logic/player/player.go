@@ -186,7 +186,7 @@ func _Service_Check_AFK(ptr interface{}) {
 	}
 }
 
-//////////////////////////////////////////////////////////////////////
+// ------------------------------------------------------------
 //! for other player write my data
 func AsyncNotifyPlayer(pid uint32, handler func(*TPlayer)) {
 	if player := FindPlayerInCache(pid); player != nil {
@@ -226,7 +226,7 @@ func (self *TPlayer) _HandleAsyncNotify() {
 	}
 }
 
-//////////////////////////////////////////////////////////////////////
+// ------------------------------------------------------------
 //! 访问玩家部分数据，包括离线的
 func GetPlayerBaseData(pid uint32) *TPlayerBase {
 	if player := FindPlayerInCache(pid); player != nil {

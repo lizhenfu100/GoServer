@@ -6,8 +6,9 @@ import (
 	"sync/atomic"
 )
 
-// lock free queue
-type SafeQueue struct {
+// https://zhuanlan.zhihu.com/p/23863915
+// https://github.com/yireyun/go-queue
+type SafeQueue struct { //lock free queue
 	capaciity uint32
 	capMod    uint32
 	putPos    uint32
@@ -50,17 +51,14 @@ func (q *SafeQueue) Capaciity() uint32 {
 }
 
 func (q *SafeQueue) Quantity() uint32 {
-	var putPos, getPos uint32
-	var quantity uint32
+	var putPos, getPos, quantity uint32
 	getPos = atomic.LoadUint32(&q.getPos)
 	putPos = atomic.LoadUint32(&q.putPos)
-
 	if putPos >= getPos {
 		quantity = putPos - getPos
 	} else {
 		quantity = q.capMod + (putPos - getPos)
 	}
-
 	return quantity
 }
 

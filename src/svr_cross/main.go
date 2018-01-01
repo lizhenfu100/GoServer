@@ -8,6 +8,7 @@ import (
 	"gamelog"
 	_ "generate_out/rpc/svr_cross"
 	"netConfig"
+	"svr_cross/logic"
 	"zookeeper/component"
 )
 
@@ -30,6 +31,8 @@ func main() {
 	console.StartConsole()
 
 	component.RegisterToZookeeper()
+
+	go logic.MainLoop()
 
 	print("----Cross Server Start-----")
 	if !netConfig.CreateNetSvr(Module_Name, Module_SvrID) {

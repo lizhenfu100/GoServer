@@ -55,7 +55,7 @@ func RegConsoleCmd(cmd string, mh CommandHandler) {
 	G_HandlerMap[cmd] = mh
 }
 
-//////////////////////////////////////////////////////////////////////
+// ------------------------------------------------------------
 //! 命令行函数
 func HandCmd_SetLogLevel(args []string) bool {
 	if len(args) < 2 {

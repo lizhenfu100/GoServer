@@ -34,6 +34,8 @@ func main() {
 
 	component.RegisterToZookeeper()
 
+	go logic.MainLoop()
+
 	print("----Sdk Server Start-----")
 	if !netConfig.CreateNetSvr(K_Module_Name, K_Module_SvrID) {
 		print("----Sdk NetSvr Failed-----")

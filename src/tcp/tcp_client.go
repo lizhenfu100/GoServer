@@ -53,7 +53,7 @@ func (self *TCPClient) connect() bool {
 		return false
 	}
 	if self.TcpConn == nil {
-		self.TcpConn = newTCPConn(conn, nil)
+		self.TcpConn = newTCPConn(conn)
 		self.TcpConn.UserPtr = self
 	} else {
 		//断线重连的新连接标记得重置，否则tcpConn.readRoutine.readLoop会直接break

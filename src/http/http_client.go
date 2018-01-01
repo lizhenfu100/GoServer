@@ -23,7 +23,7 @@ import (
 	"time"
 )
 
-//////////////////////////////////////////////////////////////////////
+// ------------------------------------------------------------
 //! 底层接口，业务层一般用不到
 func PostReq(url string, b []byte) []byte {
 	ack, err := http.Post(url, "text/HTML", bytes.NewReader(b))
@@ -42,7 +42,7 @@ func PostReq(url string, b []byte) []byte {
 // resp, err := http.Post(url, "text/HTML", bytes.NewReader(b))
 // resp.Body.Close()
 
-//////////////////////////////////////////////////////////////////////
+// ------------------------------------------------------------
 //! 模块注册
 func RegistToSvr(destAddr string, meta *meta.Meta) {
 	go _RegistToSvr(destAddr, meta)

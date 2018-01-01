@@ -68,7 +68,7 @@ func AfterRecvNetMsg(ptr interface{}, buf *common.NetPack) {
 	}
 	if self.Friend.inviteMsg.Size() > 0 { //被别人邀请
 		common.SetBit32(&bit, Bit_Invite_Friend, true)
-		buf.WriteBuf(self.Friend.inviteMsg.DataPtr)
+		buf.WriteBuf(self.Friend.inviteMsg.Data())
 		self.Friend.inviteMsg.Clear()
 	}
 	if self.pTeam != nil && self.pTeam.isChange {

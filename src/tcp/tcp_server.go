@@ -91,18 +91,17 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 		gamelog.Error("too many connections(%d/%d)", len(self.connmap), self.MaxConnNum)
 		return
 	}
-
 	connId := atomic.AddUint32(&self.autoConnId, 1)
 
 	self.wgConns.Add(1)
-	tcpConn := newTCPConn(conn,
-		func(this *TCPConn) {
-			self.mutexConns.Lock()
-			delete(self.connmap, connId)
-			self.mutexConns.Unlock()
-			gamelog.Debug("Disconnect: UserPtr:%v, DelConnId: %d, ConnCnt: %d", this.UserPtr, connId, len(self.connmap))
-			self.wgConns.Done()
-		})
+	tcpConn := newTCPConn(conn)
+	tcpConn.onNetClose = func(this *TCPConn) {
+		self.mutexConns.Lock()
+		delete(self.connmap, connId)
+		self.mutexConns.Unlock()
+		gamelog.Debug("Disconnect: DelConnId: %d, UserPtr:%v, ConnCnt: %d", connId, this.UserPtr, len(self.connmap))
+		self.wgConns.Done()
+	}
 	self.mutexConns.Lock()
 	self.connmap[connId] = tcpConn
 	self.mutexConns.Unlock()
@@ -113,8 +112,9 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 	acceptMsg.SetOpCode(enum.Rpc_svr_accept)
 	acceptMsg.WriteUInt32(connId)
 	tcpConn.WriteMsg(acceptMsg)
+	acceptMsg.Free()
 	go tcpConn.readRoutine()
-	tcpConn.writeRoutine()
+	tcpConn.writeRoutine() //block
 }
 func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
 	self.mutexConns.Lock()
@@ -125,7 +125,7 @@ func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
 			gamelog.Debug("_ResetOldConn isClose: %d", oldId)
 			oldconn.ResetConn(newconn)
 			go oldconn.readRoutine()
-			oldconn.writeRoutine()
+			oldconn.writeRoutine() //block
 		} else {
 			gamelog.Debug("_ResetOldConn isOpen: %d", oldId)
 			// newconn.Close()
@@ -151,7 +151,7 @@ func (self *TCPServer) Close() {
 	gamelog.Debug("server been closed!!")
 }
 
-//////////////////////////////////////////////////////////////////////
+// ------------------------------------------------------------
 //! 模块注册
 type TRegConn struct {
 	*meta.Meta
@@ -166,6 +166,7 @@ func DoRegistToSvr(req, ack *common.NetPack, conn *TCPConn) {
 
 	g_reg_conn_map.Store(common.KeyPair{ptr.Module, ptr.SvrID}, TRegConn{ptr, conn})
 	meta.AddMeta(ptr)
+	gamelog.Debug("DoRegistToSvr: {%s %d}", ptr.Module, ptr.SvrID)
 
 	cb := conn.onNetClose
 	conn.onNetClose = func(this *TCPConn) {
@@ -177,7 +178,6 @@ func DoRegistToSvr(req, ack *common.NetPack, conn *TCPConn) {
 			cb(this)
 		}
 	}
-	gamelog.Debug("DoRegistToSvr: {%s %d}", ptr.Module, ptr.SvrID)
 }
 
 func FindRegModuleConn(module string, id int) *TCPConn {

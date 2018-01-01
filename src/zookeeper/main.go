@@ -23,6 +23,7 @@ import (
 	"gamelog"
 	_ "generate_out/rpc/zookeeper"
 	"netConfig"
+	"zookeeper/logic"
 )
 
 const (
@@ -39,6 +40,8 @@ func main() {
 		gamelog.SetLevel(gamelog.Lv_Info)
 	}
 	InitConf()
+
+	go logic.MainLoop()
 
 	print("----zookeeper Start-----")
 	if !netConfig.CreateNetSvr(K_Module_Name, K_Module_SvrID) {

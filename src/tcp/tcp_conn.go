@@ -61,15 +61,13 @@ import (
 	"generate_out/rpc/enum"
 	"io"
 	"net"
-	"runtime/debug"
-	"sync"
-	"sync/atomic"
 	"time"
 )
 
 const (
-	G_Msg_Size_Max = 1024
-	Write_Chan_Cap = 32
+	G_Msg_Size_Max    = 1024
+	Write_Chan_Cap    = 32
+	Delay_Delete_Conn = 30 * time.Second
 )
 
 var (
@@ -77,11 +75,7 @@ var (
 		enum.Rpc_regist:     DoRegistToSvr,
 		enum.Rpc_svr_accept: OnSvrAcceptConn,
 	}
-	g_rpc_response = make(map[uint64]func(*common.NetPack))
-	g_auto_req_idx = uint32(0)
-	g_rw_lock      sync.RWMutex
-
-	g_error_conn_close = errors.New("tcp conn close")
+	G_RpcQueue = NewRpcQueue(4096)
 )
 
 type TCPConn struct {
@@ -92,18 +86,19 @@ type TCPConn struct {
 	isClose      bool //isClose标记仅在ResetConn、Close中设置，其它地方只读
 	isWriteClose bool
 	onNetClose   func(*TCPConn)
+	timer        *time.Timer
 	UserPtr      interface{}
-	sendBuffer   *common.NetPack //for rpc
-	backBuffer   *common.NetPack
 }
 
-func newTCPConn(conn net.Conn, callback func(*TCPConn)) *TCPConn {
+func newTCPConn(conn net.Conn) *TCPConn {
 	self := new(TCPConn)
-	self.ResetConn(conn)
-	self.onNetClose = callback
 	self.writeChan = make(chan []byte, Write_Chan_Cap)
-	self.sendBuffer = common.NewNetPackCap(128)
-	self.backBuffer = common.NewNetPackCap(128)
+	self.timer = time.AfterFunc(Delay_Delete_Conn, func() { //Notice:回调函数须线程安全
+		if self.isClose {
+			self.onNetClose(self)
+		}
+	})
+	self.ResetConn(conn)
 	return self
 }
 func (self *TCPConn) ResetConn(conn net.Conn) {
@@ -111,6 +106,7 @@ func (self *TCPConn) ResetConn(conn net.Conn) {
 	self.reader = bufio.NewReader(conn)
 	self.writer = bufio.NewWriter(conn)
 	self.isClose = false
+	self.timer.Stop()
 }
 func (self *TCPConn) Close() {
 	if self.isClose {
@@ -123,11 +119,7 @@ func (self *TCPConn) Close() {
 	self.isClose = true
 
 	if self.onNetClose != nil {
-		time.AfterFunc(30*time.Second, func() { //Notice:AfterFunc是在另一线程执行，所以调的函数须是线程安全的
-			if self.isClose {
-				self.onNetClose(self)
-			}
-		})
+		self.timer.Reset(Delay_Delete_Conn)
 	}
 }
 func (self *TCPConn) IsClose() bool { return self.isClose }
@@ -142,7 +134,7 @@ func (self *TCPConn) WriteMsg(msg *common.NetPack) {
 
 	binary.LittleEndian.PutUint16(buf, msgLen)
 
-	copy(buf[2:], msg.DataPtr)
+	copy(buf[2:], msg.Data())
 
 	if false == self.isClose {
 		self.WriteBuf(buf)
@@ -160,7 +152,7 @@ func (self *TCPConn) WriteBuf(buf []byte) {
 }
 func (self *TCPConn) _WriteFull(buf []byte) (err error) { //FIXME：err可能是io.ErrShortWrite，网络还是能继续工作的
 	if buf == nil {
-		return g_error_conn_close
+		return errors.New("tcp conn close")
 	}
 	var n, nn int
 	length := len(buf)
@@ -208,9 +200,8 @@ func (self *TCPConn) readRoutine() {
 	var err error
 	var msgLen int
 	var msgHeader = make([]byte, 2) //前2字节存msgLen
-	var msgBuf = make([]byte, G_Msg_Size_Max)
-	var packet = common.NewNetPack(nil)
-	// var firstTime bool = true
+	//var packet, msgBuf = &common.NetPack{}, make([]byte, G_Msg_Size_Max)
+	//var firstTime bool = true
 	for {
 		if self.isClose {
 			break
@@ -227,15 +218,16 @@ func (self *TCPConn) readRoutine() {
 			gamelog.Error("ReadFull msgHeader error: %s", err.Error())
 			break
 		}
-
 		msgLen = int(binary.LittleEndian.Uint16(msgHeader))
 		if msgLen <= 0 || msgLen > G_Msg_Size_Max {
 			gamelog.Error("ReadProcess Invalid msgLen :%d", msgLen)
 			break
 		}
-		packet.Reset(msgBuf[:msgLen])
+		//packet.Reset(msgBuf[:msgLen]) //每次都操作的同片内存
+		packet := common.NewNetPackLen(msgLen)
+		common.Assert(len(packet.Data()) == msgLen)
 
-		_, err = io.ReadFull(self.reader, packet.DataPtr)
+		_, err = io.ReadFull(self.reader, packet.Data())
 		if err != nil {
 			gamelog.Error("ReadFull msgData error: %s", err.Error())
 			break
@@ -243,83 +235,15 @@ func (self *TCPConn) readRoutine() {
 
 		//FIXME: 消息加密、验证有效性，不通过即踢掉
 
-		//【Notice: 目前是在io线程直接调消息响应函数(多线程处理玩家操作)，玩家之间互改数据须考虑竞态问题(可用actor模式解决)】
+		//【Notice: 在io线程直接调消息响应函数(多线程处理玩家操作)，玩家之间互改数据须考虑竞态问题(可用actor模式解决)】
 		//【Notice: 若友好支持玩家强交互，可将packet放入主逻辑循环的消息队列(SafeQueue)】
-		self.msgDispatcher(packet)
+		G_RpcQueue.Insert(self, packet)
 	}
 	self.Close()
 }
-func (self *TCPConn) msgDispatcher(msg *common.NetPack) {
-	msgID := msg.GetOpCode()
-	defer func() {
-		if r := recover(); r != nil {
-			gamelog.Error("recover msgId:%d\n%v: %s", msgID, r, debug.Stack())
-		}
-	}()
-	if msghandler := G_HandleFunc[msgID]; msghandler != nil {
-		gamelog.Debug("TcpMsgId:%d, len:%d", msgID, msg.Size())
-		self.backBuffer.ResetHead(msg)
-		msghandler(msg, self.backBuffer, self)
-		if self.backBuffer.BodySize() > 0 {
-			self.WriteMsg(self.backBuffer)
-		}
-	} else if rpcRecv := _FindResponse(msg.GetReqKey()); rpcRecv != nil {
-		rpcRecv(msg)
-		_DeleteResponse(msg.GetReqKey())
-	} else {
-		gamelog.Error("msgid[%d] havn't msg handler!!", msgID)
-	}
-}
 
 // ------------------------------------------------------------
-//! rpc 【非线程安全的】只给Player用
-func (self *TCPConn) CallRpcUnsafe(msgID uint16, sendFun, recvFun func(*common.NetPack)) {
-	common.Assert(G_HandleFunc[msgID] == nil && self.sendBuffer.GetOpCode() == 0)
-	//gamelog.Error("[%d] Server and Client have the same Rpc or Repeat CallRpc", msgID)
-
-	self.sendBuffer.SetOpCode(msgID)
-	self.sendBuffer.SetReqIdx(_GetNextReqIdx())
-	sendFun(self.sendBuffer)
-	self.WriteMsg(self.sendBuffer)
-	self.sendBuffer.Clear()
-
-	if recvFun != nil {
-		_InsertResponse(self.sendBuffer.GetReqKey(), recvFun)
-	}
+// rpc
+func (self *TCPConn) CallRpc(msgId uint16, sendFun, recvFun func(*common.NetPack)) {
+	G_RpcQueue.CallRpc(self, msgId, sendFun, recvFun)
 }
-func (self *TCPConn) CallRpc(msgID uint16, sendFun, recvFun func(*common.NetPack)) {
-	common.Assert(G_HandleFunc[msgID] == nil)
-	//gamelog.Error("[%d] Server and Client have the same Rpc", msgID)
-
-	buf := common.NewNetPackCap(128)
-	buf.SetOpCode(msgID)
-	buf.SetReqIdx(_GetNextReqIdx())
-	sendFun(buf)
-	self.WriteMsg(buf)
-
-	if recvFun != nil {
-		_InsertResponse(buf.GetReqKey(), recvFun)
-	}
-}
-func _FindResponse(reqKey uint64) func(*common.NetPack) {
-	g_rw_lock.RLock()
-	defer g_rw_lock.RUnlock()
-	if rpcRecv, ok := g_rpc_response[reqKey]; ok {
-		return rpcRecv
-	}
-	return nil
-}
-func _InsertResponse(reqKey uint64, fun func(*common.NetPack)) {
-	// 后来的应该覆盖之前的
-	// if _FindResponse(reqKey) == nil {
-	g_rw_lock.Lock()
-	g_rpc_response[reqKey] = fun
-	g_rw_lock.Unlock()
-	// }
-}
-func _DeleteResponse(reqKey uint64) {
-	g_rw_lock.Lock()
-	delete(g_rpc_response, reqKey)
-	g_rw_lock.Unlock()
-}
-func _GetNextReqIdx() uint32 { return atomic.AddUint32(&g_auto_req_idx, 1) }

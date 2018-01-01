@@ -38,9 +38,8 @@ func (data *TActivityData) RefreshStatus(now int64) {
 	}
 }
 
-//////////////////////////////////////////////////////////////////////
+// ------------------------------------------------------------
 // 开服，构造serv活动数据
-//////////////////////////////////////////////////////////////////////
 func (self *TGlobalActivity) Init() {
 	self.db_LoadGlobalActivity()
 	self.CheckActivityAdd()   //! 检测表中是否有新增活动
@@ -85,10 +84,8 @@ func (self *TGlobalActivity) db_LoadGlobalActivity() bool {
 	return true
 }
 
-//////////////////////////////////////////////////////////////////////
-// 活动数据刷新
-//////////////////////////////////////////////////////////////////////
-//! 在线跨天
+// ------------------------------------------------------------
+// 活动数据刷新，在线跨天
 func (self *TGlobalActivity) OnTimerRefresh(now int64) bool {
 	self.EnterNextDay(now)
 	return true
