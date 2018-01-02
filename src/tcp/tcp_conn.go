@@ -86,7 +86,7 @@ type TCPConn struct {
 	isClose      bool //isClose标记仅在ResetConn、Close中设置，其它地方只读
 	isWriteClose bool
 	onNetClose   func(*TCPConn)
-	timer        *time.Timer
+	timer        *time.Timer //延时清理连接，提高重连效率
 	UserPtr      interface{}
 }
 
@@ -112,6 +112,7 @@ func (self *TCPConn) Close() {
 	if self.isClose {
 		return
 	}
+	self.conn.(*net.TCPConn).SetLinger(0) //丢弃数据
 	self.conn.Close()
 	if !self.isWriteClose {
 		self.WriteBuf(nil) //触发writeRoutine结束
@@ -123,6 +124,11 @@ func (self *TCPConn) Close() {
 	}
 }
 func (self *TCPConn) IsClose() bool { return self.isClose }
+
+func (self *TCPConn) SetOnNetClose(cb func(*TCPConn)) {
+	common.Assert(self.onNetClose == nil)
+	self.onNetClose = cb
+}
 
 // msgdata must not be modified by other goroutines
 func (self *TCPConn) WriteMsg(msg *common.NetPack) {
@@ -136,16 +142,16 @@ func (self *TCPConn) WriteMsg(msg *common.NetPack) {
 
 	copy(buf[2:], msg.Data())
 
-	if false == self.isClose {
-		self.WriteBuf(buf)
-	}
+	self.WriteBuf(buf)
 }
 func (self *TCPConn) WriteBuf(buf []byte) {
+	if self.isClose {
+		return
+	}
 	select {
 	case self.writeChan <- buf: //chan满后再写即阻塞，select进入default分支报错
 	default:
 		gamelog.Error("WriteBuf: channel full")
-		self.conn.(*net.TCPConn).SetLinger(0)
 		self.Close()
 		// close(self.writeChan) //client重连chan里的数据得保留，server都是新new的
 	}
@@ -201,18 +207,10 @@ func (self *TCPConn) readRoutine() {
 	var msgLen int
 	var msgHeader = make([]byte, 2) //前2字节存msgLen
 	//var packet, msgBuf = &common.NetPack{}, make([]byte, G_Msg_Size_Max)
-	//var firstTime bool = true
 	for {
 		if self.isClose {
 			break
 		}
-		//【check client heartbeat to close invalid conn】
-		// if firstTime == true {
-		// 	self.conn.SetReadDeadline(time.Now().Add(5 * time.Second)) //首次读，5秒超时【Notice: Client无需超时限制】
-		// 	firstTime = false
-		// } else {
-		// 	self.conn.SetReadDeadline(time.Time{}) //后面读的就没有超时了
-		// }
 		_, err = io.ReadFull(self.reader, msgHeader)
 		if err != nil {
 			gamelog.Error("ReadFull msgHeader error: %s", err.Error())
@@ -225,7 +223,6 @@ func (self *TCPConn) readRoutine() {
 		}
 		//packet.Reset(msgBuf[:msgLen]) //每次都操作的同片内存
 		packet := common.NewNetPackLen(msgLen)
-		common.Assert(len(packet.Data()) == msgLen)
 
 		_, err = io.ReadFull(self.reader, packet.Data())
 		if err != nil {

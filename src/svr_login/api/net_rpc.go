@@ -6,20 +6,23 @@ import (
 	"http"
 	"netConfig"
 	"strings"
+	"sync"
 )
 
 var (
-	g_cache_center_addr = make(map[int]string)
-	g_cache_game_addr   = make(map[int]string)
+	g_cache_center_addr sync.Map // make(map[int]string)
+	g_cache_game_addr   sync.Map // make(map[int]string)
 )
 
 // ------------------------------------------------------------
 //! center
 func CallRpcCenter(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	addr, ok := g_cache_center_addr[svrId]
-	if false == ok {
+	var addr string
+	if v, ok := g_cache_center_addr.Load(svrId); ok {
+		addr = v.(string)
+	} else {
 		addr = netConfig.GetHttpAddr("center", svrId)
-		g_cache_center_addr[svrId] = addr
+		g_cache_center_addr.Store(svrId, addr)
 	}
 	http.CallRpc(addr, rid, sendFun, recvFun)
 }
@@ -47,10 +50,12 @@ func HashCenterID(key string) int {
 // ------------------------------------------------------------
 //! game
 func CallRpcGame(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	addr, ok := g_cache_game_addr[svrId]
-	if false == ok {
+	var addr string
+	if v, ok := g_cache_game_addr.Load(svrId); ok {
+		addr = v.(string)
+	} else {
 		addr = netConfig.GetHttpAddr("game", svrId)
-		g_cache_game_addr[svrId] = addr
+		g_cache_game_addr.Store(svrId, addr)
 	}
 	http.CallRpc(addr, rid, sendFun, recvFun)
 }

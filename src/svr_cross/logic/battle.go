@@ -29,7 +29,7 @@ func Rpc_cross_relay_battle_data(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		gamelog.Error("!!! svr_battle is full !!!")
 		return
 	}
-	println("--- select battle: ", svrId)
+	gamelog.Debug("select battle: %d", svrId)
 
 	// 转给Battle进程
 	api.CallRpcBattle(svrId, enum.Rpc_battle_handle_player_data, func(buf *common.NetPack) {
@@ -39,7 +39,7 @@ func Rpc_cross_relay_battle_data(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		g_battle_player_cnt[svrId] = playerCnt
 
 		//【Notice：异步回调里不能用非线程安全的数据，直接用ack回复错的】
-		print("--- send addr to game ---\n")
+		gamelog.Debug("send addr to game")
 		ip, port := meta.GetIpPort("battle", svrId)
 		gameMsg := common.NewNetPackCap(256)
 		gameMsg.SetOpCode(enum.Rpc_game_battle_ack)

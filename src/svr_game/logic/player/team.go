@@ -3,14 +3,17 @@ package player
 import (
 	"common"
 	"fmt"
+	"sync"
 )
 
 //同一队伍的人引用同一地址，但仅队长能操作数据，别人只读
 type TeamData struct {
 	lst      []*TPlayer
 	isChange bool
-	chatLst  []TeamChat
-	chatPos  map[uint32]int //要发给pid的索引位
+
+	sync.RWMutex
+	chatLst []TeamChat
+	chatPos map[uint32]int //要发给pid的索引位
 }
 type TeamChat struct {
 	pid  uint32
@@ -132,15 +135,19 @@ func Rpc_game_send_team_chat(req, ack *common.NetPack, ptr interface{}) {
 		return
 	}
 	str := req.ReadString()
+	self.pTeam.Lock()
 	self.pTeam.chatLst = append(self.pTeam.chatLst, TeamChat{pid, self.Name, str})
+	self.pTeam.Unlock()
 
 	if pos := self.pTeam.GetNoSendIdx(pid); pos >= 0 {
 		self.pTeam.DataToBuf(ack, pid)
 	}
 }
 func (self *TeamData) GetNoSendIdx(pid uint32) int {
+	self.RLock()
 	pos := self.chatPos[pid]
 	length := len(self.chatLst)
+	self.RUnlock()
 	if length > pos {
 		return pos
 	} else {
@@ -148,6 +155,7 @@ func (self *TeamData) GetNoSendIdx(pid uint32) int {
 	}
 }
 func (self *TeamData) DataToBuf(buf *common.NetPack, pid uint32) {
+	self.RLock()
 	//下发从pos起始的内容
 	pos := self.chatPos[pid]
 	length := len(self.chatLst)
@@ -158,5 +166,9 @@ func (self *TeamData) DataToBuf(buf *common.NetPack, pid uint32) {
 		buf.WriteString(v.name)
 		buf.WriteString(v.str)
 	}
+	self.RUnlock()
+
+	self.Lock()
 	self.chatPos[pid] = length
+	self.Unlock()
 }

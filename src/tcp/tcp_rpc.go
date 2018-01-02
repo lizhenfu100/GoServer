@@ -83,11 +83,10 @@ func (self *RpcQueue) CallRpc(conn *TCPConn, msgId uint16, sendFun, recvFun func
 
 	self.sendBuffer.SetOpCode(msgId)
 	self.sendBuffer.SetReqIdx(atomic.AddUint32(&self.reqIdx, 1))
-	sendFun(self.sendBuffer)
-	conn.WriteMsg(self.sendBuffer)
-	self.sendBuffer.Clear()
-
 	if recvFun != nil {
 		self.response[self.sendBuffer.GetReqKey()] = recvFun
 	}
+	sendFun(self.sendBuffer)
+	conn.WriteMsg(self.sendBuffer)
+	self.sendBuffer.Clear()
 }

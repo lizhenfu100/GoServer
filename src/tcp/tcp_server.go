@@ -70,7 +70,8 @@ func (self *TCPServer) run() {
 	}
 }
 func (self *TCPServer) _HandleAcceptConn(conn net.Conn) {
-	buf := make([]byte, 2+4) //Notice：收第一个包，客户端上报connId
+	buf := make([]byte, 2+4)                              //Notice：收第一个包，客户端上报connId
+	conn.SetReadDeadline(time.Now().Add(5 * time.Second)) //首次读，5秒超时防连接占用攻击；client无需超时限制
 	if _, err := io.ReadFull(conn, buf); err != nil {
 		conn.Close()
 		gamelog.Error("RecvFirstPack: %s", err.Error())
@@ -79,6 +80,8 @@ func (self *TCPServer) _HandleAcceptConn(conn net.Conn) {
 	connId := binary.LittleEndian.Uint32(buf[2:])
 	gamelog.Debug("_HandleAcceptConn: %d", connId)
 
+	conn.SetReadDeadline(time.Time{}) //后续无超时限制
+
 	if connId > 0 {
 		self._ResetOldConn(conn, connId)
 	} else {
@@ -86,26 +89,23 @@ func (self *TCPServer) _HandleAcceptConn(conn net.Conn) {
 	}
 }
 func (self *TCPServer) _AddNewConn(conn net.Conn) {
+	self.mutexConns.Lock()
 	if len(self.connmap) >= self.MaxConnNum {
+		self.mutexConns.Unlock()
 		conn.Close()
-		gamelog.Error("too many connections(%d/%d)", len(self.connmap), self.MaxConnNum)
+		gamelog.Error("too many connections")
 		return
 	}
+	self.mutexConns.Unlock()
+
 	connId := atomic.AddUint32(&self.autoConnId, 1)
 
 	self.wgConns.Add(1)
 	tcpConn := newTCPConn(conn)
-	tcpConn.onNetClose = func(this *TCPConn) {
-		self.mutexConns.Lock()
-		delete(self.connmap, connId)
-		self.mutexConns.Unlock()
-		gamelog.Debug("Disconnect: DelConnId: %d, UserPtr:%v, ConnCnt: %d", connId, this.UserPtr, len(self.connmap))
-		self.wgConns.Done()
-	}
 	self.mutexConns.Lock()
 	self.connmap[connId] = tcpConn
 	self.mutexConns.Unlock()
-	gamelog.Debug("Connect From: %s, AddConnId: %d, ConnCnt: %d", conn.RemoteAddr().String(), connId, len(self.connmap))
+	gamelog.Debug("Connect From: %s, AddConnId: %d", conn.RemoteAddr().String(), connId)
 
 	// 通知client，连接被接收，下发connId、密钥等
 	acceptMsg := common.NewNetPackCap(32)
@@ -113,8 +113,7 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 	acceptMsg.WriteUInt32(connId)
 	tcpConn.WriteMsg(acceptMsg)
 	acceptMsg.Free()
-	go tcpConn.readRoutine()
-	tcpConn.writeRoutine() //block
+	self._RunConn(tcpConn, connId)
 }
 func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
 	self.mutexConns.Lock()
@@ -124,8 +123,7 @@ func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
 		if oldconn.isClose {
 			gamelog.Debug("_ResetOldConn isClose: %d", oldId)
 			oldconn.ResetConn(newconn)
-			go oldconn.readRoutine()
-			oldconn.writeRoutine() //block
+			self._RunConn(oldconn, oldId)
 		} else {
 			gamelog.Debug("_ResetOldConn isOpen: %d", oldId)
 			// newconn.Close()
@@ -136,6 +134,17 @@ func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
 		self._AddNewConn(newconn)
 	}
 }
+func (self *TCPServer) _RunConn(conn *TCPConn, connId uint32) {
+	go conn.readRoutine()
+	conn.writeRoutine() //block
+
+	self.mutexConns.Lock()
+	delete(self.connmap, connId)
+	self.mutexConns.Unlock()
+	gamelog.Debug("Disconnect: DelConnId: %d, UserPtr:%v", connId, conn.UserPtr)
+	self.wgConns.Done()
+}
+
 func (self *TCPServer) Close() {
 	self.listener.Close()
 	self.wgLn.Wait()
@@ -168,16 +177,12 @@ func DoRegistToSvr(req, ack *common.NetPack, conn *TCPConn) {
 	meta.AddMeta(ptr)
 	gamelog.Debug("DoRegistToSvr: {%s %d}", ptr.Module, ptr.SvrID)
 
-	cb := conn.onNetClose
-	conn.onNetClose = func(this *TCPConn) {
+	conn.SetOnNetClose(func(this *TCPConn) {
 		if pConn := FindRegModuleConn(ptr.Module, ptr.SvrID); pConn != nil && pConn.isClose {
 			gamelog.Debug("Delete Regist Svr: {%s %d}", ptr.Module, ptr.SvrID)
 			g_reg_conn_map.Delete(common.KeyPair{ptr.Module, ptr.SvrID})
 		}
-		if cb != nil {
-			cb(this)
-		}
-	}
+	})
 }
 
 func FindRegModuleConn(module string, id int) *TCPConn {
