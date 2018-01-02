@@ -2,7 +2,6 @@ package http
 
 import (
 	"common"
-	// "net"
 	"common/net/meta"
 	"encoding/json"
 	"fmt"
@@ -13,20 +12,10 @@ import (
 
 func Addr(ip string, port uint16) string { return fmt.Sprintf("http://%s:%d/", ip, port) }
 
-//Notice：http的消息处理，是另开goroutine调用的，所以函数中可阻塞；tcp就不行了
-//Notice：正因为每条消息都是另开goroutine，若玩家连续发多条消息，服务器就是并发处理了，存在竞态……client确保应答式通信
 func NewHttpServer(addr string) error {
 	LoadCacheNetMeta()
-
 	http.HandleFunc("/reg_to_svr", _doRegistToSvr)
-
 	return http.ListenAndServe(addr, nil)
-	// listener, err := net.Listen("tcp", addr)
-	// if err != nil {
-	// 	return err
-	// }
-	// defer listener.Close()
-	// return http.Serve(listener, nil)
 }
 
 // ------------------------------------------------------------
