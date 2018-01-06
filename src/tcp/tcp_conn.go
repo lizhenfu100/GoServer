@@ -22,7 +22,7 @@
 * @ reconnect
 	1、Accept返回的conn，先收一个包，内含connId
 	2、connId为0表示新连接，挑选一个空闲的TCPConn，newTCPConn()
-	3、不为0即重连，取对应TCPConn，若它关闭的，随即ResetConn()
+	3、不为0即重连，取对应TCPConn，若它关闭的，随即resetConn()
 
 * @ 更稳定的连接
 	*、参考项目
@@ -83,7 +83,7 @@ type TCPConn struct {
 	reader       *bufio.Reader //包装conn减少conn.Read的io次数，见【common\net.go】
 	writer       *bufio.Writer
 	writeChan    chan []byte
-	isClose      bool //isClose标记仅在ResetConn、Close中设置，其它地方只读
+	isClose      bool //isClose标记仅在resetConn、Close中设置，其它地方只读
 	isWriteClose bool
 	onNetClose   func(*TCPConn)
 	timer        *time.Timer //延时清理连接，提高重连效率
@@ -98,10 +98,10 @@ func newTCPConn(conn net.Conn) *TCPConn {
 			self.onNetClose(self)
 		}
 	})
-	self.ResetConn(conn)
+	self.resetConn(conn)
 	return self
 }
-func (self *TCPConn) ResetConn(conn net.Conn) {
+func (self *TCPConn) resetConn(conn net.Conn) {
 	self.conn = conn
 	self.reader = bufio.NewReader(conn)
 	self.writer = bufio.NewWriter(conn)

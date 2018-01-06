@@ -122,7 +122,7 @@ func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
 	if oldconn != nil && ok {
 		if oldconn.isClose {
 			gamelog.Debug("_ResetOldConn isClose: %d", oldId)
-			oldconn.ResetConn(newconn)
+			oldconn.resetConn(newconn)
 			self._RunConn(oldconn, oldId)
 		} else {
 			gamelog.Debug("_ResetOldConn isOpen: %d", oldId)

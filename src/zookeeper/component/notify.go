@@ -53,7 +53,7 @@ func Rpc_svr_node_join(req, ack *common.NetPack, conn *tcp.TCPConn) {
 }
 
 /* Notice：
-由于zookeeper只有一个，节点与zookeeper的仅一条连接
+由于zookeeper只有一个，节点与zookeeper仅一条连接
 rpc中对 ConnectToModule() 的调用其实是单线程的
 所以对 netConfig.G_Client_Conns 的操作无需锁
 */
