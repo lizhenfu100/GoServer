@@ -2,7 +2,7 @@ package player
 
 import (
 	"common"
-	"fmt"
+	"gamelog"
 	"sync"
 )
 
@@ -40,7 +40,7 @@ func Rpc_game_exit_team(req, ack *common.NetPack, ptr interface{}) {
 }
 func Rpc_game_get_team_info(req, ack *common.NetPack, ptr interface{}) {
 	self := ptr.(*TPlayer)
-	fmt.Println("Team_Info", self.pTeam)
+	gamelog.Debug("Team_Info: %v", self.pTeam)
 	if self.pTeam == nil {
 		ack.WriteByte(0)
 	} else {
@@ -69,7 +69,7 @@ func Rpc_game_agree_join_team(req, ack *common.NetPack, ptr interface{}) {
 	destPid := req.ReadUInt32()
 	if captain := FindPlayerInCache(destPid); captain != nil && captain.pTeam != nil { //! readonly
 
-		fmt.Println("Agree_Join_Team", captain.pTeam)
+		gamelog.Debug("Agree_Join_Team: %v", captain.pTeam)
 
 		// 通知队长，加自己
 		captain.AsyncNotify(func(p *TPlayer) {
@@ -78,7 +78,7 @@ func Rpc_game_agree_join_team(req, ack *common.NetPack, ptr interface{}) {
 	}
 }
 func (self *TPlayer) JoinToMyTeam(dest *TPlayer) {
-	fmt.Println("JoinToMyTeam", self.pTeam)
+	gamelog.Debug("JoinToMyTeam: %v", self.pTeam)
 	if self.pTeam == nil || dest.pTeam != nil {
 		return
 	}
@@ -111,7 +111,7 @@ func (self *TPlayer) _ExitFromMyTeam(destPid uint32) {
 	}
 }
 func (self *TPlayer) ExitTeam() {
-	fmt.Println("ExitTeam", self.pTeam)
+	gamelog.Debug("ExitTeam: %v", self.pTeam)
 	if self.pTeam == nil {
 		return
 	}

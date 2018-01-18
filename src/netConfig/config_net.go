@@ -27,26 +27,24 @@ import (
 	"common/net/meta"
 	"fmt"
 	"http"
+	"sync"
 	"tcp"
 )
 
 var (
 	G_Local_Meta   *meta.Meta
-	G_Client_Conns = make(map[common.KeyPair]*tcp.TCPClient) //本模块，对其它模块的tcp连接
+	G_Client_Conns sync.Map //= make(map[common.KeyPair]*tcp.TCPClient) //本模块，对其它模块的tcp连接
 )
 
 func CreateNetSvr(module string, svrID int) bool {
 	//1、找到当前的配置信息
-	G_Local_Meta = meta.GetMeta(module, svrID)
-	if G_Local_Meta == nil {
-		return false
-	}
+	common.Assert(G_Local_Meta != nil)
 
 	//2、连接/注册其它模块
-	if nil == meta.GetMeta("zookeeper", -1) { //没有zookeeper节点，才依赖配置，否则依赖zookeeper的通知
+	if nil == meta.GetMeta("zookeeper", 0) { //没有zookeeper节点，才依赖配置，否则依赖zookeeper的通知
 		for _, destModule := range G_Local_Meta.ConnectLst {
-			for i := 0; i < len(meta.G_SvrNets); i++ {
-				destCfg := &meta.G_SvrNets[i]
+			meta.G_SvrNets.Range(func(k, v interface{}) bool {
+				destCfg := v.(*meta.Meta)
 				if destCfg.Module == destModule {
 					if destCfg.HttpPort > 0 {
 						http.RegistToSvr(
@@ -58,12 +56,13 @@ func CreateNetSvr(module string, svrID int) bool {
 							tcp.Addr(destCfg.IP, destCfg.TcpPort),
 							G_Local_Meta)
 						//Notice：client.ConnectToSvr是异步过程，这里返回的client.TcpConn还是空指针，不能保存*tcp.TCPConn
-						G_Client_Conns[common.KeyPair{destCfg.Module, destCfg.SvrID}] = client
+						G_Client_Conns.Store(common.KeyPair{destCfg.Module, destCfg.SvrID}, client)
 					} else {
 						fmt.Println(destCfg.Module + ": have none HttpPort|TcpPort!!!")
 					}
 				}
-			}
+				return true
+			})
 		}
 	}
 
@@ -81,9 +80,9 @@ func CreateNetSvr(module string, svrID int) bool {
 
 //Notice：应用层cache住结果，避免每次都查找
 func GetTcpConn(module string, svrId int) *tcp.TCPConn {
-	if v, ok := G_Client_Conns[common.KeyPair{module, svrId}]; ok {
-		// game(c) - cross(s)
-		return v.TcpConn
+	if v, ok := G_Client_Conns.Load(common.KeyPair{module, svrId}); ok {
+		ptr := v.(*tcp.TCPClient)
+		return ptr.Conn
 	}
 	// cross(s) - game(c)
 	return tcp.FindRegModuleConn(module, svrId)

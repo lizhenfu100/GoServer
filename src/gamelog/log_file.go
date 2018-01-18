@@ -14,7 +14,7 @@ const (
 	Lv_Warn
 	Lv_Error
 	Lv_Fatal
-	Change_File_CD = 60 * 3600 * time.Second
+	Change_File_CD = time.Hour
 )
 
 var (

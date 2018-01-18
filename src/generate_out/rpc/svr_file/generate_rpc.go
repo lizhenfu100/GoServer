@@ -22,5 +22,6 @@ func init() {
 	})
 	register.RegHttpHandler(map[string]register.HttpHandle{
 		
+		"file_upload": logic.Http_file_upload,
 	})
 }

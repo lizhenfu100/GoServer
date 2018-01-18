@@ -28,7 +28,7 @@ func main() {
 	InitConf()
 
 	//设置mongodb的服务器地址
-	pMeta := meta.GetMeta("db_sdk", -1)
+	pMeta := meta.GetMeta("db_sdk", 0)
 	dbmgo.InitWithUser(pMeta.IP, pMeta.TcpPort, pMeta.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
 	logic.InitDB()
 
@@ -42,11 +42,13 @@ func main() {
 	}
 }
 func InitConf() {
+	var metaCfg []meta.Meta
 	common.G_Csv_Map = map[string]interface{}{
-		"conf_net": &meta.G_SvrNets,
+		"conf_net": &metaCfg,
 		"conf_svr": &conf.SvrCsv,
 	}
 	common.LoadAllCsv()
+	meta.InitConf(metaCfg)
 
 	netConfig.G_Local_Meta = meta.GetMeta(K_Module_Name, K_Module_SvrID)
 }

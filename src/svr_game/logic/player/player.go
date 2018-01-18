@@ -76,11 +76,11 @@ type TPlayerBase struct {
 }
 type TPlayer struct {
 	//temp data
-	moudles []iMoudle
-	askchan chan func(*TPlayer)
-	isOnlie bool
-	idleSec uint32
-	pTeam   *TeamData
+	moudles   []iMoudle
+	askchan   chan func(*TPlayer)
+	_isOnlnie int32
+	_idleSec  uint32
+	pTeam     *TeamData
 	//db data
 	TPlayerBase
 	Mail   TMailMoudle
@@ -137,9 +137,9 @@ func (self *TPlayer) WriteAllToDB() {
 	}
 }
 func (self *TPlayer) Login() {
-	self.isOnlie = true
+	atomic.StoreInt32(&self._isOnlnie, 1)
 	self.LoginTime = time.Now().Unix()
-	atomic.SwapUint32(&self.idleSec, 0)
+	atomic.SwapUint32(&self._idleSec, 0)
 	for _, v := range self.moudles {
 		v.OnLogin()
 	}
@@ -148,7 +148,7 @@ func (self *TPlayer) Login() {
 	G_ServiceMgr.Register(Service_Check_AFK, self)
 }
 func (self *TPlayer) Logout() {
-	self.isOnlie = false
+	atomic.StoreInt32(&self._isOnlnie, 0)
 	self.LogoutTime = time.Now().Unix()
 	for _, v := range self.moudles {
 		v.OnLogout()
@@ -161,13 +161,14 @@ func (self *TPlayer) Logout() {
 	//Notice: AfterFunc是在另一线程执行，所以传入函数必须线程安全
 	time.AfterFunc(Reconnect_Wait_Second*time.Second, func() {
 		// 延时30s后再删，提升重连效率
-		if !self.isOnlie {
+		if !self.IsOnline() {
 			gamelog.Debug("Pid(%d) Delete", self.PlayerID)
 			go self.WriteAllToDB()
 			DelPlayerCache(self)
 		}
 	})
 }
+func (self *TPlayer) IsOnline() bool { return atomic.LoadInt32(&self._isOnlnie) > 0 }
 
 // -------------------------------------
 // service
@@ -177,9 +178,9 @@ func _Service_Write_DB(ptr interface{}) {
 	}
 }
 func _Service_Check_AFK(ptr interface{}) {
-	if player, ok := ptr.(*TPlayer); ok && player.isOnlie {
-		atomic.AddUint32(&player.idleSec, 1)
-		if player.idleSec > Idle_Max_Second {
+	if player, ok := ptr.(*TPlayer); ok && player.IsOnline() {
+		atomic.AddUint32(&player._idleSec, 1)
+		if atomic.LoadUint32(&player._idleSec) > Idle_Max_Second {
 			gamelog.Debug("Pid(%d) AFK", player.PlayerID)
 			player.Logout()
 		}
@@ -194,7 +195,7 @@ func AsyncNotifyPlayer(pid uint32, handler func(*TPlayer)) {
 	}
 }
 func (self *TPlayer) AsyncNotify(handler func(*TPlayer)) {
-	if self.isOnlie {
+	if self.IsOnline() {
 		select {
 		case self.askchan <- handler:
 		default:

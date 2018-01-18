@@ -35,6 +35,7 @@ func _doRegistToSvr(w http.ResponseWriter, r *http.Request) {
 	gamelog.Debug("DoRegistToSvr: %v", *ptr)
 
 	g_reg_addr_map.Store(common.KeyPair{ptr.Module, ptr.SvrID}, ptr)
+
 	meta.AddMeta(ptr)
 	AppendNetMeta(ptr)
 
@@ -72,6 +73,7 @@ func ForeachRegModule(f func(v *meta.Meta)) {
 //! 采用追加方式，同个“远程服务”的地址，会被最新追加的覆盖掉
 var (
 	g_svraddr_path = common.GetExeDir() + "reg_addr.csv"
+	_mutex         sync.Mutex
 )
 
 func LoadCacheNetMeta() {
@@ -88,6 +90,8 @@ func LoadCacheNetMeta() {
 	common.UpdateCsv(g_svraddr_path, [][]string{})
 }
 func AppendNetMeta(meta *meta.Meta) {
+	_mutex.Lock()
+	defer _mutex.Unlock()
 	b, _ := json.Marshal(meta)
 	record := []string{string(b)}
 	err := common.AppendCsv(g_svraddr_path, record)

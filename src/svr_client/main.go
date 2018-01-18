@@ -57,10 +57,12 @@ func main() {
 	time.Sleep(100 * time.Second)
 }
 func InitConf() {
+	var metaCfg []meta.Meta
 	common.G_Csv_Map = map[string]interface{}{
-		"conf_net": &meta.G_SvrNets,
+		"conf_net": &metaCfg,
 	}
 	common.LoadAllCsv()
+	meta.InitConf(metaCfg)
 	// for k, v := range netConfig.G_SvrNetCfg {
 	// 	fmt.Println(k, v)
 	// }

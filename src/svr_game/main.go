@@ -10,7 +10,6 @@ import (
 	_ "generate_out/rpc/svr_game"
 	"http"
 	"netConfig"
-	"strconv"
 	"svr_game/logic"
 	"svr_game/logic/player"
 	"zookeeper/component"
@@ -39,7 +38,6 @@ func main() {
 
 	//开启控制台窗口，可以接受一些调试命令
 	console.StartConsole()
-	console.RegConsoleCmd("MakeFriends", HandCmd_MakeFriends)
 
 	component.RegisterToZookeeper()
 
@@ -50,32 +48,14 @@ func main() {
 		print("----Game NetSvr Failed-----")
 	}
 }
-func HandCmd_MakeFriends(args []string) bool {
-	pid1, err1 := strconv.Atoi(args[1])
-	pid2, err2 := strconv.Atoi(args[2])
-	if err1 != nil || err2 != nil {
-		gamelog.Error("HandCmd_MakeFriends => Invalid param:%s, %s", args[1], args[2])
-		return false
-	}
-	player1 := player.FindWithDB_PlayerId(uint32(pid1))
-	player2 := player.FindWithDB_PlayerId(uint32(pid2))
-	if player1 != nil && player2 != nil {
-		player1.AsyncNotify(func(player *player.TPlayer) {
-			player.Friend.AddFriend(player2.PlayerID, player2.Name)
-		})
-		player2.AsyncNotify(func(player *player.TPlayer) {
-			player.Friend.AddFriend(player1.PlayerID, player1.Name)
-		})
-		return true
-	}
-	return false
-}
 func InitConf() {
+	var metaCfg []meta.Meta
 	common.G_Csv_Map = map[string]interface{}{
-		"conf_net": &meta.G_SvrNets,
+		"conf_net": &metaCfg,
 		"conf_svr": &conf.SvrCsv,
 	}
 	common.LoadAllCsv()
+	meta.InitConf(metaCfg)
 
 	http.G_Before_Recv_Player = player.BeforeRecvNetMsg
 	http.G_After_Recv_Player = player.AfterRecvNetMsg

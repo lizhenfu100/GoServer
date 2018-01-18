@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+func init() {
+	http.DefaultClient.Timeout = 3 * time.Second
+}
+
 // ------------------------------------------------------------
 //! 底层接口，业务层一般用不到
 func PostReq(url string, b []byte) []byte {
@@ -36,7 +40,6 @@ func RegistToSvr(destAddr string, meta *meta.Meta) {
 func _RegistToSvr(destAddr string, meta *meta.Meta) {
 	buf, _ := common.ToBytes(meta)
 	for {
-		http.DefaultClient.Timeout = 3 * time.Second
 		if PostReq(destAddr+"reg_to_svr", buf) == nil {
 			time.Sleep(3 * time.Second)
 		} else {

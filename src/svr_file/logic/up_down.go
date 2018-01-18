@@ -3,7 +3,7 @@
 * @ brief
     1、客户端启动，先连svr_file，上报自己的版本号，同后台比对
 
-    2、若小于后台的，将后台 patch 目录中的文件名打包下发
+    2、若小于后台的，将后台 net_file/patch 目录中的文件名打包下发
 
     3、客户端据收到的文件名列表，逐个【增量更新】
 
@@ -21,6 +21,7 @@ import (
 	"common"
 	"conf"
 	"fmt"
+	"gamelog"
 	"io"
 	"net/http"
 	"os"
@@ -28,39 +29,29 @@ import (
 	"strings"
 )
 
-var (
-	// g_file_patch = http.StripPrefix("/download/", http.FileServer(http.Dir("patch")))
-	g_file_patch  = http.FileServer(http.Dir("patch"))
-	g_file_upload = http.FileServer(http.Dir("upload"))
-)
-
-func Rpc_file_download(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.Method, "url down path: "+r.URL.Path)
-	if common.IsExist("patch" + r.URL.Path) {
-		g_file_patch.ServeHTTP(w, r)
-	} else if common.IsExist("upload" + r.URL.Path) {
-		g_file_upload.ServeHTTP(w, r)
-	}
+func init() {
+	http.Handle("/", http.FileServer(http.Dir("net_file")))
 }
-func Rpc_file_upload(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.Method, "url up path: "+r.URL.Path)
+
+func Http_file_upload(w http.ResponseWriter, r *http.Request) {
+	gamelog.Debug("%s url up path: %s", r.Method, r.URL.Path)
 	r.ParseMultipartForm(1024 * 1024)
 	file, handler, err := r.FormFile("file")
 	if err != nil {
-		fmt.Println(err)
+		gamelog.Error(err.Error())
 		return
 	}
 	defer file.Close()
 	fmt.Fprintf(w, "%v", handler.Header)
 
-	filename := "./upload/" + handler.Filename
+	filename := "./net_file/upload/" + handler.Filename
 	if err := os.MkdirAll(filepath.Dir(filename), 0777); err != nil {
-		fmt.Println(err)
+		gamelog.Error(err.Error())
 		return
 	}
 	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
-		fmt.Println(err)
+		gamelog.Error(err.Error())
 		return
 	}
 	defer f.Close()
@@ -71,10 +62,10 @@ func Rpc_file_update_list(req, ack *common.NetPack) {
 	version := req.ReadString()
 	if strings.Compare(version, conf.SvrCsv.Version) < 0 {
 		//下发 patch 目录下的文件列表
-		names, _ := common.WalkDir("patch", "")
+		names, _ := common.WalkDir("net_file/patch", "")
 		ack.WriteUInt16(uint16(len(names)))
 		for _, v := range names {
-			ack.WriteString(strings.Trim(v, "patch"))
+			ack.WriteString(strings.Trim(v, "net_file"))
 		}
 		ack.WriteString(conf.SvrCsv.Version)
 	} else {

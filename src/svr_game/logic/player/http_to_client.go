@@ -36,11 +36,12 @@ const (
 	Bit_Team_Update   = 4
 	Bit_Show_UI_Wait  = 5
 	Bit_Team_Chat     = 6
+	Bit_Friend_Update = 7
 )
 
 func BeforeRecvNetMsg(pid uint32) interface{} {
 	if player := FindPlayerInCache(pid); player != nil {
-		atomic.SwapUint32(&player.idleSec, 0)
+		atomic.SwapUint32(&player._idleSec, 0)
 		player._HandleAsyncNotify()
 		player.Mail.SendSvrMailAll()
 		return player
@@ -65,20 +66,16 @@ func AfterRecvNetMsg(ptr interface{}, buf *common.NetPack) {
 		common.SetBit32(&bit, Bit_Chat_Info, true)
 		//界面红点提示
 	}
-	if len(self.Friend.ApplyLst) > 0 {
+	if len(self.Friend.ApplyLst) > 0 { //收到好友申请
 		common.SetBit32(&bit, Bit_Friend_Apply, true)
-		length := len(self.Friend.ApplyLst)
-		buf.WriteByte(byte(length))
-		for i := 0; i < length; i++ {
-			self.Friend.ApplyLst[i].DataToBuf(buf)
-		}
+		self.Friend.PackApplyInfo(buf)
 	}
 	if self.Friend.inviteMsg.Size() > 0 { //被别人邀请
 		common.SetBit32(&bit, Bit_Invite_Friend, true)
 		buf.WriteBuf(self.Friend.inviteMsg.Data())
 		self.Friend.inviteMsg.Clear()
 	}
-	if self.pTeam != nil && self.pTeam.isChange {
+	if self.pTeam != nil && self.pTeam.isChange { //队伍人员变动
 		common.SetBit32(&bit, Bit_Team_Update, true)
 		self.pTeam.isChange = false
 	}
@@ -86,11 +83,15 @@ func AfterRecvNetMsg(ptr interface{}, buf *common.NetPack) {
 		common.SetBit32(&bit, Bit_Show_UI_Wait, true)
 		self.Battle.isShowWaitUI = false
 	}
-	if self.pTeam != nil {
+	if self.pTeam != nil { //队伍聊天
 		if pos := self.pTeam.GetNoSendIdx(pid); pos >= 0 {
 			common.SetBit32(&bit, Bit_Team_Chat, true)
 			self.pTeam.DataToBuf(buf, pid)
 		}
+	}
+	if self.Friend.isChange { //好友列表变动
+		common.SetBit32(&bit, Bit_Friend_Update, true)
+		self.Friend.isChange = false
 	}
 	//! 最后重置位标记
 	buf.SetPos(bitPosInBody, bit)

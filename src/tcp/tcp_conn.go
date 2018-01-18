@@ -61,6 +61,7 @@ import (
 	"generate_out/rpc/enum"
 	"io"
 	"net"
+	"sync/atomic"
 	"time"
 )
 
@@ -79,22 +80,22 @@ var (
 )
 
 type TCPConn struct {
-	conn         net.Conn
-	reader       *bufio.Reader //包装conn减少conn.Read的io次数，见【common\net.go】
-	writer       *bufio.Writer
-	writeChan    chan []byte
-	isClose      bool //isClose标记仅在resetConn、Close中设置，其它地方只读
-	isWriteClose bool
-	onNetClose   func(*TCPConn)
-	timer        *time.Timer //延时清理连接，提高重连效率
-	UserPtr      interface{}
+	conn          net.Conn
+	reader        *bufio.Reader //包装conn减少conn.Read的io次数，见【common\net.go】
+	writer        *bufio.Writer
+	writeChan     chan []byte
+	_isClose      int32 //isClose标记仅在resetConn、Close中设置，其它地方只读
+	_isWriteClose bool
+	onNetClose    func(*TCPConn)
+	timer         *time.Timer //延时清理连接，提高重连效率
+	UserPtr       interface{}
 }
 
 func newTCPConn(conn net.Conn) *TCPConn {
 	self := new(TCPConn)
 	self.writeChan = make(chan []byte, Write_Chan_Cap)
 	self.timer = time.AfterFunc(Delay_Delete_Conn, func() { //Notice:回调函数须线程安全
-		if self.isClose {
+		if self.IsClose() {
 			self.onNetClose(self)
 		}
 	})
@@ -105,29 +106,31 @@ func (self *TCPConn) resetConn(conn net.Conn) {
 	self.conn = conn
 	self.reader = bufio.NewReader(conn)
 	self.writer = bufio.NewWriter(conn)
-	self.isClose = false
+	atomic.StoreInt32(&self._isClose, 0)
 	self.timer.Stop()
 }
 func (self *TCPConn) Close() {
-	if self.isClose {
+	if self.IsClose() {
 		return
 	}
 	self.conn.(*net.TCPConn).SetLinger(0) //丢弃数据
 	self.conn.Close()
-	if !self.isWriteClose {
+	if !self._isWriteClose {
 		self.WriteBuf(nil) //触发writeRoutine结束
 	}
-	self.isClose = true
+	atomic.StoreInt32(&self._isClose, 1)
 
 	if self.onNetClose != nil {
 		self.timer.Reset(Delay_Delete_Conn)
 	}
 }
-func (self *TCPConn) IsClose() bool { return self.isClose }
+func (self *TCPConn) IsClose() bool { return atomic.LoadInt32(&self._isClose) > 0 }
 
 func (self *TCPConn) SetOnNetClose(cb func(*TCPConn)) {
-	common.Assert(self.onNetClose == nil)
-	self.onNetClose = cb
+	if !self.IsClose() {
+		common.Assert(self.onNetClose == nil)
+		self.onNetClose = cb
+	}
 }
 
 // msgdata must not be modified by other goroutines
@@ -145,7 +148,7 @@ func (self *TCPConn) WriteMsg(msg *common.NetPack) {
 	self.WriteBuf(buf)
 }
 func (self *TCPConn) WriteBuf(buf []byte) {
-	if self.isClose {
+	if self.IsClose() {
 		return
 	}
 	select {
@@ -157,7 +160,7 @@ func (self *TCPConn) WriteBuf(buf []byte) {
 	}
 }
 func (self *TCPConn) _WriteFull(buf []byte) (err error) { //FIXME：err可能是io.ErrShortWrite，网络还是能继续工作的
-	if buf == nil {
+	if buf == nil || self.IsClose() {
 		return errors.New("tcp conn close")
 	}
 	var n, nn int
@@ -172,7 +175,7 @@ func (self *TCPConn) _WriteFull(buf []byte) (err error) { //FIXME：err可能是
 	return
 }
 func (self *TCPConn) writeRoutine() {
-	self.isWriteClose = false
+	self._isWriteClose = false
 LOOP:
 	for {
 		select {
@@ -199,7 +202,7 @@ LOOP:
 			}
 		}
 	}
-	self.isWriteClose = true
+	self._isWriteClose = true
 	self.Close()
 }
 func (self *TCPConn) readRoutine() {
@@ -208,7 +211,7 @@ func (self *TCPConn) readRoutine() {
 	var msgHeader = make([]byte, 2) //前2字节存msgLen
 	//var packet, msgBuf = &common.NetPack{}, make([]byte, G_Msg_Size_Max)
 	for {
-		if self.isClose {
+		if self.IsClose() {
 			break
 		}
 		_, err = io.ReadFull(self.reader, msgHeader)

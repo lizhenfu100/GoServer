@@ -84,6 +84,8 @@ func _HandleRpc(w http.ResponseWriter, r *http.Request) {
 		ack.Free()
 	}()
 
+	gamelog.Debug("HttpMsg:%d, len:%d", msgId, req.Size())
+
 	if handler := G_HandleFunc[msgId]; handler != nil {
 		handler(req, ack)
 		common.CompressInto(ack.Data(), w)

@@ -8,6 +8,10 @@
 	1、G_SvrNets []Meta 作为一个数组，中间元素被删除后会整体移动
 	2、此时若外界缓存了 GetMeta() 返回的指针，其指向很可能变为下个元素
 
+* @ Notice
+	1、G_SvrNets sync.Map 存的指针，这样就要求外界放入的指针，必须是堆上的，且指向不同内存
+	2、最好每次存入，都重新new
+
 * @ 动态更新
     1、运维通知zookeeper，让其将某个节点meta设置成关闭（还需同步给关联节点们）
 	2、各个节点有自己的关闭策略，如：
@@ -22,6 +26,7 @@ package meta
 import (
 	"common"
 	"gamelog"
+	"sync"
 )
 
 type Meta struct {
@@ -77,39 +82,37 @@ func (self *Meta) BufToData(buf *common.NetPack) {
 
 // -------------------------------------
 //! meta list
-var G_SvrNets []Meta
+var G_SvrNets sync.Map
 
-//Notice：缓存Meta指针有风险，详见文件头注释
-func GetMeta(module string, svrID int) *Meta { //负ID表示自动找首个
-	for i := 0; i < len(G_SvrNets); i++ {
-		v := &G_SvrNets[i]
-		if !v.IsClosed && v.Module == module && (svrID < 0 || v.SvrID == svrID) {
-			return v
-		}
+func InitConf(list []Meta) {
+	for i := 0; i < len(list); i++ {
+		AddMeta(&list[i])
+	}
+}
+
+func GetMeta(module string, svrID int) *Meta {
+	if v, ok := G_SvrNets.Load(common.KeyPair{module, svrID}); ok && !v.(*Meta).IsClosed {
+		return v.(*Meta)
 	}
 	gamelog.Error("{%s %d}: have none SvrNetMeta", module, svrID)
 	return nil
 }
-func AddMeta(ptr *Meta) {
-	for i := 0; i < len(G_SvrNets); i++ {
-		v := &G_SvrNets[i]
-		if v.Module == ptr.Module && v.SvrID == ptr.SvrID {
-			*v = *ptr
-			return
-		}
-	}
-	G_SvrNets = append(G_SvrNets, *ptr)
-}
+
+func AddMeta(ptr *Meta) { G_SvrNets.Store(common.KeyPair{ptr.Module, ptr.SvrID}, ptr) }
+
 func DelMeta(module string, svrID int) {
-	for i := len(G_SvrNets) - 1; i >= 0; i-- {
-		v := &G_SvrNets[i]
-		if v.Module == module && v.SvrID == svrID {
-			//Notice：防止内存移动，不删元素，仅改状态
-			//G_SvrNets = append(G_SvrNets[:i], G_SvrNets[i+1:]...)
-			v.IsClosed = true
-			return
-		}
-	}
+
+	G_SvrNets.Delete(common.KeyPair{module, svrID})
+
+	//for i := len(G_SvrNets) - 1; i >= 0; i-- {
+	//	v := &G_SvrNets[i]
+	//	if v.Module == module && v.SvrID == svrID {
+	//		//Notice：防止内存移动，不删元素，仅改状态
+	//		//G_SvrNets = append(G_SvrNets[:i], G_SvrNets[i+1:]...)
+	//		v.IsClosed = true
+	//		return
+	//	}
+	//}
 }
 
 func GetIpPort(module string, id int) (ip string, port uint16) {
@@ -124,12 +127,12 @@ func GetIpPort(module string, id int) (ip string, port uint16) {
 	return
 }
 func GetModuleIDs(module string) (ret []int) {
-	for i := 0; i < len(G_SvrNets); i++ {
-		v := &G_SvrNets[i]
-		if v.Module == module {
-			ret = append(ret, v.SvrID)
+	G_SvrNets.Range(func(k, v interface{}) bool {
+		if k.(common.KeyPair).Name == module {
+			ret = append(ret, k.(common.KeyPair).ID)
 		}
-	}
+		return true
+	})
 	return
 }
 

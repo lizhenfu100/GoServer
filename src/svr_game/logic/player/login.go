@@ -17,7 +17,6 @@ package player
 import (
 	"common"
 	"common/format"
-	"fmt"
 	"gamelog"
 	"sync"
 )
@@ -38,7 +37,7 @@ func Rpc_game_login(req, ack *common.NetPack) {
 			ack.WriteInt8(-2) //notify client to create new player
 		} else {
 			player.Login()
-			fmt.Println("Player_Login:\n", player)
+			gamelog.Debug("Player Login: %s, pid(%d), accountId(%d)", player.Name, player.PlayerID, player.AccountID)
 			ack.WriteInt8(1)
 			ack.WriteUInt32(player.PlayerID)
 			ack.WriteString(player.Name)

@@ -36,6 +36,7 @@ func init() {
 		enum.Rpc_game_friend_agree: player.Rpc_game_friend_agree,
 		enum.Rpc_game_friend_refuse: player.Rpc_game_friend_refuse,
 		enum.Rpc_game_friend_del: player.Rpc_game_friend_del,
+		enum.Rpc_game_search_player: player.Rpc_game_search_player,
 		enum.Rpc_game_logout: player.Rpc_game_logout,
 		enum.Rpc_game_heart_beat: player.Rpc_game_heart_beat,
 		enum.Rpc_game_get_mail: player.Rpc_game_get_mail,

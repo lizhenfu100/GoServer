@@ -15,11 +15,11 @@ import (
 
 type TCPServer struct {
 	Addr       string //"ip:port"，ip可缺省
-	MaxConnNum int
+	MaxConnNum int32
+	connCnt    int32
 	autoConnId uint32
-	connmap    map[uint32]*TCPConn
+	connmap    sync.Map
 	listener   net.Listener
-	mutexConns sync.Mutex
 	wgLn       sync.WaitGroup
 	wgConns    sync.WaitGroup
 }
@@ -27,7 +27,7 @@ type TCPServer struct {
 func NewTcpServer(addr string, maxconn int) {
 	svr := new(TCPServer)
 	svr.Addr = addr
-	svr.MaxConnNum = maxconn
+	svr.MaxConnNum = int32(maxconn)
 	svr.init()
 	svr.run()
 	svr.Close()
@@ -39,7 +39,6 @@ func (self *TCPServer) init() bool {
 		return false
 	}
 	self.listener = ln
-	self.connmap = make(map[uint32]*TCPConn)
 	return true
 }
 func (self *TCPServer) run() {
@@ -89,22 +88,18 @@ func (self *TCPServer) _HandleAcceptConn(conn net.Conn) {
 	}
 }
 func (self *TCPServer) _AddNewConn(conn net.Conn) {
-	self.mutexConns.Lock()
-	if len(self.connmap) >= self.MaxConnNum {
-		self.mutexConns.Unlock()
+	if self.connCnt >= self.MaxConnNum {
 		conn.Close()
 		gamelog.Error("too many connections")
 		return
 	}
-	self.mutexConns.Unlock()
 
 	connId := atomic.AddUint32(&self.autoConnId, 1)
 
 	self.wgConns.Add(1)
 	tcpConn := newTCPConn(conn)
-	self.mutexConns.Lock()
-	self.connmap[connId] = tcpConn
-	self.mutexConns.Unlock()
+	self.connmap.Store(connId, tcpConn)
+	atomic.AddInt32(&self.connCnt, 1)
 	gamelog.Debug("Connect From: %s, AddConnId: %d", conn.RemoteAddr().String(), connId)
 
 	// 通知client，连接被接收，下发connId、密钥等
@@ -116,11 +111,9 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 	self._RunConn(tcpConn, connId)
 }
 func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
-	self.mutexConns.Lock()
-	oldconn, ok := self.connmap[oldId]
-	self.mutexConns.Unlock()
-	if oldconn != nil && ok {
-		if oldconn.isClose {
+	if v, ok := self.connmap.Load(oldId); ok {
+		oldconn := v.(*TCPConn)
+		if oldconn.IsClose() {
 			gamelog.Debug("_ResetOldConn isClose: %d", oldId)
 			oldconn.resetConn(newconn)
 			self._RunConn(oldconn, oldId)
@@ -138,9 +131,8 @@ func (self *TCPServer) _RunConn(conn *TCPConn, connId uint32) {
 	go conn.readRoutine()
 	conn.writeRoutine() //block
 
-	self.mutexConns.Lock()
-	delete(self.connmap, connId)
-	self.mutexConns.Unlock()
+	self.connmap.Delete(connId)
+	atomic.AddInt32(&self.connCnt, -1)
 	gamelog.Debug("Disconnect: DelConnId: %d, UserPtr:%v", connId, conn.UserPtr)
 	self.wgConns.Done()
 }
@@ -149,12 +141,10 @@ func (self *TCPServer) Close() {
 	self.listener.Close()
 	self.wgLn.Wait()
 
-	self.mutexConns.Lock()
-	for _, conn := range self.connmap {
-		conn.Close()
-	}
-	self.connmap = nil
-	self.mutexConns.Unlock()
+	self.connmap.Range(func(k, v interface{}) bool {
+		v.(*TCPConn).Close()
+		return true
+	})
 
 	self.wgConns.Wait()
 	gamelog.Debug("server been closed!!")
@@ -178,7 +168,7 @@ func DoRegistToSvr(req, ack *common.NetPack, conn *TCPConn) {
 	gamelog.Debug("DoRegistToSvr: {%s %d}", ptr.Module, ptr.SvrID)
 
 	conn.SetOnNetClose(func(this *TCPConn) {
-		if pConn := FindRegModuleConn(ptr.Module, ptr.SvrID); pConn != nil && pConn.isClose {
+		if pConn := FindRegModuleConn(ptr.Module, ptr.SvrID); pConn != nil && pConn.IsClose() {
 			gamelog.Debug("Delete Regist Svr: {%s %d}", ptr.Module, ptr.SvrID)
 			g_reg_conn_map.Delete(common.KeyPair{ptr.Module, ptr.SvrID})
 		}

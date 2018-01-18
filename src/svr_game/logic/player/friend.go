@@ -3,21 +3,17 @@ package player
 import (
 	"common"
 	"dbmgo"
-	"fmt"
-	// "gopkg.in/mgo.v2/bson"
+	"gamelog"
 )
 
 type TFriendMoudle struct {
 	PlayerID  uint32 `bson:"_id"`
-	FriendLst []TFriend
-	ApplyLst  []TFriend
+	FriendLst []uint32
+	ApplyLst  []uint32
 
 	owner     *TPlayer
 	inviteMsg *common.ByteBuffer
-}
-type TFriend struct {
-	ID   uint32
-	Name string
+	isChange  bool
 }
 
 // -------------------------------------
@@ -46,52 +42,49 @@ func (self *TFriendMoudle) _InitTempData() {
 
 // -------------------------------------
 //! buf
-func (self *TFriend) DataToBuf(buf *common.NetPack) {
-	buf.WriteUInt32(self.ID)
-	buf.WriteString(self.Name)
-}
-func (self *TFriend) BufToData(buf *common.NetPack) {
-	self.ID = buf.ReadUInt32()
-	self.Name = buf.ReadString()
-}
-func (self *TFriendMoudle) DataToBuf(buf *common.NetPack) {
-	length := len(self.FriendLst)
-	buf.WriteUInt16(uint16(length))
-	for i := 0; i < length; i++ {
-		self.FriendLst[i].DataToBuf(buf)
+func (self *TFriendMoudle) PackFriendInfo(buf *common.NetPack) {
+	ptrList := make([]*TPlayer, 0, len(self.FriendLst))
+	for _, v := range self.FriendLst {
+		if ptr := FindPlayerInCache(v); ptr != nil {
+			ptrList = append(ptrList, ptr)
+		}
 	}
-	length = len(self.ApplyLst)
-	buf.WriteUInt16(uint16(length))
-	for i := 0; i < length; i++ {
-		self.ApplyLst[i].DataToBuf(buf)
+	buf.WriteUInt16(uint16(len(ptrList)))
+	for _, v := range ptrList {
+		buf.WriteUInt32(v.PlayerID)
+		buf.WriteString(v.Name)
+	}
+}
+func (self *TFriendMoudle) PackApplyInfo(buf *common.NetPack) {
+	ptrList := make([]*TPlayer, 0, len(self.ApplyLst))
+	for _, v := range self.ApplyLst {
+		if ptr := FindPlayerInCache(v); ptr != nil {
+			ptrList = append(ptrList, ptr)
+		}
+	}
+	buf.WriteUInt8(uint8(len(ptrList)))
+	for _, v := range ptrList {
+		buf.WriteUInt32(v.PlayerID)
+		buf.WriteString(v.Name)
 	}
 }
 
 // -------------------------------------
 // -- API
-func (self *TFriendMoudle) FindFriend(pid uint32) *TFriend {
-	length := len(self.FriendLst)
-	for i := 0; i < length; i++ {
-		friend := &self.FriendLst[i]
-		if friend.ID == pid {
-			return friend
-		}
-	}
-	return nil
-}
-func (self *TFriendMoudle) RecvApply(pid uint32, name string) int8 {
+func (self *TFriendMoudle) RecvApply(pid uint32) int8 {
 	if self.InApplyLst(pid) >= 0 {
 		return -1
 	}
-	if self.InFriendLst(pid) >= 0 {
-		return -2
+	if self.InFriendLst(pid) >= 0 { //对方是自己好友，直接同意
+		AsyncNotifyPlayer(pid, func(player *TPlayer) {
+			player.Friend.AddFriend(self.PlayerID)
+		})
+		return 0
 	}
 	if self.PlayerID == pid {
 		return -3
 	}
-	data := TFriend{pid, name}
-	self.ApplyLst = append(self.ApplyLst, data)
-	//dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"applylst": data}})
+	self.ApplyLst = append(self.ApplyLst, pid)
 	return 0
 }
 func (self *TFriendMoudle) Agree(pid uint32) {
@@ -99,16 +92,11 @@ func (self *TFriendMoudle) Agree(pid uint32) {
 	if i < 0 {
 		return
 	}
-	ptr := &self.ApplyLst[i]
-
-	if self.AddFriend(ptr.ID, ptr.Name) >= 0 {
-		//dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
-		//	"applylst": bson.M{"id": ptr.ID}}})
-	}
+	self.AddFriend(pid)
 	self.ApplyLst = append(self.ApplyLst[:i], self.ApplyLst[i+1:]...)
 
-	AsyncNotifyPlayer(ptr.ID, func(player *TPlayer) {
-		player.Friend.AddFriend(self.PlayerID, self.owner.Name)
+	AsyncNotifyPlayer(pid, func(player *TPlayer) {
+		player.Friend.AddFriend(self.PlayerID)
 	})
 }
 func (self *TFriendMoudle) Refuse(pid uint32) {
@@ -116,17 +104,14 @@ func (self *TFriendMoudle) Refuse(pid uint32) {
 	if i < 0 {
 		return
 	}
-	//ptr := &self.ApplyLst[i]
-	//dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
-	//	"applylst": bson.M{"id": ptr.ID}}})
 	self.ApplyLst = append(self.ApplyLst[:i], self.ApplyLst[i+1:]...)
 }
-func (self *TFriendMoudle) AddFriend(pid uint32, name string) int8 {
+func (self *TFriendMoudle) AddFriend(pid uint32) int8 {
 	if self.InFriendLst(pid) >= 0 {
 		return -2
 	}
-	data := TFriend{pid, name}
-	self.FriendLst = append(self.FriendLst, data)
+	self.FriendLst = append(self.FriendLst, pid)
+	self.isChange = true
 	//dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"friendlst": data}})
 	return 0
 }
@@ -136,6 +121,7 @@ func (self *TFriendMoudle) DelFriend(pid uint32) {
 		//dbmgo.UpdateToDB("Friend", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
 		//	"friendlst": bson.M{"id": ptr.ID}}})
 		self.FriendLst = append(self.FriendLst[:i], self.FriendLst[i+1:]...)
+		self.isChange = true
 	}
 }
 
@@ -143,7 +129,7 @@ func (self *TFriendMoudle) DelFriend(pid uint32) {
 //! 辅助函数
 func (self *TFriendMoudle) InApplyLst(pid uint32) int {
 	for i := 0; i < len(self.ApplyLst); i++ {
-		if pid == self.ApplyLst[i].ID {
+		if pid == self.ApplyLst[i] {
 			return i
 		}
 	}
@@ -151,7 +137,7 @@ func (self *TFriendMoudle) InApplyLst(pid uint32) int {
 }
 func (self *TFriendMoudle) InFriendLst(pid uint32) int {
 	for i := 0; i < len(self.FriendLst); i++ {
-		if pid == self.FriendLst[i].ID {
+		if pid == self.FriendLst[i] {
 			return i
 		}
 	}
@@ -162,14 +148,17 @@ func (self *TFriendMoudle) InFriendLst(pid uint32) int {
 //! 加好友
 func Rpc_game_friend_list(req, ack *common.NetPack, ptr interface{}) {
 	player := ptr.(*TPlayer)
-	player.Friend.DataToBuf(ack)
+	player.Friend.PackFriendInfo(ack)
 }
 func Rpc_game_friend_apply(req, ack *common.NetPack, ptr interface{}) {
 	destPid := req.ReadUInt32()
 	self := ptr.(*TPlayer)
 
+	if destPid == self.PlayerID {
+		return
+	}
 	AsyncNotifyPlayer(destPid, func(destPtr *TPlayer) {
-		destPtr.Friend.RecvApply(self.PlayerID, self.Name)
+		destPtr.Friend.RecvApply(self.PlayerID)
 	})
 }
 func Rpc_game_friend_agree(req, ack *common.NetPack, ptr interface{}) {
@@ -190,12 +179,22 @@ func Rpc_game_friend_del(req, ack *common.NetPack, ptr interface{}) {
 	player := ptr.(*TPlayer)
 	player.Friend.DelFriend(pid)
 }
+func Rpc_game_search_player(req, ack *common.NetPack, ptr interface{}) {
+	pid := req.ReadUInt32()
+	player := FindPlayerInCache(pid)
+	if player != nil {
+		ack.WriteUInt32(player.PlayerID)
+		ack.WriteString(player.Name)
+	} else {
+		ack.WriteUInt32(0)
+	}
+}
 
 // -------------------------------------
 //! 组队相关
 func (self *TFriendMoudle) BeInvitedBy(p *TPlayer) {
 	if self.owner.pTeam != nil { //已组队，邀请无效
-		fmt.Println(self.PlayerID, "is already in team", self.owner.pTeam)
+		gamelog.Debug("%d is already in team", self.PlayerID)
 		return
 	}
 	if self.inviteMsg.Size() == 0 {

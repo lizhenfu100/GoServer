@@ -13,7 +13,7 @@ import (
 type TCPClient struct {
 	addr      string
 	connId    uint32
-	TcpConn   *TCPConn
+	Conn      *TCPConn
 	OnConnect func(*TCPConn)
 }
 
@@ -32,13 +32,13 @@ func (self *TCPClient) connectRoutine(meta *meta.Meta) {
 			//Notice: 这里不能用CallRpc，非线程安全的
 			firstMsg := make([]byte, 2+4) //tcp层的包，头两个字节是长度
 			binary.LittleEndian.PutUint32(firstMsg[2:], self.connId)
-			self.TcpConn.WriteBuf(firstMsg)
-			self.TcpConn.WriteMsg(regMsg)
-			if self.OnConnect != nil {
-				self.OnConnect(self.TcpConn)
-			}
-			go self.TcpConn.readRoutine()
-			self.TcpConn.writeRoutine() //goroutine会阻塞在这里
+			self.Conn.WriteBuf(firstMsg)
+			self.Conn.WriteMsg(regMsg)
+			//if self.OnConnect != nil { //Notice：放这里，回调就是多线程执行的了，健壮性低
+			//	self.OnConnect(self.Conn)
+			//}
+			go self.Conn.readRoutine()
+			self.Conn.writeRoutine() //goroutine会阻塞在这里
 		}
 		time.Sleep(3 * time.Second)
 	}
@@ -52,20 +52,23 @@ func (self *TCPClient) connect() bool {
 	if conn == nil {
 		return false
 	}
-	if self.TcpConn == nil {
-		self.TcpConn = newTCPConn(conn)
-		self.TcpConn.UserPtr = self
+	if self.Conn == nil {
+		self.Conn = newTCPConn(conn)
+		self.Conn.UserPtr = self
 	} else {
 		//断线重连的新连接标记得重置，否则tcpConn.readRoutine.readLoop会直接break
-		self.TcpConn.resetConn(conn)
+		self.Conn.resetConn(conn)
 	}
 	return true
 }
 func (self *TCPClient) Close() {
-	self.TcpConn.Close()
-	self.TcpConn = nil
+	self.Conn.Close()
+	self.Conn = nil
 }
 func OnSvrAcceptConn(req, ack *common.NetPack, conn *TCPConn) {
 	self := conn.UserPtr.(*TCPClient)
 	self.connId = req.ReadUInt32()
+	if self.OnConnect != nil {
+		self.OnConnect(self.Conn)
+	}
 }

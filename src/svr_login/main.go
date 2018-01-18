@@ -52,11 +52,13 @@ func main() {
 	}
 }
 func InitConf() {
+	var metaCfg []meta.Meta
 	common.G_Csv_Map = map[string]interface{}{
-		"conf_net": &meta.G_SvrNets,
+		"conf_net": &metaCfg,
 		"conf_svr": &conf.SvrCsv,
 	}
 	common.LoadAllCsv()
+	meta.InitConf(metaCfg)
 
 	netConfig.G_Local_Meta = meta.GetMeta(K_Module_Name, K_Module_SvrID)
 }
