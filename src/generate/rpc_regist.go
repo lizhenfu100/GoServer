@@ -112,36 +112,37 @@ const codeRegistTemplate = `
 package rpc
 import (
 	"common/net/register"
-	"generate_out/rpc/enum"
-	{{range $k, $_ := .Moudles}}
-	{{if eq $k "logic"}}
-	"{{$.Svr}}/{{$k}}"{{else}}
-	"{{$.Svr}}/logic/{{$k}}"{{end}}{{end}}
+	{{if UsingRpcEnum .}}"generate_out/rpc/enum"{{end}}
+	{{range $k, $_ := .Moudles}}{{if eq $k "logic"}}"{{$.Svr}}/{{$k}}"{{else}}"{{$.Svr}}/logic/{{$k}}"{{end}}
+	{{end}}
 )
 func init() {
 	register.RegTcpRpc(map[uint16]register.TcpRpc{
-		{{range .TcpRpc}}
-		enum.{{.Name}}: {{.Pack}}.{{.Name}},{{end}}
+		{{range .TcpRpc}}enum.{{.Name}}: {{.Pack}}.{{.Name}},
+		{{end}}
 	})
 	register.RegHttpRpc(map[uint16]register.HttpRpc{
-		{{range .HttpRpc}}
-		enum.{{.Name}}: {{.Pack}}.{{.Name}},{{end}}
+		{{range .HttpRpc}}enum.{{.Name}}: {{.Pack}}.{{.Name}},
+		{{end}}
 	})
 	register.RegHttpPlayerRpc(map[uint16]register.HttpPlayerRpc{
-		{{range .HttpPlayerRpc}}
-		enum.{{.Name}}: {{.Pack}}.{{.Name}},{{end}}
+		{{range .HttpPlayerRpc}}enum.{{.Name}}: {{.Pack}}.{{.Name}},
+		{{end}}
 	})
 	register.RegHttpHandler(map[string]register.HttpHandle{
-		{{range .HttpHandle}}
-		"{{.Name}}": {{.Pack}}.Http_{{.Name}},{{end}}
+		{{range .HttpHandle}}"{{.Name}}": {{.Pack}}.Http_{{.Name}},
+		{{end}}
 	})
 }
 `
 
 func (self *RpcInfo) makeFile(svr string) {
 	filename := K_RegistFileName
-	tpl, err := template.New(filename).Parse(codeRegistTemplate)
-	if err != nil {
+	var err error
+	tpl := template.New(filename).Funcs(map[string]interface{}{
+		"UsingRpcEnum": UsingRpcEnum,
+	})
+	if tpl, err = tpl.Parse(codeRegistTemplate); err != nil {
 		panic(err.Error())
 		return
 	}
@@ -161,4 +162,8 @@ func (self *RpcInfo) makeFile(svr string) {
 	}
 	defer f.Close()
 	f.Write(bf.Bytes())
+}
+func UsingRpcEnum(v interface{}) bool {
+	p := v.(*RpcInfo)
+	return len(p.TcpRpc)+len(p.HttpRpc)+len(p.HttpPlayerRpc) > 0
 }

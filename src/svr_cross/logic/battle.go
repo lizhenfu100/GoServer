@@ -74,8 +74,3 @@ func _SelectBattleSvrId() int {
 	}
 	return -1
 }
-func Rpc_cross_echo(req, ack *common.NetPack, conn *tcp.TCPConn) {
-	str := req.ReadString()
-	print(str)
-	ack.WriteString(str)
-}
