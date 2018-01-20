@@ -5,7 +5,6 @@ import (
 	"common/net/meta"
 	"http"
 	"netConfig"
-	"strings"
 	"sync"
 )
 
@@ -41,7 +40,7 @@ func SyncRelayToCenter(svrId int, rid uint16, req, ack *common.NetPack) {
 }
 
 func HashCenterID(key string) int {
-	ids := meta.GetModuleIDs("center")
+	ids := meta.GetModuleIDs("center", netConfig.G_Local_Meta.Version)
 	length := uint32(len(ids))
 	n := common.StringHash(key)
 	return ids[n%length]
@@ -60,20 +59,14 @@ func CallRpcGame(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)) 
 	http.CallRpc(addr, rid, sendFun, recvFun)
 }
 
-func WriteRegGamesvr(buf *common.NetPack) {
-	ids := meta.GetModuleIDs("game")
+func WriteRegGamesvr(buf *common.NetPack, version string) {
+	ids := meta.GetModuleIDs("game", version)
 	buf.WriteByte(byte(len(ids)))
 	for _, id := range ids {
-		addr := netConfig.GetHttpAddr("game", id)
-
-		idx1 := strings.Index(addr, "//") + 2
-		idx2 := strings.LastIndex(addr, ":")
-		ip := addr[idx1:idx2]
-		port := common.CheckAtoiName(addr[idx2+1 : len(addr)-1])
-
+		pMeta := meta.GetMeta("game", id)
 		buf.WriteInt(id)
-		buf.WriteString("ChillyRoom")
-		buf.WriteString(ip)
-		buf.WriteUInt16(uint16(port))
+		buf.WriteString(pMeta.SvrName)
+		buf.WriteString(pMeta.OutIP)
+		buf.WriteUInt16(pMeta.HttpPort)
 	}
 }

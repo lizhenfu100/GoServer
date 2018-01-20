@@ -71,9 +71,7 @@ func Rpc_game_heart_beat(req, ack *common.NetPack, ptr interface{}) {
 
 // -------------------------------------
 // -- 后台账号验证
-var (
-	g_login_token sync.Map
-)
+var g_login_token sync.Map
 
 func Rpc_game_login_token(req, ack *common.NetPack) {
 	id := req.ReadUInt32()

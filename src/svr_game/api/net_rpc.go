@@ -21,7 +21,7 @@ var (
 // ------------------------------------------------------------
 //! cross
 func CallRpcCross(rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	ids := meta.GetModuleIDs("cross")
+	ids := meta.GetModuleIDs("cross", netConfig.G_Local_Meta.Version)
 	id := ids[rand.Intn(len(ids))] //随机一个节点
 
 	var conn *tcp.TCPConn

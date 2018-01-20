@@ -9,6 +9,7 @@ import (
 	_ "generate_out/rpc/svr_sdk"
 	"netConfig"
 	"svr_sdk/logic"
+	"svr_sdk/msg"
 	"zookeeper/component"
 )
 
@@ -30,16 +31,13 @@ func main() {
 	//设置mongodb的服务器地址
 	pMeta := meta.GetMeta("db_sdk", 0)
 	dbmgo.InitWithUser(pMeta.IP, pMeta.TcpPort, pMeta.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
-	logic.InitDB()
+	msg.InitDB()
 
 	component.RegisterToZookeeper()
 
 	go logic.MainLoop()
 
-	print("----Sdk Server Start-----")
-	if !netConfig.CreateNetSvr(K_Module_Name, K_Module_SvrID) {
-		print("----Sdk NetSvr Failed-----")
-	}
+	netConfig.RunNetSvr()
 }
 func InitConf() {
 	var metaCfg []meta.Meta

@@ -21,9 +21,11 @@ var (
 )
 
 // ------------------------------------------------------------
-//! TODO：某些 rpc 需告知 Battle 来源的 GameSvrID
+//!
 func Rpc_cross_relay_battle_data(req, ack *common.NetPack, conn *tcp.TCPConn) {
-	svrId := _SelectBattleSvrId()
+	version := req.ReadString()
+
+	svrId := _SelectBattleSvrId(version)
 	if svrId == -1 {
 		//FIXME:无空闲战斗服时，自动执行脚本，开新战斗服(怎么开?)
 		gamelog.Error("!!! svr_battle is full !!!")
@@ -33,7 +35,7 @@ func Rpc_cross_relay_battle_data(req, ack *common.NetPack, conn *tcp.TCPConn) {
 
 	// 转给Battle进程
 	api.CallRpcBattle(svrId, enum.Rpc_battle_handle_player_data, func(buf *common.NetPack) {
-		buf.WriteBuf(req.Body())
+		buf.WriteBuf(req.LeftBuf())
 	}, func(backBuf *common.NetPack) {
 		playerCnt := backBuf.ReadUInt32() //选中战斗服的已有人数
 		g_battle_player_cnt[svrId] = playerCnt
@@ -50,10 +52,10 @@ func Rpc_cross_relay_battle_data(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		gameMsg.Free()
 	})
 }
-func _SelectBattleSvrId() int {
+func _SelectBattleSvrId(version string) int {
 	//moba类的，应该有个专门的匹配服，供自由玩家【快速】组房间
 	//io向的，允许中途加入，应尽量分配到人多的战斗服
-	ids := meta.GetModuleIDs("battle")
+	ids := meta.GetModuleIDs("battle", version)
 	sort.Ints(ids)
 	//1、优先在各个服务器分配一定人数
 	for i := 0; i < len(ids); i++ {

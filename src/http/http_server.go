@@ -10,6 +10,10 @@ import (
 	"sync"
 )
 
+//idx1 := strings.Index(addr, "//") + 2
+//idx2 := strings.LastIndex(addr, ":")
+//ip := addr[idx1:idx2]
+//port := common.CheckAtoiName(addr[idx2+1 : len(addr)-1])
 func Addr(ip string, port uint16) string { return fmt.Sprintf("http://%s:%d/", ip, port) }
 
 func NewHttpServer(addr string) error {

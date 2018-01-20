@@ -14,6 +14,6 @@ func MainLoop() {
 
 		tcp.G_RpcQueue.Update()
 
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 	}
 }

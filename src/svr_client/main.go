@@ -50,7 +50,7 @@ func main() {
 
 	component.RegisterToZookeeper()
 
-	netConfig.CreateNetSvr(Module_Name, Module_SvrID)
+	netConfig.RunNetSvr()
 
 	// Download()
 	test()
@@ -98,16 +98,6 @@ func test() {
 	time.Sleep(3 * time.Second)
 	crossConn := netConfig.GetTcpConn("cross", 0)
 	fmt.Println("---", crossConn)
-
-	for {
-		crossConn.CallRpc(enum.Rpc_cross_echo, func(buf *common.NetPack) {
-			buf.WriteString("zhoumf233")
-		}, func(recvBuf *common.NetPack) {
-			str := recvBuf.ReadString()
-			fmt.Print(str)
-		})
-		time.Sleep(10 * time.Millisecond)
-	}
 
 	//向游戏服请求充值
 	// var msg1 sdk_msg.Msg_create_recharge_order_Req

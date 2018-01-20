@@ -34,10 +34,7 @@ func main() {
 
 	go logic.MainLoop()
 
-	print("----Cross Server Start-----")
-	if !netConfig.CreateNetSvr(Module_Name, Module_SvrID) {
-		print("----Cross NetSvr Failed-----")
-	}
+	netConfig.RunNetSvr()
 }
 func InitConf() {
 	var metaCfg []meta.Meta

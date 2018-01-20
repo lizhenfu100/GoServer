@@ -19,11 +19,11 @@ package logic
 
 import (
 	"common"
-	"conf"
 	"fmt"
 	"gamelog"
 	"io"
 	"net/http"
+	"netConfig"
 	"os"
 	"path/filepath"
 	"strings"
@@ -60,14 +60,15 @@ func Http_file_upload(w http.ResponseWriter, r *http.Request) {
 }
 func Rpc_file_update_list(req, ack *common.NetPack) {
 	version := req.ReadString()
-	if strings.Compare(version, conf.SvrCsv.Version) < 0 {
+	//TODO：可动态更改节点版本号
+	if strings.Compare(version, netConfig.G_Local_Meta.Version) < 0 {
 		//下发 patch 目录下的文件列表
 		names, _ := common.WalkDir("net_file/patch", "")
 		ack.WriteUInt16(uint16(len(names)))
 		for _, v := range names {
 			ack.WriteString(strings.Trim(v, "net_file"))
 		}
-		ack.WriteString(conf.SvrCsv.Version)
+		ack.WriteString(netConfig.G_Local_Meta.Version)
 	} else {
 		ack.WriteUInt16(0)
 	}

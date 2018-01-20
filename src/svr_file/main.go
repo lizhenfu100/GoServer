@@ -28,10 +28,7 @@ func main() {
 	//开启控制台窗口，可以接受一些调试命令
 	console.StartConsole()
 
-	print("----File Server Start-----")
-	if !netConfig.CreateNetSvr(Module_Name, Module_SvrID) {
-		print("----File NetSvr Failed-----")
-	}
+	netConfig.RunNetSvr()
 }
 func InitConf() {
 	var metaCfg []meta.Meta

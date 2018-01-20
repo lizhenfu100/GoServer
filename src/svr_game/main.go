@@ -43,10 +43,7 @@ func main() {
 
 	go logic.MainLoop()
 
-	print("----Game Server Start-----")
-	if !netConfig.CreateNetSvr(K_Module_Name, K_Module_SvrID) {
-		print("----Game NetSvr Failed-----")
-	}
+	netConfig.RunNetSvr()
 }
 func InitConf() {
 	var metaCfg []meta.Meta

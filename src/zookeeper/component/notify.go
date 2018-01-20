@@ -62,7 +62,7 @@ func ConnectToModule(ptr *meta.Meta) {
 		client := new(tcp.TCPClient)
 		client.OnConnect = func(conn *tcp.TCPConn) {
 			netConfig.G_Client_Conns.Store(common.KeyPair{ptr.Module, ptr.SvrID}, client)
-			meta.AddMeta(ptr)
+			meta.AddMeta(ptr) //Notice：闭包中引用外部指针，其内容可能变动，须额外注意
 		}
 		client.ConnectToSvr(tcp.Addr(ptr.IP, ptr.TcpPort), netConfig.G_Local_Meta)
 	}

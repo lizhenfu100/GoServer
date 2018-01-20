@@ -3,6 +3,8 @@
 * @ brief
 	1、每个节点一份meta信息，这份meta可以构建自csv表，也能构建自zookeeper
 	2、一个节点连上zookeeper时，将与其相关的节点meta下发
+	3、版本号格式：1.12.233，前两组一致的版本间可匹配，第三组用于小调整、bug修复
+	4、空版本号能与任意版本匹配
 
 * @ Notice
 	1、G_SvrNets []Meta 作为一个数组，中间元素被删除后会整体移动
@@ -126,10 +128,12 @@ func GetIpPort(module string, id int) (ip string, port uint16) {
 	}
 	return
 }
-func GetModuleIDs(module string) (ret []int) {
+
+func GetModuleIDs(module, version string) (ret []int) {
 	G_SvrNets.Range(func(k, v interface{}) bool {
-		if k.(common.KeyPair).Name == module {
-			ret = append(ret, k.(common.KeyPair).ID)
+		ptr := v.(*Meta)
+		if ptr.Module == module && (ptr.Version == "" || version == "" || ptr.Version[:4] == version[:4]) {
+			ret = append(ret, ptr.SvrID)
 		}
 		return true
 	})
@@ -147,9 +151,3 @@ func (self *Meta) IsMyServer(dst *Meta) bool {
 	return false
 }
 func (self *Meta) IsMyClient(dst *Meta) bool { return dst.IsMyServer(self) }
-
-func (self *Meta) IsSame(dst *Meta) bool {
-	return self.Module == dst.Module &&
-		self.SvrID == dst.SvrID &&
-		self.Version == dst.Version
-}

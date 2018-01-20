@@ -10,6 +10,10 @@ import (
 
 var g_login_token uint32
 
+func Rpc_login_get_gamesvr_lst(req, ack *common.NetPack) {
+	version := req.ReadString()
+	api.WriteRegGamesvr(ack, version)
+}
 func Rpc_login_account_login(req, ack *common.NetPack) {
 	_AckLoginAndCreateToken(req, ack, enum.Rpc_center_account_login)
 }

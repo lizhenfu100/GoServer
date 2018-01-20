@@ -5,7 +5,6 @@ const (
 )
 
 var SvrCsv struct {
-	Version  string
 	DBuser   string
 	DBpasswd string
 }
