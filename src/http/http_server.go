@@ -85,18 +85,21 @@ func LoadCacheNetMeta() {
 	if err != nil {
 		return
 	}
-	var info meta.Meta
+	ptr := new(meta.Meta)
 	for i := 0; i < len(records); i++ {
-		json.Unmarshal([]byte(records[i][0]), &info)
+		json.Unmarshal([]byte(records[i][0]), ptr)
 		//Notice：之前可能有同个key的，被后面追加的覆盖
-		g_reg_addr_map.Store(common.KeyPair{info.Module, info.SvrID}, info)
+		g_reg_addr_map.Store(common.KeyPair{ptr.Module, ptr.SvrID}, ptr)
 	}
 	common.UpdateCsv(g_svraddr_path, [][]string{})
 }
-func AppendNetMeta(meta *meta.Meta) {
+func AppendNetMeta(ptr *meta.Meta) {
+	if meta.GetMeta("zookeeper", 0) != nil {
+		return //有zookeeper实现重启恢复，不必本地缓存
+	}
 	_mutex.Lock()
 	defer _mutex.Unlock()
-	b, _ := json.Marshal(meta)
+	b, _ := json.Marshal(ptr)
 	record := []string{string(b)}
 	err := common.AppendCsv(g_svraddr_path, record)
 	if err != nil {

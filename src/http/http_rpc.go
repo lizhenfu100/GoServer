@@ -58,15 +58,14 @@ var (
 // ------------------------------------------------------------
 //! system rpc
 func CallRpc(addr string, rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	buf := common.NewNetPackCap(64)
-	buf.SetOpCode(rid)
-	sendFun(buf)
-	b := PostReq(addr+"client_rpc", buf.Data())
-	if recvFun != nil {
-		b2 := common.Decompress(b)
-		recvFun(common.NewNetPack(b2))
+	req := common.NewNetPackCap(64)
+	req.SetOpCode(rid)
+	sendFun(req)
+	if buf := PostReq(addr+"client_rpc", req.Data()); buf != nil && recvFun != nil {
+		ack := common.NewNetPack(common.Decompress(buf))
+		recvFun(ack)
 	}
-	buf.Free()
+	req.Free()
 }
 func RegHandleRpc() { http.HandleFunc("/client_rpc", _HandleRpc) }
 func _HandleRpc(w http.ResponseWriter, r *http.Request) {
@@ -105,18 +104,18 @@ func NewPlayerRpc(addr string, pid uint32) *PlayerRpc {
 	return &PlayerRpc{addr + "player_rpc", pid}
 }
 func (self *PlayerRpc) CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	buf := common.NewNetPackCap(64)
-	buf.SetOpCode(rid)
-	buf.SetReqIdx(self.PlayerId)
-	sendFun(buf)
-	b := PostReq(self.Url, buf.Data())
-	b2 := common.Decompress(b)
-	recvBuf := common.NewNetPack(b2)
-	if recvFun != nil {
-		recvFun(recvBuf)
+	req := common.NewNetPackCap(64)
+	req.SetOpCode(rid)
+	req.SetReqIdx(self.PlayerId)
+	sendFun(req)
+	if buf := PostReq(self.Url, req.Data()); buf != nil {
+		ack := common.NewNetPack(common.Decompress(buf))
+		if recvFun != nil {
+			recvFun(ack)
+		}
+		_RecvHttpSvrData(ack) //服务器主动下发的数据
 	}
-	buf.Free()
-	_RecvHttpSvrData(recvBuf) //服务器主动下发的数据
+	req.Free()
 }
 func _RecvHttpSvrData(buf *common.NetPack) {
 	//对应于 http_to_client.go

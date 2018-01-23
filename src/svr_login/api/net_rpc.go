@@ -58,15 +58,3 @@ func CallRpcGame(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)) 
 	}
 	http.CallRpc(addr, rid, sendFun, recvFun)
 }
-
-func WriteRegGamesvr(buf *common.NetPack, version string) {
-	ids := meta.GetModuleIDs("game", version)
-	buf.WriteByte(byte(len(ids)))
-	for _, id := range ids {
-		pMeta := meta.GetMeta("game", id)
-		buf.WriteInt(id)
-		buf.WriteString(pMeta.SvrName)
-		buf.WriteString(pMeta.OutIP)
-		buf.WriteUInt16(pMeta.HttpPort)
-	}
-}

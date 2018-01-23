@@ -33,7 +33,7 @@ func main() {
 
 	//设置mongodb的服务器地址
 	pMeta := meta.GetMeta("db_game", 1)
-	dbmgo.InitWithUser(pMeta.IP, pMeta.TcpPort, pMeta.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
+	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
 	player.InitDB()
 
 	//开启控制台窗口，可以接受一些调试命令

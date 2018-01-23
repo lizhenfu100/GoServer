@@ -76,7 +76,7 @@ func Rpc_game_battle_begin(req, ack *common.NetPack, ptr interface{}) {
 	}, nil)
 }
 func Rpc_game_battle_ack(req, ack *common.NetPack, conn *tcp.TCPConn) {
-	battleSvrIP := req.ReadString()
+	battleSvrOutIP := req.ReadString()
 	battleSvrPort := req.ReadUInt16()
 	cnt := req.ReadByte()
 	for i := byte(0); i < cnt; i++ {
@@ -84,7 +84,7 @@ func Rpc_game_battle_ack(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		//通知client登录战斗服
 		AsyncNotifyPlayer(pid, func(player *TPlayer) {
 			buf := player.Battle.loginBattleMsg
-			buf.WriteString(battleSvrIP)
+			buf.WriteString(battleSvrOutIP)
 			buf.WriteUInt16(battleSvrPort)
 		})
 	}
@@ -92,10 +92,9 @@ func Rpc_game_battle_ack(req, ack *common.NetPack, conn *tcp.TCPConn) {
 func Rpc_game_probe_login_battle(req, ack *common.NetPack, ptr interface{}) {
 	player := ptr.(*TPlayer)
 
-	msg := player.Battle.loginBattleMsg
-	if msg.Size() > 0 {
+	if player.Battle.loginBattleMsg.Size() > 0 {
 		ack.WriteInt8(1)
-		ack.WriteBuf(msg.Data())
+		ack.WriteBuf(player.Battle.loginBattleMsg.Data())
 		player.Battle.loginBattleMsg.Clear()
 	} else {
 		ack.WriteInt8(-1)

@@ -7,7 +7,7 @@
 			数  组：	[10,20,30]  [[1,2], [2,3]]
 			数值对：	同结构体				旧格式：(24|1)(11|1)...
 			结构体：	{"ID": 233, "Cnt": 1}	新格式：Json
-			Map： 		{"key1": 1, "key2": 2}  //转换为JSON的Object，key必须是string
+			Map：	{"key1": 1, "key2": 2}  转换为JSON的Object，key必须是string
 
 			物品权重表，可配成两列：[]IntPair + []int
 

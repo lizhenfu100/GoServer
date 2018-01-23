@@ -63,9 +63,9 @@ func InitConf() {
 	}
 	common.LoadAllCsv()
 	meta.InitConf(metaCfg)
-	// for k, v := range netConfig.G_SvrNetCfg {
-	// 	fmt.Println(k, v)
-	// }
+	for k, v := range metaCfg {
+		fmt.Println(k, v)
+	}
 	netConfig.G_Local_Meta = meta.GetMeta(Module_Name, Module_SvrID)
 }
 

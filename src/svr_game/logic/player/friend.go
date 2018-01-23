@@ -33,8 +33,20 @@ func (self *TFriendMoudle) LoadFromDB(player *TPlayer) {
 }
 func (self *TFriendMoudle) WriteToDB() { dbmgo.UpdateSync("Friend", self.PlayerID, self) }
 func (self *TFriendMoudle) OnLogin() {
+	//通告好友我上线了
+	for _, v := range self.FriendLst {
+		AsyncNotifyPlayer(v, func(player *TPlayer) {
+			player.Friend.isChange = true
+		})
+	}
 }
 func (self *TFriendMoudle) OnLogout() {
+	//通告好友我下线了
+	for _, v := range self.FriendLst {
+		AsyncNotifyPlayer(v, func(player *TPlayer) {
+			player.Friend.isChange = true
+		})
+	}
 }
 func (self *TFriendMoudle) _InitTempData() {
 	self.inviteMsg = common.NewByteBufferCap(32)

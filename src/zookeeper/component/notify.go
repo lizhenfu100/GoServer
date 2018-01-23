@@ -26,8 +26,7 @@ func CallRpcZoo(rid uint16, sendFun, recvFun func(*common.NetPack)) {
 
 func RegisterToZookeeper() {
 	// 初始化同zookeeper的连接，并注册
-	pMeta := meta.GetMeta("zookeeper", 0)
-	if g_cache_zoo_conn == nil && pMeta != nil {
+	if pMeta := meta.GetMeta("zookeeper", 0); pMeta != nil && g_cache_zoo_conn == nil {
 		client := new(tcp.TCPClient)
 		client.OnConnect = func(conn *tcp.TCPConn) {
 			CallRpcZoo(enum.Rpc_zoo_register, func(buf *common.NetPack) {

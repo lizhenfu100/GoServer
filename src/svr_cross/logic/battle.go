@@ -42,11 +42,11 @@ func Rpc_cross_relay_battle_data(req, ack *common.NetPack, conn *tcp.TCPConn) {
 
 		//【Notice：异步回调里不能用非线程安全的数据，直接用ack回复错的】
 		gamelog.Debug("send addr to game")
-		ip, port := meta.GetIpPort("battle", svrId)
+		pMeta := meta.GetMeta("battle", svrId)
 		gameMsg := common.NewNetPackCap(256)
 		gameMsg.SetOpCode(enum.Rpc_game_battle_ack)
-		gameMsg.WriteString(ip)
-		gameMsg.WriteUInt16(port)
+		gameMsg.WriteString(pMeta.OutIP)
+		gameMsg.WriteUInt16(pMeta.Port())
 		gameMsg.WriteBuf(backBuf.LeftBuf()) //[]<pid>
 		conn.WriteMsg(gameMsg)
 		gameMsg.Free()

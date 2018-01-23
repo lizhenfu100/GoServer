@@ -47,6 +47,14 @@ type Meta struct {
 	IsClosed bool
 }
 
+func (self *Meta) Port() uint16 {
+	if self.HttpPort > 0 {
+		return self.HttpPort
+	} else {
+		return self.TcpPort
+	}
+}
+
 // -------------------------------------
 //! buf
 func (self *Meta) DataToBuf(buf *common.NetPack) {
@@ -117,22 +125,10 @@ func DelMeta(module string, svrID int) {
 	//}
 }
 
-func GetIpPort(module string, id int) (ip string, port uint16) {
-	if v := GetMeta(module, id); v != nil {
-		if v.HttpPort > 0 {
-			port = uint16(v.HttpPort)
-		} else {
-			port = uint16(v.TcpPort)
-		}
-		ip = v.IP
-	}
-	return
-}
-
 func GetModuleIDs(module, version string) (ret []int) {
 	G_SvrNets.Range(func(k, v interface{}) bool {
 		ptr := v.(*Meta)
-		if ptr.Module == module && (ptr.Version == "" || version == "" || ptr.Version[:4] == version[:4]) {
+		if ptr.Module == module && !ptr.IsClosed && (ptr.Version == "" || version == "" || ptr.Version[:4] == version[:4]) {
 			ret = append(ret, ptr.SvrID)
 		}
 		return true

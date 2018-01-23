@@ -12,7 +12,7 @@ var g_login_token uint32
 
 func Rpc_login_get_gamesvr_lst(req, ack *common.NetPack) {
 	version := req.ReadString()
-	api.WriteRegGamesvr(ack, version)
+	WriteRegGamesvr(ack, version)
 }
 func Rpc_login_account_login(req, ack *common.NetPack) {
 	_AckLoginAndCreateToken(req, ack, enum.Rpc_center_account_login)
@@ -25,8 +25,8 @@ func _AckLoginAndCreateToken(req, ack *common.NetPack, rid uint16) {
 	gameSvrId := req.ReadInt()
 	centerSvrId := api.HashCenterID(key)
 
-	ip, port := meta.GetIpPort("game", gameSvrId)
-	if port <= 0 {
+	pMeta := meta.GetMeta("game", gameSvrId)
+	if pMeta.Port() <= 0 {
 		ack.WriteInt8(-100) //invalid_svrid
 		return
 	}
@@ -44,8 +44,8 @@ func _AckLoginAndCreateToken(req, ack *common.NetPack, rid uint16) {
 			token := atomic.AddUint32(&g_login_token, 1)
 			accountId := recvBuf.ReadUInt32()
 			ack.WriteInt8(1)
-			ack.WriteString(ip)
-			ack.WriteUInt16(port)
+			ack.WriteString(pMeta.OutIP)
+			ack.WriteUInt16(pMeta.Port())
 			ack.WriteUInt32(accountId)
 			ack.WriteUInt32(token)
 			//将token发给目标gamesvr
@@ -59,6 +59,20 @@ func _AckLoginAndCreateToken(req, ack *common.NetPack, rid uint16) {
 	})
 	if isSyncCall == false {
 		panic("Using ack int another CallRpc must be sync!!! zhoumf\n")
+	}
+}
+
+// -------------------------------------
+// game svr list
+func WriteRegGamesvr(buf *common.NetPack, version string) {
+	ids := meta.GetModuleIDs("game", version)
+	buf.WriteByte(byte(len(ids)))
+	for _, id := range ids {
+		pMeta := meta.GetMeta("game", id)
+		buf.WriteInt(id)
+		buf.WriteString(pMeta.SvrName)
+		buf.WriteString(pMeta.OutIP)
+		buf.WriteUInt16(pMeta.Port())
 	}
 }
 

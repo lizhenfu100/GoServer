@@ -16,8 +16,7 @@ func init() {
 // ------------------------------------------------------------
 //! 底层接口，业务层一般用不到
 func PostReq(url string, b []byte) []byte {
-	ack, err := http.Post(url, "text/HTML", bytes.NewReader(b))
-	if err == nil {
+	if ack, err := http.Post(url, "text/HTML", bytes.NewReader(b)); err == nil {
 		backBuf := make([]byte, ack.ContentLength)
 		ack.Body.Read(backBuf)
 		ack.Body.Close()
