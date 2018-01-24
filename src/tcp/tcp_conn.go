@@ -73,8 +73,9 @@ const (
 
 var (
 	G_HandleFunc = [enum.RpcEnumCnt]func(*common.NetPack, *common.NetPack, *TCPConn){
-		enum.Rpc_regist:     DoRegistToSvr,
-		enum.Rpc_svr_accept: OnSvrAcceptConn,
+		enum.Rpc_regist:           DoRegistToSvr,
+		enum.Rpc_svr_accept:       OnSvrAcceptConn,
+		enum.Rpc_report_net_error: ReportNetError,
 	}
 	G_RpcQueue = NewRpcQueue(4096)
 )
@@ -87,18 +88,13 @@ type TCPConn struct {
 	_isClose      int32 //isClose标记仅在resetConn、Close中设置，其它地方只读
 	_isWriteClose bool
 	onNetClose    func(*TCPConn)
-	timer         *time.Timer //延时清理连接，提高重连效率
+	delayDel      *time.Timer //延时清理连接，提高重连效率
 	UserPtr       interface{}
 }
 
 func newTCPConn(conn net.Conn) *TCPConn {
 	self := new(TCPConn)
 	self.writeChan = make(chan []byte, Write_Chan_Cap)
-	self.timer = time.AfterFunc(Delay_Delete_Conn, func() { //Notice:回调函数须线程安全
-		if self.IsClose() {
-			self.onNetClose(self)
-		}
-	})
 	self.resetConn(conn)
 	return self
 }
@@ -107,7 +103,6 @@ func (self *TCPConn) resetConn(conn net.Conn) {
 	self.reader = bufio.NewReader(conn)
 	self.writer = bufio.NewWriter(conn)
 	atomic.StoreInt32(&self._isClose, 0)
-	self.timer.Stop()
 }
 func (self *TCPConn) Close() {
 	if self.IsClose() {
@@ -120,18 +115,12 @@ func (self *TCPConn) Close() {
 	}
 	atomic.StoreInt32(&self._isClose, 1)
 
-	if self.onNetClose != nil {
-		self.timer.Reset(Delay_Delete_Conn)
-	}
+	//通知逻辑线程，连接断开
+	packet := common.NewNetPackCap(16)
+	packet.SetOpCode(enum.Rpc_report_net_error)
+	G_RpcQueue.Insert(self, packet)
 }
 func (self *TCPConn) IsClose() bool { return atomic.LoadInt32(&self._isClose) > 0 }
-
-func (self *TCPConn) SetOnNetClose(cb func(*TCPConn)) {
-	if !self.IsClose() {
-		common.Assert(self.onNetClose == nil)
-		self.onNetClose = cb
-	}
-}
 
 // msgdata must not be modified by other goroutines
 func (self *TCPConn) WriteMsg(msg *common.NetPack) {
@@ -148,9 +137,6 @@ func (self *TCPConn) WriteMsg(msg *common.NetPack) {
 	self.WriteBuf(buf)
 }
 func (self *TCPConn) WriteBuf(buf []byte) {
-	if self.IsClose() {
-		return
-	}
 	select {
 	case self.writeChan <- buf: //chan满后再写即阻塞，select进入default分支报错
 	default:
@@ -246,4 +232,10 @@ func (self *TCPConn) readRoutine() {
 // rpc
 func (self *TCPConn) CallRpc(msgId uint16, sendFun, recvFun func(*common.NetPack)) {
 	G_RpcQueue.CallRpc(self, msgId, sendFun, recvFun)
+}
+
+func ReportNetError(req, ack *common.NetPack, conn *TCPConn) {
+	//if conn.onNetClose != nil { //迁移至：延时删除
+	//	conn.onNetClose(conn)
+	//}
 }

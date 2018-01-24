@@ -32,7 +32,9 @@ func CallRpcCross(rid uint16, sendFun, recvFun func(*common.NetPack)) {
 		conn = netConfig.GetTcpConn("cross", id)
 		g_cache_cross_conn.Store(id, conn)
 	}
-	conn.CallRpc(rid, sendFun, recvFun)
+	if conn != nil {
+		conn.CallRpc(rid, sendFun, recvFun)
+	}
 }
 
 // ------------------------------------------------------------

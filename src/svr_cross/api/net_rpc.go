@@ -15,7 +15,9 @@ var (
 // ------------------------------------------------------------
 //! battle
 func CallRpcBattle(svrID int, rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	GetBattleConn(svrID).CallRpc(rid, sendFun, recvFun)
+	if conn := GetBattleConn(svrID); conn != nil {
+		conn.CallRpc(rid, sendFun, recvFun)
+	}
 }
 func GetBattleConn(svrID int) *tcp.TCPConn {
 	conn, _ := g_cache_battle_conn[svrID]
@@ -29,7 +31,9 @@ func GetBattleConn(svrID int) *tcp.TCPConn {
 // ------------------------------------------------------------
 //! game
 func CallRpcGame(svrID int, rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	GetGameConn(svrID).CallRpc(rid, sendFun, recvFun)
+	if conn := GetGameConn(svrID); conn != nil {
+		conn.CallRpc(rid, sendFun, recvFun)
+	}
 }
 func GetGameConn(svrId int) *tcp.TCPConn {
 	conn, _ := g_cache_game_conn[svrId]

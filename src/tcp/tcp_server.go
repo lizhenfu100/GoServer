@@ -102,7 +102,20 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 	atomic.AddInt32(&self.connCnt, 1)
 	gamelog.Debug("Connect From: %s, AddConnId: %d", conn.RemoteAddr().String(), connId)
 
-	// 通知client，连接被接收，下发connId、密钥等
+	//延时删除，以待断线重连
+	tcpConn.delayDel = time.AfterFunc(Delay_Delete_Conn, func() { //Notice:回调函数须线程安全
+		if tcpConn.IsClose() {
+			if tcpConn.onNetClose != nil {
+				tcpConn.onNetClose(tcpConn)
+			}
+			self.connmap.Delete(connId)
+			atomic.AddInt32(&self.connCnt, -1)
+			gamelog.Debug("Disconnect: DelConnId: %d", connId)
+		}
+	})
+	tcpConn.delayDel.Stop()
+
+	//通知client，连接被接收，下发connId、密钥等
 	acceptMsg := common.NewNetPackCap(32)
 	acceptMsg.SetOpCode(enum.Rpc_svr_accept)
 	acceptMsg.WriteUInt32(connId)
@@ -131,9 +144,11 @@ func (self *TCPServer) _RunConn(conn *TCPConn, connId uint32) {
 	go conn.readRoutine()
 	conn.writeRoutine() //block
 
-	self.connmap.Delete(connId)
-	atomic.AddInt32(&self.connCnt, -1)
-	gamelog.Debug("Disconnect: DelConnId: %d, UserPtr:%v", connId, conn.UserPtr)
+	conn.delayDel.Reset(Delay_Delete_Conn)
+	//self.connmap.Delete(connId)  //迁移至：延时删除
+	//atomic.AddInt32(&self.connCnt, -1)
+	//gamelog.Debug("Disconnect: DelConnId: %d", connId)
+
 	self.wgConns.Done()
 }
 
@@ -167,12 +182,12 @@ func DoRegistToSvr(req, ack *common.NetPack, conn *TCPConn) {
 	meta.AddMeta(ptr)
 	gamelog.Debug("DoRegistToSvr: {%s %d}", ptr.Module, ptr.SvrID)
 
-	conn.SetOnNetClose(func(this *TCPConn) {
+	conn.onNetClose = func(this *TCPConn) {
 		if pConn := FindRegModuleConn(ptr.Module, ptr.SvrID); pConn != nil && pConn.IsClose() {
 			gamelog.Debug("Delete Regist Svr: {%s %d}", ptr.Module, ptr.SvrID)
 			g_reg_conn_map.Delete(common.KeyPair{ptr.Module, ptr.SvrID})
 		}
-	})
+	}
 }
 
 func FindRegModuleConn(module string, id int) *TCPConn {
@@ -185,7 +200,7 @@ func FindRegModule(module string, id int) (TRegConn, bool) {
 	if v, ok := g_reg_conn_map.Load(common.KeyPair{module, id}); ok {
 		return v.(TRegConn), true
 	}
-	gamelog.Error("FindRegModuleConn nil : (%s,%d) => %v", module, id, g_reg_conn_map)
+	gamelog.Error("FindRegModuleConn nil : (%s,%d)", module, id)
 	return TRegConn{}, false
 }
 

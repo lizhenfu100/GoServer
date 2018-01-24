@@ -61,7 +61,7 @@ func RunNetSvr() {
 	}
 
 	//3、开启本模块网络服务(Busy Loop)
-	fmt.Printf("-------%s server start-------", G_Local_Meta.Module)
+	fmt.Printf("-------%s server start-------\n", G_Local_Meta.Module)
 	if G_Local_Meta.HttpPort > 0 {
 		http.NewHttpServer(fmt.Sprintf(":%d", G_Local_Meta.HttpPort))
 	} else if G_Local_Meta.TcpPort > 0 {
