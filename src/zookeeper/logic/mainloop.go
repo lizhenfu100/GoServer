@@ -1,6 +1,7 @@
 package logic
 
 import (
+	"common"
 	"tcp"
 	"time"
 )
@@ -16,4 +17,6 @@ func MainLoop() {
 
 		time.Sleep(10 * time.Millisecond)
 	}
+}
+func Rpc_report_net_error(req, ack *common.NetPack, conn *tcp.TCPConn) {
 }

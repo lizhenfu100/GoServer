@@ -20,6 +20,7 @@ import (
 	"common"
 	"common/net/meta"
 	"fmt"
+	"gamelog"
 	"http"
 	"sync"
 	"tcp"
@@ -78,9 +79,12 @@ func GetTcpConn(module string, svrId int) *tcp.TCPConn {
 		return ptr.Conn
 	}
 	// cross(s) - game(c)
-	return tcp.FindRegModuleConn(module, svrId)
+	return tcp.FindRegModule(module, svrId)
 }
 func GetHttpAddr(module string, svrId int) string {
-	pMeta := meta.GetMeta(module, svrId)
-	return http.Addr(pMeta.IP, pMeta.HttpPort)
+	if pMeta := meta.GetMeta(module, svrId); pMeta != nil {
+		return http.Addr(pMeta.IP, pMeta.HttpPort)
+	}
+	gamelog.Error("GetHttpAddr nil : (%s,%d) %d", module, svrId)
+	return ""
 }

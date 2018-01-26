@@ -31,13 +31,14 @@ import (
 )
 
 const (
-	Flush_Interval = 15 * time.Second //间隔几秒写一次log
+	Flush_Interval = time.Second * 15
 )
 
 type Writer interface {
 	Write(data1, data2 [][]byte)
 }
 type AsyncLog struct {
+	sync.Mutex
 	cond     *sync.Cond
 	curBuf   [][]byte
 	spareBuf [][]byte
@@ -46,7 +47,7 @@ type AsyncLog struct {
 
 func NewAsyncLog(bufSize int, wr Writer) *AsyncLog {
 	log := new(AsyncLog)
-	log.cond = sync.NewCond(new(sync.Mutex))
+	log.cond = sync.NewCond(&log.Mutex)
 	log.curBuf = make([][]byte, 0, bufSize)
 	log.spareBuf = make([][]byte, 0, bufSize)
 	log.wr = wr
@@ -58,7 +59,7 @@ func NewAsyncLog(bufSize int, wr Writer) *AsyncLog {
 //如果写得非常快，瞬间把两片buf都写满了，会阻塞在awakeChan处，等writeLoop写完log即恢复
 //两片buf的好处：在当前线程即可交换，不用等到后台writeLoop唤醒
 func (self *AsyncLog) Append(pdata []byte) {
-	self.cond.L.Lock()
+	self.Lock()
 	{
 		self.curBuf = append(self.curBuf, pdata)
 		if len(self.curBuf) == cap(self.curBuf) {
@@ -66,14 +67,14 @@ func (self *AsyncLog) Append(pdata []byte) {
 			self.cond.Signal()
 		}
 	}
-	self.cond.L.Unlock()
+	self.Unlock()
 }
 
 func (self *AsyncLog) _writeLoop(bufSize int) {
 	bufToWrite1 := make([][]byte, 0, bufSize)
 	bufToWrite2 := make([][]byte, 0, bufSize)
 	for {
-		self.cond.L.Lock()
+		self.Lock()
 		{
 			self.cond.Wait() //Notice：必须在临近区内
 
@@ -81,7 +82,7 @@ func (self *AsyncLog) _writeLoop(bufSize int) {
 			_swapBuf(&bufToWrite1, &self.spareBuf)
 			_swapBuf(&bufToWrite2, &self.curBuf)
 		}
-		self.cond.L.Unlock()
+		self.Unlock()
 
 		//将bufToWrite中的数据全写进log，并清空
 		self.wr.Write(bufToWrite1, bufToWrite2)
@@ -90,8 +91,7 @@ func (self *AsyncLog) _writeLoop(bufSize int) {
 	}
 }
 func (self *AsyncLog) _timeOutWrite() {
-	for {
-		time.Sleep(Flush_Interval)
+	for range time.Tick(Flush_Interval) {
 		self.cond.Signal()
 	}
 }

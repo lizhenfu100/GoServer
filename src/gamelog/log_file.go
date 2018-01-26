@@ -1,7 +1,7 @@
 package gamelog
 
 import (
-	"common"
+	"common/file"
 	"fmt"
 	"log"
 	"os"
@@ -18,7 +18,7 @@ const (
 )
 
 var (
-	g_logDir   = common.GetExeDir() + "log/"
+	g_logDir   = file.GetExeDir() + "log/"
 	g_logger   *log.Logger
 	g_level    = Lv_Debug
 	g_levelStr = []string{
@@ -68,13 +68,10 @@ func Fatal(format string, v ...interface{}) {
 // -------------------------------------
 // 每隔一段时间，更换输出文件
 func AutoChangeFile(name string) {
-	for {
-		time.Sleep(Change_File_CD)
+	for range time.Tick(Change_File_CD) {
 		timeStr := time.Now().Format("20060102_150405")
-		file, err := common.CreateFile(g_logDir, name+timeStr+".log")
-		if err != nil {
-			panic("CreateFile error : " + err.Error())
+		if f, err := file.CreateFile(g_logDir, name+timeStr+".log", os.O_WRONLY); err == nil {
+			InitFileLog(f)
 		}
-		InitFileLog(file)
 	}
 }

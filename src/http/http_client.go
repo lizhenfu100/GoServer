@@ -27,16 +27,12 @@ func PostReq(url string, b []byte) []byte {
 	}
 }
 
-// 已验证：此函数失败，resp是nil，那resp.Body.Close()就不能无脑调了
-// resp, err := http.Post(url, "text/HTML", bytes.NewReader(b))
-// resp.Body.Close()
-
 // ------------------------------------------------------------
 //! 模块注册
 func RegistToSvr(destAddr string, meta *meta.Meta) {
-	go _RegistToSvr(destAddr, meta)
+	go _registToSvr(destAddr, meta)
 }
-func _RegistToSvr(destAddr string, meta *meta.Meta) {
+func _registToSvr(destAddr string, meta *meta.Meta) {
 	buf, _ := common.ToBytes(meta)
 	for {
 		if PostReq(destAddr+"reg_to_svr", buf) == nil {

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"common"
 	"common/console"
+	"common/file"
 	"common/net/meta"
 	"conf"
 	"dbmgo"
@@ -22,17 +22,12 @@ const (
 func main() {
 	//初始化日志系统
 	gamelog.InitLogger(K_Module_Name)
-	if conf.IsDebug {
-		gamelog.SetLevel(gamelog.Lv_Debug)
-	} else {
-		gamelog.SetLevel(gamelog.Lv_Info)
-	}
 	InitConf()
 
 	//设置mongodb的服务器地址
 	pMeta := meta.GetMeta("db_account", 0)
 	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
-	account.G_AccountMgr.Init()
+	account.InitDB()
 
 	//开启控制台窗口，可以接受一些调试命令
 	console.StartConsole()
@@ -45,11 +40,11 @@ func main() {
 }
 func InitConf() {
 	var metaCfg []meta.Meta
-	common.G_Csv_Map = map[string]interface{}{
+	file.G_Csv_Map = map[string]interface{}{
 		"conf_net": &metaCfg,
 		"conf_svr": &conf.SvrCsv,
 	}
-	common.LoadAllCsv()
+	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
 
 	netConfig.G_Local_Meta = meta.GetMeta(K_Module_Name, K_Module_SvrID)

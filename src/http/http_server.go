@@ -2,6 +2,7 @@ package http
 
 import (
 	"common"
+	"common/file"
 	"common/net/meta"
 	"encoding/json"
 	"fmt"
@@ -18,7 +19,7 @@ func Addr(ip string, port uint16) string { return fmt.Sprintf("http://%s:%d/", i
 
 func NewHttpServer(addr string) error {
 	LoadCacheNetMeta()
-	http.HandleFunc("/reg_to_svr", _doRegistToSvr)
+	http.HandleFunc("/reg_to_svr", _RegistToSvr)
 	return http.ListenAndServe(addr, nil)
 }
 
@@ -26,27 +27,30 @@ func NewHttpServer(addr string) error {
 //! 模块注册
 var g_reg_addr_map sync.Map
 
-func _doRegistToSvr(w http.ResponseWriter, r *http.Request) {
+func _RegistToSvr(w http.ResponseWriter, r *http.Request) {
 	buffer := make([]byte, r.ContentLength)
 	r.Body.Read(buffer)
 
-	ptr := new(meta.Meta)
-	err := common.ToStruct(buffer, ptr)
-	if err != nil {
-		gamelog.Error("DoRegistToSvr common.ToStruct fail: %s", err.Error())
+	pMeta := new(meta.Meta)
+	if err := common.ToStruct(buffer, pMeta); err != nil {
+		gamelog.Error("RegistToSvr common.ToStruct: %s", err.Error())
 		return
 	}
-	gamelog.Debug("DoRegistToSvr: %v", *ptr)
+	gamelog.Debug("RegistToSvr: {%s %d}", pMeta.Module, pMeta.SvrID)
 
-	g_reg_addr_map.Store(common.KeyPair{ptr.Module, ptr.SvrID}, ptr)
+	g_reg_addr_map.Store(common.KeyPair{pMeta.Module, pMeta.SvrID}, pMeta)
 
-	meta.AddMeta(ptr)
-	AppendNetMeta(ptr)
+	meta.AddMeta(pMeta)
+	AppendNetMeta(pMeta)
 
 	defer func() {
 		w.Write([]byte("ok"))
 	}()
 }
+func _UnRegistToSvr(pMeta *meta.Meta) {
+	gamelog.Debug("UnRegist Svr: {%s %d}", pMeta.Module, pMeta.SvrID)
+}
+
 func FindRegModuleAddr(module string, id int) string { //"http://%s:%d/"
 	if v, ok := g_reg_addr_map.Load(common.KeyPair{module, id}); ok {
 		ptr := v.(*meta.Meta)
@@ -76,12 +80,12 @@ func ForeachRegModule(f func(v *meta.Meta)) {
 //! 不似tcp，对端不知道这边傻逼了( ▔___▔)y
 //! 采用追加方式，同个“远程服务”的地址，会被最新追加的覆盖掉
 var (
-	g_svraddr_path = common.GetExeDir() + "reg_addr.csv"
+	g_svraddr_path = file.GetExeDir() + "reg_addr.csv"
 	_mutex         sync.Mutex
 )
 
 func LoadCacheNetMeta() {
-	records, err := common.ReadCsv(g_svraddr_path)
+	records, err := file.ReadCsv(g_svraddr_path)
 	if err != nil {
 		return
 	}
@@ -91,7 +95,7 @@ func LoadCacheNetMeta() {
 		//Notice：之前可能有同个key的，被后面追加的覆盖
 		g_reg_addr_map.Store(common.KeyPair{ptr.Module, ptr.SvrID}, ptr)
 	}
-	common.UpdateCsv(g_svraddr_path, [][]string{})
+	file.UpdateCsv(g_svraddr_path, [][]string{})
 }
 func AppendNetMeta(ptr *meta.Meta) {
 	if meta.GetMeta("zookeeper", 0) != nil {
@@ -101,7 +105,7 @@ func AppendNetMeta(ptr *meta.Meta) {
 	defer _mutex.Unlock()
 	b, _ := json.Marshal(ptr)
 	record := []string{string(b)}
-	err := common.AppendCsv(g_svraddr_path, record)
+	err := file.AppendCsv(g_svraddr_path, record)
 	if err != nil {
 		gamelog.Error("AppendSvrAddrCsv (%v): %s", record, err.Error())
 	}

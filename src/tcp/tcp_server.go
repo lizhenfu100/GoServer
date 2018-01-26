@@ -105,12 +105,21 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 	//延时删除，以待断线重连
 	tcpConn.delayDel = time.AfterFunc(Delay_Delete_Conn, func() { //Notice:回调函数须线程安全
 		if tcpConn.IsClose() {
-			if tcpConn.onNetClose != nil {
-				tcpConn.onNetClose(tcpConn)
-			}
 			self.connmap.Delete(connId)
 			atomic.AddInt32(&self.connCnt, -1)
 			gamelog.Debug("Disconnect: DelConnId: %d", connId)
+
+			//通知逻辑线程，连接断开
+			packet := common.NewNetPackCap(16)
+			packet.SetOpCode(enum.Rpc_report_net_error)
+			G_RpcQueue.Insert(tcpConn, packet)
+
+			//连接的后台节点断开，注销之
+			if _, ok := tcpConn.UserPtr.(*meta.Meta); ok {
+				packet := common.NewNetPackCap(16)
+				packet.SetOpCode(enum.Rpc_unregist)
+				G_RpcQueue.Insert(tcpConn, packet)
+			}
 		}
 	})
 	tcpConn.delayDel.Stop()
@@ -144,10 +153,11 @@ func (self *TCPServer) _RunConn(conn *TCPConn, connId uint32) {
 	go conn.readRoutine()
 	conn.writeRoutine() //block
 
-	conn.delayDel.Reset(Delay_Delete_Conn)
-	//self.connmap.Delete(connId)  //迁移至：延时删除
+	//【迁移至：延时删除】
+	//self.connmap.Delete(connId)
 	//atomic.AddInt32(&self.connCnt, -1)
 	//gamelog.Debug("Disconnect: DelConnId: %d", connId)
+	conn.delayDel.Reset(Delay_Delete_Conn)
 
 	self.wgConns.Done()
 }
@@ -166,42 +176,33 @@ func (self *TCPServer) Close() {
 }
 
 // ------------------------------------------------------------
-//! 模块注册
-type TRegConn struct {
-	*meta.Meta
-	Conn *TCPConn
-}
-
+// 模块注册
 var g_reg_conn_map sync.Map
 
-func DoRegistToSvr(req, ack *common.NetPack, conn *TCPConn) {
-	ptr := new(meta.Meta)
-	ptr.BufToData(req)
+func _RegistToSvr(req, ack *common.NetPack, conn *TCPConn) {
+	pMeta := new(meta.Meta)
+	pMeta.BufToData(req)
+	conn.UserPtr = pMeta
 
-	g_reg_conn_map.Store(common.KeyPair{ptr.Module, ptr.SvrID}, TRegConn{ptr, conn})
-	meta.AddMeta(ptr)
-	gamelog.Debug("DoRegistToSvr: {%s %d}", ptr.Module, ptr.SvrID)
-
-	conn.onNetClose = func(this *TCPConn) {
-		if pConn := FindRegModuleConn(ptr.Module, ptr.SvrID); pConn != nil && pConn.IsClose() {
-			gamelog.Debug("Delete Regist Svr: {%s %d}", ptr.Module, ptr.SvrID)
-			g_reg_conn_map.Delete(common.KeyPair{ptr.Module, ptr.SvrID})
+	g_reg_conn_map.Store(common.KeyPair{pMeta.Module, pMeta.SvrID}, conn)
+	meta.AddMeta(pMeta)
+	gamelog.Debug("RegistToSvr: {%s %d}", pMeta.Module, pMeta.SvrID)
+}
+func _UnRegistToSvr(req, ack *common.NetPack, conn *TCPConn) {
+	if pMeta, ok := conn.UserPtr.(*meta.Meta); ok {
+		if pConn := FindRegModule(pMeta.Module, pMeta.SvrID); pConn != nil && pConn.IsClose() {
+			gamelog.Debug("UnRegist Svr: {%s %d}", pMeta.Module, pMeta.SvrID)
+			g_reg_conn_map.Delete(common.KeyPair{pMeta.Module, pMeta.SvrID})
 		}
 	}
 }
 
-func FindRegModuleConn(module string, id int) *TCPConn {
-	if v, ok := FindRegModule(module, id); ok {
-		return v.Conn
-	}
-	return nil
-}
-func FindRegModule(module string, id int) (TRegConn, bool) {
+func FindRegModule(module string, id int) *TCPConn {
 	if v, ok := g_reg_conn_map.Load(common.KeyPair{module, id}); ok {
-		return v.(TRegConn), true
+		return v.(*TCPConn)
 	}
 	gamelog.Error("FindRegModuleConn nil : (%s,%d)", module, id)
-	return TRegConn{}, false
+	return nil
 }
 
 func GetRegModuleIDs(module string) (ret []int) {
@@ -213,9 +214,9 @@ func GetRegModuleIDs(module string) (ret []int) {
 	})
 	return
 }
-func ForeachRegModule(f func(v TRegConn)) {
+func ForeachRegModule(f func(v *TCPConn)) {
 	g_reg_conn_map.Range(func(k, v interface{}) bool {
-		f(v.(TRegConn))
+		f(v.(*TCPConn))
 		return true
 	})
 }

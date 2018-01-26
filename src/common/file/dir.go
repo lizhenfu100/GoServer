@@ -1,4 +1,4 @@
-package common
+package file
 
 import (
 	"bufio"
@@ -13,8 +13,7 @@ func GetExeDir() string {
 	return dir + "/"
 }
 func IsDirExist(path string) bool {
-	fi, err := os.Stat(path)
-	if err != nil {
+	if fi, err := os.Stat(path); err != nil {
 		return os.IsExist(err)
 	} else {
 		return fi.IsDir()
@@ -62,15 +61,13 @@ func ReadLine(filename string, cb func(string)) error {
 	return nil
 }
 
-func CreateFile(dir, name string) (*os.File, error) {
-	if !IsDirExist(dir) {
-		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-			return nil, err
-		}
-	}
-	file, err := os.OpenFile(dir+name, os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
+func CreateFile(dir, name string, flag int) (*os.File, error) {
+	if err := os.MkdirAll(dir, 0777); err != nil {
 		return nil, err
 	}
-	return file, nil
+	if file, err := os.OpenFile(dir+name, flag|os.O_CREATE, 0666); err != nil {
+		return nil, err
+	} else {
+		return file, nil
+	}
 }

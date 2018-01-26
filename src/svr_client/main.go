@@ -2,24 +2,20 @@ package main
 
 import (
 	"common"
-	// "conf"
-	// "dbmgo"
-	"fmt"
-	"gamelog"
-	"http"
-	"netConfig"
-	"time"
-	//"msg/sdk_msg"
-	//"svr_client/api"
-	//"svr_game/logic/player"
+	"common/file"
 	"common/net/meta"
 	"conf"
+	"fmt"
+	"gamelog"
 	"generate_out/rpc/enum"
+	"http"
 	"io"
 	nhttp "net/http"
+	"netConfig"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 	"zookeeper/component"
 )
 
@@ -41,11 +37,6 @@ func main() {
 	println(addr[idx2+1 : len(addr)-1])
 
 	gamelog.InitLogger(Module_Name)
-	if conf.IsDebug {
-		gamelog.SetLevel(gamelog.Lv_Debug)
-	} else {
-		gamelog.SetLevel(gamelog.Lv_Info)
-	}
 	InitConf()
 
 	component.RegisterToZookeeper()
@@ -58,10 +49,11 @@ func main() {
 }
 func InitConf() {
 	var metaCfg []meta.Meta
-	common.G_Csv_Map = map[string]interface{}{
+	file.G_Csv_Map = map[string]interface{}{
 		"conf_net": &metaCfg,
+		"conf_svr": &conf.SvrCsv,
 	}
-	common.LoadAllCsv()
+	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
 	for k, v := range metaCfg {
 		fmt.Println(k, v)

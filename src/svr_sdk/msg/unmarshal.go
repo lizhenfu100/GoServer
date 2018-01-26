@@ -1,7 +1,7 @@
 package msg
 
 import (
-	"common"
+	"common/file"
 	"net/url"
 	"reflect"
 	"strings"
@@ -14,7 +14,7 @@ func Unmarshal(ptr interface{}, form url.Values) {
 		name := strings.ToLower(typ.Field(i).Name)
 		for k, v := range form {
 			if strings.ToLower(k) == name {
-				common.SetField(val.Field(i), v[0])
+				file.SetField(val.Field(i), v[0])
 			}
 		}
 	}
@@ -26,7 +26,8 @@ func CopySameField(pDest interface{}, pSrc interface{}) {
 	val1 := reflect.ValueOf(pDest).Elem()
 	val2 := reflect.ValueOf(pSrc).Elem()
 	for i := 0; i < typ1.NumField(); i++ {
-		v := val2.FieldByName(typ1.Field(i).Name)
-		val1.Field(i).Set(v)
+		if v := val2.FieldByName(typ1.Field(i).Name); v.IsValid() {
+			val1.Field(i).Set(v)
+		}
 	}
 }

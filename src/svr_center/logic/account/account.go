@@ -36,7 +36,7 @@ func (self *TAccount) Login(passwd string) (errcode int8) {
 		dbmgo.UpdateToDB("Account", bson.M{"_id": self.AccountID}, bson.M{"$set": bson.M{"logintime": self.LoginTime}})
 
 		time.AfterFunc(15*time.Minute, func() {
-			G_AccountMgr.DelToCache(self)
+			DelCache(self)
 		})
 	}
 	return
@@ -52,7 +52,7 @@ func Rpc_center_reg_account(req, ack *common.NetPack) {
 		ack.WriteInt8(-1)
 	} else if !format.CheckPasswd(password) {
 		ack.WriteInt8(-2)
-	} else if account := G_AccountMgr.AddNewAccount(name, password); account != nil {
+	} else if account := AddNewAccount(name, password); account != nil {
 		ack.WriteInt8(1)
 	} else {
 		ack.WriteInt8(-3)
@@ -79,7 +79,7 @@ func Rpc_center_change_password(req, ack *common.NetPack) {
 
 	if !format.CheckPasswd(newpassword) {
 		ack.WriteInt8(-1)
-	} else if ok := G_AccountMgr.ResetPassword(name, oldpassword, newpassword); ok {
+	} else if ok := ResetPassword(name, oldpassword, newpassword); ok {
 		ack.WriteInt8(1)
 	} else {
 		ack.WriteInt8(-2)
@@ -89,7 +89,7 @@ func Rpc_center_account_login(req, ack *common.NetPack) {
 	name := req.ReadString()
 	passwd := req.ReadString()
 
-	account := G_AccountMgr.GetAccountByName(name)
+	account := GetAccountByName(name)
 	errcode := account.Login(passwd)
 	ack.WriteInt8(errcode)
 	if errcode > 0 {

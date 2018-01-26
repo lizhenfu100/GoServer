@@ -1,6 +1,7 @@
 package logic
 
 import (
+	"common"
 	"svr_game/logic/player"
 	"tcp"
 	"time"
@@ -18,5 +19,10 @@ func MainLoop() {
 		tcp.G_RpcQueue.Update()
 
 		time.Sleep(50 * time.Millisecond)
+	}
+}
+func Rpc_report_net_error(req, ack *common.NetPack, conn *tcp.TCPConn) {
+	if ptr := conn.UserPtr.(*player.TPlayer); ptr != nil {
+		ptr.Logout()
 	}
 }

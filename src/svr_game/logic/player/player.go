@@ -45,8 +45,8 @@ var (
 )
 
 const (
-	Idle_Max_Second       = 60
-	Reconnect_Wait_Second = 60 * time.Second
+	Idle_Max_Second     = 60
+	ReLogin_Wait_Second = time.Second * 120
 
 	//须与ServiceMgr初始化顺序一致
 	Service_Write_DB  = 0
@@ -159,9 +159,9 @@ func (self *TPlayer) Logout() {
 	G_ServiceMgr.UnRegister(Service_Check_AFK, self)
 
 	//Notice: AfterFunc是在另一线程执行，所以传入函数必须线程安全
-	time.AfterFunc(Reconnect_Wait_Second, func() {
+	time.AfterFunc(ReLogin_Wait_Second, func() {
 		// 延时删除，提升重连效率
-		if !self.IsOnline() {
+		if !self.IsOnline() && FindPlayerInCache(self.PlayerID) != nil {
 			gamelog.Debug("Pid(%d) Delete", self.PlayerID)
 			go self.WriteAllToDB()
 			DelPlayerCache(self)

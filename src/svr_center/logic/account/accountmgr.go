@@ -8,26 +8,21 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-type TAccountMgr struct {
-	sync.RWMutex
-	NameToPtr map[string]*TAccount
-	IdToPtr   map[uint32]*TAccount
-}
+var (
+	g_name_cache sync.Map //map[string]*TAccount
+	g_aid_cache  sync.Map //map[uint32]*TAccount
+)
 
-var G_AccountMgr TAccountMgr
-
-func (self *TAccountMgr) Init() {
-	self.IdToPtr = make(map[uint32]*TAccount, 5000)
-	self.NameToPtr = make(map[string]*TAccount, 5000)
+func InitDB() {
 	//只载入一个月内登录过的
-	var accountLst []TAccount
-	dbmgo.FindAll("Account", bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - 30*24*3600}}, &accountLst)
-	for i := 0; i < len(accountLst); i++ {
-		self.AddToCache(&accountLst[i])
+	var list []TAccount
+	dbmgo.FindAll("Account", bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - 30*24*3600}}, &list)
+	for i := 0; i < len(list); i++ {
+		AddCache(&list[i])
 	}
-	println("load active account form db: ", len(accountLst))
+	println("load active account form db: ", len(list))
 }
-func (self *TAccountMgr) AddNewAccount(name, password string) *TAccount {
+func AddNewAccount(name, password string) *TAccount {
 	account := &TAccount{
 		Name:       name,
 		Password:   password,
@@ -39,39 +34,37 @@ func (self *TAccountMgr) AddNewAccount(name, password string) *TAccount {
 	account.AccountID = dbmgo.GetNextIncId("AccountId")
 
 	if dbmgo.InsertSync("Account", account) {
-		self.AddToCache(account)
+		AddCache(account)
 		return account
 	}
 	return nil
 }
-func (self *TAccountMgr) GetAccountByName(name string) *TAccount {
-	self.RLock()
-	ret := self.NameToPtr[name]
-	self.RUnlock()
-	if ret == nil {
+func GetAccountByName(name string) *TAccount {
+	if v, ok := g_name_cache.Load(name); ok {
+		return v.(*TAccount)
+	} else {
 		account := new(TAccount)
 		if ok := dbmgo.Find("Account", "name", name, account); ok {
-			self.AddToCache(account)
+			AddCache(account)
 			return account
 		}
 	}
-	return ret
+	return nil
 }
-func (self *TAccountMgr) GetAccountById(accountId uint32) *TAccount {
-	self.RLock()
-	ret := self.IdToPtr[accountId]
-	self.RUnlock()
-	if ret == nil {
+func GetAccountById(accountId uint32) *TAccount {
+	if v, ok := g_aid_cache.Load(accountId); ok {
+		return v.(*TAccount)
+	} else {
 		account := new(TAccount)
 		if ok := dbmgo.Find("Account", "_id", accountId, account); ok {
-			self.AddToCache(account)
+			AddCache(account)
 			return account
 		}
 	}
-	return ret
+	return nil
 }
-func (self *TAccountMgr) ResetPassword(name, password, newpassword string) bool {
-	if account := self.GetAccountByName(name); account != nil {
+func ResetPassword(name, password, newpassword string) bool {
+	if account := GetAccountByName(name); account != nil {
 		if account.Password == password {
 			account.Password = newpassword
 			dbmgo.UpdateToDB("Account", bson.M{"_id": account.AccountID}, bson.M{"$set": bson.M{
@@ -84,15 +77,11 @@ func (self *TAccountMgr) ResetPassword(name, password, newpassword string) bool 
 
 // -------------------------------------
 //! 辅助函数
-func (self *TAccountMgr) AddToCache(account *TAccount) {
-	self.Lock()
-	self.IdToPtr[account.AccountID] = account
-	self.NameToPtr[account.Name] = account
-	self.Unlock()
+func AddCache(account *TAccount) {
+	g_name_cache.Store(account.Name, account)
+	g_aid_cache.Store(account.AccountID, account)
 }
-func (self *TAccountMgr) DelToCache(account *TAccount) {
-	self.Lock()
-	delete(self.IdToPtr, account.AccountID)
-	delete(self.NameToPtr, account.Name)
-	self.Unlock()
+func DelCache(account *TAccount) {
+	g_name_cache.Delete(account.Name)
+	g_aid_cache.Delete(account.AccountID)
 }

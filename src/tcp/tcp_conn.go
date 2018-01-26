@@ -68,14 +68,14 @@ import (
 const (
 	G_Msg_Size_Max    = 1024
 	Write_Chan_Cap    = 32
-	Delay_Delete_Conn = 30 * time.Second
+	Delay_Delete_Conn = time.Second * 60
 )
 
 var (
 	G_HandleFunc = [enum.RpcEnumCnt]func(*common.NetPack, *common.NetPack, *TCPConn){
-		enum.Rpc_regist:           DoRegistToSvr,
-		enum.Rpc_svr_accept:       OnSvrAcceptConn,
-		enum.Rpc_report_net_error: ReportNetError,
+		enum.Rpc_regist:     _RegistToSvr,
+		enum.Rpc_unregist:   _UnRegistToSvr,
+		enum.Rpc_svr_accept: _OnSvrAcceptConn,
 	}
 	G_RpcQueue = NewRpcQueue(4096)
 )
@@ -87,7 +87,6 @@ type TCPConn struct {
 	writeChan     chan []byte
 	_isClose      int32 //isClose标记仅在resetConn、Close中设置，其它地方只读
 	_isWriteClose bool
-	onNetClose    func(*TCPConn)
 	delayDel      *time.Timer //延时清理连接，提高重连效率
 	UserPtr       interface{}
 }
@@ -103,6 +102,9 @@ func (self *TCPConn) resetConn(conn net.Conn) {
 	self.reader = bufio.NewReader(conn)
 	self.writer = bufio.NewWriter(conn)
 	atomic.StoreInt32(&self._isClose, 0)
+	if self.delayDel != nil {
+		self.delayDel.Stop()
+	}
 }
 func (self *TCPConn) Close() {
 	if self.IsClose() {
@@ -115,10 +117,11 @@ func (self *TCPConn) Close() {
 	}
 	atomic.StoreInt32(&self._isClose, 1)
 
+	//【迁移至：延时删除】
 	//通知逻辑线程，连接断开
-	packet := common.NewNetPackCap(16)
-	packet.SetOpCode(enum.Rpc_report_net_error)
-	G_RpcQueue.Insert(self, packet)
+	//packet := common.NewNetPackCap(16)
+	//packet.SetOpCode(enum.Rpc_report_net_error)
+	//G_RpcQueue.Insert(self, packet)
 }
 func (self *TCPConn) IsClose() bool { return atomic.LoadInt32(&self._isClose) > 0 }
 
@@ -232,10 +235,4 @@ func (self *TCPConn) readRoutine() {
 // rpc
 func (self *TCPConn) CallRpc(msgId uint16, sendFun, recvFun func(*common.NetPack)) {
 	G_RpcQueue.CallRpc(self, msgId, sendFun, recvFun)
-}
-
-func ReportNetError(req, ack *common.NetPack, conn *TCPConn) {
-	//if conn.onNetClose != nil { //迁移至：延时删除
-	//	conn.onNetClose(conn)
-	//}
 }

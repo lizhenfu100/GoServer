@@ -39,7 +39,6 @@ import (
 	"gamelog"
 	"generate_out/rpc/enum"
 	"net/http"
-	"runtime/debug"
 )
 
 const (
@@ -76,12 +75,13 @@ func _HandleRpc(w http.ResponseWriter, r *http.Request) {
 	//! 创建回复
 	ack := common.NewNetPackCap(128)
 	msgId := req.GetOpCode()
-	defer func() {
-		if r := recover(); r != nil {
-			gamelog.Error("recover msgId:%d\n%v: %s", msgId, r, debug.Stack())
-		}
-		ack.Free()
-	}()
+	defer ack.Free()
+	//defer func() {//库已经有recover了，见net/http/server.go:1918
+	//	if r := recover(); r != nil {
+	//		gamelog.Error("recover msgId:%d\n%v: %s", msgId, r, debug.Stack())
+	//	}
+	//	ack.Free()
+	//}()
 
 	gamelog.Debug("HttpMsg:%d, len:%d", msgId, req.Size())
 
@@ -130,12 +130,13 @@ func _HandlePlayerRpc(w http.ResponseWriter, r *http.Request) {
 	ack := common.NewNetPackCap(128)
 	msgId := req.GetOpCode()
 	pid := req.GetReqIdx()
-	defer func() {
-		if r := recover(); r != nil {
-			gamelog.Error("recover msgId:%d\n%v: %s", msgId, r, debug.Stack())
-		}
-		ack.Free()
-	}()
+	defer ack.Free()
+	//defer func() {//库已经有recover了，见net/http/server.go:1918
+	//	if r := recover(); r != nil {
+	//		gamelog.Error("recover msgId:%d\n%v: %s", msgId, r, debug.Stack())
+	//	}
+	//	ack.Free()
+	//}()
 	//FIXME: 验证消息安全性，防改包
 	//FIXME: http通信中途安全性不够，能修改client net pack里的pid，进而操作别人数据
 	//FIXME: 账号服登录验证后下发给client的token，client应该保留，附在每个HttpReq里，防止恶意窜改他人数据

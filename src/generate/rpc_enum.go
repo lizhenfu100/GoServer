@@ -18,7 +18,7 @@ package main
 
 import (
 	"bytes"
-	"common"
+	"common/file"
 	"os"
 	"regexp"
 	"text/template"
@@ -58,7 +58,7 @@ func collectRpc_Go(info *RpcInfo) {
 }
 func collectRpc_C() {
 	reg := regexp.MustCompile(`rpc_\w+`)
-	common.ReadLine(K_RpcFuncFile_C, func(line string) {
+	file.ReadLine(K_RpcFuncFile_C, func(line string) {
 		if result := reg.FindAllString(line, -1); result != nil {
 			g_rpc_func = append(g_rpc_func, result[0])
 		}
@@ -66,7 +66,7 @@ func collectRpc_C() {
 }
 func collectRpc_CSharp() {
 	reg := regexp.MustCompile(`rpc_\w+`)
-	common.ReadLine(K_RpcFuncFile_CS, func(line string) {
+	file.ReadLine(K_RpcFuncFile_CS, func(line string) {
 		if ok, _ := regexp.MatchString(`^public void rpc_.+`, line); ok {
 			g_rpc_func = append(g_rpc_func, reg.FindAllString(line, -1)[0])
 		}
@@ -74,7 +74,7 @@ func collectRpc_CSharp() {
 }
 func collectOldEnum() {
 	reg := regexp.MustCompile(`Rpc_\w+`)
-	common.ReadLine(K_EnumOutDir+K_EnumFileName+".go", func(line string) {
+	file.ReadLine(K_EnumOutDir+K_EnumFileName+".go", func(line string) {
 		if result := reg.FindAllString(line, -1); result != nil {
 			rpcname := "r" + result[0][1:]
 			g_rpc_enum = append(g_rpc_enum, TRpcEunm{Name: rpcname})

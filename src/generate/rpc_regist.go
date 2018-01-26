@@ -14,7 +14,7 @@ package main
 
 import (
 	"bytes"
-	"common"
+	"common/file"
 	"os"
 	"regexp"
 	"text/template"
@@ -39,11 +39,11 @@ type RpcInfo struct {
 }
 
 func generatRpcRegist(svr string) *RpcInfo {
-	names, _ := common.WalkDir(K_SvrDir+svr+"/logic", ".go")
+	names, _ := file.WalkDir(K_SvrDir+svr+"/logic", ".go")
 	pinfo := &RpcInfo{Svr: svr, Moudles: make(map[string]bool)}
 	for _, v := range names {
 		moudle := "" //package name
-		common.ReadLine(v, func(line string) {
+		file.ReadLine(v, func(line string) {
 			fname := "" //func name
 			if fname = getPackage(line); fname != "" {
 				moudle = fname

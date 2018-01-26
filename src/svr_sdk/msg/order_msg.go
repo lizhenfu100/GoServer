@@ -5,12 +5,26 @@ type Retcode_ack struct {
 	Msg     string `json:"msg"`     //响应信息（与retcode对应）
 }
 
-type Pre_buy_ack struct {
-	Retcode_ack
-	Order_id string `json:"order_id"` //订单id
+// ------------------------------------------------------------
+// 预下单回复【各渠道可能回复数据不同】
+type Pre_buy_ack interface {
+	SetRetcode(int)
+	SetMsg(string)
+	SetOrderId(string)
 }
 
-//订单查询回复
+//默认
+type Pre_buy struct {
+	Retcode_ack
+	Order_id string `json:"order_id"`
+}
+
+func (self *Pre_buy) SetRetcode(v int)    { self.Retcode = v }
+func (self *Pre_buy) SetMsg(v string)     { self.Msg = v }
+func (self *Pre_buy) SetOrderId(v string) { self.Order_id = v }
+
+// ------------------------------------------------------------
+// 订单查询回复
 type Query_order_ack struct {
 	Retcode int    `json:"retcode"` //0代表成功，其他失败
 	Msg     string `json:"msg"`     //响应信息（与retcode对应）

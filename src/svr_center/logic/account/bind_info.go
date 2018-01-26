@@ -53,7 +53,7 @@ func Rpc_center_get_account_by_bind_info(req, ack *common.NetPack) {
 // 辅助函数
 func BindInfoToAccount(name, passwd, k, v string, force int8) (errcode int8) {
 	dbkey := fmt.Sprintf("bindinfo.%s", k)
-	account := G_AccountMgr.GetAccountByName(name)
+	account := GetAccountByName(name)
 	if account == nil {
 		errcode = -1 //not_exist
 	} else if passwd != account.Password {

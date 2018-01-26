@@ -44,12 +44,11 @@
 * @ author zhoumf
 * @ date 2016-6-22
 ***********************************************************************/
-package common
+package file
 
 import (
 	"encoding/csv"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -251,18 +250,10 @@ func _GetRecordsValidCnt(records [][]string) (ret int) {
 // 读写csv文件
 func ReadCsv(path string) ([][]string, error) {
 	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
 	defer file.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	fstate, err := file.Stat()
-	if err != nil {
-		return nil, err
-	}
-	if fstate.IsDir() {
-		return nil, errors.New("ReadCsv is dir!")
-	}
 
 	csvReader := csv.NewReader(file)
 	records, err := csvReader.ReadAll()
@@ -272,19 +263,11 @@ func ReadCsv(path string) ([][]string, error) {
 	return records, nil
 }
 func UpdateCsv(path string, records [][]string) error {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0666)
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+	if err != nil {
+		return err
+	}
 	defer file.Close()
-	if err != nil {
-		return err
-	}
-
-	fstate, err := file.Stat()
-	if err != nil {
-		return err
-	}
-	if fstate.IsDir() {
-		return errors.New("UpdateCsv is dir!")
-	}
 
 	csvWriter := csv.NewWriter(file)
 	csvWriter.UseCRLF = true
@@ -292,18 +275,10 @@ func UpdateCsv(path string, records [][]string) error {
 }
 func AppendCsv(path string, record []string) error {
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		return err
+	}
 	defer file.Close()
-	if err != nil {
-		return err
-	}
-
-	fstate, err := file.Stat()
-	if err != nil {
-		return err
-	}
-	if fstate.IsDir() {
-		return errors.New("AppendCsv is dir!")
-	}
 
 	csvWriter := csv.NewWriter(file)
 	csvWriter.UseCRLF = true

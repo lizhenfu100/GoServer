@@ -5,6 +5,7 @@ import (
 	"common/net/meta"
 	"encoding/binary"
 	"fmt"
+	"gamelog"
 	"generate_out/rpc/enum"
 	"net"
 	"time"
@@ -46,7 +47,7 @@ func (self *TCPClient) connectRoutine(meta *meta.Meta) {
 func (self *TCPClient) connect() bool {
 	conn, err := net.Dial("tcp", self.addr)
 	if err != nil {
-		fmt.Printf("connect to %s error :%s \n", self.addr, err.Error())
+		gamelog.Error("connect to %s :%s", self.addr, err.Error())
 		return false
 	}
 	if conn == nil {
@@ -65,7 +66,7 @@ func (self *TCPClient) Close() {
 	self.Conn.Close()
 	self.Conn = nil
 }
-func OnSvrAcceptConn(req, ack *common.NetPack, conn *TCPConn) {
+func _OnSvrAcceptConn(req, ack *common.NetPack, conn *TCPConn) {
 	self := conn.UserPtr.(*TCPClient)
 	self.connId = req.ReadUInt32()
 	if self.OnConnect != nil {

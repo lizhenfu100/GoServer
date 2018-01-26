@@ -50,11 +50,11 @@ func Init(ip string, port uint16, dbname string) {
 }
 func InitWithUser(ip string, port uint16, dbname, username, password string) {
 	pInfo := &mgo.DialInfo{
-		Addrs:     []string{fmt.Sprintf("%s:%d", ip, port)},
-		Timeout:   10 * time.Second,
-		Database:  dbname,
-		Username:  username,
-		Password:  password,
+		Addrs:    []string{fmt.Sprintf("%s:%d", ip, port)},
+		Timeout:  10 * time.Second,
+		Database: dbname,
+		Username: username,
+		Password: password,
 	}
 	var err error
 	if g_db_session, err = mgo.DialWithInfo(pInfo); err != nil {
@@ -89,7 +89,7 @@ func UpdateSync(table string, id, pData interface{}) bool {
 func RemoveSync(table string, search bson.M) bool {
 	coll := g_database.C(table)
 	err := coll.Remove(search)
-	if err != nil {
+	if err != nil && err != mgo.ErrNotFound {
 		gamelog.Error("RemoveSync error: %v \r\ntable: %s \r\nsearch: %v \r\n", err.Error(), table, search)
 		return false
 	}

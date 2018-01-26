@@ -19,6 +19,7 @@ package logic
 
 import (
 	"common"
+	"common/file"
 	"fmt"
 	"gamelog"
 	"io"
@@ -36,34 +37,32 @@ func init() {
 func Http_file_upload(w http.ResponseWriter, r *http.Request) {
 	gamelog.Debug("%s url up path: %s", r.Method, r.URL.Path)
 	r.ParseMultipartForm(1024 * 1024)
-	file, handler, err := r.FormFile("file")
+	upfile, handler, err := r.FormFile("file")
 	if err != nil {
 		gamelog.Error(err.Error())
 		return
 	}
-	defer file.Close()
+	defer upfile.Close()
 	fmt.Fprintf(w, "%v", handler.Header)
 
-	filename := "./net_file/upload/" + handler.Filename
-	if err := os.MkdirAll(filepath.Dir(filename), 0777); err != nil {
-		gamelog.Error(err.Error())
-		return
-	}
-	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	path := "./net_file/upload/" + handler.Filename
+	dir, name := filepath.Dir(path), filepath.Base(path)
+
+	f, err := file.CreateFile(dir, name, os.O_WRONLY|os.O_TRUNC)
 	if err != nil {
 		gamelog.Error(err.Error())
 		return
 	}
 	defer f.Close()
 
-	io.Copy(f, file)
+	io.Copy(f, upfile)
 }
 func Rpc_file_update_list(req, ack *common.NetPack) {
 	version := req.ReadString()
 	//TODO：可动态更改节点版本号
 	if strings.Compare(version, netConfig.G_Local_Meta.Version) < 0 {
 		//下发 patch 目录下的文件列表
-		names, _ := common.WalkDir("net_file/patch", "")
+		names, _ := file.WalkDir("net_file/patch", "")
 		ack.WriteUInt16(uint16(len(names)))
 		for _, v := range names {
 			ack.WriteString(strings.Trim(v, "net_file"))

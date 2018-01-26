@@ -1,12 +1,5 @@
 package logic
 
-func CheckToken(channel string) bool {
-	if info, ok := g_token_map[channel]; ok {
-		return info.checkFunc()
-	}
-	return false
-}
-
 type tokenInfo struct {
 	token     string
 	checkFunc func() bool
@@ -17,6 +10,12 @@ var g_token_map = map[string]*tokenInfo{
 	"mini": {"bbbaads", _check_mini},
 }
 
+func CheckToken(channel string) bool {
+	if v, ok := g_token_map[channel]; ok {
+		return v.checkFunc()
+	}
+	return false
+}
 func _check_360() bool {
 	return true
 }
