@@ -74,7 +74,7 @@ func InitDB() {
 	dbmgo.RemoveSync("Order", bson.M{"time": bson.M{"$lt": time.Now().Unix() - 30*24*3600}})
 	//载入所有未完成订单
 	var list []TOrderInfo
-	dbmgo.FindAll("Order", bson.M{"can_send": 0}, &list)
+	dbmgo.FindAll("Order", bson.M{"can_send": 1}, &list)
 	for i := 0; i < len(list); i++ {
 		g_order_map.Store(list[i].Order_id, &list[i])
 	}

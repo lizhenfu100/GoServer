@@ -145,7 +145,7 @@ func (self *TCPConn) WriteBuf(buf []byte) {
 	default:
 		gamelog.Error("WriteBuf: channel full")
 		self.Close()
-		// close(self.writeChan) //client重连chan里的数据得保留，server都是新new的
+		//close(self.writeChan) //重连chan里的数据得保留
 	}
 }
 func (self *TCPConn) _WriteFull(buf []byte) (err error) { //FIXME：err可能是io.ErrShortWrite，网络还是能继续工作的

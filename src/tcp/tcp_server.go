@@ -14,7 +14,6 @@ import (
 )
 
 type TCPServer struct {
-	Addr       string //"ip:port"，ip可缺省
 	MaxConnNum int32
 	connCnt    int32
 	autoConnId uint32
@@ -24,22 +23,15 @@ type TCPServer struct {
 	wgConns    sync.WaitGroup
 }
 
-func NewTcpServer(addr string, maxconn int) {
-	svr := new(TCPServer)
-	svr.Addr = addr
-	svr.MaxConnNum = int32(maxconn)
-	svr.init()
-	svr.run()
-	svr.Close()
-}
-func (self *TCPServer) init() bool {
-	ln, err := net.Listen("tcp", self.Addr)
-	if err != nil {
-		gamelog.Error("TCPServer Init failed  error :%s", err.Error())
-		return false
+func NewTcpServer(addr string, maxconn int) { //"ip:port"，ip可缺省
+	var err error
+	svr := TCPServer{MaxConnNum: int32(maxconn)}
+	if svr.listener, err = net.Listen("tcp", addr); err == nil {
+		svr.run()
+		svr.Close()
+	} else {
+		panic("NewTcpServer failed :%s" + err.Error())
 	}
-	self.listener = ln
-	return true
 }
 func (self *TCPServer) run() {
 	self.wgLn.Add(1)

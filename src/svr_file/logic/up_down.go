@@ -48,14 +48,12 @@ func Http_file_upload(w http.ResponseWriter, r *http.Request) {
 	path := "./net_file/upload/" + handler.Filename
 	dir, name := filepath.Dir(path), filepath.Base(path)
 
-	f, err := file.CreateFile(dir, name, os.O_WRONLY|os.O_TRUNC)
-	if err != nil {
+	if f, err := file.CreateFile(dir, name, os.O_WRONLY|os.O_TRUNC); err == nil {
+		io.Copy(f, upfile)
+		f.Close()
+	} else {
 		gamelog.Error(err.Error())
-		return
 	}
-	defer f.Close()
-
-	io.Copy(f, upfile)
 }
 func Rpc_file_update_list(req, ack *common.NetPack) {
 	version := req.ReadString()

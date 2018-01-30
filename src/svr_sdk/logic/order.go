@@ -98,7 +98,6 @@ func Http_query_order(w http.ResponseWriter, r *http.Request) {
 		gamelog.Debug("ack: %v", ack)
 	}()
 
-	print(r.Form["order_id"][0])
 	order := msg.FindOrder(r.Form.Get("order_id"))
 	if order == nil {
 		gamelog.Debug("none order_id: %s", r.Form.Get("order_id"))

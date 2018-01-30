@@ -12,10 +12,8 @@ func Unmarshal(ptr interface{}, form url.Values) {
 	val, typ := reflect.ValueOf(ptr).Elem(), reflect.TypeOf(ptr).Elem()
 	for i := 0; i < typ.NumField(); i++ {
 		name := strings.ToLower(typ.Field(i).Name)
-		for k, v := range form {
-			if strings.ToLower(k) == name {
-				file.SetField(val.Field(i), v[0])
-			}
+		if v := form.Get(name); v != "" {
+			file.SetField(val.Field(i), v)
 		}
 	}
 }
