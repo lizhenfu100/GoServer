@@ -1,7 +1,6 @@
 package dbmgo
 
 import (
-	"common"
 	"gopkg.in/mgo.v2/bson"
 	"sync"
 )
@@ -11,12 +10,17 @@ var (
 	g_inc_id_mutex sync.Mutex
 )
 
+type nameId struct {
+	Name string `bson:"_id"`
+	ID   uint32
+}
+
 func _init_inc_ids() {
-	var lst []common.KeyPair
+	var lst []nameId
 	FindAll("IncId", nil, &lst)
 	g_inc_id_mutex.Lock()
 	for _, v := range lst {
-		g_inc_id_map[v.Name] = uint32(v.ID)
+		g_inc_id_map[v.Name] = v.ID
 	}
 	g_inc_id_mutex.Unlock()
 }
@@ -26,7 +30,7 @@ func GetNextIncId(key string) uint32 {
 	g_inc_id_map[key] = ret
 	g_inc_id_mutex.Unlock()
 	if ret == 1 {
-		InsertToDB("IncId", common.KeyPair{key, 1})
+		InsertToDB("IncId", nameId{key, 1})
 	} else {
 		UpdateToDB("IncId", bson.M{"_id": key}, bson.M{"$set": bson.M{"id": ret}})
 	}

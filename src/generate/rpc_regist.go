@@ -16,7 +16,9 @@ import (
 	"bytes"
 	"common/file"
 	"os"
+	"path/filepath"
 	"regexp"
+	"strings"
 	"text/template"
 )
 
@@ -30,7 +32,6 @@ type Func struct {
 	Name string
 }
 type RpcInfo struct {
-	Svr           string          //服务器名
 	Moudles       map[string]bool //package
 	TcpRpc        []Func
 	HttpRpc       []Func
@@ -39,15 +40,16 @@ type RpcInfo struct {
 }
 
 func generatRpcRegist(svr string) *RpcInfo {
-	names, _ := file.WalkDir(K_SvrDir+svr+"/logic", ".go")
-	pinfo := &RpcInfo{Svr: svr, Moudles: make(map[string]bool)}
+	pinfo := &RpcInfo{Moudles: make(map[string]bool)}
+	names, _ := file.WalkDir(K_SvrDir+svr, ".go")
 	for _, v := range names {
 		moudle := "" //package name
 		file.ReadLine(v, func(line string) {
 			fname := "" //func name
-			if fname = getPackage(line); fname != "" {
-				moudle = fname
-				fname = ""
+			if moudle == "" {
+				//moudle = getPackage(line)
+				moudle = filepath.Dir(v)[len(K_SvrDir):]
+				moudle = filepath.ToSlash(moudle)
 			} else if fname = getTcpRpc(line); fname != "" {
 				pinfo.TcpRpc = append(pinfo.TcpRpc, Func{moudle, fname})
 			} else if fname = getHttpRpc(line); fname != "" {
@@ -69,35 +71,35 @@ func generatRpcRegist(svr string) *RpcInfo {
 // -------------------------------------
 // -- 提取 package、RpcFunc
 func getPackage(s string) string {
-	if ok, _ := regexp.MatchString(`^package \w+$`, s); ok {
+	if ok, _ := regexp.MatchString(`^package \w+`, s); ok {
 		reg := regexp.MustCompile(`\w+`)
 		return reg.FindAllString(s, -1)[1]
 	}
 	return ""
 }
 func getTcpRpc(s string) string {
-	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack, \w+ \*tcp.TCPConn\) \{$`, s); ok {
+	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack, \w+ \*tcp.TCPConn\) \{`, s); ok {
 		reg := regexp.MustCompile(`Rpc_\w+`)
 		return reg.FindAllString(s, -1)[0]
 	}
 	return ""
 }
 func getHttpRpc(s string) string {
-	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack\) \{$`, s); ok {
+	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack\) \{`, s); ok {
 		reg := regexp.MustCompile(`Rpc_\w+`)
 		return reg.FindAllString(s, -1)[0]
 	}
 	return ""
 }
 func getHttpPlayerRpc(s string) string {
-	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack, \w+ interface\{\}\) \{$`, s); ok {
+	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack, \w+ interface\{\}\) \{`, s); ok {
 		reg := regexp.MustCompile(`Rpc_\w+`)
 		return reg.FindAllString(s, -1)[0]
 	}
 	return ""
 }
 func getHttpHandle(s string) string {
-	if ok, _ := regexp.MatchString(`^func Http_\w+\(\w+ http.ResponseWriter, \w+ \*http.Request\) \{$`, s); ok {
+	if ok, _ := regexp.MatchString(`^func Http_\w+\(\w+ http.ResponseWriter, \w+ \*http.Request\) \{`, s); ok {
 		reg := regexp.MustCompile(`Http_\w+`)
 		return reg.FindAllString(s, -1)[0][5:]
 	}
@@ -112,25 +114,25 @@ const codeRegistTemplate = `
 package rpc
 import (
 	"common/net/register"
-	{{if UsingRpcEnum .}}"generate_out/rpc/enum"{{end}}
-	{{range $k, $_ := .Moudles}}{{if eq $k "logic"}}"{{$.Svr}}/{{$k}}"{{else}}"{{$.Svr}}/logic/{{$k}}"{{end}}
+	{{if .UsingRpcEnum}}"generate_out/rpc/enum"{{end}}
+	{{range $k, $_ := .Moudles}}"{{$k}}"
 	{{end}}
 )
 func init() {
 	register.RegTcpRpc(map[uint16]register.TcpRpc{
-		{{range .TcpRpc}}enum.{{.Name}}: {{.Pack}}.{{.Name}},
+		{{range .TcpRpc}}enum.{{.Name}}: {{GetPackage .Pack}}.{{.Name}},
 		{{end}}
 	})
 	register.RegHttpRpc(map[uint16]register.HttpRpc{
-		{{range .HttpRpc}}enum.{{.Name}}: {{.Pack}}.{{.Name}},
+		{{range .HttpRpc}}enum.{{.Name}}: {{GetPackage .Pack}}.{{.Name}},
 		{{end}}
 	})
 	register.RegHttpPlayerRpc(map[uint16]register.HttpPlayerRpc{
-		{{range .HttpPlayerRpc}}enum.{{.Name}}: {{.Pack}}.{{.Name}},
+		{{range .HttpPlayerRpc}}enum.{{.Name}}: {{GetPackage .Pack}}.{{.Name}},
 		{{end}}
 	})
 	register.RegHttpHandler(map[string]register.HttpHandle{
-		{{range .HttpHandle}}"{{.Name}}": {{.Pack}}.Http_{{.Name}},
+		{{range .HttpHandle}}"{{.Name}}": {{GetPackage .Pack}}.Http_{{.Name}},
 		{{end}}
 	})
 }
@@ -140,7 +142,7 @@ func (self *RpcInfo) makeFile(svr string) {
 	filename := K_RegistFileName
 	var err error
 	tpl := template.New(filename).Funcs(map[string]interface{}{
-		"UsingRpcEnum": UsingRpcEnum,
+		"GetPackage": GetPackage,
 	})
 	if tpl, err = tpl.Parse(codeRegistTemplate); err != nil {
 		panic(err.Error())
@@ -163,7 +165,5 @@ func (self *RpcInfo) makeFile(svr string) {
 	defer f.Close()
 	f.Write(bf.Bytes())
 }
-func UsingRpcEnum(v interface{}) bool {
-	p := v.(*RpcInfo)
-	return len(p.TcpRpc)+len(p.HttpRpc)+len(p.HttpPlayerRpc) > 0
-}
+func (p *RpcInfo) UsingRpcEnum() bool { return len(p.TcpRpc)+len(p.HttpRpc)+len(p.HttpPlayerRpc) > 0 }
+func GetPackage(dir string) string    { return dir[strings.LastIndex(dir, "/")+1:] }

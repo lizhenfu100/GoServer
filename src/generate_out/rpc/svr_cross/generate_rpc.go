@@ -5,14 +5,14 @@ package rpc
 import (
 	"common/net/register"
 	"generate_out/rpc/enum"
-	
-	
 	"svr_cross/logic"
+	
 )
 func init() {
 	register.RegTcpRpc(map[uint16]register.TcpRpc{
-		
 		enum.Rpc_cross_relay_battle_data: logic.Rpc_cross_relay_battle_data,
+		enum.Rpc_report_net_error: logic.Rpc_report_net_error,
+		
 	})
 	register.RegHttpRpc(map[uint16]register.HttpRpc{
 		

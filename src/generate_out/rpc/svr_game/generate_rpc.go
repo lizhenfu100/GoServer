@@ -5,19 +5,18 @@ package rpc
 import (
 	"common/net/register"
 	"generate_out/rpc/enum"
-	
-	
-	"svr_game/logic/cloud"
-	
+	"svr_game/cloud"
+	"svr_game/logic"
 	"svr_game/logic/player"
+	
 )
 func init() {
 	register.RegTcpRpc(map[uint16]register.TcpRpc{
-		
+		enum.Rpc_report_net_error: logic.Rpc_report_net_error,
 		enum.Rpc_game_battle_ack: player.Rpc_game_battle_ack,
+		
 	})
 	register.RegHttpRpc(map[uint16]register.HttpRpc{
-		
 		enum.Rpc_game_get_cloud_archive_change_times: cloud.Rpc_game_get_cloud_archive_change_times,
 		enum.Rpc_game_upload_save_data: cloud.Rpc_game_upload_save_data,
 		enum.Rpc_game_download_save_data: cloud.Rpc_game_download_save_data,
@@ -26,9 +25,9 @@ func init() {
 		enum.Rpc_game_login_token: player.Rpc_game_login_token,
 		enum.Rpc_game_bind_cloud_archive: player.Rpc_game_bind_cloud_archive,
 		enum.Rpc_game_get_cloud_archive: player.Rpc_game_get_cloud_archive,
+		
 	})
 	register.RegHttpPlayerRpc(map[uint16]register.HttpPlayerRpc{
-		
 		enum.Rpc_game_battle_begin: player.Rpc_game_battle_begin,
 		enum.Rpc_game_probe_login_battle: player.Rpc_game_probe_login_battle,
 		enum.Rpc_game_friend_list: player.Rpc_game_friend_list,
@@ -50,6 +49,7 @@ func init() {
 		enum.Rpc_game_invite_friend: player.Rpc_game_invite_friend,
 		enum.Rpc_game_agree_join_team: player.Rpc_game_agree_join_team,
 		enum.Rpc_game_send_team_chat: player.Rpc_game_send_team_chat,
+		
 	})
 	register.RegHttpHandler(map[string]register.HttpHandle{
 		

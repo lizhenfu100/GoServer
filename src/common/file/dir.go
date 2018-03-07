@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+//dir, name := filepath.Dir(path), filepath.Base(path)
+
 func GetExeDir() string {
 	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	return dir + "/"

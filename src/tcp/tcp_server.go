@@ -178,12 +178,12 @@ func _RegistToSvr(req, ack *common.NetPack, conn *TCPConn) {
 
 	g_reg_conn_map.Store(common.KeyPair{pMeta.Module, pMeta.SvrID}, conn)
 	meta.AddMeta(pMeta)
-	gamelog.Debug("RegistToSvr: {%s %d}", pMeta.Module, pMeta.SvrID)
+	gamelog.Info("RegistToSvr: {%s %d}", pMeta.Module, pMeta.SvrID)
 }
 func _UnRegistToSvr(req, ack *common.NetPack, conn *TCPConn) {
 	if pMeta, ok := conn.UserPtr.(*meta.Meta); ok {
 		if pConn := FindRegModule(pMeta.Module, pMeta.SvrID); pConn != nil && pConn.IsClose() {
-			gamelog.Debug("UnRegist Svr: {%s %d}", pMeta.Module, pMeta.SvrID)
+			gamelog.Info("UnRegist Svr: {%s %d}", pMeta.Module, pMeta.SvrID)
 			g_reg_conn_map.Delete(common.KeyPair{pMeta.Module, pMeta.SvrID})
 		}
 	}

@@ -70,6 +70,11 @@ func ConfirmOrder(ptr *TOrderInfo) {
 	g_order_map.Delete(ptr.Order_id)
 }
 func InitDB() {
+	//删除超过7天的无效订单
+	dbmgo.RemoveSync("Order", bson.M{
+		"status": 0, "can_send": 0,
+		"time":   bson.M{"$lt": time.Now().Unix() - 7*24*3600},
+	})
 	//删除数据库里超过30天的订单
 	dbmgo.RemoveSync("Order", bson.M{"time": bson.M{"$lt": time.Now().Unix() - 30*24*3600}})
 	//载入所有未完成订单

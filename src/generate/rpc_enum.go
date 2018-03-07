@@ -18,6 +18,7 @@ package main
 
 import (
 	"bytes"
+	"common"
 	"common/file"
 	"os"
 	"regexp"
@@ -33,15 +34,10 @@ const (
 	K_RpcFuncFile_CS = "../../GameClient/Assets/RGScript/Net/Player/Player.cs"
 )
 
-type TRpcEunm struct {
-	Name string
-	ID   uint16
-}
-
 // -------------------------------------
 // 收集各处的 Rpc 函数名，小写开头
 var (
-	g_rpc_enum []TRpcEunm
+	g_rpc_enum []common.KeyPair
 	g_rpc_func []string
 )
 
@@ -77,7 +73,7 @@ func collectOldEnum() {
 	file.ReadLine(K_EnumOutDir+K_EnumFileName+".go", func(line string) {
 		if result := reg.FindAllString(line, -1); result != nil {
 			rpcname := "r" + result[0][1:]
-			g_rpc_enum = append(g_rpc_enum, TRpcEunm{Name: rpcname})
+			g_rpc_enum = append(g_rpc_enum, common.KeyPair{Name: rpcname})
 		}
 	})
 }
@@ -99,7 +95,7 @@ func generatRpcEnum() {
 	haveNewRpc := false
 	for _, name := range g_rpc_func {
 		if isNewRpc(name) {
-			g_rpc_enum = append(g_rpc_enum, TRpcEunm{Name: name})
+			g_rpc_enum = append(g_rpc_enum, common.KeyPair{Name: name})
 			haveNewRpc = true
 		}
 	}
@@ -107,9 +103,9 @@ func generatRpcEnum() {
 		print("no new rpc, don't change enum.h\n")
 		return
 	}
-	g_rpc_enum = append(g_rpc_enum, TRpcEunm{"RpcEnumCnt", uint16(len(g_rpc_enum)) + 1})
+	g_rpc_enum = append(g_rpc_enum, common.KeyPair{"RpcEnumCnt", len(g_rpc_enum) + 1})
 
-	autoIncId := uint16(1)
+	autoIncId := 1
 	for i := 0; i < len(g_rpc_enum); i++ {
 		g_rpc_enum[i].ID = autoIncId
 		autoIncId++

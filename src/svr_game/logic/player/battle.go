@@ -55,8 +55,10 @@ func Rpc_game_battle_begin(req, ack *common.NetPack, ptr interface{}) {
 	if self.pTeam == nil || self.pTeam.lst[0] != self {
 		return
 	}
+	gameMode := req.ReadUInt8()
 	api.CallRpcCross(enum.Rpc_cross_relay_battle_data, func(buf *common.NetPack) {
 		buf.WriteString(netConfig.G_Local_Meta.Version)
+		buf.WriteUInt8(gameMode)
 		buf.WriteByte(byte(len(self.pTeam.lst)))
 		for _, ptr := range self.pTeam.lst {
 			buf.WriteUInt32(ptr.PlayerID)

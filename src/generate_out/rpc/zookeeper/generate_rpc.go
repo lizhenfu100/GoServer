@@ -5,14 +5,16 @@ package rpc
 import (
 	"common/net/register"
 	"generate_out/rpc/enum"
-	
-	
+	"zookeeper/component"
 	"zookeeper/logic"
+	
 )
 func init() {
 	register.RegTcpRpc(map[uint16]register.TcpRpc{
-		
+		enum.Rpc_svr_node_join: component.Rpc_svr_node_join,
+		enum.Rpc_report_net_error: logic.Rpc_report_net_error,
 		enum.Rpc_zoo_register: logic.Rpc_zoo_register,
+		
 	})
 	register.RegHttpRpc(map[uint16]register.HttpRpc{
 		

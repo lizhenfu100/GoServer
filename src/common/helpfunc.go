@@ -9,7 +9,7 @@ type IntPair struct {
 	Cnt int
 }
 type KeyPair struct {
-	Name string `bson:"_id"`
+	Name string
 	ID   int
 }
 type Addr struct {

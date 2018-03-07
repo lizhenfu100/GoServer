@@ -152,17 +152,17 @@ func ParseRefCsvByStruct(records [][]string, pStruct interface{}) {
 		}
 	}
 }
-func _parseHead(record []string) (ret int64) { // 不读的列：没命名/前缀"_"
+func _parseHead(record []string) (nilFlag int64) { // 不读的列：没命名/前缀"_"
 	length := len(record)
 	if length > 64 {
-		fmt.Printf("csv column is over to 64 !!!\n")
+		panic("csv column is over to 64 !!!\n")
 	}
 	for i := 0; i < length; i++ {
 		if record[i] == "" || strings.Index(record[i], "_") == 0 {
-			ret |= (1 << uint(i))
+			nilFlag |= (1 << uint(i))
 		}
 	}
-	return ret
+	return nilFlag
 }
 func _parseData(record []string, nilFlag int64, data reflect.Value) {
 	idx := 0

@@ -18,6 +18,7 @@ import (
 	"gamelog"
 	"net/http"
 	"strings"
+	"svr_sdk/api"
 	"svr_sdk/logic/kuaishou"
 	"svr_sdk/msg"
 )
@@ -41,7 +42,7 @@ func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 
 	//反射解析订单信息
 	var order msg.TOrderInfo
-	msg.Unmarshal(&order, r.Form)
+	api.Unmarshal(&order, r.Form)
 
 	//! 创建回复
 	ack := NewPreBuyAck(order.Pf_id)
@@ -111,7 +112,7 @@ func Http_query_order(w http.ResponseWriter, r *http.Request) {
 	if order.Status == 1 && order.Can_send == 1 {
 		ack.Retcode = 0
 		//回复订单信息
-		msg.CopySameField(&ack.Order, order)
+		api.CopySameField(&ack.Order, order)
 	}
 }
 

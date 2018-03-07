@@ -36,7 +36,7 @@ func _RegistToSvr(w http.ResponseWriter, r *http.Request) {
 		gamelog.Error("RegistToSvr common.ToStruct: %s", err.Error())
 		return
 	}
-	gamelog.Debug("RegistToSvr: {%s %d}", pMeta.Module, pMeta.SvrID)
+	gamelog.Info("RegistToSvr: {%s %d}", pMeta.Module, pMeta.SvrID)
 
 	g_reg_addr_map.Store(common.KeyPair{pMeta.Module, pMeta.SvrID}, pMeta)
 
@@ -48,7 +48,7 @@ func _RegistToSvr(w http.ResponseWriter, r *http.Request) {
 	}()
 }
 func _UnRegistToSvr(pMeta *meta.Meta) {
-	gamelog.Debug("UnRegist Svr: {%s %d}", pMeta.Module, pMeta.SvrID)
+	gamelog.Info("UnRegist Svr: {%s %d}", pMeta.Module, pMeta.SvrID)
 }
 
 func FindRegModuleAddr(module string, id int) string { //"http://%s:%d/"

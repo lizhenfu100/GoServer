@@ -1,4 +1,4 @@
-package msg
+package api
 
 import (
 	"common/file"
