@@ -184,6 +184,7 @@ func _UnRegistToSvr(req, ack *common.NetPack, conn *TCPConn) {
 	if pMeta, ok := conn.UserPtr.(*meta.Meta); ok {
 		if pConn := FindRegModule(pMeta.Module, pMeta.SvrID); pConn != nil && pConn.IsClose() {
 			gamelog.Info("UnRegist Svr: {%s %d}", pMeta.Module, pMeta.SvrID)
+			meta.DelMeta(pMeta.Module, pMeta.SvrID)
 			g_reg_conn_map.Delete(common.KeyPair{pMeta.Module, pMeta.SvrID})
 		}
 	}

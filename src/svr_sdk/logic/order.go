@@ -29,7 +29,7 @@ const (
 	k_pt_key = "yqqs(#(%$(%!$"
 )
 
-func calcSign(s string) string {
+func CalcSign(s string) string {
 	key := fmt.Sprintf("%x", md5.Sum([]byte(k_pt_key)))
 	sign := fmt.Sprintf("%s&%s", s, strings.ToLower(key))
 	return fmt.Sprintf("%x", md5.Sum([]byte(sign)))
@@ -55,7 +55,7 @@ func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 
 	//验证签名
 	s := fmt.Sprintf("pf_id=%s&pk_id=%s&pay_id=%d&item_id=%d&item_count=%d&total_price=%d", order.Pf_id, order.Pk_id, order.Pay_id, order.Item_id, order.Item_count, order.Total_price)
-	if r.Form.Get("sign") != calcSign(s) {
+	if r.Form.Get("sign") != CalcSign(s) {
 		ack.SetRetcode(-2)
 		gamelog.Error("pre_buy_request: sign failed")
 		return
@@ -104,7 +104,7 @@ func Http_query_order(w http.ResponseWriter, r *http.Request) {
 		gamelog.Debug("none order_id: %s", r.Form.Get("order_id"))
 		return
 	}
-	if r.Form.Get("sign") != calcSign("order_id="+order.Order_id) { //验证签名
+	if r.Form.Get("sign") != CalcSign("order_id="+order.Order_id) { //验证签名
 		gamelog.Error("Rpc_sdk_query_order: sign failed")
 		return
 	}
@@ -131,7 +131,7 @@ func Http_confirm_order(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	if order := msg.FindOrder(r.Form.Get("order_id")); order != nil {
-		if r.Form.Get("sign") != calcSign("order_id="+order.Order_id) { //验证签名
+		if r.Form.Get("sign") != CalcSign("order_id="+order.Order_id) { //验证签名
 			gamelog.Error("Rpc_sdk_confirm_order: sign failed")
 			return
 		}

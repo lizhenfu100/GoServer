@@ -30,10 +30,12 @@ func CompressInto(b []byte, w io.Writer) {
 }
 func Decompress(b []byte) []byte {
 	if Compress_Flag == binary.LittleEndian.Uint32(b) {
-		gr, _ := gzip.NewReader(bytes.NewReader(b[4:]))
-		b2, _ := ioutil.ReadAll(gr)
-		gr.Close()
-		return b2
+		if gr, err := gzip.NewReader(bytes.NewReader(b[4:])); err == nil {
+			if b2, err := ioutil.ReadAll(gr); err == nil {
+				return b2
+			}
+			gr.Close()
+		}
 	}
 	return b
 }

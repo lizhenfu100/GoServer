@@ -4,6 +4,10 @@ type Retcode_ack struct {
 	Retcode int    `json:"retcode"` //0代表成功，其他失败
 	Msg     string `json:"msg"`     //响应信息（与retcode对应）
 }
+type Json_ack struct {
+	Retcode_ack
+	Data string `json:"data"`
+}
 
 // ------------------------------------------------------------
 // 预下单回复【各渠道可能回复数据不同】
@@ -13,8 +17,7 @@ type Pre_buy_ack interface {
 	SetOrderId(string)
 }
 
-//默认
-type Pre_buy struct {
+type Pre_buy struct { //默认
 	Retcode_ack
 	Order_id string `json:"order_id"`
 }

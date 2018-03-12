@@ -28,7 +28,7 @@ const (
 )
 
 type Func struct {
-	Pack string //package
+	Pack string //package dir
 	Name string
 }
 type RpcInfo struct {
@@ -43,7 +43,7 @@ func generatRpcRegist(svr string) *RpcInfo {
 	pinfo := &RpcInfo{Moudles: make(map[string]bool)}
 	names, _ := file.WalkDir(K_SvrDir+svr, ".go")
 	for _, v := range names {
-		moudle := "" //package name
+		moudle := "" //package dir
 		file.ReadLine(v, func(line string) {
 			fname := "" //func name
 			if moudle == "" {

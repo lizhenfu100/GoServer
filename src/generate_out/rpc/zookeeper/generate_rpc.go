@@ -12,6 +12,7 @@ import (
 func init() {
 	register.RegTcpRpc(map[uint16]register.TcpRpc{
 		enum.Rpc_svr_node_join: component.Rpc_svr_node_join,
+		enum.Rpc_http_node_quit: component.Rpc_http_node_quit,
 		enum.Rpc_report_net_error: logic.Rpc_report_net_error,
 		enum.Rpc_zoo_register: logic.Rpc_zoo_register,
 		

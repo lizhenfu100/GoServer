@@ -52,6 +52,14 @@ func Rpc_svr_node_join(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	pMeta.BufToData(req)
 	ConnectToModule(pMeta)
 }
+func Rpc_http_node_quit(req, ack *common.NetPack, conn *tcp.TCPConn) {
+	module := req.ReadString()
+	svrID := req.ReadInt()
+	meta.DelMeta(module, svrID)
+	//tcp node 消逝，由tcp系统自己感知，无需zookeeper额外处理
+	//tcp client 会断线重连，所以tcp的DelMeta，仅在tcp_server调用
+	//FIXME：用运维指令方式，主动剔除节点，阻断tcp_client的自动重连 -- 达到动态删除效果
+}
 
 func ConnectToModule(ptr *meta.Meta) {
 	if ptr.HttpPort > 0 {

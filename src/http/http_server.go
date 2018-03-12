@@ -25,8 +25,6 @@ func NewHttpServer(addr string) error {
 
 // ------------------------------------------------------------
 //! 模块注册
-var g_reg_addr_map sync.Map
-
 func _RegistToSvr(w http.ResponseWriter, r *http.Request) {
 	buffer := make([]byte, r.ContentLength)
 	r.Body.Read(buffer)
@@ -38,41 +36,12 @@ func _RegistToSvr(w http.ResponseWriter, r *http.Request) {
 	}
 	gamelog.Info("RegistToSvr: {%s %d}", pMeta.Module, pMeta.SvrID)
 
-	g_reg_addr_map.Store(common.KeyPair{pMeta.Module, pMeta.SvrID}, pMeta)
-
 	meta.AddMeta(pMeta)
 	AppendNetMeta(pMeta)
 
 	defer func() {
 		w.Write([]byte("ok"))
 	}()
-}
-func _UnRegistToSvr(pMeta *meta.Meta) {
-	gamelog.Info("UnRegist Svr: {%s %d}", pMeta.Module, pMeta.SvrID)
-}
-
-func FindRegModuleAddr(module string, id int) string { //"http://%s:%d/"
-	if v, ok := g_reg_addr_map.Load(common.KeyPair{module, id}); ok {
-		ptr := v.(*meta.Meta)
-		return Addr(ptr.IP, ptr.HttpPort)
-	}
-	gamelog.Error("FindRegModuleAddr nil: {%s:%d}", module, id)
-	return ""
-}
-func GetRegModuleIDs(module string) (ret []int) {
-	g_reg_addr_map.Range(func(k, v interface{}) bool {
-		if k.(common.KeyPair).Name == module {
-			ret = append(ret, k.(common.KeyPair).ID)
-		}
-		return true
-	})
-	return
-}
-func ForeachRegModule(f func(v *meta.Meta)) {
-	g_reg_addr_map.Range(func(k, v interface{}) bool {
-		f(v.(*meta.Meta))
-		return true
-	})
 }
 
 // ------------------------------------------------------------
@@ -89,21 +58,21 @@ func LoadCacheNetMeta() {
 	if err != nil {
 		return
 	}
-	ptr := new(meta.Meta)
+	pMeta := new(meta.Meta)
 	for i := 0; i < len(records); i++ {
-		json.Unmarshal([]byte(records[i][0]), ptr)
+		json.Unmarshal([]byte(records[i][0]), pMeta)
 		//Notice：之前可能有同个key的，被后面追加的覆盖
-		g_reg_addr_map.Store(common.KeyPair{ptr.Module, ptr.SvrID}, ptr)
+		meta.AddMeta(pMeta)
 	}
 	file.UpdateCsv(g_svraddr_path, [][]string{})
 }
-func AppendNetMeta(ptr *meta.Meta) {
+func AppendNetMeta(pMeta *meta.Meta) {
 	if meta.GetMeta("zookeeper", 0) != nil {
 		return //有zookeeper实现重启恢复，不必本地缓存
 	}
 	_mutex.Lock()
 	defer _mutex.Unlock()
-	b, _ := json.Marshal(ptr)
+	b, _ := json.Marshal(pMeta)
 	record := []string{string(b)}
 	err := file.AppendCsv(g_svraddr_path, record)
 	if err != nil {
