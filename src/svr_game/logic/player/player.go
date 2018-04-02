@@ -1,9 +1,8 @@
 /***********************************************************************
 * @ 玩家数据
 * @ brief
-	1、数据散列模块化，按业务区分成块，各自独立处理，如：TMailMoudle
+	1、数据散列模块化，按业务区分成块，各自独立处理，见iModule
 	2、可调用DB【同步读单个模块】，编辑后再【异步写】
-	3、本文件的数据库操作接口，都是【同步的】
 
 * @ 访问离线玩家
 	1、用什么取什么，读出一块数据编辑完后写回，尽量少载入整个玩家结构体
@@ -37,18 +36,136 @@ import (
 	"dbmgo"
 	"gamelog"
 	"sync/atomic"
+	"tcp"
 	"time"
 )
 
-var (
-	G_ServiceMgr service.ServiceMgr
+const (
+	Idle_Max_Second     = 60 //须客户端心跳包
+	ReLogin_Wait_Second = time.Second * 120
 )
 
-const (
-	Idle_Max_Second     = 60
-	ReLogin_Wait_Second = time.Second * 120
+type TPlayerBase struct {
+	PlayerID   uint32 `bson:"_id"`
+	AccountID  uint32 //用于网络通信：一个账号下可能有多个角色，但仅可能一个在线
+	Name       string
+	Head       string
+	LoginTime  int64
+	LogoutTime int64
+}
+type iModule interface {
+	InitAndInsert(*TPlayer)
+	LoadFromDB(*TPlayer)
+	WriteToDB()
+	OnLogin()
+	OnLogout()
+}
+type TPlayer struct {
+	_isOnlnie int32
+	_idleSec  uint32 //每次收到消息时归零
+	conn      *tcp.TCPConn
+	//askchan   chan func(*TPlayer)
 
-	//须与ServiceMgr初始化顺序一致
+	/* --- db data --- */
+	TPlayerBase
+	modules []iModule
+	Mail    TMailModule
+	Friend  TFriendMoudle
+	team    Team
+}
+
+func _NewPlayer() *TPlayer {
+	self := new(TPlayer)
+	self.init()
+	return self
+}
+func (self *TPlayer) init() {
+	//self.askchan = make(chan func(*TPlayer), 128)
+	self.modules = []iModule{ //regist
+		&self.Mail,
+		&self.Friend,
+		&self.team,
+	}
+}
+
+// -------------------------------------
+// modules
+func NewPlayerInDB(accountId uint32, name string) *TPlayer {
+	player := _NewPlayer()
+	// if dbmgo.Find("Player", "name", name, player) { //禁止重名
+	// 	return nil
+	// }
+	player.Name = name
+	player.AccountID = accountId
+	player.PlayerID = dbmgo.GetNextIncId("PlayerId")
+
+	if dbmgo.InsertSync("Player", &player.TPlayerBase) {
+		for _, v := range player.modules {
+			v.InitAndInsert(player)
+		}
+		AddCache(player)
+		return player
+	}
+	return nil
+}
+func LoadPlayerFromDB(key string, val uint32) *TPlayer {
+	player := _NewPlayer()
+	if dbmgo.Find("Player", key, val, &player.TPlayerBase) {
+		for _, v := range player.modules {
+			v.LoadFromDB(player)
+		}
+		AddCache(player)
+		return player
+	}
+	return nil
+}
+func (self *TPlayer) WriteAllToDB() {
+	if dbmgo.UpdateIdSync("Player", self.PlayerID, &self.TPlayerBase) {
+		for _, v := range self.modules {
+			v.WriteToDB()
+		}
+	}
+}
+func (self *TPlayer) Login(conn *tcp.TCPConn) {
+	atomic.StoreInt32(&self._isOnlnie, 1)
+	atomic.SwapUint32(&self._idleSec, 0)
+	self.LoginTime = time.Now().Unix()
+	self.conn = conn
+	for _, v := range self.modules {
+		v.OnLogin()
+	}
+
+	G_ServiceMgr.Register(Service_Write_DB, self)
+	G_ServiceMgr.Register(Service_Check_AFK, self)
+}
+func (self *TPlayer) Logout() {
+	atomic.StoreInt32(&self._isOnlnie, 0)
+	self.LogoutTime = time.Now().Unix()
+	for _, v := range self.modules {
+		v.OnLogout()
+	}
+	self.WriteAllToDB()
+
+	G_ServiceMgr.UnRegister(Service_Write_DB, self)
+	G_ServiceMgr.UnRegister(Service_Check_AFK, self)
+
+	//Notice: AfterFunc是在另一线程执行，所以传入函数必须线程安全
+	time.AfterFunc(ReLogin_Wait_Second, func() {
+		// 延时删除，提升重连效率
+		if !self.IsOnline() && FindAccountId(self.AccountID) != nil {
+			gamelog.Debug("Aid(%d) Delete", self.AccountID)
+			self.WriteAllToDB()
+			DelCache(self)
+		}
+	})
+}
+func (self *TPlayer) IsOnline() bool { return atomic.LoadInt32(&self._isOnlnie) > 0 }
+
+// -------------------------------------
+// service
+var G_ServiceMgr service.ServiceMgr
+
+const ( //须与ServiceMgr初始化顺序一致
 	Service_Write_DB  = 0
 	Service_Check_AFK = 1
 )
@@ -59,119 +176,6 @@ func init() {
 		service.NewServiceVec(_Service_Check_AFK, 1000),
 	}}
 }
-
-type iMoudle interface {
-	InitAndInsert(*TPlayer)
-	LoadFromDB(*TPlayer)
-	WriteToDB()
-	OnLogin()
-	OnLogout()
-}
-type TPlayerBase struct {
-	PlayerID   uint32 `bson:"_id"`
-	AccountID  uint32
-	Name       string
-	LoginTime  int64
-	LogoutTime int64
-}
-type TPlayer struct {
-	//temp data
-	moudles   []iMoudle
-	askchan   chan func(*TPlayer)
-	_isOnlnie int32
-	_idleSec  uint32
-	pTeam     *TeamData
-	//db data
-	TPlayerBase
-	Mail   TMailMoudle
-	Friend TFriendMoudle
-	Chat   TChatMoudle
-	Battle TBattleMoudle
-	Save   TSaveClient
-}
-
-func _NewPlayer() *TPlayer {
-	player := new(TPlayer)
-	//! regist
-	player.moudles = []iMoudle{
-		&player.Mail,
-		&player.Friend,
-		&player.Chat,
-		&player.Battle,
-		&player.Save,
-	}
-	player.askchan = make(chan func(*TPlayer), 128)
-	return player
-}
-func _NewPlayerInDB(accountId uint32, id uint32, name string) *TPlayer {
-	player := _NewPlayer()
-	// if dbmgo.Find("Player", "name", name, player) { //禁止重名
-	// 	return nil
-	// }
-	player.AccountID = accountId
-	player.PlayerID = id
-	player.Name = name
-	if dbmgo.InsertSync("Player", &player.TPlayerBase) {
-		for _, v := range player.moudles {
-			v.InitAndInsert(player)
-		}
-		return player
-	}
-	return nil
-}
-func LoadPlayerFromDB(key string, val uint32) *TPlayer {
-	player := _NewPlayer()
-	if dbmgo.Find("Player", key, val, &player.TPlayerBase) {
-		for _, v := range player.moudles {
-			v.LoadFromDB(player)
-		}
-		return player
-	}
-	return nil
-}
-func (self *TPlayer) WriteAllToDB() {
-	if dbmgo.UpdateSync("Player", self.PlayerID, &self.TPlayerBase) {
-		for _, v := range self.moudles {
-			v.WriteToDB()
-		}
-	}
-}
-func (self *TPlayer) Login() {
-	atomic.StoreInt32(&self._isOnlnie, 1)
-	self.LoginTime = time.Now().Unix()
-	atomic.SwapUint32(&self._idleSec, 0)
-	for _, v := range self.moudles {
-		v.OnLogin()
-	}
-
-	G_ServiceMgr.Register(Service_Write_DB, self)
-	G_ServiceMgr.Register(Service_Check_AFK, self)
-}
-func (self *TPlayer) Logout() {
-	atomic.StoreInt32(&self._isOnlnie, 0)
-	self.LogoutTime = time.Now().Unix()
-	for _, v := range self.moudles {
-		v.OnLogout()
-	}
-	self.ExitTeam()
-
-	G_ServiceMgr.UnRegister(Service_Write_DB, self)
-	G_ServiceMgr.UnRegister(Service_Check_AFK, self)
-
-	//Notice: AfterFunc是在另一线程执行，所以传入函数必须线程安全
-	time.AfterFunc(ReLogin_Wait_Second, func() {
-		// 延时删除，提升重连效率
-		if !self.IsOnline() && FindPlayerInCache(self.PlayerID) != nil {
-			gamelog.Debug("Pid(%d) Delete", self.PlayerID)
-			go self.WriteAllToDB()
-			DelPlayerCache(self)
-		}
-	})
-}
-func (self *TPlayer) IsOnline() bool { return atomic.LoadInt32(&self._isOnlnie) > 0 }
-
-// -------------------------------------
-// service
 func _Service_Write_DB(ptr interface{}) {
 	if player, ok := ptr.(*TPlayer); ok {
 		player.WriteAllToDB()
@@ -181,62 +185,8 @@ func _Service_Check_AFK(ptr interface{}) {
 	if player, ok := ptr.(*TPlayer); ok && player.IsOnline() {
 		atomic.AddUint32(&player._idleSec, 1)
 		if atomic.LoadUint32(&player._idleSec) > Idle_Max_Second {
-			gamelog.Debug("Pid(%d) AFK", player.PlayerID)
+			gamelog.Debug("Aid(%d) AFK", player.AccountID)
 			player.Logout()
 		}
-	}
-}
-
-// ------------------------------------------------------------
-//! for other player write my data
-func AsyncNotifyPlayer(pid uint32, handler func(*TPlayer)) {
-	if player := FindPlayerInCache(pid); player != nil {
-		player.AsyncNotify(handler)
-	}
-}
-func (self *TPlayer) AsyncNotify(handler func(*TPlayer)) {
-	if self.IsOnline() {
-		select {
-		case self.askchan <- handler:
-		default:
-			gamelog.Warn("Player askChan is full !!!")
-			return
-		}
-	} else { //TODO:zhoumf: 如何安全方便的修改离线玩家数据
-
-		//准备将离线的操作转给mainloop，这样所有离线玩家就都在一个chan里处理了
-		//要是中途玩家上线，mainloop的chan里还有他的操作没处理完怎么整！？囧~
-		//mainloop设计成map<pid, chan>，玩家上线时，检测自己的chan有效否，等它处理完？
-
-		//gen_server
-		//将某个独立模块的所有操作扔进gen_server，外界只读(有滞后性)
-		//会加大代码量，每个操作都得转一次到chan
-		//【Notice】可能gen_server里还有修改操作，且玩家已下线，会重新读到内存，此时修改完毕后须及时入库
-
-		//设计统一的接口，编辑离线数据，也很麻烦呐
-	}
-}
-func (self *TPlayer) _HandleAsyncNotify() {
-	for {
-		select {
-		case handler := <-self.askchan:
-			handler(self)
-		default:
-			return
-		}
-	}
-}
-
-// ------------------------------------------------------------
-//! 访问玩家部分数据，包括离线的
-func GetPlayerBaseData(pid uint32) *TPlayerBase {
-	if player := FindPlayerInCache(pid); player != nil {
-		return &player.TPlayerBase
-	} else {
-		ptr := new(TPlayerBase)
-		if dbmgo.Find("Player", "_id", pid, ptr) {
-			return ptr
-		}
-		return nil
 	}
 }

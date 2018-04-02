@@ -25,7 +25,6 @@ package player
 import (
 	"common"
 	"gamelog"
-	"sync/atomic"
 )
 
 const (
@@ -39,18 +38,17 @@ const (
 	Bit_Friend_Update = 7
 )
 
-func BeforeRecvNetMsg(pid uint32) interface{} {
-	if player := FindPlayerInCache(pid); player != nil {
-		atomic.SwapUint32(&player._idleSec, 0)
-		player._HandleAsyncNotify()
-		player.Mail.SendSvrMailAll()
+//! 需要主动发给玩家的数据，每回通信时捎带过去
+func BeforeRecvHttpMsg(accountId uint32) *TPlayer {
+	if player := FindAccountId(accountId); player != nil {
+		//player._HandleAsyncNotify()
+		//player.Mail.SendSvrMailAll()
 		return player
 	}
 	return nil
 }
-func AfterRecvNetMsg(ptr interface{}, buf *common.NetPack) {
-	self := ptr.(*TPlayer)
-	pid := self.PlayerID
+func AfterRecvHttpMsg(self *TPlayer, buf *common.NetPack) {
+	accountId := self.AccountID
 
 	//! 先写位标记
 	buf.WriteUInt8(0xFF)
@@ -58,44 +56,91 @@ func AfterRecvNetMsg(ptr interface{}, buf *common.NetPack) {
 	buf.WriteUInt32(bit)
 
 	//! 再写数据块
-	if pos := self.Mail.GetNoSendIdx(); pos >= 0 {
-		common.SetBit32(&bit, Bit_Mail_Lst, true)
-		//界面红点提示
-	}
-	if pos := self.Chat.GetNoSendIdx(); pos >= 0 {
-		common.SetBit32(&bit, Bit_Chat_Info, true)
-		//界面红点提示
-	}
-	if len(self.Friend.ApplyLst) > 0 { //收到好友申请
-		common.SetBit32(&bit, Bit_Friend_Apply, true)
-		self.Friend.PackApplyInfo(buf)
-	}
-	if self.Friend.inviteMsg.Size() > 0 { //被别人邀请
-		common.SetBit32(&bit, Bit_Invite_Friend, true)
-		buf.WriteBuf(self.Friend.inviteMsg.Data())
-		self.Friend.inviteMsg.Clear()
-	}
-	if self.pTeam != nil && self.pTeam.isChange { //队伍人员变动
-		common.SetBit32(&bit, Bit_Team_Update, true)
-		self.pTeam.isChange = false
-	}
-	if self.Battle.isShowWaitUI { //队长开始匹配，队员得到通知
-		common.SetBit32(&bit, Bit_Show_UI_Wait, true)
-		self.Battle.isShowWaitUI = false
-	}
-	if self.pTeam != nil { //队伍聊天
-		if pos := self.pTeam.GetNoSendIdx(pid); pos >= 0 {
-			common.SetBit32(&bit, Bit_Team_Chat, true)
-			self.pTeam.DataToBuf(buf, pid)
+	/*
+		if pos := self.Mail.GetNoSendIdx(); pos >= 0 {
+			common.SetBit32(&bit, Bit_Mail_Lst, true)
+			//界面红点提示
 		}
-	}
-	if self.Friend.isChange { //好友列表变动
-		common.SetBit32(&bit, Bit_Friend_Update, true)
-		self.Friend.isChange = false
-	}
+		if pos := self.Chat.GetNoSendIdx(); pos >= 0 {
+			common.SetBit32(&bit, Bit_Chat_Info, true)
+			//界面红点提示
+		}
+		if len(self.Friend.ApplyLst) > 0 { //收到好友申请
+			common.SetBit32(&bit, Bit_Friend_Apply, true)
+			self.Friend.PackApplyInfo(buf)
+		}
+		if self.Friend.inviteMsg.Size() > 0 { //被别人邀请
+			common.SetBit32(&bit, Bit_Invite_Friend, true)
+			buf.WriteBuf(self.Friend.inviteMsg.Data())
+			self.Friend.inviteMsg.Clear()
+		}
+		if self.pTeam != nil && self.pTeam.isChange { //队伍人员变动
+			common.SetBit32(&bit, Bit_Team_Update, true)
+			self.pTeam.isChange = false
+		}
+		if self.Battle.isShowWaitUI { //队长开始匹配，队员得到通知
+			common.SetBit32(&bit, Bit_Show_UI_Wait, true)
+			self.Battle.isShowWaitUI = false
+		}
+		if self.pTeam != nil { //队伍聊天
+			if pos := self.pTeam.GetNoSendIdx(accountId); pos >= 0 {
+				common.SetBit32(&bit, Bit_Team_Chat, true)
+				self.pTeam.DataToBuf(buf, accountId)
+			}
+		}
+		if self.Friend.isChange { //好友列表变动
+			common.SetBit32(&bit, Bit_Friend_Update, true)
+			self.Friend.isChange = false
+		}
+	*/
 	//! 最后重置位标记
 	buf.SetPos(bitPosInBody, bit)
 	if bit > 0 {
-		gamelog.Debug("pid(%d), PackSendBit(%b) %v", pid, bit, buf)
+		gamelog.Debug("aid(%d), PackSendBit(%b) %v", accountId, bit, buf)
 	}
 }
+
+func Rpc_game_heart_beat(req, ack *common.NetPack) {
+}
+
+// ------------------------------------------------------------
+//! for other player write my data
+/*
+func AsyncNotifyPlayer(accountId uint32, handler func(*TPlayer)) {
+	if player := FindAccountId(accountId); player != nil {
+		player.AsyncNotify(handler)
+	}
+}
+func (self *TPlayer) AsyncNotify(handler func(*TPlayer)) {
+	if self.IsOnline() {
+		select {
+		case self.askchan <- handler:
+		default:
+			gamelog.Warn("Player askChan is full !!!")
+			return
+		}
+	} else { //FIXME:zhoumf: 如何安全方便的修改离线玩家数据
+
+		//准备将离线的操作转给mainloop，这样所有离线玩家就都在一个chan里处理了
+		//要是中途玩家上线，mainloop的chan里还有他的操作没处理完怎么整！？囧~
+		//mainloop设计成map<accountId, chan>，玩家上线时，检测自己的chan有效否，等它处理完？
+
+		//gen_server
+		//将某个独立模块的所有操作扔进gen_server，外界只读(有滞后性)
+		//会加大代码量，每个操作都得转一次到chan
+		//【Notice】可能gen_server里还有修改操作，且玩家已下线，会重新读到内存，此时修改完毕后须及时入库
+
+		//设计统一的接口，编辑离线数据，也很麻烦呐
+	}
+}
+func (self *TPlayer) _HandleAsyncNotify() {
+	for {
+		select {
+		case handler := <-self.askchan:
+			handler(self)
+		default:
+			return
+		}
+	}
+}
+*/

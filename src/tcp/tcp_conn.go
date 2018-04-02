@@ -66,16 +66,17 @@ import (
 )
 
 const (
-	G_Msg_Size_Max    = 1024
+	Msg_Size_Max      = 1024
+	Msg_Queue_Cap     = 10240
 	Write_Chan_Cap    = 32
 	Delay_Delete_Conn = time.Second * 60
 )
 
 var (
 	G_HandleFunc = [enum.RpcEnumCnt]func(*common.NetPack, *common.NetPack, *TCPConn){
-		enum.Rpc_regist:     _RegistToSvr,
-		enum.Rpc_unregist:   _UnRegistToSvr,
-		enum.Rpc_svr_accept: _OnSvrAcceptConn,
+		enum.Rpc_regist:     _Rpc_regist,
+		enum.Rpc_unregist:   _Rpc_unregist,
+		enum.Rpc_svr_accept: _Rpc_svr_accept,
 	}
 	G_RpcQueue = NewRpcQueue(4096)
 )
@@ -120,12 +121,12 @@ func (self *TCPConn) Close() {
 	//【迁移至：延时删除】
 	//通知逻辑线程，连接断开
 	//packet := common.NewNetPackCap(16)
-	//packet.SetOpCode(enum.Rpc_report_net_error)
+	//packet.SetOpCode(enum.Rpc_net_error)
 	//G_RpcQueue.Insert(self, packet)
 }
 func (self *TCPConn) IsClose() bool { return atomic.LoadInt32(&self._isClose) > 0 }
 
-// msgdata must not be modified by other goroutines
+//Notice：若连接关闭，继续写入的消息会堆积在writeChan中，直至塞满
 func (self *TCPConn) WriteMsg(msg *common.NetPack) {
 	msgLen := uint16(msg.Size())
 
@@ -198,7 +199,7 @@ func (self *TCPConn) readRoutine() {
 	var err error
 	var msgLen int
 	var msgHeader = make([]byte, 2) //前2字节存msgLen
-	//var packet, msgBuf = &common.NetPack{}, make([]byte, G_Msg_Size_Max)
+	//var packet, msgBuf = &common.NetPack{}, make([]byte, Msg_Size_Max)
 	for {
 		if self.IsClose() {
 			break
@@ -209,7 +210,7 @@ func (self *TCPConn) readRoutine() {
 			break
 		}
 		msgLen = int(binary.LittleEndian.Uint16(msgHeader))
-		if msgLen <= 0 || msgLen > G_Msg_Size_Max {
+		if msgLen <= 0 || msgLen > Msg_Size_Max {
 			gamelog.Error("ReadProcess Invalid msgLen :%d", msgLen)
 			break
 		}
@@ -232,7 +233,7 @@ func (self *TCPConn) readRoutine() {
 }
 
 // ------------------------------------------------------------
-// rpc
+// 非线程安全的
 func (self *TCPConn) CallRpc(msgId uint16, sendFun, recvFun func(*common.NetPack)) {
 	G_RpcQueue.CallRpc(self, msgId, sendFun, recvFun)
 }

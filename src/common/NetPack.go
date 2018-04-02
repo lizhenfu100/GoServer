@@ -74,6 +74,10 @@ func (self *NetPack) GetReqIdx() (ret uint32) {
 func (self *NetPack) GetReqKey() uint64 {
 	return uint64(self.GetOpCode())<<32 | uint64(self.GetReqIdx())
 }
+func (self *NetPack) SetReqKey(key uint64) {
+	self.SetOpCode(uint16(key >> 32))
+	self.SetReqIdx(uint32(0xFFFFFFFF & key))
+}
 
 //! Set
 func (self *NetPack) SetPos(pos int, v uint32) { self.ByteBuffer.SetPos(PACK_HEADER_SIZE+pos, v) }

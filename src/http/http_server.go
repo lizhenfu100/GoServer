@@ -3,11 +3,11 @@ package http
 import (
 	"common"
 	"common/file"
-	"common/net/meta"
 	"encoding/json"
 	"fmt"
 	"gamelog"
 	"net/http"
+	"netConfig/meta"
 	"sync"
 )
 
@@ -19,13 +19,13 @@ func Addr(ip string, port uint16) string { return fmt.Sprintf("http://%s:%d/", i
 
 func NewHttpServer(addr string) error {
 	LoadCacheNetMeta()
-	http.HandleFunc("/reg_to_svr", _RegistToSvr)
+	http.HandleFunc("/reg_to_svr", _reg_to_svr)
 	return http.ListenAndServe(addr, nil)
 }
 
 // ------------------------------------------------------------
 //! 模块注册
-func _RegistToSvr(w http.ResponseWriter, r *http.Request) {
+func _reg_to_svr(w http.ResponseWriter, r *http.Request) {
 	buffer := make([]byte, r.ContentLength)
 	r.Body.Read(buffer)
 

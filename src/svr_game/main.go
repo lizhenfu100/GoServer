@@ -3,16 +3,15 @@ package main
 import (
 	"common/console"
 	"common/file"
-	"common/net/meta"
 	"conf"
 	"dbmgo"
 	"gamelog"
 	_ "generate_out/rpc/svr_game"
-	"http"
 	"netConfig"
+	"netConfig/meta"
+	"shared_svr/zookeeper/component"
 	"svr_game/logic"
 	"svr_game/logic/player"
-	"zookeeper/component"
 )
 
 const (
@@ -26,7 +25,7 @@ func main() {
 	InitConf()
 
 	//设置mongodb的服务器地址
-	pMeta := meta.GetMeta("db_game", 1)
+	pMeta := meta.GetMeta("db_game", K_Module_SvrID)
 	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
 	player.InitDB()
 
@@ -47,9 +46,5 @@ func InitConf() {
 	}
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
-
-	http.G_Before_Recv_Player = player.BeforeRecvNetMsg
-	http.G_After_Recv_Player = player.AfterRecvNetMsg
-
 	netConfig.G_Local_Meta = meta.GetMeta(K_Module_Name, K_Module_SvrID)
 }

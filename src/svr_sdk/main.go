@@ -2,15 +2,15 @@ package main
 
 import (
 	"common/file"
-	"common/net/meta"
 	"conf"
 	"dbmgo"
 	"gamelog"
 	_ "generate_out/rpc/svr_sdk"
 	"netConfig"
+	"netConfig/meta"
+	"shared_svr/zookeeper/component"
 	"svr_sdk/logic"
 	"svr_sdk/msg"
-	"zookeeper/component"
 )
 
 const (
@@ -42,6 +42,5 @@ func InitConf() {
 	}
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
-
 	netConfig.G_Local_Meta = meta.GetMeta(K_Module_Name, K_Module_SvrID)
 }

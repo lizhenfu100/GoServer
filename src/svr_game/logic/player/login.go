@@ -19,64 +19,58 @@ import (
 	"common/format"
 	"gamelog"
 	"sync"
+	"tcp"
 )
 
 // -------------------------------------
 // -- 玩家登录
-func Rpc_game_login(req, ack *common.NetPack) {
-	//req: accountId, token(账号服生成的登录验证码)
-	//ack: playerId, data
+// Notice：登录、创建角色，可做成普通rpc，用以建立玩家缓存
+func Rpc_game_login(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	accountId := req.ReadUInt32()
-	token := req.ReadUInt32()
 
-	if !CheckLoginToken(accountId, token) {
-		ack.WriteInt8(-1)
+	//TODO:zhoumf: 读数据库同步的，比较耗时，直接读的方式不适合外网
+	if player := FindWithDB_AccountId(accountId); player == nil {
+		ack.WriteInt8(-2) //notify client to create new player
 	} else {
-		player := FindWithDB_AccountId(accountId)
-		if player == nil {
-			ack.WriteInt8(-2) //notify client to create new player
-		} else {
-			player.Login()
-			gamelog.Debug("Player Login: %s, pid(%d), accountId(%d)", player.Name, player.PlayerID, player.AccountID)
-			ack.WriteInt8(1)
-			ack.WriteUInt32(player.PlayerID)
-			ack.WriteString(player.Name)
-		}
+		player.Login(conn)
+		gamelog.Debug("Player Login: %s, accountId(%d)", player.Name, player.AccountID)
+		ack.WriteInt8(1)
+		ack.WriteUInt32(player.AccountID)
+		ack.WriteString(player.Name)
 	}
 }
-func Rpc_game_logout(req, ack *common.NetPack, ptr interface{}) {
-	player := ptr.(*TPlayer)
-	player.Logout()
-}
-func Rpc_game_player_create(req, ack *common.NetPack) {
+func Rpc_game_create_player(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	accountId := req.ReadUInt32()
-	token := req.ReadUInt32()
 	playerName := req.ReadString()
 
-	if !CheckLoginToken(accountId, token) { //token验证
+	if !format.CheckName(playerName) { //名字不合格
 		ack.WriteUInt32(0)
-	} else if !format.CheckName(playerName) { //名字不合格
+	} else if player := NewPlayerInDB(accountId, playerName); player == nil {
 		ack.WriteUInt32(0)
-	} else if player := AddNewPlayer(accountId, playerName); player != nil {
-		gamelog.Debug("Create NewPlayer: accountId(%d) name(%s) pid(%d)",
-			accountId, playerName, player.PlayerID)
-		player.Login()
-		ack.WriteUInt32(player.PlayerID)
 	} else {
-		ack.WriteUInt32(0)
+		gamelog.Debug("Create NewPlayer: accountId(%d) name(%s)", accountId, playerName)
+		player.Login(conn)
+		ack.WriteUInt32(player.AccountID)
 	}
 }
-func Rpc_game_heart_beat(req, ack *common.NetPack, ptr interface{}) {
+func Rpc_game_logout(req, ack *common.NetPack, player *TPlayer) {
+	player.Logout()
+}
+
+func Rpc_game_get_player_cnt(req, ack *common.NetPack, conn *tcp.TCPConn) {
+	ack.WriteInt32(g_player_cnt)
 }
 
 // -------------------------------------
 // -- 后台账号验证
 var g_login_token sync.Map
 
-func Rpc_game_login_token(req, ack *common.NetPack) {
-	id := req.ReadUInt32()
+func Rpc_game_login_token(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	token := req.ReadUInt32()
-	g_login_token.Store(id, token)
+	accountId := req.ReadUInt32()
+	g_login_token.Store(accountId, token)
+
+	ack.WriteInt32(g_player_cnt)
 }
 func CheckLoginToken(id, token uint32) bool {
 	if value, ok := g_login_token.Load(id); ok {

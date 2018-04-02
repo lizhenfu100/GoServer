@@ -7,7 +7,7 @@
 
 * @ 几种更新方式
 	UpdateToDB("Player", bson.M{"_id": playerID}, bson.M{"$set": bson.M{
-		"moudle.data": self.data,
+		"module.data": self.data,
 		"goods":    self.Goods,
 		"resetday": self.ResetDay}})
 	UpdateToDB("Player", bson.M{"_id": playerID}, bson.M{"$inc": bson.M{"logincnt": 1}})
@@ -76,7 +76,7 @@ func InsertSync(table string, pData interface{}) bool {
 	}
 	return true
 }
-func UpdateSync(table string, id, pData interface{}) bool {
+func UpdateIdSync(table string, id, pData interface{}) bool {
 	coll := g_database.C(table)
 	err := coll.UpdateId(id, pData)
 	if err != nil {

@@ -21,8 +21,5 @@ func MainLoop() {
 		time.Sleep(50 * time.Millisecond)
 	}
 }
-func Rpc_report_net_error(req, ack *common.NetPack, conn *tcp.TCPConn) {
-	if ptr := conn.UserPtr.(*player.TPlayer); ptr != nil {
-		ptr.Logout()
-	}
+func Rpc_net_error(req, ack *common.NetPack, conn *tcp.TCPConn) {
 }

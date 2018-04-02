@@ -12,13 +12,18 @@ var (
 	g_cache_coll = make(map[string]*mgo.Collection)
 )
 
+const (
+	DB_Insert       = byte(1)
+	DB_Update_Field = byte(2)
+	DB_Update_Id    = byte(3)
+	DB_Update_All   = byte(4)
+)
+
 type TDB_Param struct {
-	isAll    bool //是否更新全部记录
-	isInsert bool
-	table    string //表名
-	search   bson.M //条件
-	stuff    bson.M //数据
-	pData    interface{}
+	optype byte        //操作类型
+	table  string      //表名
+	search interface{} //条件
+	data   interface{} //数据，可bson.M指定更新字段，详见dbmgo.go头部注释
 }
 
 func _DBProcess() {
@@ -33,39 +38,50 @@ func _DBProcess() {
 			}
 			g_last_table = param.table
 		}
-		if param.isInsert {
-			err = pColl.Insert(param.pData)
-		} else if param.isAll {
-			_, err = pColl.UpdateAll(param.search, param.stuff)
-		} else {
-			err = pColl.Update(param.search, param.stuff)
+		switch param.optype {
+		case DB_Insert:
+			err = pColl.Insert(param.data)
+		case DB_Update_Field:
+			err = pColl.Update(param.search, param.data)
+		case DB_Update_Id:
+			err = pColl.UpdateId(param.search, param.data)
+		case DB_Update_All:
+			_, err = pColl.UpdateAll(param.search, param.data)
 		}
 		if err != nil {
 			gamelog.Error("DBProcess Failed: table[%s] search[%v], stuff[%v], Error[%v]",
-				param.table, param.search, param.stuff, err.Error())
+				param.table, param.search, param.data, err.Error())
 		}
 	}
 }
-func UpdateToDB(table string, search, stuff bson.M) {
+func UpdateToDB(table string, search, update bson.M) {
 	g_param_chan <- &TDB_Param{
-		isAll:  false,
+		optype: DB_Update_Field,
 		table:  table,
 		search: search,
-		stuff:  stuff,
+		data:   update,
 	}
 }
-func UpdateToDBAll(table string, search, stuff bson.M) {
+func UpdateIdToDB(table string, id, data interface{}) {
 	g_param_chan <- &TDB_Param{
-		isAll:  true,
+		optype: DB_Update_Id,
+		table:  table,
+		search: id,
+		data:   data,
+	}
+}
+func UpdateToDBAll(table string, search, data bson.M) {
+	g_param_chan <- &TDB_Param{
+		optype: DB_Update_All,
 		table:  table,
 		search: search,
-		stuff:  stuff,
+		data:   data,
 	}
 }
-func InsertToDB(table string, pData interface{}) {
+func InsertToDB(table string, data interface{}) {
 	g_param_chan <- &TDB_Param{
-		isInsert: true,
-		table:    table,
-		pData:    pData,
+		optype: DB_Insert,
+		table:  table,
+		data:   data,
 	}
 }

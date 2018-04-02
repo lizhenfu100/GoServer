@@ -8,12 +8,12 @@ import (
 
 func CheckAtoiName(s string) int {
 	if len(s) <= 0 {
-		fmt.Printf("field: %s is empty", s)
+		fmt.Printf("CheckAtoiName: is empty")
 		return 0
 	}
 	ret, err := strconv.Atoi(s)
 	if err != nil {
-		fmt.Printf("field: %s text can't convert to int", s)
+		fmt.Printf("CheckAtoiName can't convert to int: %s ", s)
 	}
 	return ret
 }
@@ -25,8 +25,8 @@ func ParseStringToPair(str string) []IntPair {
 	items := make([]IntPair, len(slice))
 	for i, v := range slice {
 		pv := strings.Split(v, "|")
-		if len(pv) != 2 {
-			fmt.Printf("ParseStringToPair : %s", str)
+		if len(pv) < 2 {
+			fmt.Printf("ParseStringToPair too short: %s", str)
 			return items
 		}
 		items[i].ID = CheckAtoiName(pv[0])

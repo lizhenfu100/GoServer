@@ -3,7 +3,6 @@ package main
 import (
 	"common"
 	"common/file"
-	"common/net/meta"
 	"conf"
 	"fmt"
 	"gamelog"
@@ -12,11 +11,12 @@ import (
 	"io"
 	nhttp "net/http"
 	"netConfig"
+	"netConfig/meta"
 	"os"
+	"shared_svr/zookeeper/component"
 	"strconv"
 	"strings"
 	"time"
-	"zookeeper/component"
 )
 
 const (
@@ -30,7 +30,7 @@ func main() {
 	t := uint32(10)
 	println(v == t)
 
-	addr := "http://192.168.1.11:7033/"
+	addr := "http://192.168.1.11:2233/"
 	idx1 := strings.Index(addr, "//") + 2
 	idx2 := strings.LastIndex(addr, ":")
 	println(addr[idx1:idx2])
@@ -66,10 +66,10 @@ func Download() {
 	stat, err := f.Stat() //获取文件状态
 	if err != nil {
 		panic(err)
-	} //把文件指针指到文件末，当然你说为何不直接用 O_APPEND 模式打开，没错是可以。我这里只是试验。
-	url := "http://127.0.0.1:7040/table.csv"
+	}
+	addr := netConfig.GetHttpAddr("file", 0)
 
-	req, _ := nhttp.NewRequest("GET", url, nil)
+	req, _ := nhttp.NewRequest("GET", addr+"table.csv", nil)
 	req.Header.Set("Range", "bytes="+strconv.FormatInt(stat.Size(), 10)+"-")
 	resp, err := nhttp.DefaultClient.Do(req)
 	if err != nil {
@@ -122,7 +122,7 @@ func test() {
 	gamesvrPort := uint16(0)
 	logintoken := uint32(0)
 
-	http.CallRpc(loginAddr, enum.Rpc_login_reg_account, func(buf *common.NetPack) {
+	http.CallRpc(loginAddr, enum.Rpc_center_reg_account, func(buf *common.NetPack) {
 		buf.WriteString(accountName)
 		buf.WriteString(password)
 	}, func(backBuf *common.NetPack) {
@@ -130,7 +130,7 @@ func test() {
 		fmt.Println("errCode1:", errCode1)
 	})
 
-	http.CallRpc(loginAddr, enum.Rpc_login_account_login, func(buf *common.NetPack) {
+	http.CallRpc(loginAddr, enum.Rpc_center_account_login, func(buf *common.NetPack) {
 		buf.WriteInt(1) //gamesvrId
 		buf.WriteString(accountName)
 		buf.WriteString(password)
@@ -154,14 +154,14 @@ func test() {
 	}, func(backBuf *common.NetPack) {
 		errCode3 := backBuf.ReadInt8()
 		if errCode3 > 0 {
-			playerRpc.PlayerId = backBuf.ReadUInt32()
+			playerRpc.AccountId = backBuf.ReadUInt32()
 		} else if errCode3 == -2 {
 			//创建新角色
-			http.CallRpc(gameAddr, enum.Rpc_game_player_create, func(buf *common.NetPack) {
+			http.CallRpc(gameAddr, enum.Rpc_game_create_player, func(buf *common.NetPack) {
 				buf.WriteUInt32(accountId)
 				buf.WriteString("zhoumf")
 			}, func(backBuf *common.NetPack) {
-				playerRpc.PlayerId = backBuf.ReadUInt32()
+				playerRpc.AccountId = backBuf.ReadUInt32()
 			})
 		} else {
 			fmt.Println("errCode3:", errCode3)

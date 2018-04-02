@@ -2,12 +2,12 @@ package tcp
 
 import (
 	"common"
-	"common/net/meta"
 	"encoding/binary"
 	"gamelog"
 	"generate_out/rpc/enum"
 	"io"
 	"net"
+	"netConfig/meta"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -99,11 +99,11 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 		if tcpConn.IsClose() {
 			self.connmap.Delete(connId)
 			atomic.AddInt32(&self.connCnt, -1)
-			gamelog.Debug("Disconnect: DelConnId: %d", connId)
+			gamelog.Debug("Disconnect: DelConnId: %d %v", connId, tcpConn.UserPtr)
 
 			//通知逻辑线程，连接断开
 			packet := common.NewNetPackCap(16)
-			packet.SetOpCode(enum.Rpc_report_net_error)
+			packet.SetOpCode(enum.Rpc_net_error)
 			G_RpcQueue.Insert(tcpConn, packet)
 
 			//连接的后台节点断开，注销之
@@ -171,7 +171,7 @@ func (self *TCPServer) Close() {
 // 模块注册
 var g_reg_conn_map sync.Map
 
-func _RegistToSvr(req, ack *common.NetPack, conn *TCPConn) {
+func _Rpc_regist(req, ack *common.NetPack, conn *TCPConn) {
 	pMeta := new(meta.Meta)
 	pMeta.BufToData(req)
 	conn.UserPtr = pMeta
@@ -180,7 +180,7 @@ func _RegistToSvr(req, ack *common.NetPack, conn *TCPConn) {
 	meta.AddMeta(pMeta)
 	gamelog.Info("RegistToSvr: {%s %d}", pMeta.Module, pMeta.SvrID)
 }
-func _UnRegistToSvr(req, ack *common.NetPack, conn *TCPConn) {
+func _Rpc_unregist(req, ack *common.NetPack, conn *TCPConn) {
 	if pMeta, ok := conn.UserPtr.(*meta.Meta); ok {
 		if pConn := FindRegModule(pMeta.Module, pMeta.SvrID); pConn != nil && pConn.IsClose() {
 			gamelog.Info("UnRegist Svr: {%s %d}", pMeta.Module, pMeta.SvrID)

@@ -3,18 +3,18 @@ package main
 import (
 	"common/console"
 	"common/file"
-	"common/net/meta"
 	"conf"
 	"gamelog"
 	_ "generate_out/rpc/svr_cross"
 	"netConfig"
+	"netConfig/meta"
+	"shared_svr/zookeeper/component"
 	"svr_cross/logic"
-	"zookeeper/component"
 )
 
 const (
 	Module_Name  = "cross"
-	Module_SvrID = 0
+	Module_SvrID = 1
 )
 
 func main() {
@@ -39,6 +39,5 @@ func InitConf() {
 	}
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
-
 	netConfig.G_Local_Meta = meta.GetMeta(Module_Name, Module_SvrID)
 }

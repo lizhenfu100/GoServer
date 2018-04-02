@@ -1,9 +1,17 @@
 /***********************************************************************
 * @ 多进程服务器架构
 * @ brief
-	1、游戏服，可多个GameSvr对应同一区服玩家
-	2、战斗服，可动态扩展；GameSvr将玩家数据通过Cross转至某Battle
-	3、唯一的Zookeeper，其它进程需在Zookeeper注册，管理后台所有进程
+	1、shared_svr不属于某个游戏，可供其它游戏复用
+		、【独立的好友服，好友关系入库】类似微信，实现社交关系不同游戏间复用
+
+	2、唯一的Zookeeper，其它进程需在Zookeeper注册，管理后台所有进程
+
+	3、【业务节点动态扩展】
+		、游戏服，在账号上绑定区服编号（自动分服）/ 本地缓存（玩家手选区服）：确定玩家-服务器匹配关系
+		、战斗服，无持久性状态数据，扩展方便；GameSvr将玩家数据通过Cross转至某Battle（hash取模路由）
+		、其它服务节点，如邮件、好友...设计成无状态的(redis缓存)，彼此一致，直接hash取模即可
+
+	4、【gatew采用hash取模方式路由玩家，无法动态扩展，部署上需预留盈余，性能不够时可将同机器上其它节点迁移】
 
 * @ reconnect
 	1、【1-1】关系中的"client"重启：game每次均会连接battle
@@ -18,17 +26,17 @@ package netConfig
 
 import (
 	"common"
-	"common/net/meta"
 	"fmt"
 	"gamelog"
 	"http"
+	"netConfig/meta"
 	"sync"
 	"tcp"
 )
 
 var (
 	G_Local_Meta   *meta.Meta
-	G_Client_Conns sync.Map //= make(map[common.KeyPair]*tcp.TCPClient) //本模块，对其它模块的tcp连接
+	g_client_conns sync.Map //= make(map[common.KeyPair]*tcp.TCPClient) //本模块，对其它模块的tcp连接
 )
 
 func RunNetSvr() {
@@ -37,24 +45,11 @@ func RunNetSvr() {
 
 	//2、连接/注册其它模块
 	if nil == meta.GetMeta("zookeeper", 0) { //没有zookeeper节点，才依赖配置，否则依赖zookeeper的通知
-		for _, destModule := range G_Local_Meta.ConnectLst {
+		for _, connModule := range G_Local_Meta.ConnectLst {
 			meta.G_SvrNets.Range(func(k, v interface{}) bool {
-				destCfg := v.(*meta.Meta)
-				if destCfg.Module == destModule {
-					if destCfg.HttpPort > 0 {
-						http.RegistToSvr(
-							http.Addr(destCfg.IP, destCfg.HttpPort),
-							G_Local_Meta)
-					} else if destCfg.TcpPort > 0 {
-						client := new(tcp.TCPClient)
-						client.ConnectToSvr(
-							tcp.Addr(destCfg.IP, destCfg.TcpPort),
-							G_Local_Meta)
-						//Notice：client.ConnectToSvr是异步过程，这里返回的client.TcpConn还是空指针，不能保存*tcp.TCPConn
-						G_Client_Conns.Store(common.KeyPair{destCfg.Module, destCfg.SvrID}, client)
-					} else {
-						fmt.Println(destCfg.Module + ": have none HttpPort|TcpPort!!!")
-					}
+				dest := v.(*meta.Meta)
+				if dest.Module == connModule && !dest.IsSame(G_Local_Meta) {
+					ConnectModule(dest)
 				}
 				return true
 			})
@@ -68,15 +63,42 @@ func RunNetSvr() {
 	} else if G_Local_Meta.TcpPort > 0 {
 		tcp.NewTcpServer(fmt.Sprintf(":%d", G_Local_Meta.TcpPort), G_Local_Meta.Maxconn)
 	} else {
-		fmt.Println(G_Local_Meta.Module + ": have none HttpPort|TcpPort!!!")
+		gamelog.Error("%s: have none HttpPort|TcpPort!!!", G_Local_Meta.Module)
 	}
 }
 
-//Notice：应用层cache住结果，避免每次都查找
+//Notice：参数pMeta会被闭包引用(且会存入容器)，须避免外界变更其内容，最好都是new的
+func ConnectModule(ptr *meta.Meta) {
+	if ptr.HttpPort > 0 {
+		http.RegistToSvr(http.Addr(ptr.IP, ptr.HttpPort), G_Local_Meta)
+		meta.AddMeta(ptr)
+	} else if ptr.TcpPort > 0 {
+		ConnectModuleTcp(ptr, func(*tcp.TCPConn) { meta.AddMeta(ptr) })
+	} else {
+		gamelog.Error("%s: have none HttpPort|TcpPort!!!", ptr.Module)
+	}
+}
+func ConnectModuleTcp(ptr *meta.Meta, cb func(*tcp.TCPConn)) {
+	if ptr.TcpPort == 0 {
+		gamelog.Error("%s: have none TcpPort!!!", ptr.Module)
+		return
+	}
+	var client *tcp.TCPClient
+	if v, ok := g_client_conns.Load(common.KeyPair{ptr.Module, ptr.SvrID}); ok {
+		client = v.(*tcp.TCPClient)
+	} else {
+		client = new(tcp.TCPClient)
+		g_client_conns.Store(common.KeyPair{ptr.Module, ptr.SvrID}, client)
+		//Notice：client.ConnectToSvr是异步过程，这里的client.TcpConn还是空指针，不能保存*tcp.TCPConn
+	}
+	client.OnConnect = cb
+	client.ConnectToSvr(tcp.Addr(ptr.IP, ptr.TcpPort), G_Local_Meta)
+}
+
+// TCPConn是对真正net.Conn的包装，发生断线重连时，会执行tcp.TCPConn.ResetConn()，所以外部缓存的tcp.TCPConn仍有效，无需更新
 func GetTcpConn(module string, svrId int) *tcp.TCPConn {
-	if v, ok := G_Client_Conns.Load(common.KeyPair{module, svrId}); ok {
-		ptr := v.(*tcp.TCPClient)
-		return ptr.Conn
+	if v, ok := g_client_conns.Load(common.KeyPair{module, svrId}); ok {
+		return v.(*tcp.TCPClient).Conn
 	}
 	// cross(s) - game(c)
 	return tcp.FindRegModule(module, svrId)

@@ -3,9 +3,9 @@ package http
 import (
 	"bytes"
 	"common"
-	"common/net/meta"
 	"gamelog"
 	"net/http"
+	"netConfig/meta"
 	"time"
 )
 

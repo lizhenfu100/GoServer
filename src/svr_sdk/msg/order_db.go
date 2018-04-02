@@ -68,12 +68,21 @@ func ConfirmOrder(ptr *TOrderInfo) {
 	ptr.Can_send = 0
 	dbmgo.UpdateToDB("Order", bson.M{"_id": ptr.Order_id}, bson.M{"$set": bson.M{"can_send": 0}})
 	g_order_map.Delete(ptr.Order_id)
+
+	//删除内存中滞留一天的订单
+	timenow := time.Now().Unix()
+	g_order_map.Range(func(k, v interface{}) bool {
+		if timenow-v.(*TOrderInfo).Time > 24*3600 {
+			g_order_map.Delete(k)
+		}
+		return true
+	})
 }
 func InitDB() {
 	//删除超过7天的无效订单
 	dbmgo.RemoveSync("Order", bson.M{
 		"status": 0, "can_send": 0,
-		"time":   bson.M{"$lt": time.Now().Unix() - 7*24*3600},
+		"time": bson.M{"$lt": time.Now().Unix() - 7*24*3600},
 	})
 	//删除数据库里超过30天的订单
 	dbmgo.RemoveSync("Order", bson.M{"time": bson.M{"$lt": time.Now().Unix() - 30*24*3600}})

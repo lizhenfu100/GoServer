@@ -2,21 +2,15 @@ package logic
 
 import (
 	"common"
+	"netConfig/meta"
 	"tcp"
-	"time"
 )
 
 func MainLoop() {
-	//timeNow, timeOld, time_elapse := time.Now().UnixNano()/int64(time.Millisecond), int64(0), 0
-	for {
-		//timeOld = timeNow
-		//timeNow = time.Now().UnixNano() / int64(time.Millisecond)
-		//time_elapse = int(timeNow - timeOld)
-
-		tcp.G_RpcQueue.Update()
-
-		time.Sleep(10 * time.Millisecond)
-	}
+	tcp.G_RpcQueue.Loop()
 }
-func Rpc_report_net_error(req, ack *common.NetPack, conn *tcp.TCPConn) {
+func Rpc_net_error(req, ack *common.NetPack, conn *tcp.TCPConn) {
+	if ptr, ok := conn.UserPtr.(*meta.Meta); ok && ptr.Module == "battle" {
+		delete(g_battle_player_cnt, ptr.SvrID)
+	}
 }
