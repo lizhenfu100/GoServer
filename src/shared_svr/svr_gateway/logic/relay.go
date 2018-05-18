@@ -58,7 +58,7 @@ func RelayPlayerMsg(accountId uint32, rpcId uint16, rpcData []byte, oldReqKey ui
 				conn.WriteMsg(backBuf)
 			})
 		} else {
-			gamelog.Debug("rid(%d) gateway client conn nil", rpcId)
+			gamelog.Debug("rid(%d) accountId(%d) client conn nil", rpcId, accountId)
 		}
 	} else { //转给后台节点
 		if pConn := _GetSvrNodeConn(rpcModule, accountId); pConn != nil {
@@ -71,7 +71,7 @@ func RelayPlayerMsg(accountId uint32, rpcId uint16, rpcData []byte, oldReqKey ui
 				conn.WriteMsg(backBuf)
 			})
 		} else {
-			gamelog.Debug("rid(%d) gateway relay conn nil", rpcId)
+			gamelog.Debug("rid(%d) accountId(%d) svr conn nil", rpcId, accountId)
 		}
 	}
 }

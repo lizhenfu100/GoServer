@@ -9,6 +9,7 @@ import (
 	"net"
 	"netConfig/meta"
 	"sync/atomic"
+	"time"
 )
 
 type TCPClient struct {
@@ -21,19 +22,19 @@ type TCPClient struct {
 
 func Addr(ip string, port uint16) string { return fmt.Sprintf("%s:%d", ip, port) }
 
-func (self *TCPClient) ConnectToSvr(addr string, meta *meta.Meta) {
+func (self *TCPClient) ConnectToSvr(addr string, myMeta *meta.Meta) {
 	if atomic.LoadInt32(&self._isLoop) == 0 {
 		self.addr = addr
-		go self.connectRoutine(meta) //会断线后自动重连
+		go self.connectRoutine(myMeta) //会断线后自动重连
 	}
 }
-func (self *TCPClient) connectRoutine(pMeta *meta.Meta) {
+func (self *TCPClient) connectRoutine(myMeta *meta.Meta) {
 	regMsg := common.NewNetPackCap(32)
 	regMsg.SetOpCode(enum.Rpc_regist)
-	pMeta.DataToBuf(regMsg)
+	myMeta.DataToBuf(regMsg)
 
-	//atomic.StoreInt32(&self._isLoop, 1) //有zookeeper管理节点连接，无需自动重连
-	//for {
+	atomic.StoreInt32(&self._isLoop, 1)
+	for {
 		if self.connect() {
 			//Notice: 这里不能用CallRpc，非线程安全的
 			firstMsg := make([]byte, 2+4) //tcp层的包，头两个字节是长度
@@ -46,9 +47,14 @@ func (self *TCPClient) connectRoutine(pMeta *meta.Meta) {
 			go self.Conn.readRoutine()
 			self.Conn.writeRoutine() //goroutine会阻塞在这里
 		}
-	//	time.Sleep(3 * time.Second)
-	//}
-	//atomic.StoreInt32(&self._isLoop, 0)
+
+		//有zookeeper管理节点连接，无需自动重连
+		if meta.GetMeta("zookeeper", 0) != nil {
+			break
+		}
+		time.Sleep(3 * time.Second)
+	}
+	atomic.StoreInt32(&self._isLoop, 0)
 }
 func (self *TCPClient) connect() bool {
 	conn, err := net.Dial("tcp", self.addr)

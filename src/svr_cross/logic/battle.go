@@ -21,7 +21,7 @@ var (
 )
 
 // ------------------------------------------------------------
-//!
+// - 将svr_game中的玩家属性数据发到svr_battle
 func Rpc_cross_relay_battle_data(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	version := req.ReadString()
 
@@ -70,4 +70,13 @@ func _SelectBattleSvrId(version string) int {
 		}
 	}
 	return -1
+}
+
+// ------------------------------------------------------------
+// - 转至svr_game
+func Rpc_cross_relay_to_game(req, ack *common.NetPack, conn *tcp.TCPConn) {
+	svrId := req.ReadInt()
+	netConfig.CallRpcGame(svrId, enum.Rpc_recv_player_msg, func(buf *common.NetPack) {
+		buf.WriteBuf(req.LeftBuf()) //头两字段须是：rid、aid
+	}, nil)
 }

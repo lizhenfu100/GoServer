@@ -24,7 +24,7 @@ func main() {
 	vec := []*RpcInfo{
 		generatRpcRegist("shared_svr/zookeeper"),
 		generatRpcRegist("shared_svr/svr_center"),
-		//generatRpcRegist("shared_svr/svr_login"),
+		generatRpcRegist("shared_svr/svr_login"),
 		generatRpcRegist("shared_svr/svr_gateway"),
 		generatRpcRegist("shared_svr/svr_save"),
 		generatRpcRegist("shared_svr/svr_file"),

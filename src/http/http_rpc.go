@@ -75,7 +75,7 @@ func _HandleRpc(w http.ResponseWriter, r *http.Request) {
 
 	if handler := G_HandleFunc[msgId]; handler != nil {
 		handler(req, ack)
-		common.CompressInto(ack.Data(), w)
+		common.CompressTo(ack.Data(), w)
 	} else {
 		gamelog.Error("HttpMsg(%d) Not Regist", msgId)
 	}

@@ -14,6 +14,7 @@ package tcp
 
 import (
 	"common"
+	"common/assert"
 	"gamelog"
 	"runtime/debug"
 	"sync/atomic"
@@ -38,7 +39,7 @@ type RpcQueue struct {
 func NewRpcQueue(cap uint32) *RpcQueue {
 	self := new(RpcQueue)
 	//self.queue = safe.NewQueue(cap)
-	self.queue = make(chan objMsg, Msg_Queue_Cap)
+	self.queue = make(chan objMsg, cap)
 	self.sendBuffer = common.NewNetPackCap(128)
 	self.backBuffer = common.NewNetPackCap(128)
 	self.response = make(map[uint64]func(*common.NetPack))
@@ -73,15 +74,9 @@ func (self *RpcQueue) Update() {
 }
 func (self *RpcQueue) Loop() { //死循环，阻塞等待
 	for {
-		select {
-		case v := <-self.queue:
-			self._Handle(v.conn, v.msg)
-			v.msg.Free()
-		default:
-			v := <-self.queue
-			self._Handle(v.conn, v.msg)
-			v.msg.Free()
-		}
+		v := <-self.queue
+		self._Handle(v.conn, v.msg)
+		v.msg.Free()
 	}
 }
 
@@ -93,20 +88,24 @@ func (self *RpcQueue) _Handle(conn *TCPConn, msg *common.NetPack) {
 			gamelog.Error("recover msgId:%d\n%v: %s", msgId, r, debug.Stack())
 		}
 	}()
-	gamelog.Debug("Recv TcpMsgId:%d, len:%d", msgId, msg.Size())
-
 	self.backBuffer.ResetHead(msg)
 
+	//1、先处理玩家rpc(与player指针强关联)
 	if self._handlePlayerRpc != nil && self._handlePlayerRpc(msg, self.backBuffer, conn) {
+		gamelog.Debug("PlayerMsg:%d, len:%d", msgId, msg.Size())
 		if self.backBuffer.BodySize() > 0 {
 			conn.WriteMsg(self.backBuffer)
 		}
+		//2、普通类型rpc(与连接关联的)
 	} else if msgFunc := G_HandleFunc[msgId]; msgFunc != nil {
+		gamelog.Debug("TcpMsg:%d, len:%d", msgId, msg.Size())
 		msgFunc(msg, self.backBuffer, conn)
 		if self.backBuffer.BodySize() > 0 {
 			conn.WriteMsg(self.backBuffer)
 		}
+		//3、rpc回复(自己发起的调用，对方回复的数据)
 	} else if rpcRecv, ok := self.response[msg.GetReqKey()]; ok {
+		gamelog.Debug("ResponseMsg:%d, len:%d", msgId, msg.Size())
 		rpcRecv(msg)
 		delete(self.response, msg.GetReqKey())
 	} else {
@@ -121,7 +120,7 @@ func RegHandlePlayerRpc(cb func(req, ack *common.NetPack, conn *TCPConn) bool) {
 
 //Notice：非线程安全的，仅供主逻辑线程调用，内部操作的同个sendBuffer，多线程下须每次new新的
 func (self *RpcQueue) CallRpc(conn *TCPConn, msgId uint16, sendFun, recvFun func(*common.NetPack)) {
-	common.Assert(G_HandleFunc[msgId] == nil && self.sendBuffer.GetOpCode() == 0)
+	assert.True(G_HandleFunc[msgId] == nil && self.sendBuffer.GetOpCode() == 0)
 	//CallRpc中途不能再CallRpc
 	//gamelog.Error("[%d] Server and Client have the same Rpc or Repeat CallRpc", msgID)
 

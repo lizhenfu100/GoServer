@@ -2,6 +2,7 @@ package logic
 
 import (
 	"common"
+	"common/timer"
 	"svr_game/logic/player"
 	"tcp"
 	"time"
@@ -17,6 +18,8 @@ func MainLoop() {
 		player.G_ServiceMgr.RunAllService(time_elapse, timeNow)
 
 		tcp.G_RpcQueue.Update()
+
+		timer.G_TimerChan.Update()
 
 		time.Sleep(50 * time.Millisecond)
 	}

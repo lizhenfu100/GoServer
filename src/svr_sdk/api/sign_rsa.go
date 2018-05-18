@@ -12,43 +12,43 @@ import (
 // ------------------------------------------------------------
 //
 type RSA struct {
-	privateKey *rsa.PrivateKey
-	publicKey  *rsa.PublicKey
+	PrivateKey *rsa.PrivateKey
+	PublicKey  *rsa.PublicKey
 }
 
 func (this *RSA) Encrypt(plaintext []byte) ([]byte, error) {
-	return rsa.EncryptPKCS1v15(rand.Reader, this.publicKey, plaintext)
+	return rsa.EncryptPKCS1v15(rand.Reader, this.PublicKey, plaintext)
 }
 func (this *RSA) Decrypt(ciphertext []byte) ([]byte, error) {
-	return rsa.DecryptPKCS1v15(rand.Reader, this.privateKey, ciphertext)
+	return rsa.DecryptPKCS1v15(rand.Reader, this.PrivateKey, ciphertext)
 }
 func (this *RSA) Sign(src []byte, hash crypto.Hash) ([]byte, error) {
 	h := hash.New()
 	h.Write(src)
 	hashed := h.Sum(nil)
-	return rsa.SignPKCS1v15(rand.Reader, this.privateKey, hash, hashed)
+	return rsa.SignPKCS1v15(rand.Reader, this.PrivateKey, hash, hashed)
 }
 func (this *RSA) Verify(src []byte, sign []byte, hash crypto.Hash) error {
 	h := hash.New()
 	h.Write(src)
 	hashed := h.Sum(nil)
-	return rsa.VerifyPKCS1v15(this.publicKey, hash, hashed, sign)
+	return rsa.VerifyPKCS1v15(this.PublicKey, hash, hashed, sign)
 }
 
 // ------------------------------------------------------------
 //
-func NewRSA(privateKey, publicKey string) (ret *RSA, err error) {
+func NewRSA(privateKey, publicKey []byte) (ret *RSA, err error) {
 	ret = &RSA{}
-	if err == nil { //生成私钥
-		if block, _ := pem.Decode([]byte(privateKey)); block != nil {
-			ret.privateKey, err = genPrivate(block.Bytes, block.Type)
+	if err == nil && privateKey != nil { //生成私钥
+		if block, _ := pem.Decode(privateKey); block != nil {
+			ret.PrivateKey, err = genPrivate(block.Bytes, block.Type)
 		} else {
 			err = errors.New("private key error")
 		}
 	}
-	if err == nil { //生成公钥
-		if block, _ := pem.Decode([]byte(publicKey)); block != nil {
-			ret.publicKey, err = genPublic(block.Bytes)
+	if err == nil && publicKey != nil { //生成公钥
+		if block, _ := pem.Decode(publicKey); block != nil {
+			ret.PublicKey, err = genPublic(block.Bytes)
 		} else {
 			err = errors.New("public key error")
 		}

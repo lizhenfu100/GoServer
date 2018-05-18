@@ -1,66 +1,90 @@
+/***********************************************************************
+* @ game svr list
+* @ brief
+	玩家手选区服：
+		1、下发区服列表，client选定具体gamesvr节点登录
+		2、client本地存储gamesvr节点编号，登录时上报
+
+	后台自动分服：
+		1、验证账号，若账号中无绑定区服信息，进入创建角色流程
+		2、选择最空闲gamesvr节点，创建角色成功，将区服编号绑账号上
+		3、下次登录，验证账号后即定位具体gamesvr节点
+
+* @ author zhoumf
+* @ date 2018-3-19
+***********************************************************************/
 package logic
 
 import (
 	"common"
+	"common/assert"
 	"generate_out/rpc/enum"
 	"netConfig"
 	"netConfig/meta"
+	"shared_svr/svr_center/gameInfo/SoulKnight"
 	"sync"
 	"sync/atomic"
+	"tcp"
 )
 
 var g_login_token uint32
 
-func Rpc_login_account_login(req, ack *common.NetPack) { //req: 游戏区服id，游戏名，账号，密码
-	gameSvrId := req.ReadInt() //玩家手选的区服
-
+func Rpc_login_account_login(req, ack *common.NetPack) {
+	version := req.ReadString()
 	//临时读取buffer数据
 	oldPos := req.ReadPos
-	/*gameName :=*/ req.ReadString()
+	gameName := req.ReadString()
+	//gameSvrId := req.ReadInt() //若手选区服方式，则登录时自己上报节点编号
 	account := req.ReadString()
 	req.ReadPos = oldPos
 
-	pMeta := meta.GetMeta("game", gameSvrId)
-	if pMeta.Port() <= 0 {
-		ack.WriteInt8(-100) //invalid_svrid
-		return
-	}
-	//Notice: 这里必须是同步调用，CallRpc的回调里才能有效使用ack
-	//由于svr_center、svr_login都是http服务器，所以能这么搞
-	//如果是tcp服务，就得分成两条消息，让login主动通知client
-	isSyncCall := false
+	//同步验证账号信息，取得绑定的gameInfo
 	centerSvrId := netConfig.HashCenterID(account)
-	netConfig.CallRpcCenter(centerSvrId, enum.Rpc_center_account_login, func(buf *common.NetPack) {
-		buf.WriteBuf(req.LeftBuf())
-	}, func(recvBuf *common.NetPack) {
-		isSyncCall = true
-		if err := recvBuf.ReadInt8(); err > 0 {
-			//临时读取buffer数据
-			oldPos := recvBuf.ReadPos
-			accountId := recvBuf.ReadUInt32()
-			recvBuf.ReadPos = oldPos
+	netConfig.SyncRelayToCenter(centerSvrId, enum.Rpc_center_account_login, req, ack)
 
-			//生成一个临时token，发给gamesvr、client，用以登录验证
-			token := atomic.AddUint32(&g_login_token, 1)
-			netConfig.CallRpcGame(gameSvrId, enum.Rpc_game_login_token, func(buf *common.NetPack) {
-				buf.WriteUInt32(token)
-				buf.WriteUInt32(accountId)
-			}, func(recvBuf *common.NetPack) { //返回在线人数
-				playerCnt := recvBuf.ReadInt32()
-				g_game_player_cnt.Store(gameSvrId, playerCnt)
-			})
+	if errCode := ack.ReadInt8(); errCode > 0 {
+		accountId := ack.ReadUInt32()
+		var gameInfo SoulKnight.TGameInfo //解析账号上的gameInfo
+		gameInfo.BufToData(ack)
+		ack.Clear()
 
+		//自动选取空闲节点，并绑定到账号上
+		if gameInfo.SvrId == 0 {
+			if gameInfo.SvrId = GetFreeSvrId(version); gameInfo.SvrId > 0 {
+				netConfig.CallRpcCenter(centerSvrId, enum.Rpc_center_set_game_info, func(buf *common.NetPack) {
+					buf.WriteUInt32(accountId)
+					buf.WriteString(gameName)
+					gameInfo.DataToBuf(buf)
+				}, nil)
+			}
+		}
+		assert.True(gameInfo.SvrId > 0)
+
+		//登录成功，设置各类信息
+		gameSvrId := gameInfo.SvrId
+		gatewayId := netConfig.HashGatewayID(accountId) //此玩家要连接的gateway
+
+		//生成一个临时token，发给gamesvr、client用以登录验证
+		token := atomic.AddUint32(&g_login_token, 1)
+		//【Notice: CallRpc接口不是线程安全的，http后台不适用】
+		if conn := netConfig.GetTcpConn("gateway", gatewayId); conn != nil {
+			msg := common.NewNetPackCap(32)
+			msg.SetOpCode(enum.Rpc_gateway_login_token)
+			msg.WriteUInt32(token)
+			msg.WriteUInt32(accountId)
+			msg.WriteInt(gameSvrId)
+			conn.WriteMsg(msg)
+		}
+
+		if pMeta := meta.GetMeta("gateway", gatewayId); pMeta != nil {
 			ack.WriteInt8(1)
+			ack.WriteUInt32(accountId)
 			ack.WriteString(pMeta.OutIP)
 			ack.WriteUInt16(pMeta.Port())
 			ack.WriteUInt32(token)
-			ack.WriteBuf(recvBuf.LeftBuf())
-		} else {
-			ack.WriteInt8(err)
 		}
-	})
-	if isSyncCall == false {
-		panic("Using ack int another CallRpc must be sync!!! zhoumf\n")
+	} else {
+		ack.WriteInt8(errCode)
 	}
 }
 func Rpc_login_relay_to_center(req, ack *common.NetPack) {
@@ -95,4 +119,23 @@ func Rpc_login_get_gamesvr_list(req, ack *common.NetPack) {
 		}
 		ack.WriteInt32(playerCnt)
 	}
+}
+func Rpc_login_set_player_cnt(req, ack *common.NetPack, conn *tcp.TCPConn) {
+	svrId := req.ReadInt()
+	cnt := req.ReadInt32()
+	g_game_player_cnt.Store(svrId, cnt)
+}
+func GetFreeSvrId(version string) int {
+	ret, minCnt := -1, int32(999999)
+	ids, _ := meta.GetModuleIDs("game", version)
+	for _, id := range ids {
+		if v, ok := g_game_player_cnt.Load(id); ok {
+			if cnt := v.(int32); cnt < minCnt {
+				if pMeta := meta.GetMeta("game", id); pMeta != nil && pMeta.IsMatchVersion(version) {
+					ret, minCnt = id, cnt
+				}
+			}
+		}
+	}
+	return ret
 }

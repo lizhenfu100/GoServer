@@ -36,18 +36,6 @@ var (
 	g_database   *mgo.Database
 )
 
-func Init(ip string, port uint16, dbname string) {
-	var err error
-	g_db_session, err = mgo.Dial(fmt.Sprintf("%s:%d", ip, port))
-	if err != nil {
-		gamelog.Error(err.Error())
-		panic("Mongodb Init Failed:" + err.Error())
-	}
-	g_db_session.SetPoolLimit(20)
-	g_database = g_db_session.DB(dbname)
-	_init_inc_ids()
-	go _DBProcess()
-}
 func InitWithUser(ip string, port uint16, dbname, username, password string) {
 	pInfo := &mgo.DialInfo{
 		Addrs:    []string{fmt.Sprintf("%s:%d", ip, port)},
@@ -61,8 +49,10 @@ func InitWithUser(ip string, port uint16, dbname, username, password string) {
 		gamelog.Error(err.Error())
 		panic("Mongodb Init Failed:" + err.Error())
 	}
+	//g_db_session.SetPoolLimit(20)
 	g_database = g_db_session.DB(dbname)
 	_init_inc_ids()
+	_init_svr_args()
 	go _DBProcess()
 }
 
@@ -86,11 +76,20 @@ func UpdateIdSync(table string, id, pData interface{}) bool {
 	}
 	return true
 }
-func RemoveSync(table string, search bson.M) bool {
+func RemoveOneSync(table string, search bson.M) bool {
 	coll := g_database.C(table)
 	err := coll.Remove(search)
 	if err != nil && err != mgo.ErrNotFound {
-		gamelog.Error("RemoveSync error: %v \r\ntable: %s \r\nsearch: %v \r\n", err.Error(), table, search)
+		gamelog.Error("RemoveOneSync error: %v \r\ntable: %s \r\nsearch: %v \r\n", err.Error(), table, search)
+		return false
+	}
+	return true
+}
+func RemoveAllSync(table string, search bson.M) bool {
+	coll := g_database.C(table)
+	_, err := coll.RemoveAll(search)
+	if err != nil && err != mgo.ErrNotFound {
+		gamelog.Error("RemoveAllSync error: %v \r\ntable: %s \r\nsearch: %v \r\n", err.Error(), table, search)
 		return false
 	}
 	return true

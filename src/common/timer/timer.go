@@ -13,38 +13,12 @@
 package timer
 
 import (
-	"gamelog"
-	"runtime/debug"
 	"sync"
 	"time"
 )
 
-func IsToday(day int) bool { return time.Now().Day() == day }
-func WeekInYear() int {
-	_, ret := time.Now().ISOWeek()
-	return ret
-}
-func GetTodayBeginSec() int64 {
-	now := time.Now()
-	todayTime := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	return todayTime.Unix()
-}
-func GetTodayEndSec() int64 {
-	return GetTodayBeginSec() + OneDay_SecCnt
-}
-func GetTodayRunSec() int64 {
-	now := time.Now()
-	return int64(now.Hour()*3600 + now.Minute()*60 + now.Second())
-}
-func GetTodayLeftSec() int64 {
-	return OneDay_SecCnt - GetTodayRunSec()
-}
-
-const (
-	OneDay_SecCnt = 24 * 3600
-	INT_MAX       = 0x7FFFFFFF
-)
-
+// ------------------------------------------------------------
+// 计时器
 type TimeHandler interface {
 	OnTimerRefresh(now int64) bool //失败即停止循环
 	OnTimerRunEnd(now int64)
@@ -62,7 +36,21 @@ type Timer struct {
 	delLst  []TimerFunc
 }
 
-//! 计时器
+func NewHourTimer(interval time.Duration) *Timer {
+	return _Newimer(interval * time.Hour)
+}
+func NewMinuteTimer(interval time.Duration) *Timer {
+	return _Newimer(interval * time.Minute)
+}
+func NewSecondTimer(interval time.Duration) *Timer {
+	return _Newimer(interval * time.Second)
+}
+func _Newimer(interval time.Duration) *Timer {
+	p := new(Timer)
+	go p._OnTimer(interval)
+	return p
+}
+
 func (self *Timer) _OnTimer(interval time.Duration) {
 	timer := time.NewTimer(interval)
 	for {
@@ -117,23 +105,6 @@ func (self *Timer) _OnTimerFunc(now int64) {
 	}
 }
 
-// ------------------------------------------------------------
-// API
-func NewHourTimer(interval time.Duration) *Timer {
-	return _Newimer(interval * time.Hour)
-}
-func NewMinuteTimer(interval time.Duration) *Timer {
-	return _Newimer(interval * time.Minute)
-}
-func NewSecondTimer(interval time.Duration) *Timer {
-	return _Newimer(interval * time.Second)
-}
-func _Newimer(interval time.Duration) *Timer {
-	p := new(Timer)
-	go p._OnTimer(interval)
-	return p
-}
-
 //  延时多久后开始执行
 //! 用于简单逻辑调用：可重复添加
 func (self *Timer) AddTimeFunc(delaySec int64, cdSec, runSec int, handler TimeHandler) {
@@ -180,30 +151,28 @@ type TimerChan struct {
 	timerChan chan func()
 }
 
-func NewTimer(chanSize int) *TimerChan {
-	self := new(TimerChan)
-	self.timerChan = make(chan func(), chanSize)
-	return self
-}
+var G_TimerChan *TimerChan
+
+func NewTimerChan(chanSize int) *TimerChan { return &TimerChan{make(chan func(), chanSize)} }
 
 /*
-	t := AfterFunc()
-	t.Stop()
+	ret := AfterFunc()
+	ret.Stop()
 */
 func (self *TimerChan) AfterFunc(d time.Duration, callback func()) *time.Timer {
-	safeFun := func() {
-		defer func() {
-			if r := recover(); r != nil {
-				gamelog.Error("recover Timer:%v %s", r, debug.Stack())
-			}
-		}()
-		callback()
-	}
+	//safeFun := func() {
+	//	defer func() {
+	//		if r := recover(); r != nil {
+	//			gamelog.Error("recover Timer:%v %s", r, debug.Stack())
+	//		}
+	//	}()
+	//	callback()
+	//}
 	return time.AfterFunc(d, func() {
-		self.timerChan <- safeFun
+		self.timerChan <- callback //safeFun
 	})
 }
-func (self *TimerChan) Refresh() {
+func (self *TimerChan) Update() {
 	for {
 		select {
 		case cb := <-self.timerChan:

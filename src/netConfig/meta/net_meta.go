@@ -84,6 +84,7 @@ func (self *Meta) BufToData(buf *common.NetPack) {
 	self.HttpPort = buf.ReadUInt16()
 	self.Maxconn = buf.ReadInt()
 	length := buf.ReadByte()
+	self.ConnectLst = self.ConnectLst[:0]
 	for i := byte(0); i < length; i++ {
 		str := buf.ReadString()
 		self.ConnectLst = append(self.ConnectLst, str)
@@ -120,7 +121,10 @@ func GetMeta(module string, svrID int) *Meta {
 //	}
 //}
 func DelMeta(module string, svrID int) { G_SvrNets.Delete(common.KeyPair{module, svrID}) }
-func AddMeta(ptr *Meta)                { gamelog.Info("AddMeta: %s:%d", ptr.Module, ptr.SvrID);G_SvrNets.Store(common.KeyPair{ptr.Module, ptr.SvrID}, ptr) }
+func AddMeta(ptr *Meta) {
+	gamelog.Debug("AddMeta: %s:%d", ptr.Module, ptr.SvrID)
+	G_SvrNets.Store(common.KeyPair{ptr.Module, ptr.SvrID}, ptr)
+}
 
 func GetModuleIDs(module, version string) (ret []int, ok bool) {
 	G_SvrNets.Range(func(k, v interface{}) bool {

@@ -13,10 +13,13 @@ var (
 )
 
 const (
-	DB_Insert       = byte(1)
-	DB_Update_Field = byte(2)
-	DB_Update_Id    = byte(3)
-	DB_Update_All   = byte(4)
+	_ = iota
+	DB_Insert
+	DB_Update_Field
+	DB_Update_Id
+	DB_Update_All
+	DB_Remove_One
+	DB_Remove_All
 )
 
 type TDB_Param struct {
@@ -47,9 +50,13 @@ func _DBProcess() {
 			err = pColl.UpdateId(param.search, param.data)
 		case DB_Update_All:
 			_, err = pColl.UpdateAll(param.search, param.data)
+		case DB_Remove_One:
+			err = pColl.Remove(param.search)
+		case DB_Remove_All:
+			_, err = pColl.RemoveAll(param.search)
 		}
 		if err != nil {
-			gamelog.Error("DBProcess Failed: table[%s] search[%v], stuff[%v], Error[%v]",
+			gamelog.Error("DBProcess Failed: table[%s] search[%v], data[%v], Error[%v]",
 				param.table, param.search, param.data, err.Error())
 		}
 	}
@@ -70,12 +77,26 @@ func UpdateIdToDB(table string, id, data interface{}) {
 		data:   data,
 	}
 }
-func UpdateToDBAll(table string, search, data bson.M) {
+func UpdateAllToDB(table string, search, data bson.M) {
 	g_param_chan <- &TDB_Param{
 		optype: DB_Update_All,
 		table:  table,
 		search: search,
 		data:   data,
+	}
+}
+func RemoveToDB(table string, search bson.M) {
+	g_param_chan <- &TDB_Param{
+		optype: DB_Remove_One,
+		table:  table,
+		search: search,
+	}
+}
+func RemoveAllToDB(table string, search bson.M) {
+	g_param_chan <- &TDB_Param{
+		optype: DB_Remove_All,
+		table:  table,
+		search: search,
 	}
 }
 func InsertToDB(table string, data interface{}) {

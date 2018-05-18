@@ -41,8 +41,8 @@ import (
 )
 
 const (
-	Idle_Max_Second     = 60 //须客户端心跳包
-	ReLogin_Wait_Second = time.Second * 120
+	Idle_Max_Minute   = 60 //须客户端心跳包
+	ReLogin_Wait_Time = time.Minute * 5
 )
 
 type TPlayerBase struct {
@@ -62,7 +62,7 @@ type iModule interface {
 }
 type TPlayer struct {
 	_isOnlnie int32
-	_idleSec  uint32 //每次收到消息时归零
+	_idleMin  uint32 //每次收到消息时归零
 	conn      *tcp.TCPConn
 	//askchan   chan func(*TPlayer)
 
@@ -72,6 +72,7 @@ type TPlayer struct {
 	Mail    TMailModule
 	Friend  TFriendMoudle
 	team    Team
+	Battle  TBattleModule
 }
 
 func _NewPlayer() *TPlayer {
@@ -85,6 +86,7 @@ func (self *TPlayer) init() {
 		&self.Mail,
 		&self.Friend,
 		&self.team,
+		&self.Battle,
 	}
 }
 
@@ -97,7 +99,8 @@ func NewPlayerInDB(accountId uint32, name string) *TPlayer {
 	// }
 	player.Name = name
 	player.AccountID = accountId
-	player.PlayerID = dbmgo.GetNextIncId("PlayerId")
+	player.PlayerID = accountId //一个账户下仅一个角色的游戏，可令pid=aid
+	//player.PlayerID = dbmgo.GetNextIncId("PlayerId")
 
 	if dbmgo.InsertSync("Player", &player.TPlayerBase) {
 		for _, v := range player.modules {
@@ -120,17 +123,18 @@ func LoadPlayerFromDB(key string, val uint32) *TPlayer {
 	return nil
 }
 func (self *TPlayer) WriteAllToDB() {
-	if dbmgo.UpdateIdSync("Player", self.PlayerID, &self.TPlayerBase) {
-		for _, v := range self.modules {
-			v.WriteToDB()
-		}
+	dbmgo.UpdateIdToDB("Player", self.PlayerID, &self.TPlayerBase)
+	for _, v := range self.modules {
+		v.WriteToDB()
 	}
 }
 func (self *TPlayer) Login(conn *tcp.TCPConn) {
 	atomic.StoreInt32(&self._isOnlnie, 1)
-	atomic.SwapUint32(&self._idleSec, 0)
+	atomic.SwapUint32(&self._idleMin, 0)
 	self.LoginTime = time.Now().Unix()
-	self.conn = conn
+	if self.conn = conn; conn.UserPtr == nil { //链接可能是gateway节点
+		conn.UserPtr = self
+	}
 	for _, v := range self.modules {
 		v.OnLogin()
 	}
@@ -150,7 +154,7 @@ func (self *TPlayer) Logout() {
 	G_ServiceMgr.UnRegister(Service_Check_AFK, self)
 
 	//Notice: AfterFunc是在另一线程执行，所以传入函数必须线程安全
-	time.AfterFunc(ReLogin_Wait_Second, func() {
+	time.AfterFunc(ReLogin_Wait_Time, func() {
 		// 延时删除，提升重连效率
 		if !self.IsOnline() && FindAccountId(self.AccountID) != nil {
 			gamelog.Debug("Aid(%d) Delete", self.AccountID)
@@ -173,7 +177,7 @@ const ( //须与ServiceMgr初始化顺序一致
 func init() {
 	G_ServiceMgr = service.ServiceMgr{[]service.IService{
 		service.NewServicePatch(_Service_Write_DB, 15*60*1000),
-		service.NewServiceVec(_Service_Check_AFK, 1000),
+		service.NewServiceVec(_Service_Check_AFK, 60*1000),
 	}}
 }
 func _Service_Write_DB(ptr interface{}) {
@@ -183,8 +187,7 @@ func _Service_Write_DB(ptr interface{}) {
 }
 func _Service_Check_AFK(ptr interface{}) {
 	if player, ok := ptr.(*TPlayer); ok && player.IsOnline() {
-		atomic.AddUint32(&player._idleSec, 1)
-		if atomic.LoadUint32(&player._idleSec) > Idle_Max_Second {
+		if atomic.AddUint32(&player._idleMin, 1) > Idle_Max_Minute {
 			gamelog.Debug("Aid(%d) AFK", player.AccountID)
 			player.Logout()
 		}

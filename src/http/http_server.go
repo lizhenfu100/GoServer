@@ -34,10 +34,10 @@ func _reg_to_svr(w http.ResponseWriter, r *http.Request) {
 		gamelog.Error("RegistToSvr common.ToStruct: %s", err.Error())
 		return
 	}
-	gamelog.Info("RegistToSvr: {%s %d}", pMeta.Module, pMeta.SvrID)
 
 	meta.AddMeta(pMeta)
 	AppendNetMeta(pMeta)
+	gamelog.Info("RegistToSvr: %v", pMeta)
 
 	defer func() {
 		w.Write([]byte("ok"))

@@ -28,16 +28,18 @@ const (
 )
 
 type Func struct {
-	Pack string //package
-	Name string
+	Pack string //函数所在包名
+	Name string //函数名
 }
 type RpcInfo struct {
-	Module     string
-	PackDirs   map[string]bool
+	Module     string          //模块名：game、login、gateway...
+	PackDirs   map[string]bool //import需要：rpc涉及到的包路径
 	TcpRpc     []Func
 	HttpRpc    []Func
 	PlayerRpc  []Func
 	HttpHandle []Func
+
+	RegPlayerRpcPack string //玩家rpc注册函数所在包名
 }
 
 func generatRpcRegist(svr string) *RpcInfo {
@@ -55,10 +57,12 @@ func generatRpcRegist(svr string) *RpcInfo {
 				pinfo.TcpRpc = append(pinfo.TcpRpc, Func{pack, fname})
 			} else if fname = getHttpRpc(line); fname != "" {
 				pinfo.HttpRpc = append(pinfo.HttpRpc, Func{pack, fname})
-			} else if fname = getPlayerRpc(line); fname != "" {
-				pinfo.PlayerRpc = append(pinfo.PlayerRpc, Func{pack, fname})
 			} else if fname = getHttpHandle(line); fname != "" {
 				pinfo.HttpHandle = append(pinfo.HttpHandle, Func{pack, fname})
+			} else if fname = getPlayerRpc(line); fname != "" {
+				pinfo.PlayerRpc = append(pinfo.PlayerRpc, Func{pack, fname})
+			} else if fname = getRegPlayerRpc(line); fname != "" {
+				pinfo.RegPlayerRpcPack = pack
 			}
 			if packdir != "" && fname != "" {
 				pinfo.PackDirs[packdir] = true
@@ -94,7 +98,7 @@ func getHttpRpc(s string) string {
 	return ""
 }
 func getPlayerRpc(s string) string {
-	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack, \w+ \*.*TPlayer\) \{`, s); ok {
+	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack, this \*.+\) \{`, s); ok {
 		reg := regexp.MustCompile(`Rpc_\w+`)
 		return reg.FindAllString(s, -1)[0]
 	}
@@ -104,6 +108,12 @@ func getHttpHandle(s string) string {
 	if ok, _ := regexp.MatchString(`^func Http_\w+\(\w+ http.ResponseWriter, \w+ \*http.Request\) \{`, s); ok {
 		reg := regexp.MustCompile(`Http_\w+`)
 		return reg.FindAllString(s, -1)[0][5:]
+	}
+	return ""
+}
+func getRegPlayerRpc(s string) string {
+	if ok, _ := regexp.MatchString(`^func RegPlayerRpc\(\w+ map\[uint16\]PlayerRpc\) \{`, s); ok {
+		return "RegPlayerRpc"
 	}
 	return ""
 }
@@ -133,7 +143,7 @@ func init() {
 		})
 	{{end}}
 	{{if .PlayerRpcCnt}}
-		player.RegPlayerRpc(map[uint16]player.PlayerRpc{
+		{{.RegPlayerRpcPack}}.RegPlayerRpc(map[uint16]{{.RegPlayerRpcPack}}.PlayerRpc{
 			{{range .PlayerRpc}}enum.{{.Name}}: {{.Pack}}.{{.Name}},
 			{{end}}
 		})

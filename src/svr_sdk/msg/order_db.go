@@ -24,7 +24,7 @@ type TOrderInfo struct {
 	Pf_id          string //平台名（如oppo）
 	Pk_id          string //包id
 	Pay_id         int    //支付商id（不同平台下的同一种支付渠道pay_id必须一样）
-	Op_id          int    //运营商 注：1代表移动。2代表联通 3代表电信
+	Op_id          int    //运营商 注：1代表移动 2代表联通 3代表电信
 	App_id         string //应用id
 	Server_id      int    //服务器id（只有一个服务器的话，默认传1）
 	Account        string //账号（没有必须传空字符）
@@ -44,6 +44,7 @@ type TOrderInfo struct {
 	Status         int    //1成功 0失败（第三方通告）
 	Can_send       int    //1能发货 （client发货后置0）
 	Time           int64
+	Extra          string
 }
 
 var g_order_map sync.Map
@@ -59,8 +60,14 @@ func CreateOrderInDB(ptr *TOrderInfo) bool {
 	return false
 }
 func FindOrder(orderId string) *TOrderInfo {
-	if v, ok := g_order_map.Load(orderId); ok {
+	if orderId == "" || orderId == "0" {
+
+	} else if v, ok := g_order_map.Load(orderId); ok {
 		return v.(*TOrderInfo)
+	} else {
+		if ptr := new(TOrderInfo); dbmgo.Find("Order", "_id", orderId, ptr) {
+			return ptr
+		}
 	}
 	return nil
 }
@@ -68,8 +75,8 @@ func ConfirmOrder(ptr *TOrderInfo) {
 	ptr.Can_send = 0
 	dbmgo.UpdateToDB("Order", bson.M{"_id": ptr.Order_id}, bson.M{"$set": bson.M{"can_send": 0}})
 	g_order_map.Delete(ptr.Order_id)
-
-	//删除内存中滞留一天的订单
+}
+func DeleteTimeOutOrder() { //删除内存中滞留一天的订单
 	timenow := time.Now().Unix()
 	g_order_map.Range(func(k, v interface{}) bool {
 		if timenow-v.(*TOrderInfo).Time > 24*3600 {
@@ -80,12 +87,12 @@ func ConfirmOrder(ptr *TOrderInfo) {
 }
 func InitDB() {
 	//删除超过7天的无效订单
-	dbmgo.RemoveSync("Order", bson.M{
+	dbmgo.RemoveAllSync("Order", bson.M{
 		"status": 0, "can_send": 0,
 		"time": bson.M{"$lt": time.Now().Unix() - 7*24*3600},
 	})
 	//删除数据库里超过30天的订单
-	dbmgo.RemoveSync("Order", bson.M{"time": bson.M{"$lt": time.Now().Unix() - 30*24*3600}})
+	dbmgo.RemoveAllSync("Order", bson.M{"time": bson.M{"$lt": time.Now().Unix() - 30*24*3600}})
 	//载入所有未完成订单
 	var list []TOrderInfo
 	dbmgo.FindAll("Order", bson.M{"can_send": 1}, &list)
@@ -93,4 +100,10 @@ func InitDB() {
 		g_order_map.Store(list[i].Order_id, &list[i])
 	}
 	println("load active order form db: ", len(list))
+
+	go func() {
+		for range time.Tick(time.Hour * 24) {
+			DeleteTimeOutOrder()
+		}
+	}()
 }

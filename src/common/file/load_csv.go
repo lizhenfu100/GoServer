@@ -219,7 +219,7 @@ func SetField(field reflect.Value, s string) {
 					vec := strings.Split(sFix, ",")
 					field.Set(reflect.ValueOf(vec))
 				}
-			case reflect.Int, reflect.Struct, reflect.Slice:
+			case reflect.Int, reflect.Uint32, reflect.Float32, reflect.Struct, reflect.Slice:
 				{
 					if err := json.Unmarshal([]byte(s), field.Addr().Interface()); err != nil {
 						fmt.Errorf("Field Parse Error: (content=%v): %v", s, err)

@@ -1,10 +1,5 @@
 package service
 
-type ServiceObj struct {
-	pObj  interface{}
-	isReg bool //注册或注销对象
-}
-
 // -------------------------------------
 // -- 花一段时长，遍历完所有对象
 type ServicePatch struct {
@@ -47,6 +42,8 @@ func (self *ServicePatch) _doUnRegister(pObj interface{}) {
 			self.obj_lst = append(self.obj_lst[:i], self.obj_lst[i+1:]...)
 			if i < self.runPos {
 				self.runPos--
+			} else if self.runPos >= len(self.obj_lst) {
+				self.runPos = 0
 			}
 			return
 		}
@@ -72,11 +69,10 @@ func (self *ServicePatch) _runSevice(timelapse int) {
 	}
 
 	for i := 0; i < runCnt; i++ {
-		ptr := self.obj_lst[self.runPos]
-		self.runPos++
-		if self.runPos == len(self.obj_lst) { //到末尾了，回到队头
+		obj := self.obj_lst[self.runPos]
+		if self.runPos++; self.runPos >= len(self.obj_lst) { //到末尾了，回到队头
 			self.runPos = 0
 		}
-		self.callback(ptr)
+		self.callback(obj)
 	}
 }

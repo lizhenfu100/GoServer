@@ -1,7 +1,9 @@
 /***********************************************************************
 * @ 排行榜：数组交换式
 * @ brief
-	、TODO：有待进一步优化
+	1、从大到小排序，1起始
+	2、数组缓存Top N，变动时上下移动
+	3、整个排行榜系统包括两部分，本模块负责排序，具体业务模块需单独结构负责存储
 
 * @ author zhoumf
 * @ date 2017-9-30
@@ -9,184 +11,105 @@
 package math
 
 import (
-	"fmt"
+	"common/assert"
+	"dbmgo"
 	"sort"
-	"sync"
 )
 
-type TRankItem struct {
-	RankID    int32
-	RankValue int
+type IRankItem interface {
+	GetRank() uint
+	SetRank(uint)
+	Less(IRankItem) bool //内部强转为结构体指针，支持多层级的比对，如：先积分、再等级...
 }
-type TRankList []*TRankItem
 type TRanker struct {
-	sync.Mutex
-	List    TRankList
-	ShowNum int //显示数量
-	RankNum int //排行数量
+	_arr   []IRankItem //0位留空，序号1起始
+	_last  uint
+	_table string //数据库表名
 }
 
-func (list TRankList) Len() int {
-	return len(list)
-}
-func (list TRankList) Less(i, j int) bool {
-	if list[i].RankValue > list[j].RankValue {
-		return true
-	}
-
-	return false
-}
-func (list *TRankList) Swap(i, j int) {
-	var pItem *TRankItem = (*list)[i]
-	(*list)[i] = (*list)[j]
-	(*list)[j] = pItem
+func (self *TRanker) Init(table string, amount int, pRankItemSlice interface{}) {
+	self._last = 0
+	self._table = table
+	self._arr = make([]IRankItem, amount+1)
+	dbmgo.FindAll(table, nil, pRankItemSlice)
 }
 
-//show 显示的条数
-//rank 总的排名条数
-func (ranker *TRanker) InitRanker(show int, rank int) {
-	ranker.ShowNum = show
-	ranker.RankNum = rank
-	ranker.List = make([]*TRankItem, rank)
-	for i := 0; i < len(ranker.List); i++ {
-		ranker.List[i] = &TRankItem{0, -1}
+func (self *TRanker) OnValueChange(obj IRankItem) bool {
+	oldRank := obj.GetRank()
+	newIdx := self.SearchIndex(obj)
+	if oldRank > 0 { //已上榜
+		self.MoveToIndex(newIdx, oldRank)
+	} else if newIdx > 0 { //之前未上榜
+		self.InsertToIndex(newIdx, obj)
 	}
+	return oldRank == obj.GetRank()
 }
-func (ranker *TRanker) Clear() {
-	for i := 0; i < len(ranker.List); i++ {
-		ranker.List[i].RankID = 0
-		ranker.List[i].RankValue = -1
-	}
-}
-func (ranker *TRanker) SetRankItem(rankid int32, rankvalue int) int {
-	ranker.Lock()
-	defer ranker.Unlock()
-	nCount := len(ranker.List)
-	MinValue := ranker.List[nCount-1].RankValue
-	if rankvalue <= MinValue {
-		return -1
-	}
 
-	targetIndex := sort.Search(nCount, func(i int) bool {
-		if ranker.List[i].RankValue <= rankvalue {
-			return true
-		}
-		return false
+func (self *TRanker) Clear() {
+	for i := uint(0); i <= self._last; i++ {
+		self._arr[i] = nil
+	}
+	self._last = 0
+	dbmgo.RemoveAllToDB(self._table, nil)
+}
+func (self *TRanker) GetRanker(rank uint) IRankItem {
+	if rank <= self._last {
+		return self._arr[rank]
+	}
+	return nil
+}
+func (self *TRanker) GetLastRanker() IRankItem { return self._arr[self._last] }
+
+func (self *TRanker) _WriteDB(obj IRankItem) {
+	if dbmgo.InsertSync(self._table, obj) {
+	} else {
+		dbmgo.UpdateIdToDB(self._table, obj.GetRank(), obj)
+	}
+}
+
+func (self *TRanker) SearchIndex(obj IRankItem) uint {
+	//Search()方法回使用“二分查找”算法来搜索某指定切片[0:n]，并返回能够使f(i)=true的最小i
+	//找不到返回n，而不是-1
+	idx := sort.Search(len(self._arr), func(i int) bool {
+		return i > 0 && (self._arr[i] == nil || self._arr[i].Less(obj))
 	})
-
-	myIndex := nCount - 1
-	for i := targetIndex; i < nCount; i++ {
-		if ranker.List[i].RankID == rankid || ranker.List[i].RankID == 0 {
-			ranker.List[i].RankValue = rankvalue
-			ranker.List[i].RankID = rankid
-			myIndex = i
-			break
-		}
-	}
-
-	if myIndex == targetIndex {
-		return targetIndex
-	}
-
-	for i := myIndex; i > targetIndex; i-- {
-		ranker.List[i].RankID = ranker.List[i-1].RankID
-		ranker.List[i].RankValue = ranker.List[i-1].RankValue
-	}
-
-	ranker.List[targetIndex].RankID = rankid
-	ranker.List[targetIndex].RankValue = rankvalue
-	return targetIndex
-}
-
-//for fight value ranker
-func (ranker *TRanker) SetRankItemEx(rankid int32, orgvalue int, newvalue int) {
-	ranker.Lock()
-	defer ranker.Unlock()
-	nCount := len(ranker.List)
-	MinValue := ranker.List[nCount-1].RankValue
-
-	myIndex := -1
-
-	if orgvalue >= MinValue {
-		for i := 0; i < nCount; i++ {
-			if rankid == ranker.List[i].RankID {
-				myIndex = i
-				break
-			}
-		}
-	}
-
-	if myIndex >= 0 {
-		ranker.List[myIndex].RankValue = newvalue
-		sort.Sort(&ranker.List)
-		return
-	}
-
-	if newvalue > MinValue {
-		ranker.List[nCount-1].RankID = rankid
-		ranker.List[nCount-1].RankValue = newvalue
-		sort.Sort(&ranker.List)
-	}
-
-	return
-}
-
-func (ranker *TRanker) GetRankIndex(rankid int32, rankvalue int) int {
-	nCount := len(ranker.List)
-	MinValue := ranker.List[nCount-1].RankValue
-	if rankvalue <= MinValue {
-		return -1
-	}
-
-	targetIndex := sort.Search(nCount,
-		func(i int) bool {
-			if ranker.List[i].RankValue <= rankvalue {
-				return true
-			}
-			return false
-		})
-
-	if targetIndex == nCount {
-		return -1
-	}
-
-	for i := targetIndex; i >= 0; i-- {
-		if ranker.List[i].RankID == rankid {
-			return i + 1
-		}
-	}
-
-	return -1
-}
-
-func (ranker *TRanker) ForeachShow(handler func(int32, int)) {
-	sum := 0
-	for _, v := range ranker.List {
-		if sum >= ranker.ShowNum || v.RankID == 0 {
-			break
-		}
-		sum++
-		handler(v.RankID, v.RankValue)
+	if idx == len(self._arr) {
+		return 0
+	} else {
+		return uint(idx)
 	}
 }
-
-func (ranker *TRanker) CopyFrom(src *TRanker) {
-	if src == nil || src.List == nil {
-		return
-	}
-	for i := 0; i < len(src.List); i++ {
-		if i >= ranker.RankNum || src.List[i].RankID <= 0 {
-			break
+func (self *TRanker) MoveToIndex(dst, src uint) {
+	assert.True(dst <= self._last && src <= self._last)
+	tmp := self._arr[src]
+	if src > dst {
+		copy(self._arr[dst+1:], self._arr[dst:src]) //dst后移一步
+		self._arr[dst] = tmp
+		for i := dst; i <= src; i++ {
+			self._arr[i].SetRank(i)
+			self._WriteDB(self._arr[i])
 		}
-		ranker.List[i].RankID = src.List[i].RankID
-		ranker.List[i].RankValue = src.List[i].RankValue
+	} else if src < dst {
+		copy(self._arr[src:dst], self._arr[src+1:]) //src+1前移一步
+		self._arr[dst] = tmp
+		for i := src; i <= dst; i++ {
+			self._arr[i].SetRank(i)
+			self._WriteDB(self._arr[i])
+		}
 	}
-
-	return
 }
-
-func (ranker *TRanker) Print() {
-	for i := 0; i < len(ranker.List); i++ {
-		fmt.Println(ranker.List[i])
+func (self *TRanker) InsertToIndex(idx uint, obj IRankItem) {
+	if idx > self._last {
+		self._last++
+		idx = self._last
+	}
+	if self._arr[self._last] != nil {
+		self._arr[self._last].SetRank(0) //尾名被挤出
+	}
+	copy(self._arr[idx+1:], self._arr[idx:self._last])
+	self._arr[idx] = obj
+	for i := idx; i <= self._last; i++ {
+		self._arr[i].SetRank(i)
+		self._WriteDB(self._arr[i])
 	}
 }

@@ -1,6 +1,7 @@
 package common
 
 import (
+	"common/assert"
 	"math"
 	"sync"
 )
@@ -104,14 +105,9 @@ func (self *ByteBuffer) ReadString() (ret string) {
 	}
 	return
 }
-func (self *ByteBuffer) ReadByte() (ret byte) {
-	if self.readableBytes() >= 1 {
-		ret = self.buf[self.ReadPos]
-		self.ReadPos += 1
-	}
-	return
-}
-func (self *ByteBuffer) ReadInt() int { return int(self.ReadInt32()) }
+func (self *ByteBuffer) ReadBool() bool { return self.ReadUInt8() > 0 }
+func (self *ByteBuffer) ReadByte() byte { return byte(self.ReadUInt8()) }
+func (self *ByteBuffer) ReadInt() int   { return int(self.ReadInt32()) }
 func (self *ByteBuffer) ReadInt8() (ret int8) {
 	if self.readableBytes() >= 1 {
 		ret = int8(self.buf[self.ReadPos])
@@ -205,7 +201,7 @@ func malloc() *ByteBuffer {
 	return buf
 }
 func (p *ByteBuffer) Free() {
-	Assert(p.ReadPos >= 0) //防止同片内存重复归还
+	assert.True(p.ReadPos >= 0) //防止同片内存重复归还
 	p.buf = p.buf[:0]
 	p.ReadPos = -99999
 	g_pool.Put(p)

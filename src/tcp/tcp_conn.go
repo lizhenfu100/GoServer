@@ -61,6 +61,7 @@ import (
 	"generate_out/rpc/enum"
 	"io"
 	"net"
+	"runtime/debug"
 	"sync/atomic"
 	"time"
 )
@@ -78,7 +79,7 @@ var (
 		enum.Rpc_unregist:   _Rpc_unregist,
 		enum.Rpc_svr_accept: _Rpc_svr_accept,
 	}
-	G_RpcQueue = NewRpcQueue(4096)
+	G_RpcQueue = NewRpcQueue(Msg_Queue_Cap)
 )
 
 type TCPConn struct {
@@ -144,8 +145,14 @@ func (self *TCPConn) WriteBuf(buf []byte) {
 	select {
 	case self.writeChan <- buf: //chan满后再写即阻塞，select进入default分支报错
 	default:
-		gamelog.Error("WriteBuf: channel full")
-		self.Close()
+		gamelog.Error("WriteBuf: channel full %s", debug.Stack())
+		/* 连接无效bug
+		1、tcp_conn断开后，业务层还是能调write接口的，消息缓存在writeChan里，它被塞满后，即使重连依然会立即失效
+		2、连接建立流程是：先发首条消息、注册消息，再开读写协程
+		3、writeChan满后，调发送接口即引发关闭~
+		4、还是只抛弃，记录错误堆栈，更健壮些
+		*/
+		//self.Close()
 		//close(self.writeChan) //重连chan里的数据得保留
 	}
 }
@@ -181,7 +188,7 @@ LOOP:
 				}
 			}
 			if err != nil {
-				gamelog.Error("WriteRoutine Flush error: %s", err.Error())
+				gamelog.Error("(%p)WriteRoutine Flush error: %s", self.conn, err.Error())
 				break LOOP
 			}
 			//FIXME: 这里能不能加句 sleep(10ms)，让包更易积累，合并发送；不加的话，调度权就完全依赖golang了，其实只要不是写一个包就唤醒一次，问题不大
@@ -206,12 +213,12 @@ func (self *TCPConn) readRoutine() {
 		}
 		_, err = io.ReadFull(self.reader, msgHeader)
 		if err != nil {
-			gamelog.Error("ReadFull msgHeader error: %s", err.Error())
+			gamelog.Error("(%p)ReadFull msgHeader error: %s", self.conn, err.Error())
 			break
 		}
 		msgLen = int(binary.LittleEndian.Uint16(msgHeader))
 		if msgLen <= 0 || msgLen > Msg_Size_Max {
-			gamelog.Error("ReadProcess Invalid msgLen :%d", msgLen)
+			gamelog.Error("invalid msgLen: %d", msgLen)
 			break
 		}
 		//packet.Reset(msgBuf[:msgLen]) //每次都操作的同片内存
@@ -219,7 +226,7 @@ func (self *TCPConn) readRoutine() {
 
 		_, err = io.ReadFull(self.reader, packet.Data())
 		if err != nil {
-			gamelog.Error("ReadFull msgData error: %s", err.Error())
+			gamelog.Error("(%p)ReadFull msgData error: %s", self.conn, err.Error())
 			break
 		}
 
@@ -227,7 +234,8 @@ func (self *TCPConn) readRoutine() {
 
 		//【Notice: 在io线程直接调消息响应函数(多线程处理玩家操作)，玩家之间互改数据须考虑竞态问题(可用actor模式解决)】
 		//【Notice: 若友好支持玩家强交互，可将packet放入主逻辑循环的消息队列(SafeQueue)】
-		G_RpcQueue.Insert(self, packet)
+		G_RpcQueue.Insert(self, packet) //转至逻辑线程处理消息
+		//G_RpcQueue._Handle(self, packet) //直接在io线程处理消息，响应函数中须考虑竞态问题了
 	}
 	self.Close()
 }

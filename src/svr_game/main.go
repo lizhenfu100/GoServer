@@ -34,6 +34,8 @@ func main() {
 
 	component.RegisterToZookeeper()
 
+	logic.InitTimeUpdate()
+
 	go logic.MainLoop()
 
 	netConfig.RunNetSvr()

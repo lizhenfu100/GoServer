@@ -22,6 +22,7 @@ import (
 
 type (
 	// 与player强绑定的rpc，见player_rpc.go
+	// PlayerRpc func(req, ack *common.NetPack, this *Type)
 	TcpRpc     func(req, ack *common.NetPack, conn *tcp.TCPConn)
 	HttpRpc    func(req, ack *common.NetPack)
 	HttpHandle func(http.ResponseWriter, *http.Request)

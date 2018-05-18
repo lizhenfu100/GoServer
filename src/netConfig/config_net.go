@@ -26,6 +26,7 @@ package netConfig
 
 import (
 	"common"
+	"common/assert"
 	"fmt"
 	"gamelog"
 	"http"
@@ -41,7 +42,7 @@ var (
 
 func RunNetSvr() {
 	//1、找到当前的配置信息
-	common.Assert(G_Local_Meta != nil)
+	assert.True(G_Local_Meta != nil)
 
 	//2、连接/注册其它模块
 	if nil == meta.GetMeta("zookeeper", 0) { //没有zookeeper节点，才依赖配置，否则依赖zookeeper的通知

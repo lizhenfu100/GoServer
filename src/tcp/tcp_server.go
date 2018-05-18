@@ -38,8 +38,10 @@ func (self *TCPServer) run() {
 	defer self.wgLn.Done()
 	var tempDelay time.Duration
 	for {
-		conn, err := self.listener.Accept()
-		if err != nil {
+		if conn, err := self.listener.Accept(); err == nil {
+			tempDelay = 0
+			go self._HandleAcceptConn(conn)
+		} else {
 			if ne, ok := err.(net.Error); ok && ne.Temporary() {
 				if tempDelay == 0 {
 					tempDelay = 5 * time.Millisecond
@@ -56,8 +58,6 @@ func (self *TCPServer) run() {
 			gamelog.Error("accept error: %s", err.Error())
 			return
 		}
-		tempDelay = 0
-		go self._HandleAcceptConn(conn)
 	}
 }
 func (self *TCPServer) _HandleAcceptConn(conn net.Conn) {
@@ -65,7 +65,7 @@ func (self *TCPServer) _HandleAcceptConn(conn net.Conn) {
 	conn.SetReadDeadline(time.Now().Add(5 * time.Second)) //首次读，5秒超时防连接占用攻击；client无需超时限制
 	if _, err := io.ReadFull(conn, buf); err != nil {
 		conn.Close()
-		gamelog.Error("RecvFirstPack: %s", err.Error())
+		gamelog.Error("(%p)RecvFirstPack: %s", conn, err.Error())
 		return
 	}
 	connId := binary.LittleEndian.Uint32(buf[2:])
@@ -80,7 +80,7 @@ func (self *TCPServer) _HandleAcceptConn(conn net.Conn) {
 	}
 }
 func (self *TCPServer) _AddNewConn(conn net.Conn) {
-	if self.connCnt >= self.MaxConnNum {
+	if atomic.LoadInt32(&self.connCnt) >= self.MaxConnNum {
 		conn.Close()
 		gamelog.Error("too many connections")
 		return
@@ -99,7 +99,7 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 		if tcpConn.IsClose() {
 			self.connmap.Delete(connId)
 			atomic.AddInt32(&self.connCnt, -1)
-			gamelog.Debug("Disconnect: DelConnId: %d %v", connId, tcpConn.UserPtr)
+			gamelog.Debug("DelConnId: %d %v", connId, tcpConn.UserPtr)
 
 			//通知逻辑线程，连接断开
 			packet := common.NewNetPackCap(16)
@@ -176,14 +176,22 @@ func _Rpc_regist(req, ack *common.NetPack, conn *TCPConn) {
 	pMeta.BufToData(req)
 	conn.UserPtr = pMeta
 
-	g_reg_conn_map.Store(common.KeyPair{pMeta.Module, pMeta.SvrID}, conn)
-	meta.AddMeta(pMeta)
-	gamelog.Info("RegistToSvr: {%s %d}", pMeta.Module, pMeta.SvrID)
+	isRegist := false
+	if ptr := FindRegModule(pMeta.Module, pMeta.SvrID); ptr == nil || ptr.IsClose() {
+		isRegist = true //该模块连接无效，可添加
+	} else if ptr := meta.GetMeta(pMeta.Module, pMeta.SvrID); ptr == nil || ptr.Version != pMeta.Version {
+		isRegist = true //该模块有新版本，可覆盖
+	}
+	if isRegist {
+		g_reg_conn_map.Store(common.KeyPair{pMeta.Module, pMeta.SvrID}, conn)
+		meta.AddMeta(pMeta)
+		gamelog.Info("RegistToSvr: %v", pMeta)
+	}
 }
 func _Rpc_unregist(req, ack *common.NetPack, conn *TCPConn) {
 	if pMeta, ok := conn.UserPtr.(*meta.Meta); ok {
-		if pConn := FindRegModule(pMeta.Module, pMeta.SvrID); pConn != nil && pConn.IsClose() {
-			gamelog.Info("UnRegist Svr: {%s %d}", pMeta.Module, pMeta.SvrID)
+		if pConn := FindRegModule(pMeta.Module, pMeta.SvrID); pConn == nil || pConn.IsClose() {
+			gamelog.Info("UnRegist Svr: %v", pMeta)
 			meta.DelMeta(pMeta.Module, pMeta.SvrID)
 			g_reg_conn_map.Delete(common.KeyPair{pMeta.Module, pMeta.SvrID})
 		}

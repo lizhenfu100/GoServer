@@ -23,7 +23,7 @@ import (
 	"tcp"
 )
 
-type PlayerRpc func(req, ack *common.NetPack, player *TPlayer)
+type PlayerRpc func(req, ack *common.NetPack, this *TPlayer)
 
 var G_PlayerHandleFunc [enum.RpcEnumCnt]PlayerRpc
 
@@ -36,17 +36,22 @@ func RegPlayerRpc(list map[uint16]PlayerRpc) {
 	tcp.RegHandlePlayerRpc(_HandlePlayerRpc1)   //tcp 直连
 	mhttp.RegHandlePlayerRpc(_HandlePlayerRpc2) //http 直连
 }
+func DoPlayerRpc(this *TPlayer, rpcId uint16, req, ack *common.NetPack) bool {
+	if msgFunc := G_PlayerHandleFunc[rpcId]; msgFunc != nil {
+		atomic.SwapUint32(&this._idleMin, 0)
+		msgFunc(req, ack, this)
+		return true
+	}
+	gamelog.Debug("PlayerMsg(%d) Not Regist", rpcId)
+	return false
+}
 
 // ------------------------------------------------------------
 // - tcp 直连 player rpc
 // - 将原生tcpRpc的 "conn *tcp.TCPConn" 参数转换为 "player *TPlayer"
 func _HandlePlayerRpc1(req, ack *common.NetPack, conn *tcp.TCPConn) bool {
 	if player, ok := conn.UserPtr.(*TPlayer); ok {
-		if msgFunc := G_PlayerHandleFunc[req.GetOpCode()]; msgFunc != nil {
-			atomic.SwapUint32(&player._idleSec, 0)
-			msgFunc(req, ack, player)
-			return true
-		}
+		return DoPlayerRpc(player, req.GetOpCode(), req, ack)
 	}
 	return false
 }
@@ -82,13 +87,9 @@ func _HandlePlayerRpc2(w http.ResponseWriter, r *http.Request) {
 		binary.LittleEndian.PutUint32(flag, conf.Flag_Client_ReLogin)
 		w.Write(flag)
 	} else {
-		if handler := G_PlayerHandleFunc[msgId]; handler != nil {
-			atomic.SwapUint32(&player._idleSec, 0)
-			handler(req, ack, player)
+		if DoPlayerRpc(player, msgId, req, ack) {
 			AfterRecvHttpMsg(player, ack)
-			common.CompressInto(ack.Data(), w)
-		} else {
-			gamelog.Error("HttpMsg(%d) Not Regist", msgId)
+			common.CompressTo(ack.Data(), w)
 		}
 	}
 }
@@ -99,10 +100,10 @@ func Rpc_recv_player_msg(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	rpcId := req.ReadUInt16()
 	accountId := req.ReadUInt32()
 
+	gamelog.Debug("PlayerMsg:%d", rpcId)
+
 	if player := FindAccountId(accountId); player != nil {
-		if handler := G_PlayerHandleFunc[rpcId]; handler != nil {
-			handler(req, ack, player)
-		}
+		DoPlayerRpc(player, rpcId, req, ack)
 	} else {
 		gamelog.Debug("(%d) not online", accountId)
 	}

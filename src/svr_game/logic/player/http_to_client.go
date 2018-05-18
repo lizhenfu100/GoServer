@@ -100,7 +100,7 @@ func AfterRecvHttpMsg(self *TPlayer, buf *common.NetPack) {
 	}
 }
 
-func Rpc_game_heart_beat(req, ack *common.NetPack) {
+func Rpc_game_heart_beat(req, ack *common.NetPack, this *TPlayer) {
 }
 
 // ------------------------------------------------------------

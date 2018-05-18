@@ -1,9 +1,5 @@
 package common
 
-import (
-	"conf"
-)
-
 type IntPair struct {
 	ID  int
 	Cnt int
@@ -11,6 +7,10 @@ type IntPair struct {
 type KeyPair struct {
 	Name string
 	ID   int
+}
+type StrPair struct {
+	K string
+	V string
 }
 type Addr struct {
 	IP   string
@@ -71,8 +71,3 @@ func (self *UInt32Lst) Swap(i, j uint32) {
 
 // -------------------------------------
 //
-func Assert(eq bool) {
-	if conf.IsDebug && !eq {
-		panic("assert")
-	}
-}

@@ -28,15 +28,15 @@ import (
 func Rpc_game_login(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	accountId := req.ReadUInt32()
 
-	//TODO:zhoumf: 读数据库同步的，比较耗时，直接读的方式不适合外网
-	if player := FindWithDB_AccountId(accountId); player == nil {
+	//TODO:zhoumf: 读数据库同步的，比较耗时，直接读的方式不适合外网；可转入线程池再通知回主线程
+	if this := FindWithDB_AccountId(accountId); this == nil {
 		ack.WriteInt8(-2) //notify client to create new player
 	} else {
-		player.Login(conn)
-		gamelog.Debug("Player Login: %s, accountId(%d)", player.Name, player.AccountID)
+		this.Login(conn)
+		gamelog.Debug("Player Login: %s, accountId(%d)", this.Name, this.AccountID)
 		ack.WriteInt8(1)
-		ack.WriteUInt32(player.AccountID)
-		ack.WriteString(player.Name)
+		ack.WriteUInt32(this.AccountID)
+		ack.WriteString(this.Name)
 	}
 }
 func Rpc_game_create_player(req, ack *common.NetPack, conn *tcp.TCPConn) {
@@ -45,16 +45,16 @@ func Rpc_game_create_player(req, ack *common.NetPack, conn *tcp.TCPConn) {
 
 	if !format.CheckName(playerName) { //名字不合格
 		ack.WriteUInt32(0)
-	} else if player := NewPlayerInDB(accountId, playerName); player == nil {
+	} else if this := NewPlayerInDB(accountId, playerName); this == nil {
 		ack.WriteUInt32(0)
 	} else {
 		gamelog.Debug("Create NewPlayer: accountId(%d) name(%s)", accountId, playerName)
-		player.Login(conn)
-		ack.WriteUInt32(player.AccountID)
+		this.Login(conn)
+		ack.WriteUInt32(this.AccountID)
 	}
 }
-func Rpc_game_logout(req, ack *common.NetPack, player *TPlayer) {
-	player.Logout()
+func Rpc_game_logout(req, ack *common.NetPack, this *TPlayer) {
+	this.Logout()
 }
 
 func Rpc_game_get_player_cnt(req, ack *common.NetPack, conn *tcp.TCPConn) {
@@ -72,8 +72,8 @@ func Rpc_game_login_token(req, ack *common.NetPack, conn *tcp.TCPConn) {
 
 	ack.WriteInt32(g_player_cnt)
 }
-func CheckLoginToken(id, token uint32) bool {
-	if value, ok := g_login_token.Load(id); ok {
+func CheckLoginToken(accountId, token uint32) bool {
+	if value, ok := g_login_token.Load(accountId); ok {
 		return token == value
 	}
 	return false
