@@ -10,7 +10,7 @@ type TFriendMoudle struct {
 	owner *TPlayer
 }
 
-// -------------------------------------
+// ------------------------------------------------------------
 // -- 框架接口
 func (self *TFriendMoudle) InitAndInsert(p *TPlayer) { self.owner = p }
 func (self *TFriendMoudle) LoadFromDB(p *TPlayer)    { self.owner = p }
@@ -51,3 +51,6 @@ func (self *TFriendMoudle) OnLogout() {
 		}
 	})
 }
+
+// ------------------------------------------------------------
+// --

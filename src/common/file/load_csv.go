@@ -145,9 +145,9 @@ func ParseRefCsvBySlice(records [][]string, pSlice interface{}) { // slice可减
 	}
 }
 func ParseRefCsvByStruct(records [][]string, pStruct interface{}) {
+	st := reflect.ValueOf(pStruct).Elem()
 	for _, v := range records {
 		if strings.Index(v[0], "#") == -1 { // "#"起始的不读
-			st := reflect.ValueOf(pStruct).Elem()
 			SetField(st.FieldByName(v[0]), v[1])
 		}
 	}

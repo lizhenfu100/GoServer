@@ -48,9 +48,7 @@ func RandSelect(list []RandItem, count int) (ret []int) {
 }
 
 // [left, right]
-func RandBetween(left, right int) int {
-	return rand.Intn(right+1-left) + left
-}
+func RandBetween(left, right int) int { return left + rand.Intn(right+1-left) }
 
 // 数组乱序
 func RandShuffle(slice []int) {

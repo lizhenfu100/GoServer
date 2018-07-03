@@ -2,6 +2,8 @@ package file
 
 import (
 	"bufio"
+	"crypto/md5"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -67,9 +69,26 @@ func CreateFile(dir, name string, flag int) (*os.File, error) {
 	if err := os.MkdirAll(dir, 0777); err != nil {
 		return nil, err
 	}
+	if dir[len(dir)-1] != '/' {
+		dir += "/"
+	}
 	if file, err := os.OpenFile(dir+name, flag|os.O_CREATE, 0666); err != nil {
 		return nil, err
 	} else {
 		return file, nil
 	}
+}
+
+// ------------------------------------------------------------
+// 计算文件md5
+func CalcMd5(name string) string {
+	f, err := os.Open(name)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+
+	md5hash := md5.New()
+	io.Copy(md5hash, f)
+	return fmt.Sprintf("%x", md5hash.Sum(nil))
 }

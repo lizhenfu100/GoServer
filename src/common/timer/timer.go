@@ -178,7 +178,7 @@ func (self *TimerChan) Update() {
 		case cb := <-self.timerChan:
 			cb()
 		default:
-			break
+			return
 		}
 	}
 }

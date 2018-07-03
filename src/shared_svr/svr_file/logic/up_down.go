@@ -9,8 +9,7 @@
 
 * @ Notice
 	1、HttpDownload 是通过文件 seek 定位的，内容减少的变动，无法检测到
-
-	2、有必要的话，可以加个 cover.txt 之类的，里头的问题无脑覆盖更新
+	2、有必要的话，可以加个 cover.txt 之类的，里头的文件无脑覆盖更新
 
 * @ author zhoumf
 * @ date 2017-8-23
@@ -20,39 +19,55 @@ package logic
 import (
 	"common"
 	"common/file"
-	"fmt"
 	"gamelog"
 	"io"
 	"net/http"
 	"netConfig"
 	"os"
 	"path/filepath"
-	"strings"
+	"sync"
 )
 
 const (
 	Http_File_Dir   = "net_file"
-	Player_File_Dir = "./net_file/upload/"
-	Patch_File_Dir  = "net_file/patch"
+	Player_File_Dir = "net_file/upload/"
+	Patch_File_Dir  = "net_file/patch/"
+)
+
+var (
+	G_file_md5 sync.Map
 )
 
 func init() {
 	http.Handle("/", http.FileServer(http.Dir(Http_File_Dir)))
+
+	names, _ := file.WalkDir(Patch_File_Dir, "")
+	for _, v := range names {
+		md5str := file.CalcMd5(v)
+		G_file_md5.Store(v, common.StringHash(md5str))
+	}
 }
 
-func Http_file_upload(w http.ResponseWriter, r *http.Request) {
+func Http_upload_player_file(w http.ResponseWriter, r *http.Request) {
+	_upload_file(w, r, Player_File_Dir)
+}
+func Http_upload_patch_file(w http.ResponseWriter, r *http.Request) {
+	name := _upload_file(w, r, Patch_File_Dir)
+	md5str := file.CalcMd5(name)
+	G_file_md5.Store(name, common.StringHash(md5str))
+}
+func _upload_file(w http.ResponseWriter, r *http.Request, baseDir string) string {
 	gamelog.Debug("%s url up path: %s", r.Method, r.URL.Path)
 	r.ParseMultipartForm(1024 * 1024)
 	upfile, handler, err := r.FormFile("file")
 	if err != nil {
 		gamelog.Error(err.Error())
-		return
+		return ""
 	}
 	defer upfile.Close()
-	fmt.Fprintf(w, "%v", handler.Header)
 
-	path := Player_File_Dir + handler.Filename
-	dir, name := filepath.Dir(path), filepath.Base(path)
+	fullname := baseDir + handler.Filename
+	dir, name := filepath.Dir(fullname), filepath.Base(fullname)
 
 	if f, err := file.CreateFile(dir, name, os.O_WRONLY|os.O_TRUNC); err == nil {
 		io.Copy(f, upfile)
@@ -60,18 +75,22 @@ func Http_file_upload(w http.ResponseWriter, r *http.Request) {
 	} else {
 		gamelog.Error(err.Error())
 	}
+	return fullname
 }
+
 func Rpc_file_update_list(req, ack *common.NetPack) {
 	version := req.ReadString()
-	if strings.Compare(version, netConfig.G_Local_Meta.Version) < 0 {
+	if version == netConfig.G_Local_Meta.Version {
+		ack.WriteUInt16(0)
+	} else {
 		//下发 patch 目录下的文件列表
 		names, _ := file.WalkDir(Patch_File_Dir, "")
 		ack.WriteUInt16(uint16(len(names)))
 		for _, v := range names {
-			ack.WriteString(strings.Trim(v, Http_File_Dir))
+			ack.WriteString(v[len(Patch_File_Dir):])
+			vv, _ := G_file_md5.Load(v)
+			ack.WriteUInt32(vv.(uint32))
 		}
 		ack.WriteString(netConfig.G_Local_Meta.Version)
-	} else {
-		ack.WriteUInt16(0)
 	}
 }
