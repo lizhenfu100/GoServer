@@ -18,7 +18,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"text/template"
 )
 
@@ -50,7 +49,6 @@ func generatRpcRegist(svr string) *RpcInfo {
 		file.ReadLine(v, func(line string) {
 			fname := "" //func name
 			if packdir == "" {
-				//pack = getPackage(line)
 				packdir = filepath.ToSlash(filepath.Dir(v)[len(K_SvrDir):])
 				pack = getPackage(packdir)
 			} else if fname = getTcpRpc(line); fname != "" {
@@ -75,14 +73,7 @@ func generatRpcRegist(svr string) *RpcInfo {
 
 // -------------------------------------
 // -- 提取 package、RpcFunc
-//func getPackage(s string) string {
-//	if ok, _ := regexp.MatchString(`^package \w+`, s); ok {
-//		reg := regexp.MustCompile(`\w+`)
-//		return reg.FindAllString(s, -1)[1]
-//	}
-//	return ""
-//}
-func getPackage(dir string) string { return dir[strings.LastIndex(dir, "/")+1:] }
+func getPackage(dir string) string { return filepath.Base(dir) }
 func getTcpRpc(s string) string {
 	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack, \w+ \*tcp.TCPConn\) \{`, s); ok {
 		reg := regexp.MustCompile(`Rpc_\w+`)
@@ -150,7 +141,7 @@ func init() {
 	{{end}}
 	{{if .HttpHandleCnt}}
 		register.RegHttpHandler(map[string]register.HttpHandle{
-			{{range .HttpHandle}}"{{.Name}}": {{.Pack}}.Http_{{.Name}},
+			{{range .HttpHandle}}"/{{.Name}}": {{.Pack}}.Http_{{.Name}},
 			{{end}}
 		})
 	{{end}}

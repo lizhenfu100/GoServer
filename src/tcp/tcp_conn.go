@@ -84,7 +84,7 @@ var (
 
 type TCPConn struct {
 	conn          net.Conn
-	reader        *bufio.Reader //包装conn减少conn.Read的io次数，见【common\net.go】
+	reader        *bufio.Reader //包装conn减少conn.Read的io次数，见【common/net.go】
 	writer        *bufio.Writer
 	writeChan     chan []byte
 	_isClose      int32 //isClose标记仅在resetConn、Close中设置，其它地方只读

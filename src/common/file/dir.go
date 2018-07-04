@@ -10,11 +10,12 @@ import (
 	"strings"
 )
 
-//dir, name := filepath.Dir(path), filepath.Base(path)
+//dir, name := filepath.Dir(path), filepath.Base(path) //不包含分隔符，且会转换为对应平台的分隔符
+//dir, name := filepath.Split(path) 				   //dir包含分隔符，同参数的分隔符
 
 func GetExeDir() string {
 	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-	return dir + "/"
+	return filepath.ToSlash(dir)
 }
 func IsDirExist(path string) bool {
 	if fi, err := os.Stat(path); err != nil {
@@ -41,7 +42,7 @@ func WalkDir(dirPth, suffix string) ([]string, error) {
 			return nil
 		}
 		if strings.HasSuffix(fi.Name(), suffix) {
-			ret = append(ret, filename)
+			ret = append(ret, filepath.ToSlash(filename))
 		}
 		return nil
 	})

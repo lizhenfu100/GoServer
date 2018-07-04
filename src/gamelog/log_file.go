@@ -18,8 +18,9 @@ const (
 )
 
 var (
-	g_logDir   = file.GetExeDir() + "log/"
+	g_logDir   = file.GetExeDir() + "/log/"
 	g_logger   *log.Logger
+	g_logfile  *os.File //用以关闭旧文件
 	g_level    = Lv_Debug
 	g_levelStr = []string{
 		"[D] ",
@@ -32,8 +33,11 @@ var (
 
 func InitFileLog(file *os.File) {
 	if g_logger == nil {
+		g_logfile = file
 		g_logger = log.New(file, "", log.Ldate|log.Ltime|log.Lshortfile)
 	} else {
+		g_logfile.Close()
+		g_logfile = file
 		g_logger.SetOutput(file)
 	}
 	if g_logger == nil {

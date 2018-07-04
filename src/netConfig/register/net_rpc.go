@@ -43,6 +43,6 @@ func RegHttpRpc(httpLst map[uint16]HttpRpc) {
 }
 func RegHttpHandler(httpLst map[string]HttpHandle) {
 	for k, v := range httpLst {
-		http.HandleFunc("/"+k, v)
+		http.HandleFunc(k, v)
 	}
 }

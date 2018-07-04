@@ -27,6 +27,6 @@ func InitConf() {
 		HttpPort: 7601,
 	}
 	register.RegHttpHandler(map[string]register.HttpHandle{
-		"ask_for_leave": Http_ask_for_leave,
+		"/ask_for_leave": Http_ask_for_leave,
 	})
 }

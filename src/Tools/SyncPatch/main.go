@@ -55,15 +55,31 @@ func SyncServerPatch(addr string) {
 				}
 			}
 
+			//本次无需同步的文件列表，用于显示
+			notSyncList := make([]string, 0, cnt)
+
 			//比对本地、服务器，有新增或变更才上传
+			fmt.Println("\nSync File: ")
 			for k, v1 := range localList {
 				if v2, ok := svrList[k]; ok {
 					if v1 != v2 { //变动文件
-						http.UploadFile(addr+"upload_patch_file", k)
+						if http.UploadFile(addr+"upload_patch_file", k) == nil {
+							fmt.Println("    ", k)
+						}
+					} else {
+						notSyncList = append(notSyncList, k)
 					}
 				} else { //新增文件
-					http.UploadFile(addr+"upload_patch_file", k)
+					if http.UploadFile(addr+"upload_patch_file", k) == nil {
+						fmt.Println("    ", k)
+					}
 				}
+			}
+
+			//打印本次无需同步的文件
+			fmt.Println("\nNot Sync File: ")
+			for _, v := range notSyncList {
+				fmt.Println("    ", v)
 			}
 		}
 	})

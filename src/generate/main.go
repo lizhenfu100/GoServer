@@ -13,25 +13,30 @@ const (
 )
 
 func main() {
+	svrList := []string{
+		"shared_svr/zookeeper",
+		"shared_svr/svr_center",
+		"shared_svr/svr_login",
+		"shared_svr/svr_gateway",
+		"shared_svr/svr_save",
+		"shared_svr/svr_file",
+		"shared_svr/svr_friend",
+		"svr_cross",
+		"svr_sdk",
+		"svr_game",
+	}
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Printf("%v: %s", r, debug.Stack())
 			time.Sleep(time.Minute)
 		}
 	}()
+
 	//1、收集并注册RpcFunc -- 公共服务器、具体某游戏的业务服务器
+	vec := make([]*RpcInfo, len(svrList))
 	funcs := make([]string, 0, 1024) //小写开头
-	vec := []*RpcInfo{
-		generatRpcRegist("shared_svr/zookeeper"),
-		generatRpcRegist("shared_svr/svr_center"),
-		generatRpcRegist("shared_svr/svr_login"),
-		generatRpcRegist("shared_svr/svr_gateway"),
-		generatRpcRegist("shared_svr/svr_save"),
-		generatRpcRegist("shared_svr/svr_file"),
-		generatRpcRegist("shared_svr/svr_friend"),
-		generatRpcRegist("svr_cross"),
-		generatRpcRegist("svr_sdk"),
-		generatRpcRegist("svr_game"),
+	for i, v := range svrList {
+		vec[i] = generatRpcRegist(v)
 	}
 	for _, ptr := range vec {
 		addRpc_Go(&funcs, ptr)

@@ -62,6 +62,7 @@ func UploadFile(url, filename string) error {
 		return err
 	}
 	if _, err = io.Copy(fw, fh); err != nil {
+		gamelog.Error("io.Copy: %s: %s", filename, err.Error())
 		return err
 	}
 	contentType := bodyWriter.FormDataContentType()
@@ -70,6 +71,7 @@ func UploadFile(url, filename string) error {
 		resp.Body.Close()
 		return nil
 	} else {
+		gamelog.Error("http.Post: %s", err.Error())
 		return err
 	}
 }

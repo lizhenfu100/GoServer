@@ -69,7 +69,7 @@ func LoadAllCsv() {
 	}
 }
 func ReloadCsv(csvName string) {
-	name := fmt.Sprintf("%scsv/%s.csv", GetExeDir(), csvName)
+	name := fmt.Sprintf("%s/csv/%s.csv", GetExeDir(), csvName)
 	LoadOneCsv(name)
 }
 func LoadOneCsv(name string) {
