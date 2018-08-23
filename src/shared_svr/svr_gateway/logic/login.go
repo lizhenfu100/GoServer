@@ -3,6 +3,7 @@ package logic
 import (
 	"common"
 	"generate_out/rpc/enum"
+	"http"
 	"netConfig"
 	"netConfig/meta"
 	"sync"
@@ -22,6 +23,8 @@ func Rpc_gateway_login(req, ack *common.NetPack, client *tcp.TCPConn) {
 	}
 }
 
+// RelayPlayerMsg处理的玩家相关rpc（rpc参数是this *TPlayer）
+// 登录之前，游戏服尚无玩家数据，所以登录、创建是单独抽离的
 func Rpc_gateway_relay_game_login(req, ack *common.NetPack, client *tcp.TCPConn) {
 	if accountId, ok := client.UserPtr.(uint32); ok {
 		if pConn := GetGameConn(accountId); pConn != nil {
@@ -85,8 +88,8 @@ func CheckLoginToken(accountId, token uint32) bool {
 func _NotifyPlayerCnt(gameSvrId int, cnt int32) {
 	ids, _ := meta.GetModuleIDs("login", netConfig.G_Local_Meta.Version)
 	for _, id := range ids {
-		if conn := netConfig.GetTcpConn("login", id); conn != nil {
-			conn.CallRpc(enum.Rpc_login_set_player_cnt, func(buf *common.NetPack) {
+		if addr := netConfig.GetHttpAddr("login", id); addr != "" {
+			http.CallRpc(addr, enum.Rpc_login_set_player_cnt, func(buf *common.NetPack) {
 				buf.WriteInt(gameSvrId)
 				buf.WriteInt32(cnt)
 			}, nil)

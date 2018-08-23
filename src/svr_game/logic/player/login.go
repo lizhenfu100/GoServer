@@ -18,6 +18,10 @@ import (
 	"common"
 	"common/format"
 	"gamelog"
+	"generate_out/rpc/enum"
+	"http"
+	"netConfig"
+	"netConfig/meta"
 	"sync"
 	"tcp"
 )
@@ -28,14 +32,24 @@ import (
 func Rpc_game_login(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	accountId := req.ReadUInt32()
 
+	// game直连了login，须校验登录token
+	if meta.GetMeta("login", 0).IsMyClient(netConfig.G_Local_Meta) {
+		token := req.ReadUInt32()
+		if CheckLoginToken(accountId, token) {
+			_NotifyPlayerCnt(netConfig.G_Local_Meta.SvrID, g_player_cnt)
+		} else {
+			ack.WriteInt8(-1)
+		}
+	}
+
 	//TODO:zhoumf: 读数据库同步的，比较耗时，直接读的方式不适合外网；可转入线程池再通知回主线程
 	if this := FindWithDB_AccountId(accountId); this == nil {
 		ack.WriteInt8(-2) //notify client to create new player
 	} else {
 		this.Login(conn)
-		gamelog.Debug("Player Login: %s, accountId(%d)", this.Name, this.AccountID)
+		gamelog.Debug("Player Login: %s, accountId(%d)", this.Name, this.PlayerID)
 		ack.WriteInt8(1)
-		ack.WriteUInt32(this.AccountID)
+		ack.WriteUInt32(this.PlayerID)
 		ack.WriteString(this.Name)
 	}
 }
@@ -48,9 +62,9 @@ func Rpc_game_create_player(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	} else if this := NewPlayerInDB(accountId, playerName); this == nil {
 		ack.WriteUInt32(0)
 	} else {
-		gamelog.Debug("Create NewPlayer: accountId(%d) name(%s)", accountId, playerName)
 		this.Login(conn)
-		ack.WriteUInt32(this.AccountID)
+		gamelog.Debug("Create NewPlayer: accountId(%d) name(%s)", accountId, playerName)
+		ack.WriteUInt32(this.PlayerID)
 	}
 }
 func Rpc_game_logout(req, ack *common.NetPack, this *TPlayer) {
@@ -77,4 +91,18 @@ func CheckLoginToken(accountId, token uint32) bool {
 		return token == value
 	}
 	return false
+}
+
+// ------------------------------------------------------------
+// -- 游戏服在线人数
+func _NotifyPlayerCnt(gameSvrId int, cnt int32) {
+	ids, _ := meta.GetModuleIDs("login", netConfig.G_Local_Meta.Version)
+	for _, id := range ids {
+		if addr := netConfig.GetHttpAddr("login", id); addr != "" {
+			http.CallRpc(addr, enum.Rpc_login_set_player_cnt, func(buf *common.NetPack) {
+				buf.WriteInt(gameSvrId)
+				buf.WriteInt32(cnt)
+			}, nil)
+		}
+	}
 }

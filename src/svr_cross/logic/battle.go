@@ -52,9 +52,9 @@ func _SelectBattleSvrId(version string) int {
 	if ids, ok := meta.GetModuleIDs("battle", version); ok {
 		sort.Ints(ids)
 		//1、优先在各个服务器分配一定人数
-		for i := 0; i < len(ids); i++ {
-			if g_battle_player_cnt[ids[i]] < K_Player_Base {
-				return ids[i]
+		for _, id := range ids {
+			if g_battle_player_cnt[id] < K_Player_Base {
+				return id
 			}
 		}
 		//2、基础人数够了，再各服均分

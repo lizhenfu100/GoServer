@@ -44,10 +44,10 @@ func RunNetSvr() {
 	//1、找到当前的配置信息
 	assert.True(G_Local_Meta != nil)
 
-	//2、连接/注册其它模块
+	//2、连接并注册到其它模块
 	if nil == meta.GetMeta("zookeeper", 0) { //没有zookeeper节点，才依赖配置，否则依赖zookeeper的通知
 		for _, connModule := range G_Local_Meta.ConnectLst {
-			meta.G_SvrNets.Range(func(k, v interface{}) bool {
+			meta.G_Metas.Range(func(k, v interface{}) bool {
 				dest := v.(*meta.Meta)
 				if dest.Module == connModule && !dest.IsSame(G_Local_Meta) {
 					ConnectModule(dest)
@@ -108,6 +108,6 @@ func GetHttpAddr(module string, svrId int) string {
 	if pMeta := meta.GetMeta(module, svrId); pMeta != nil {
 		return http.Addr(pMeta.IP, pMeta.HttpPort)
 	}
-	gamelog.Error("GetHttpAddr nil : (%s,%d) %d", module, svrId)
+	gamelog.Error("GetHttpAddr nil : (%s,%d)", module, svrId)
 	return ""
 }

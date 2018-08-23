@@ -10,7 +10,7 @@ const (
 	INT_MAX       = 0x7FFFFFFF
 )
 
-func IsToday(day int) bool { return time.Now().Day() == day }
+func IsToday(sec int64) bool { return time.Unix(sec, 0).YearDay() == time.Now().YearDay() }
 func WeekInYear() int {
 	_, ret := time.Now().ISOWeek()
 	return ret

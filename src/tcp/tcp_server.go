@@ -94,24 +94,27 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 	atomic.AddInt32(&self.connCnt, 1)
 	gamelog.Debug("Connect From: %s, AddConnId: %d", conn.RemoteAddr().String(), connId)
 
-	//延时删除，以待断线重连
+	tcpConn.onDisConnect = func(tcpConn *TCPConn) { //Notice:回调函数须线程安全
+		self.connmap.Delete(connId)
+		atomic.AddInt32(&self.connCnt, -1)
+		gamelog.Debug("DelConnId: %d %v", connId, tcpConn.UserPtr)
+
+		//通知逻辑线程，连接断开
+		packet := common.NewNetPackCap(16)
+		packet.SetOpCode(enum.Rpc_net_error)
+		G_RpcQueue.Insert(tcpConn, packet)
+
+		//连接的后台节点断开，注销之
+		if _, ok := tcpConn.UserPtr.(*meta.Meta); ok {
+			packet := common.NewNetPackCap(16)
+			packet.SetOpCode(enum.Rpc_unregist)
+			G_RpcQueue.Insert(tcpConn, packet)
+		}
+	}
+	//延时删除，以待断线重连，仅针对玩家链接
 	tcpConn.delayDel = time.AfterFunc(Delay_Delete_Conn, func() { //Notice:回调函数须线程安全
 		if tcpConn.IsClose() {
-			self.connmap.Delete(connId)
-			atomic.AddInt32(&self.connCnt, -1)
-			gamelog.Debug("DelConnId: %d %v", connId, tcpConn.UserPtr)
-
-			//通知逻辑线程，连接断开
-			packet := common.NewNetPackCap(16)
-			packet.SetOpCode(enum.Rpc_net_error)
-			G_RpcQueue.Insert(tcpConn, packet)
-
-			//连接的后台节点断开，注销之
-			if _, ok := tcpConn.UserPtr.(*meta.Meta); ok {
-				packet := common.NewNetPackCap(16)
-				packet.SetOpCode(enum.Rpc_unregist)
-				G_RpcQueue.Insert(tcpConn, packet)
-			}
+			tcpConn.onDisConnect(tcpConn)
 		}
 	})
 	tcpConn.delayDel.Stop()
@@ -149,7 +152,11 @@ func (self *TCPServer) _RunConn(conn *TCPConn, connId uint32) {
 	//self.connmap.Delete(connId)
 	//atomic.AddInt32(&self.connCnt, -1)
 	//gamelog.Debug("Disconnect: DelConnId: %d", connId)
-	conn.delayDel.Reset(Delay_Delete_Conn)
+	if _, ok := conn.UserPtr.(*meta.Meta); ok {
+		conn.onDisConnect(conn)
+	} else {
+		conn.delayDel.Reset(Delay_Delete_Conn)
+	}
 
 	self.wgConns.Done()
 }

@@ -136,6 +136,7 @@ func (q *SafeQueue) Get() (val interface{}, ok bool, quantity uint32) {
 		putNo := atomic.LoadUint32(&cache.putNo)
 		if getPosNew == getNo && getNo == putNo-q.capaciity {
 			val = cache.value
+			cache.value = nil
 			atomic.AddUint32(&cache.getNo, q.capaciity)
 			return val, true, posCnt - 1
 		} else {

@@ -70,7 +70,7 @@ type TPlayer struct {
 	TPlayerBase
 	modules []iModule
 	Mail    TMailModule
-	Friend  TFriendMoudle
+	Friend  TFriendModule
 	team    Team
 	Battle  TBattleModule
 }
@@ -132,7 +132,8 @@ func (self *TPlayer) Login(conn *tcp.TCPConn) {
 	atomic.StoreInt32(&self._isOnlnie, 1)
 	atomic.SwapUint32(&self._idleMin, 0)
 	self.LoginTime = time.Now().Unix()
-	if self.conn = conn; conn.UserPtr == nil { //链接可能是gateway节点
+	self.conn = conn
+	if conn != nil && conn.UserPtr == nil { //链接可能是gateway节点
 		conn.UserPtr = self
 	}
 	for _, v := range self.modules {

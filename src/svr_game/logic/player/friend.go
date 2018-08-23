@@ -6,16 +6,16 @@ import (
 	"netConfig"
 )
 
-type TFriendMoudle struct {
+type TFriendModule struct {
 	owner *TPlayer
 }
 
 // ------------------------------------------------------------
 // -- 框架接口
-func (self *TFriendMoudle) InitAndInsert(p *TPlayer) { self.owner = p }
-func (self *TFriendMoudle) LoadFromDB(p *TPlayer)    { self.owner = p }
-func (self *TFriendMoudle) WriteToDB()               {}
-func (self *TFriendMoudle) OnLogin() {
+func (self *TFriendModule) InitAndInsert(p *TPlayer) { self.owner = p }
+func (self *TFriendModule) LoadFromDB(p *TPlayer)    { self.owner = p }
+func (self *TFriendModule) WriteToDB()               {}
+func (self *TFriendModule) OnLogin() {
 	netConfig.CallRpcFriend(self.owner.AccountID, enum.Rpc_friend_get_friend_list, func(buf *common.NetPack) {
 	}, func(recvBuf *common.NetPack) {
 		cnt := recvBuf.ReadByte()
@@ -37,7 +37,7 @@ func (self *TFriendMoudle) OnLogin() {
 		}
 	})
 }
-func (self *TFriendMoudle) OnLogout() {
+func (self *TFriendModule) OnLogout() {
 	netConfig.CallRpcFriend(self.owner.AccountID, enum.Rpc_friend_get_friend_list, func(buf *common.NetPack) {
 	}, func(recvBuf *common.NetPack) {
 		cnt := recvBuf.ReadByte()

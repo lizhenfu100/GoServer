@@ -56,8 +56,7 @@ func (self *RpcQueue) Insert(conn *TCPConn, msg *common.NetPack) {
 	}
 }
 
-//主循环，每帧调一次
-func (self *RpcQueue) Update() {
+func (self *RpcQueue) Update() { //主循环，每帧调一次
 	//if v, ok, _ := self.queue.Get(); ok {
 	//	self._Handle(v.(objMsg).conn, v.(objMsg).msg)
 	//	v.(objMsg).msg.Free()

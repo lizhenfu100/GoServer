@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+//【多字符串拼接，用bytes.Buffer.WriteString()快400-500倍】
+
 func CheckAtoiName(s string) int {
 	if len(s) <= 0 {
 		fmt.Printf("CheckAtoiName: is empty")

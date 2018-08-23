@@ -81,16 +81,16 @@ func _HandlePlayerRpc2(w http.ResponseWriter, r *http.Request) {
 	if msgId != enum.Rpc_game_heart_beat {
 		gamelog.Debug("HttpMsg:%d, len:%d, uid:%d", msgId, req.Size(), accountId)
 	}
-	if player := BeforeRecvHttpMsg(accountId); player == nil {
-		gamelog.Debug("===> uid:%d isn't in memcache, please relogin", accountId)
-		flag := make([]byte, 4) //重登录标记
-		binary.LittleEndian.PutUint32(flag, conf.Flag_Client_ReLogin)
-		w.Write(flag)
-	} else {
+	if player := BeforeRecvHttpMsg(accountId); player != nil {
 		if DoPlayerRpc(player, msgId, req, ack) {
 			AfterRecvHttpMsg(player, ack)
 			common.CompressTo(ack.Data(), w)
 		}
+	} else {
+		gamelog.Debug("===> uid:%d isn't in memcache, please relogin", accountId)
+		flag := make([]byte, 4) //重登录标记
+		binary.LittleEndian.PutUint32(flag, conf.Flag_Client_ReLogin)
+		w.Write(flag)
 	}
 }
 

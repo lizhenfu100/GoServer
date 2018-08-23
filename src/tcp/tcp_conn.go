@@ -19,6 +19,14 @@
 	5、现在的架构是：每条连接各线程收数据，直接在io线程调注册的业务函数，对强交互的业务不友好
 		要是做MMO之类的，可考虑像c++一样，io线程只负责收发，数据交付给全局队列，主线程逐帧处理，避免竞态
 
+	6、io.ErrShortWrite
+		这个错误比较奇怪，按道理只是本次io没有发完数据，底层网络仍是可以工作的，应该上层处理好多余数据，继续发才是……
+		但我查了好些资料，还有github上的开源库，都是直接报错断开的
+		有一种说法是这样的,如果发生short write了,说明网络很糟糕了,继续发送可能会更糟糕,断开才是对的
+		这个看你策略是保证对,还是降低服务器压力
+		C++库的方式一般是把数据积累到服务器缓存里，网络不好，积累爆炸后服务也会跪掉
+		这种方式保证对,用内存做代价,其实较好的。go的channel就反过来,如果有问题要解决问题,而不是积累问题
+
 * @ reconnect
 	1、Accept返回的conn，先收一个包，内含connId
 	2、connId为0表示新连接，挑选一个空闲的TCPConn，newTCPConn()
@@ -89,7 +97,8 @@ type TCPConn struct {
 	writeChan     chan []byte
 	_isClose      int32 //isClose标记仅在resetConn、Close中设置，其它地方只读
 	_isWriteClose bool
-	delayDel      *time.Timer //延时清理连接，提高重连效率
+	delayDel      *time.Timer //延时清理连接，提高重连效率，仅针对玩家链接
+	onDisConnect  func(*TCPConn)
 	UserPtr       interface{}
 }
 
@@ -156,20 +165,21 @@ func (self *TCPConn) WriteBuf(buf []byte) {
 		//close(self.writeChan) //重连chan里的数据得保留
 	}
 }
-func (self *TCPConn) _WriteFull(buf []byte) (err error) { //FIXME：err可能是io.ErrShortWrite，网络还是能继续工作的
+func (self *TCPConn) _WriteFull(buf []byte) error { //brief.6：err可能是io.ErrShortWrite，网络还是能继续工作的
 	if buf == nil || self.IsClose() {
 		return errors.New("tcp conn close")
 	}
-	var n, nn int
-	length := len(buf)
-	for n < length && err == nil {
-		nn, err = self.writer.Write(buf[n:]) //Notice：bufio包装过，这里不会陷入系统调用；先缓存完chan的数据再Flush，更高效
-		n += nn
+	total := len(buf)
+	for pos := 0; pos < total; {
+		// bufio包装过，这里不会陷入系统调用；先缓存完chan的数据再Flush，更高效
+		if n, err := self.writer.Write(buf[pos:]); err == nil {
+			pos += n
+		} else {
+			gamelog.Error("WriteRoutine Write error: %s", err.Error())
+			return err
+		}
 	}
-	if err != nil {
-		gamelog.Error("WriteRoutine Write error: %s", err.Error())
-	}
-	return
+	return nil
 }
 func (self *TCPConn) writeRoutine() {
 	self._isWriteClose = false
@@ -182,11 +192,11 @@ LOOP:
 			}
 		default:
 			var err error
-			for i := 0; i < 100; i++ { //还写不完，等下一轮调度吧
-				if err = self.writer.Flush(); err != io.ErrShortWrite {
-					break
-				}
+			//for i := 0; i < 100; i++ { //还写不完，等下一轮调度吧 //在同一函数帧里多次尝试意义不大,io还是阻塞的
+			if err = self.writer.Flush(); err != io.ErrShortWrite { //见文件头brief.6
+				break
 			}
+			//}
 			if err != nil {
 				gamelog.Error("(%p)WriteRoutine Flush error: %s", self.conn, err.Error())
 				break LOOP

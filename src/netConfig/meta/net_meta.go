@@ -7,11 +7,11 @@
 	4、空版本号能与任意版本匹配
 
 * @ Notice
-	1、G_SvrNets []Meta 作为一个数组，中间元素被删除后会整体移动
+	1、G_Metas []Meta 作为一个数组，中间元素被删除后会整体移动
 	2、此时若外界缓存了 GetMeta() 返回的指针，其指向很可能变为下个元素
 
 * @ Notice
-	1、G_SvrNets sync.Map 存的指针，这样就要求外界放入的指针，必须是堆上的，且指向不同内存
+	1、G_Metas sync.Map 存的指针，这样就要求外界放入的指针，必须是堆上的，且指向不同内存
 	2、最好每次存入，都重新new
 
 * @ 动态更新
@@ -93,7 +93,7 @@ func (self *Meta) BufToData(buf *common.NetPack) {
 
 // -------------------------------------
 //! meta list
-var G_SvrNets sync.Map
+var G_Metas sync.Map
 
 func InitConf(list []Meta) {
 	for i := 0; i < len(list); i++ {
@@ -102,7 +102,7 @@ func InitConf(list []Meta) {
 }
 
 func GetMeta(module string, svrID int) *Meta {
-	if v, ok := G_SvrNets.Load(common.KeyPair{module, svrID}); ok && !v.(*Meta).IsClosed {
+	if v, ok := G_Metas.Load(common.KeyPair{module, svrID}); ok && !v.(*Meta).IsClosed {
 		return v.(*Meta)
 	}
 	gamelog.Error("{%s %d}: have none SvrNetMeta", module, svrID)
@@ -110,24 +110,27 @@ func GetMeta(module string, svrID int) *Meta {
 }
 
 //{
-//	for i := len(G_SvrNets) - 1; i >= 0; i-- {
-//		v := &G_SvrNets[i]
+//	for i := len(G_Metas) - 1; i >= 0; i-- {
+//		v := &G_Metas[i]
 //		if v.Module == module && v.SvrID == svrID {
 //			//Notice：防止内存移动，不删元素，仅改状态
-//			//G_SvrNets = append(G_SvrNets[:i], G_SvrNets[i+1:]...)
+//			//G_Metas = append(G_Metas[:i], G_Metas[i+1:]...)
 //			v.IsClosed = true
 //			return
 //		}
 //	}
 //}
-func DelMeta(module string, svrID int) { G_SvrNets.Delete(common.KeyPair{module, svrID}) }
+func DelMeta(module string, svrID int) {
+	gamelog.Debug("DelMeta: %s:%d", module, svrID)
+	G_Metas.Delete(common.KeyPair{module, svrID})
+}
 func AddMeta(ptr *Meta) {
 	gamelog.Debug("AddMeta: %s:%d", ptr.Module, ptr.SvrID)
-	G_SvrNets.Store(common.KeyPair{ptr.Module, ptr.SvrID}, ptr)
+	G_Metas.Store(common.KeyPair{ptr.Module, ptr.SvrID}, ptr)
 }
 
 func GetModuleIDs(module, version string) (ret []int, ok bool) {
-	G_SvrNets.Range(func(k, v interface{}) bool {
+	G_Metas.Range(func(k, v interface{}) bool {
 		ptr := v.(*Meta)
 		if ptr.Module == module && !ptr.IsClosed && ptr.IsMatchVersion(version) {
 			ret = append(ret, ptr.SvrID)

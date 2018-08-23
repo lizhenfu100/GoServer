@@ -19,12 +19,12 @@ import (
 	"common"
 	"common/assert"
 	"generate_out/rpc/enum"
+	"http"
 	"netConfig"
 	"netConfig/meta"
 	"shared_svr/svr_center/gameInfo/SoulKnight"
 	"sync"
 	"sync/atomic"
-	"tcp"
 )
 
 var g_login_token uint32
@@ -50,7 +50,7 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 
 		//自动选取空闲节点，并绑定到账号上
 		if gameInfo.SvrId == 0 {
-			if gameInfo.SvrId = GetFreeSvrId(version); gameInfo.SvrId > 0 {
+			if gameInfo.SvrId = GetFreeGameSvrId(version); gameInfo.SvrId > 0 {
 				netConfig.CallRpcCenter(centerSvrId, enum.Rpc_center_set_game_info, func(buf *common.NetPack) {
 					buf.WriteUInt32(accountId)
 					buf.WriteString(gameName)
@@ -59,6 +59,10 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 			}
 		}
 		assert.True(gameInfo.SvrId > 0)
+		if gameInfo.SvrId <= 0 {
+			ack.WriteInt8(-100)
+			return
+		}
 
 		//登录成功，设置各类信息
 		gameSvrId := gameInfo.SvrId
@@ -66,6 +70,7 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 
 		//生成一个临时token，发给gamesvr、client用以登录验证
 		token := atomic.AddUint32(&g_login_token, 1)
+		var pMetaToClient *meta.Meta //回复client要连接的目标节点
 		//【Notice: CallRpc接口不是线程安全的，http后台不适用】
 		if conn := netConfig.GetTcpConn("gateway", gatewayId); conn != nil {
 			msg := common.NewNetPackCap(32)
@@ -74,14 +79,34 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 			msg.WriteUInt32(accountId)
 			msg.WriteInt(gameSvrId)
 			conn.WriteMsg(msg)
+
+			pMetaToClient = meta.GetMeta("gateway", gatewayId)
+
+		} else if conn := netConfig.GetTcpConn("game", gameSvrId); conn != nil {
+			msg := common.NewNetPackCap(32)
+			msg.SetOpCode(enum.Rpc_game_login_token)
+			msg.WriteUInt32(token)
+			msg.WriteUInt32(accountId)
+			conn.WriteMsg(msg)
+
+			pMetaToClient = meta.GetMeta("game", gameSvrId)
+		} else if addr := netConfig.GetHttpAddr("game", gameSvrId); addr != "" {
+			http.CallRpc(addr, enum.Rpc_game_login_token, func(buf *common.NetPack) {
+				buf.WriteUInt32(token)
+				buf.WriteUInt32(accountId)
+			}, nil)
+
+			pMetaToClient = meta.GetMeta("game", gameSvrId)
 		}
 
-		if pMeta := meta.GetMeta("gateway", gatewayId); pMeta != nil {
+		if pMetaToClient != nil { //回复client要连接的目标节点
 			ack.WriteInt8(1)
 			ack.WriteUInt32(accountId)
-			ack.WriteString(pMeta.OutIP)
-			ack.WriteUInt16(pMeta.Port())
+			ack.WriteString(pMetaToClient.OutIP)
+			ack.WriteUInt16(pMetaToClient.Port())
 			ack.WriteUInt32(token)
+		} else {
+			ack.WriteInt8(-100)
 		}
 	} else {
 		ack.WriteInt8(errCode)
@@ -120,20 +145,22 @@ func Rpc_login_get_gamesvr_list(req, ack *common.NetPack) {
 		ack.WriteInt32(playerCnt)
 	}
 }
-func Rpc_login_set_player_cnt(req, ack *common.NetPack, conn *tcp.TCPConn) {
+func Rpc_login_set_player_cnt(req, ack *common.NetPack) {
 	svrId := req.ReadInt()
 	cnt := req.ReadInt32()
 	g_game_player_cnt.Store(svrId, cnt)
 }
-func GetFreeSvrId(version string) int {
+func GetFreeGameSvrId(version string) int {
 	ret, minCnt := -1, int32(999999)
 	ids, _ := meta.GetModuleIDs("game", version)
 	for _, id := range ids {
-		if v, ok := g_game_player_cnt.Load(id); ok {
-			if cnt := v.(int32); cnt < minCnt {
-				if pMeta := meta.GetMeta("game", id); pMeta != nil && pMeta.IsMatchVersion(version) {
+		if pMeta := meta.GetMeta("game", id); pMeta != nil && pMeta.IsMatchVersion(version) {
+			if v, ok := g_game_player_cnt.Load(id); ok {
+				if cnt := v.(int32); cnt < minCnt {
 					ret, minCnt = id, cnt
 				}
+			} else {
+				ret, minCnt = id, 0
 			}
 		}
 	}
