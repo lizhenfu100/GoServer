@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"common"
+	"common/file"
 	"common/timer"
 	"flag"
 	"fmt"
@@ -127,11 +128,7 @@ func makeFile(vec []msg.TOrderInfo) {
 		panic(err.Error())
 		return
 	}
-	if err = os.MkdirAll("Order/", 0777); err != nil {
-		panic(err.Error())
-		return
-	}
-	f, err := os.OpenFile("Order/"+filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
+	f, err := file.CreateFile("Order/", filename, os.O_WRONLY|os.O_APPEND)
 	if err != nil {
 		panic(err.Error())
 		return

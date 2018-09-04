@@ -13,7 +13,7 @@ import (
 	"svr_sdk/msg"
 )
 
-const kDBTableName = "Save"
+const kDBTable = "Save"
 
 type TSaveData struct {
 	Key  string `bson:"_id"` // Pf_id + Uid
@@ -30,15 +30,12 @@ func Http_download_save_data(w http.ResponseWriter, r *http.Request) {
 	ack.Retcode = -1
 	defer func() {
 		b, _ := json.Marshal(&ack)
-		{ //数据压缩
-			var buf bytes.Buffer
-			gw := gzip.NewWriter(&buf)
-			gw.Write(b)
-			gw.Flush()
-			gw.Close()
-			b = buf.Bytes()
-		}
-		w.Write(b)
+		var buf bytes.Buffer
+		gw := gzip.NewWriter(&buf) //数据压缩
+		gw.Write(b)
+		gw.Flush()
+		gw.Close()
+		w.Write(buf.Bytes())
 		gamelog.Debug("ack: %v", ack)
 	}()
 
@@ -62,7 +59,7 @@ func Http_download_save_data(w http.ResponseWriter, r *http.Request) {
 
 type upload_data struct {
 	Uid   string `json:"uid"`
-	Pf_id string `json:"pf_id"`
+	Pf_id string `json:"pf_id"` //平台id
 	Data  string `json:"data"`
 	Sign  string `json:"sign"`
 }
@@ -102,9 +99,9 @@ func Http_upload_save_data(w http.ResponseWriter, r *http.Request) {
 	ptr.Key = key
 	ptr.Data = info.Data
 	if ok {
-		dbmgo.UpdateToDB(kDBTableName, bson.M{"_id": ptr.Key}, bson.M{"$set": bson.M{"data": ptr.Data}})
+		dbmgo.UpdateToDB(kDBTable, bson.M{"_id": ptr.Key}, bson.M{"$set": bson.M{"data": ptr.Data}})
 	} else {
-		dbmgo.InsertToDB(kDBTableName, ptr)
+		dbmgo.InsertToDB(kDBTable, ptr)
 	}
 	ack.Retcode = 0
 }
@@ -113,6 +110,6 @@ func Http_upload_save_data(w http.ResponseWriter, r *http.Request) {
 // -- 辅助函数
 func LoadFromDB(key string) (*TSaveData, bool) {
 	data := new(TSaveData)
-	ok := dbmgo.Find(kDBTableName, "_id", key, data)
+	ok := dbmgo.Find(kDBTable, "_id", key, data)
 	return data, ok
 }

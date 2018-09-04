@@ -6,6 +6,7 @@ import (
 	"conf"
 	"fmt"
 	"gamelog"
+	"generate_out/err"
 	"generate_out/rpc/enum"
 	"http"
 	"io"
@@ -126,8 +127,8 @@ func test() {
 		buf.WriteString(accountName)
 		buf.WriteString(password)
 	}, func(backBuf *common.NetPack) {
-		errCode1 := backBuf.ReadInt8()
-		fmt.Println("errCode1:", errCode1)
+		errCode := backBuf.ReadUInt16()
+		fmt.Println("errCode1:", err.ToString(errCode))
 	})
 
 	http.CallRpc(loginAddr, enum.Rpc_center_account_login, func(buf *common.NetPack) {
@@ -135,14 +136,14 @@ func test() {
 		buf.WriteString(accountName)
 		buf.WriteString(password)
 	}, func(backBuf *common.NetPack) {
-		errCode2 := backBuf.ReadInt8()
-		if errCode2 > 0 {
+		errCode := backBuf.ReadUInt16()
+		if errCode == err.Success {
 			accountId = backBuf.ReadUInt32()
 			gamesvrIp = backBuf.ReadString()
 			gamesvrPort = backBuf.ReadUInt16()
 			logintoken = backBuf.ReadUInt32()
 		} else {
-			fmt.Println("errCode2:", errCode2)
+			fmt.Println("errCode2:", err.ToString(errCode))
 		}
 	})
 
@@ -152,10 +153,10 @@ func test() {
 		buf.WriteUInt32(accountId)
 		buf.WriteUInt32(logintoken)
 	}, func(backBuf *common.NetPack) {
-		errCode3 := backBuf.ReadInt8()
-		if errCode3 > 0 {
+		errCode := backBuf.ReadUInt16()
+		if errCode == err.Success {
 			playerRpc.AccountId = backBuf.ReadUInt32()
-		} else if errCode3 == -2 {
+		} else if errCode == err.Account_have_none_player {
 			//创建新角色
 			http.CallRpc(gameAddr, enum.Rpc_game_create_player, func(buf *common.NetPack) {
 				buf.WriteUInt32(accountId)
@@ -164,7 +165,7 @@ func test() {
 				playerRpc.AccountId = backBuf.ReadUInt32()
 			})
 		} else {
-			fmt.Println("errCode3:", errCode3)
+			fmt.Println("errCode3:", err.ToString(errCode))
 		}
 	})
 

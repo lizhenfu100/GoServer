@@ -17,7 +17,7 @@ var (
 func InitDB() {
 	//只载入一个月内登录过的
 	var list []TPlayer
-	dbmgo.FindAll("Player", bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - 30*24*3600}}, &list)
+	dbmgo.FindAll(kDBPlayer, bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - 30*24*3600}}, &list)
 	for i := 0; i < len(list); i++ {
 		list[i].init()
 		AddCache(&list[i])
@@ -25,6 +25,7 @@ func InitDB() {
 	println("load active player form db: ", len(list))
 
 	InitSvrMailDB()
+	InitSeasonDB()
 }
 
 //! 若多线程架构，玩家内存，只能他自己直接修改，别人须转给他后间接改(异步)
@@ -76,7 +77,7 @@ func GetPlayerBaseData(pid uint32) *TPlayerBase {
 		return &player.TPlayerBase
 	} else {
 		ptr := new(TPlayerBase)
-		if dbmgo.Find("Player", "_id", pid, ptr) {
+		if dbmgo.Find(kDBPlayer, "_id", pid, ptr) {
 			return ptr
 		}
 		return nil

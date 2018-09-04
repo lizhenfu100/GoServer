@@ -43,6 +43,11 @@ import (
 const (
 	Idle_Max_Minute   = 60 //须客户端心跳包
 	ReLogin_Wait_Time = time.Minute * 5
+	kDBPlayer         = "Player"
+	kDBMail           = "Mail"
+	kDBMailSvr        = "MailSvr"
+	kDBBattle         = "Battle"
+	kDBSeason         = "Season"
 )
 
 type TPlayerBase struct {
@@ -73,6 +78,7 @@ type TPlayer struct {
 	Friend  TFriendModule
 	team    Team
 	Battle  TBattleModule
+	Season  TSeasonModule
 }
 
 func _NewPlayer() *TPlayer {
@@ -87,6 +93,7 @@ func (self *TPlayer) init() {
 		&self.Friend,
 		&self.team,
 		&self.Battle,
+		&self.Season,
 	}
 }
 
@@ -102,7 +109,7 @@ func NewPlayerInDB(accountId uint32, name string) *TPlayer {
 	player.PlayerID = accountId //一个账户下仅一个角色的游戏，可令pid=aid
 	//player.PlayerID = dbmgo.GetNextIncId("PlayerId")
 
-	if dbmgo.InsertSync("Player", &player.TPlayerBase) {
+	if dbmgo.InsertSync(kDBPlayer, &player.TPlayerBase) {
 		for _, v := range player.modules {
 			v.InitAndInsert(player)
 		}
@@ -113,7 +120,7 @@ func NewPlayerInDB(accountId uint32, name string) *TPlayer {
 }
 func LoadPlayerFromDB(key string, val uint32) *TPlayer {
 	player := _NewPlayer()
-	if dbmgo.Find("Player", key, val, &player.TPlayerBase) {
+	if dbmgo.Find(kDBPlayer, key, val, &player.TPlayerBase) {
 		for _, v := range player.modules {
 			v.LoadFromDB(player)
 		}
@@ -123,7 +130,7 @@ func LoadPlayerFromDB(key string, val uint32) *TPlayer {
 	return nil
 }
 func (self *TPlayer) WriteAllToDB() {
-	dbmgo.UpdateIdToDB("Player", self.PlayerID, &self.TPlayerBase)
+	dbmgo.UpdateIdToDB(kDBPlayer, self.PlayerID, &self.TPlayerBase)
 	for _, v := range self.modules {
 		v.WriteToDB()
 	}

@@ -18,6 +18,8 @@ import (
 	"time"
 )
 
+const kDBTable = "Order"
+
 type TOrderInfo struct {
 	Order_id       string `bson:"_id"`
 	Third_order_id string
@@ -53,7 +55,7 @@ func CreateOrderInDB(ptr *TOrderInfo) bool {
 	//生成订单号
 	ptr.Order_id = fmt.Sprintf("%03d%s%06d", ptr.Pay_id, time.Now().Format("060102"), dbmgo.GetNextIncId("OrderId"))
 	ptr.Time = time.Now().Unix()
-	if dbmgo.InsertSync("Order", ptr) {
+	if dbmgo.InsertSync(kDBTable, ptr) {
 		g_order_map.Store(ptr.Order_id, ptr)
 		return true
 	}
@@ -65,7 +67,7 @@ func FindOrder(orderId string) *TOrderInfo {
 	} else if v, ok := g_order_map.Load(orderId); ok {
 		return v.(*TOrderInfo)
 	} else {
-		if ptr := new(TOrderInfo); dbmgo.Find("Order", "_id", orderId, ptr) {
+		if ptr := new(TOrderInfo); dbmgo.Find(kDBTable, "_id", orderId, ptr) {
 			return ptr
 		}
 	}
@@ -73,7 +75,7 @@ func FindOrder(orderId string) *TOrderInfo {
 }
 func ConfirmOrder(ptr *TOrderInfo) {
 	ptr.Can_send = 0
-	dbmgo.UpdateToDB("Order", bson.M{"_id": ptr.Order_id}, bson.M{"$set": bson.M{"can_send": 0}})
+	dbmgo.UpdateToDB(kDBTable, bson.M{"_id": ptr.Order_id}, bson.M{"$set": bson.M{"can_send": 0}})
 	g_order_map.Delete(ptr.Order_id)
 }
 func DeleteTimeOutOrder() { //删除内存中滞留一天的订单
@@ -87,15 +89,15 @@ func DeleteTimeOutOrder() { //删除内存中滞留一天的订单
 }
 func InitDB() {
 	//删除超过7天的无效订单
-	dbmgo.RemoveAllSync("Order", bson.M{
+	dbmgo.RemoveAllSync(kDBTable, bson.M{
 		"status": 0, "can_send": 0,
 		"time": bson.M{"$lt": time.Now().Unix() - 7*24*3600},
 	})
 	//删除数据库里超过30天的订单
-	dbmgo.RemoveAllSync("Order", bson.M{"time": bson.M{"$lt": time.Now().Unix() - 30*24*3600}})
+	dbmgo.RemoveAllSync(kDBTable, bson.M{"time": bson.M{"$lt": time.Now().Unix() - 30*24*3600}})
 	//载入所有未完成订单
 	var list []TOrderInfo
-	dbmgo.FindAll("Order", bson.M{"can_send": 1}, &list)
+	dbmgo.FindAll(kDBTable, bson.M{"can_send": 1}, &list)
 	for i := 0; i < len(list); i++ {
 		g_order_map.Store(list[i].Order_id, &list[i])
 	}

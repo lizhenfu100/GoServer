@@ -14,7 +14,7 @@ const funcRouteTemplate = `
 {{range $_, $v := .}}	{{$v}},
 {{end}}`
 
-func generatRpcRoute(modules, funcs []string) {
+func generateRpcRoute(modules, funcs []string) {
 	filename := K_EnumFileName + ".go"
 	f, err := os.OpenFile(K_EnumOutDir+filename, os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
@@ -54,8 +54,8 @@ func generatRpcRoute(modules, funcs []string) {
 }
 func getModuleRpcs(module string, funcs []string) (ret []string) {
 	for _, name := range funcs {
-		if strings.Split(name, "_")[1] == module {
-			ret = append(ret, RpcNameCapitalize(name))
+		if strings.Split(name, "_")[1] == module { //Rpc_后面的字符即为模块名
+			ret = append(ret, name)
 		}
 	}
 	return

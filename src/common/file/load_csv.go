@@ -57,7 +57,7 @@ import (
 	"strings"
 )
 
-var G_Csv_Map map[string]interface{} = nil
+var G_Csv_Map map[string]interface{}
 
 func LoadAllCsv() {
 	names, err := filepath.Glob("csv/*.csv")
@@ -118,7 +118,11 @@ func ParseRefCsvByMap(records [][]string, pMap interface{}) {
 				data := slice.Index(idx)
 				idx++
 				_parseData(v, nilFlag, data)
-				table.SetMapIndex(data.Field(0), data.Addr())
+				if table.MapIndex(data.Field(0)).IsValid() {
+					panic("csv map key is repeated !!!\n")
+				} else {
+					table.SetMapIndex(data.Field(0), data.Addr())
+				}
 			}
 		}
 	}

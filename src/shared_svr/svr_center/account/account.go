@@ -4,10 +4,17 @@ import (
 	"common"
 	"common/format"
 	"dbmgo"
+	"fmt"
+	"gamelog"
+	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
+	"shared_svr/svr_center/gameInfo/HappyDiner"
 	"shared_svr/svr_center/gameInfo/SoulKnight"
+	"strconv"
 	"time"
 )
+
+const kDBTable = "Account"
 
 type TAccount struct {
 	AccountID   uint32 `bson:"_id"`
@@ -23,6 +30,7 @@ type TAccount struct {
 	// 有需要可参考player的iDBModule改写
 	gameList   map[string]IGameInfo
 	SoulKnight SoulKnight.TGameInfo
+	HappyDiner HappyDiner.TGameInfo
 }
 
 func _NewAccount() *TAccount {
@@ -33,20 +41,21 @@ func _NewAccount() *TAccount {
 func (self *TAccount) init() {
 	self.gameList = map[string]IGameInfo{
 		"SoulKnight": &self.SoulKnight,
+		"HappyDiner": &self.HappyDiner,
 	}
 }
-func (self *TAccount) Login(passwd string) (errcode int8) {
+func (self *TAccount) Login(passwd string) (errcode uint16) {
 	if self == nil {
-		errcode = -1 //not_exist
+		errcode = err.Account_none
 	} else if passwd != self.Password {
-		errcode = -2 //invalid_password
+		errcode = err.Passwd_err
 	} else if self.IsForbidden {
-		errcode = -3 //forbidded_account
+		errcode = err.Account_forbidden
 	} else {
-		errcode = 1
+		errcode = err.Success
 
 		self.LoginTime = time.Now().Unix()
-		dbmgo.UpdateToDB("Account", bson.M{"_id": self.AccountID}, bson.M{"$set": bson.M{"logintime": self.LoginTime}})
+		dbmgo.UpdateToDB(kDBTable, bson.M{"_id": self.AccountID}, bson.M{"$set": bson.M{"logintime": self.LoginTime}})
 		time.AfterFunc(15*time.Minute, func() {
 			if time.Now().Unix()-self.LoginTime >= 15*60 {
 				DelCache(self)
@@ -70,11 +79,11 @@ func Rpc_center_account_login(req, ack *common.NetPack) {
 	passwd := req.ReadString()
 
 	if account := GetAccountByName(name); account == nil {
-		ack.WriteInt8(-1)
+		ack.WriteUInt16(err.Account_none)
 	} else {
 		errcode := account.Login(passwd)
-		ack.WriteInt8(errcode)
-		if errcode > 0 {
+		ack.WriteUInt16(errcode)
+		if errcode == err.Success {
 			ack.WriteUInt32(account.AccountID)
 			//附带的游戏数据，可能有的游戏空的
 			if pInfo := account.GetGameInfo(gameName); pInfo != nil {
@@ -88,27 +97,27 @@ func Rpc_center_reg_account(req, ack *common.NetPack) {
 	password := req.ReadString()
 
 	if !format.CheckAccount(name) {
-		ack.WriteInt8(-1)
+		ack.WriteUInt16(err.Account_format_err)
 	} else if !format.CheckPasswd(password) {
-		ack.WriteInt8(-2)
+		ack.WriteUInt16(err.Passwd_format_err)
 	} else if account := AddNewAccount(name, password); account != nil {
-		ack.WriteInt8(1)
+		ack.WriteUInt16(err.Success)
 	} else {
-		ack.WriteInt8(-3)
+		ack.WriteUInt16(err.Account_repeat)
 	}
 }
 func Rpc_center_check_account(req, ack *common.NetPack) {
 	name := req.ReadString()
 
 	if !format.CheckAccount(name) {
-		ack.WriteInt8(-1)
+		ack.WriteUInt16(err.Passwd_format_err)
 		return
 	}
 	var account TAccount
-	if dbmgo.Find("Account", "name", name, &account) {
-		ack.WriteInt8(-2)
+	if dbmgo.Find(kDBTable, "name", name, &account) {
+		ack.WriteUInt16(err.Account_repeat)
 	} else {
-		ack.WriteInt8(1)
+		ack.WriteUInt16(err.Success)
 	}
 }
 func Rpc_center_change_password(req, ack *common.NetPack) {
@@ -117,10 +126,23 @@ func Rpc_center_change_password(req, ack *common.NetPack) {
 	newpassword := req.ReadString()
 
 	if !format.CheckPasswd(newpassword) {
-		ack.WriteInt8(-1)
+		ack.WriteUInt16(err.Passwd_format_err)
 	} else if ok := ResetPassword(name, oldpassword, newpassword); ok {
-		ack.WriteInt8(1)
+		ack.WriteUInt16(err.Success)
 	} else {
-		ack.WriteInt8(-2)
+		ack.WriteUInt16(err.Passwd_err)
 	}
+}
+func Rpc_center_visitor_account(req, ack *common.NetPack) {
+	id := dbmgo.GetNextIncId("VisitorId")
+	name := fmt.Sprintf("ChillyRoomGuest_%d", id)
+	passwd := strconv.Itoa(int(common.StringHash(name)))
+
+	if account := AddNewAccount(name, passwd); account == nil {
+		gamelog.Error("visitor_account fail: %s:%s", name, passwd)
+		name = ""
+		passwd = ""
+	}
+	ack.WriteString(name)
+	ack.WriteString(passwd)
 }

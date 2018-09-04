@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"common/file"
 	"fmt"
+	"os"
 	"runtime/debug"
-	"strings"
+	"text/template"
 	"time"
 )
 
@@ -36,7 +39,7 @@ func main() {
 	vec := make([]*RpcInfo, len(svrList))
 	funcs := make([]string, 0, 1024) //小写开头
 	for i, v := range svrList {
-		vec[i] = generatRpcRegist(v)
+		vec[i] = generateRpcRegist(v)
 	}
 	for _, ptr := range vec {
 		addRpc_Go(&funcs, ptr)
@@ -47,23 +50,36 @@ func main() {
 	addRpc_CS(&funcs) //client
 
 	//3、RpcFunc收集完毕，生成RpcEunm
-	if generatRpcEnum(funcs) {
+	if generateRpcEnum(funcs) {
 		//4、生成golang服务器的路由信息
 		modules := []string{"client"}
 		for _, ptr := range vec {
 			modules = append(modules, ptr.Module)
 		}
-		generatRpcRoute(modules, funcs)
+		generateRpcRoute(modules, funcs)
 	}
-	fmt.Print("Generate success...\n")
+
+	generateErrCode() //生成错误码
+
+	print("Generate success...\n")
 }
 
-func GetModuleName(svr string) string {
-	if i := strings.LastIndex(svr, "/"); i >= 0 {
-		svr = svr[i+1:]
+func MakeFile(data interface{}, outDir, filename, templateText string) {
+	tpl, err := template.New(filename).Parse(templateText)
+	if err != nil {
+		panic(err.Error())
+		return
 	}
-	if i := strings.Index(svr, "svr_"); i >= 0 {
-		return svr[i+4:]
+	var bf bytes.Buffer
+	if err = tpl.Execute(&bf, data); err != nil {
+		panic(err.Error())
+		return
 	}
-	return svr
+	f, err := file.CreateFile(outDir, filename, os.O_WRONLY|os.O_TRUNC)
+	if err != nil {
+		panic(err.Error())
+		return
+	}
+	defer f.Close()
+	f.Write(bf.Bytes())
 }

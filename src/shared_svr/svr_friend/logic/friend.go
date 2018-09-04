@@ -6,6 +6,8 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+const kDBTable = "Friend"
+
 type TFriendModule struct {
 	AccountId uint32 `bson:"_id"`
 	FriendIDs []uint32
@@ -18,7 +20,7 @@ func Rpc_friend_add(req, ack *common.NetPack, this *TFriendModule) {
 
 	if i := this.InFriendLst(aid); i < 0 {
 		this.FriendIDs = append(this.FriendIDs, aid)
-		dbmgo.UpdateToDB("Friend", bson.M{"_id": this.AccountId}, bson.M{"$push": bson.M{
+		dbmgo.UpdateToDB(kDBTable, bson.M{"_id": this.AccountId}, bson.M{"$push": bson.M{
 			"friendids": aid}})
 	}
 }
@@ -27,7 +29,7 @@ func Rpc_friend_del(req, ack *common.NetPack, this *TFriendModule) {
 
 	if i := this.InFriendLst(aid); i >= 0 {
 		this.FriendIDs = append(this.FriendIDs[:i], this.FriendIDs[i+1:]...)
-		dbmgo.UpdateToDB("Friend", bson.M{"_id": this.AccountId}, bson.M{"$pull": bson.M{
+		dbmgo.UpdateToDB(kDBTable, bson.M{"_id": this.AccountId}, bson.M{"$pull": bson.M{
 			"friendids": aid}})
 	}
 }
@@ -49,8 +51,8 @@ func Rpc_friend_get_friend_list(req, ack *common.NetPack) {
 // - 辅助函数
 func FindWithDB(aid uint32) *TFriendModule {
 	ptr := new(TFriendModule)
-	if !dbmgo.Find("Friend", "_id", aid, ptr) {
-		dbmgo.InsertToDB("Friend", ptr)
+	if !dbmgo.Find(kDBTable, "_id", aid, ptr) {
+		dbmgo.InsertToDB(kDBTable, ptr)
 	}
 	return ptr
 }

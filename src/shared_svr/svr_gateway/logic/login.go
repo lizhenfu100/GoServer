@@ -2,6 +2,7 @@ package logic
 
 import (
 	"common"
+	"generate_out/err"
 	"generate_out/rpc/enum"
 	"http"
 	"netConfig"
@@ -17,9 +18,9 @@ func Rpc_gateway_login(req, ack *common.NetPack, client *tcp.TCPConn) {
 	if CheckLoginToken(accountId, token) {
 		client.UserPtr = accountId
 		AddClientConn(accountId, client)
-		ack.WriteInt8(1)
+		ack.WriteUInt16(err.Success)
 	} else {
-		ack.WriteInt8(-1)
+		ack.WriteUInt16(err.Token_verify_err)
 	}
 }
 

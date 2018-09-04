@@ -18,6 +18,7 @@ package logic
 import (
 	"common"
 	"common/assert"
+	"generate_out/err"
 	"generate_out/rpc/enum"
 	"http"
 	"netConfig"
@@ -42,7 +43,11 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 	centerSvrId := netConfig.HashCenterID(account)
 	netConfig.SyncRelayToCenter(centerSvrId, enum.Rpc_center_account_login, req, ack)
 
-	if errCode := ack.ReadInt8(); errCode > 0 {
+	//临时读取buffer数据
+	oldPos = ack.ReadPos
+	errCode := ack.ReadUInt16()
+	ack.ReadPos = oldPos
+	if errCode == err.Success {
 		accountId := ack.ReadUInt32()
 		var gameInfo SoulKnight.TGameInfo //解析账号上的gameInfo
 		gameInfo.BufToData(ack)
@@ -60,7 +65,7 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 		}
 		assert.True(gameInfo.SvrId > 0)
 		if gameInfo.SvrId <= 0 {
-			ack.WriteInt8(-100)
+			ack.WriteUInt16(err.None_free_game_server)
 			return
 		}
 
@@ -81,6 +86,7 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 			conn.WriteMsg(msg)
 
 			pMetaToClient = meta.GetMeta("gateway", gatewayId)
+			errCode = err.None_gateway
 
 		} else if conn := netConfig.GetTcpConn("game", gameSvrId); conn != nil {
 			msg := common.NewNetPackCap(32)
@@ -90,6 +96,8 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 			conn.WriteMsg(msg)
 
 			pMetaToClient = meta.GetMeta("game", gameSvrId)
+			errCode = err.None_game_server
+
 		} else if addr := netConfig.GetHttpAddr("game", gameSvrId); addr != "" {
 			http.CallRpc(addr, enum.Rpc_game_login_token, func(buf *common.NetPack) {
 				buf.WriteUInt32(token)
@@ -97,19 +105,18 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 			}, nil)
 
 			pMetaToClient = meta.GetMeta("game", gameSvrId)
+			errCode = err.None_game_server
 		}
 
 		if pMetaToClient != nil { //回复client要连接的目标节点
-			ack.WriteInt8(1)
+			ack.WriteUInt16(err.Success)
 			ack.WriteUInt32(accountId)
 			ack.WriteString(pMetaToClient.OutIP)
 			ack.WriteUInt16(pMetaToClient.Port())
 			ack.WriteUInt32(token)
 		} else {
-			ack.WriteInt8(-100)
+			ack.WriteUInt16(errCode)
 		}
-	} else {
-		ack.WriteInt8(errCode)
 	}
 }
 func Rpc_login_relay_to_center(req, ack *common.NetPack) {

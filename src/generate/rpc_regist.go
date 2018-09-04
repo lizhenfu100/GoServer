@@ -13,12 +13,10 @@
 package main
 
 import (
-	"bytes"
 	"common/file"
-	"os"
 	"path/filepath"
 	"regexp"
-	"text/template"
+	"strings"
 )
 
 const (
@@ -28,7 +26,7 @@ const (
 
 type Func struct {
 	Pack string //函数所在包名
-	Name string //函数名
+	Name string //函数名，大写开头
 }
 type RpcInfo struct {
 	Module     string          //模块名：game、login、gateway...
@@ -41,9 +39,9 @@ type RpcInfo struct {
 	RegPlayerRpcPack string //玩家rpc注册函数所在包名
 }
 
-func generatRpcRegist(svr string) *RpcInfo {
-	pinfo := &RpcInfo{Module: GetModuleName(svr), PackDirs: make(map[string]bool)}
-	names, _ := file.WalkDir(K_SvrDir+svr, ".go")
+func generateRpcRegist(svr string) *RpcInfo {
+	pinfo := &RpcInfo{Module: getModuleName(svr), PackDirs: make(map[string]bool)}
+	names, _ := file.WalkDir(K_SvrDir+svr, ".go") //遍历所有go文件，收集rpc函数
 	for _, v := range names {
 		packdir, pack := "", ""
 		file.ReadLine(v, func(line string) {
@@ -67,8 +65,17 @@ func generatRpcRegist(svr string) *RpcInfo {
 			}
 		})
 	}
-	pinfo.makeFile(svr)
+	MakeFile(pinfo, K_RegistOutDir+svr+"/", K_RegistFileName, codeRegistTemplate)
 	return pinfo
+}
+func getModuleName(svr string) string {
+	if i := strings.LastIndex(svr, "/"); i >= 0 {
+		svr = svr[i+1:]
+	}
+	if i := strings.Index(svr, "svr_"); i >= 0 {
+		return svr[i+4:]
+	}
+	return svr
 }
 
 // -------------------------------------
@@ -148,30 +155,6 @@ func init() {
 }
 `
 
-func (self *RpcInfo) makeFile(svr string) {
-	filename := K_RegistFileName
-	tpl, err := template.New(filename).Parse(codeRegistTemplate)
-	if err != nil {
-		panic(err.Error())
-		return
-	}
-	var bf bytes.Buffer
-	if err = tpl.Execute(&bf, self); err != nil {
-		panic(err.Error())
-		return
-	}
-	if err = os.MkdirAll(K_RegistOutDir+svr, 0777); err != nil {
-		panic(err.Error())
-		return
-	}
-	f, err := os.OpenFile(K_RegistOutDir+svr+"/"+filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
-	if err != nil {
-		panic(err.Error())
-		return
-	}
-	defer f.Close()
-	f.Write(bf.Bytes())
-}
 func (p *RpcInfo) RpcCnt() int        { return len(p.TcpRpc) + len(p.HttpRpc) + len(p.PlayerRpc) }
 func (p *RpcInfo) TcpRpcCnt() int     { return len(p.TcpRpc) }
 func (p *RpcInfo) HttpRpcCnt() int    { return len(p.HttpRpc) }

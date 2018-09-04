@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"common"
+	"common/file"
 	"fmt"
 	"gamelog"
 	"net/http"
@@ -137,11 +138,7 @@ func (self *LeaveLog) writeLog() (ret string) {
 		panic(err.Error())
 		return
 	}
-	if err = os.MkdirAll(G_OutDir, 0777); err != nil {
-		panic(err.Error())
-		return
-	}
-	f, err := os.OpenFile(G_OutDir+filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
+	f, err := file.CreateFile(G_OutDir, filename, os.O_WRONLY|os.O_APPEND)
 	if err != nil {
 		panic(err.Error())
 		return

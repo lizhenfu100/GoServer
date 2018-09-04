@@ -27,7 +27,7 @@ func Rpc_center_set_game_info(req, ack *common.NetPack) {
 	if ptr := GetAccountInCache(accountId); ptr != nil {
 		if info := ptr.GetGameInfo(gameName); info != nil {
 			info.BufToData(req)
-			dbmgo.UpdateToDB("Account", bson.M{"_id": accountId}, bson.M{"$set": bson.M{strings.ToLower(gameName): info}})
+			dbmgo.UpdateToDB(kDBTable, bson.M{"_id": accountId}, bson.M{"$set": bson.M{strings.ToLower(gameName): info}})
 		}
 	}
 }

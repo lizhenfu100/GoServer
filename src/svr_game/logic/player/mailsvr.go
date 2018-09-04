@@ -15,12 +15,12 @@ var (
 
 func InitSvrMailDB() {
 	//只读一个月内的
-	dbmgo.FindAll("MailSvr", bson.M{"time": bson.M{"$gt": time.Now().Unix() - 30*24*3600}}, &g_svr_mail)
+	dbmgo.FindAll(kDBMailSvr, bson.M{"time": bson.M{"$gt": time.Now().Unix() - 30*24*3600}}, &g_svr_mail)
 }
 func CreateSvrMail(title, from, content string, items ...common.IntPair) {
 	id := dbmgo.GetNextIncId("SvrMailId")
 	pMail := &TMail{id, time.Now().Unix(), title, from, content, 0, items}
-	dbmgo.InsertToDB("MailSvr", pMail)
+	dbmgo.InsertToDB(kDBMailSvr, pMail)
 
 	g_mail_mutex.Lock()
 	g_svr_mail = append(g_svr_mail, *pMail)
@@ -32,7 +32,7 @@ func (self *TMailModule) SendSvrMail(mail *TMail) bool {
 	}
 	self.SvrMailId = mail.ID
 	mail.ID = dbmgo.GetNextIncId("MailId")
-	dbmgo.UpdateToDB("Mail", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"maillst": mail}})
+	dbmgo.UpdateToDB(kDBMail, bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"maillst": mail}})
 	self.MailLst = append(self.MailLst, *mail)
 	// self.owner.WriteMsg( mail.MailToBuf() )
 	return true

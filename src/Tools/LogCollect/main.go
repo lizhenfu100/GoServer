@@ -105,11 +105,7 @@ func makeFile(content [][]string) {
 		panic(err.Error())
 		return
 	}
-	if err = os.MkdirAll("LogCollect/", 0777); err != nil {
-		panic(err.Error())
-		return
-	}
-	f, err := os.OpenFile("LogCollect/"+filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	f, err := file.CreateFile("LogCollect/", filename, os.O_WRONLY|os.O_TRUNC)
 	if err != nil {
 		panic(err.Error())
 		return

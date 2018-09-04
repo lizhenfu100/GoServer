@@ -4,7 +4,7 @@ import (
 	"regexp"
 )
 
-//32长，数字、字母、下划线、横杠
+//32长，数字、字母、下划线、横杠、@、.
 func CheckAccount(s string) bool {
 	ret, _ := regexp.MatchString(`^[\w-@\.]{3,32}$`, s)
 	return ret
@@ -28,6 +28,10 @@ func CheckValue(key, s string) (ret bool) {
 		ret, _ = regexp.MatchString(`^[0-9]{11}$`, s)
 	case "email": //通常邮箱地址
 		ret, _ = regexp.MatchString(`^[\w-]{1,32}@[\w-]{1,32}\.[\w-]{2,4}$`, s)
+	case "qq":
+		ret, _ = regexp.MatchString(`^[0-9]{3,13}$`, s)
+	case "wechat":
+		ret, _ = regexp.MatchString(`^[\w-]{6,20}$`, s)
 	default:
 		ret = false
 	}

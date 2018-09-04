@@ -16,7 +16,7 @@ var (
 func InitDB() {
 	//只载入一个月内登录过的
 	var list []TAccount
-	dbmgo.FindAll("Account", bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - 30*24*3600}}, &list)
+	dbmgo.FindAll(kDBTable, bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - 30*24*3600}}, &list)
 	for i := 0; i < len(list); i++ {
 		list[i].init()
 		AddCache(&list[i])
@@ -25,7 +25,7 @@ func InitDB() {
 }
 func AddNewAccount(name, password string) *TAccount {
 	account := _NewAccount()
-	if dbmgo.Find("Account", "name", name, account) {
+	if dbmgo.Find(kDBTable, "name", name, account) {
 		return nil
 	}
 	account.Name = name
@@ -33,7 +33,7 @@ func AddNewAccount(name, password string) *TAccount {
 	account.CreateTime = time.Now().Unix()
 	account.AccountID = dbmgo.GetNextIncId("AccountId")
 
-	if dbmgo.InsertSync("Account", account) {
+	if dbmgo.InsertSync(kDBTable, account) {
 		AddCache(account)
 		return account
 	}
@@ -44,7 +44,7 @@ func GetAccountByName(name string) *TAccount {
 		return v.(*TAccount)
 	} else {
 		account := _NewAccount()
-		if dbmgo.Find("Account", "name", name, account) {
+		if dbmgo.Find(kDBTable, "name", name, account) {
 			AddCache(account)
 			return account
 		}
@@ -61,7 +61,7 @@ func ResetPassword(name, password, newpassword string) bool {
 	if account := GetAccountByName(name); account != nil {
 		if account.Password == password {
 			account.Password = newpassword
-			dbmgo.UpdateToDB("Account", bson.M{"_id": account.AccountID}, bson.M{"$set": bson.M{
+			dbmgo.UpdateToDB(kDBTable, bson.M{"_id": account.AccountID}, bson.M{"$set": bson.M{
 				"password": newpassword}})
 			return true
 		}

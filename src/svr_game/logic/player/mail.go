@@ -39,14 +39,14 @@ type TMail struct {
 // -- 框架接口
 func (self *TMailModule) InitAndInsert(player *TPlayer) {
 	self.PlayerID = player.PlayerID
-	dbmgo.InsertToDB("Mail", self)
+	dbmgo.InsertToDB(kDBMail, self)
 }
 func (self *TMailModule) LoadFromDB(player *TPlayer) {
-	if !dbmgo.Find("Mail", "_id", player.PlayerID, self) {
+	if !dbmgo.Find(kDBMail, "_id", player.PlayerID, self) {
 		self.InitAndInsert(player)
 	}
 }
-func (self *TMailModule) WriteToDB() { dbmgo.UpdateIdToDB("Mail", self.PlayerID, self) }
+func (self *TMailModule) WriteToDB() { dbmgo.UpdateIdToDB(kDBMail, self.PlayerID, self) }
 func (self *TMailModule) OnLogin() {
 	// 删除过期已读邮件
 	timenow := time.Now().Unix()

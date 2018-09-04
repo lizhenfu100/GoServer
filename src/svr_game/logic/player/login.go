@@ -18,11 +18,13 @@ import (
 	"common"
 	"common/format"
 	"gamelog"
+	"generate_out/err"
 	"generate_out/rpc/enum"
 	"http"
 	"netConfig"
 	"netConfig/meta"
 	"sync"
+	"sync/atomic"
 	"tcp"
 )
 
@@ -38,17 +40,17 @@ func Rpc_game_login(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		if CheckLoginToken(accountId, token) {
 			_NotifyPlayerCnt(netConfig.G_Local_Meta.SvrID, g_player_cnt)
 		} else {
-			ack.WriteInt8(-1)
+			ack.WriteUInt16(err.Token_verify_err)
 		}
 	}
 
 	//TODO:zhoumf: 读数据库同步的，比较耗时，直接读的方式不适合外网；可转入线程池再通知回主线程
 	if this := FindWithDB_AccountId(accountId); this == nil {
-		ack.WriteInt8(-2) //notify client to create new player
+		ack.WriteUInt16(err.Account_have_none_player) //notify client to create new player
 	} else {
 		this.Login(conn)
 		gamelog.Debug("Player Login: %s, accountId(%d)", this.Name, this.PlayerID)
-		ack.WriteInt8(1)
+		ack.WriteUInt16(err.Success)
 		ack.WriteUInt32(this.PlayerID)
 		ack.WriteString(this.Name)
 	}
@@ -72,7 +74,8 @@ func Rpc_game_logout(req, ack *common.NetPack, this *TPlayer) {
 }
 
 func Rpc_game_get_player_cnt(req, ack *common.NetPack, conn *tcp.TCPConn) {
-	ack.WriteInt32(g_player_cnt)
+	cnt := atomic.LoadInt32(&g_player_cnt)
+	ack.WriteInt32(cnt)
 }
 
 // -------------------------------------
@@ -84,7 +87,8 @@ func Rpc_game_login_token(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	accountId := req.ReadUInt32()
 	g_login_token.Store(accountId, token)
 
-	ack.WriteInt32(g_player_cnt)
+	cnt := atomic.LoadInt32(&g_player_cnt)
+	ack.WriteInt32(cnt)
 }
 func CheckLoginToken(accountId, token uint32) bool {
 	if value, ok := g_login_token.Load(accountId); ok {
