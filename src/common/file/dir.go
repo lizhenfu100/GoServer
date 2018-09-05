@@ -2,12 +2,14 @@ package file
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/md5"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 )
 
 //dir, name := filepath.Dir(path), filepath.Base(path) //不包含分隔符，且会转换为对应平台的分隔符
@@ -78,6 +80,26 @@ func CreateFile(dir, name string, flag int) (*os.File, error) {
 	} else {
 		return file, nil
 	}
+}
+func CreateTemplate(data interface{}, outDir, filename, tempText string) bytes.Buffer {
+	var bf bytes.Buffer
+	tpl, err := template.New(filename).Parse(tempText)
+	if err != nil {
+		panic(err.Error())
+		return bf
+	}
+	if err = tpl.Execute(&bf, data); err != nil {
+		panic(err.Error())
+		return bf
+	}
+	f, err := CreateFile(outDir, filename, os.O_WRONLY|os.O_TRUNC)
+	if err != nil {
+		panic(err.Error())
+		return bf
+	}
+	f.Write(bf.Bytes())
+	f.Close()
+	return bf
 }
 
 // ------------------------------------------------------------

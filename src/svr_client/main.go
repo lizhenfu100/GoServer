@@ -68,6 +68,7 @@ func Download() {
 	if err != nil {
 		panic(err)
 	}
+	defer f.Close()
 	addr := netConfig.GetHttpAddr("file", 0)
 
 	req, _ := nhttp.NewRequest("GET", addr+"table.csv", nil)

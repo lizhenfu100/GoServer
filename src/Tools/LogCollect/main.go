@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"common/file"
 	"fmt"
-	"os"
 	"regexp"
 	"runtime/debug"
-	"text/template"
 	"time"
 )
 
@@ -51,7 +48,8 @@ func main() {
 		})
 	}
 	//fmt.Println(result)
-	makeFile(result)
+	filename := time.Now().Format("20060102_150405") + ".log"
+	file.CreateTemplate(result, "LogCollect/", filename, K_Out_Template)
 
 	fmt.Print("Collect success...\n")
 }
@@ -91,25 +89,4 @@ func _matchTarget(lv int, s string) (ret []string) {
 		ret = append(ret, list...)
 	}
 	return
-}
-
-func makeFile(content [][]string) {
-	filename := time.Now().Format("20060102_150405") + ".log"
-	tpl, err := template.New(filename).Parse(K_Out_Template)
-	if err != nil {
-		panic(err.Error())
-		return
-	}
-	var bf bytes.Buffer
-	if err = tpl.Execute(&bf, content); err != nil {
-		panic(err.Error())
-		return
-	}
-	f, err := file.CreateFile("LogCollect/", filename, os.O_WRONLY|os.O_TRUNC)
-	if err != nil {
-		panic(err.Error())
-		return
-	}
-	defer f.Close()
-	f.Write(bf.Bytes())
 }

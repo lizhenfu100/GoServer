@@ -1,19 +1,18 @@
 package main
 
 import (
-	"bytes"
 	"common"
 	"common/file"
 	"fmt"
 	"gamelog"
 	"net/http"
-	"os"
 	"regexp"
 	"strings"
 	"svr_sdk/api"
-	"text/template"
 	"time"
 )
+
+const G_OutDir = "./"
 
 type Leave_req struct {
 	Name string
@@ -47,7 +46,9 @@ func Http_ask_for_leave(w http.ResponseWriter, r *http.Request) {
 		ack = "请假失败：姓名缺失"
 	}
 	if logInfo, ok := req.format(); ok {
-		ack = logInfo.writeLog()
+		filename := time.Now().Format("2006.01") + ".afk"
+		bf := file.CreateTemplate(logInfo, G_OutDir, filename, K_Out_Template)
+		ack = bf.String()
 	} else {
 		ack = "请假失败：日期格式错误 4.29.17:00-19:00"
 	}
@@ -123,27 +124,3 @@ const K_Out_Template = `{
 {{end}}
 }
 `
-
-var G_OutDir = "./"
-
-func (self *LeaveLog) writeLog() (ret string) {
-	filename := time.Now().Format("2006.01") + ".afk"
-	tpl, err := template.New(filename).Parse(K_Out_Template)
-	if err != nil {
-		panic(err.Error())
-		return
-	}
-	var bf bytes.Buffer
-	if err = tpl.Execute(&bf, self); err != nil {
-		panic(err.Error())
-		return
-	}
-	f, err := file.CreateFile(G_OutDir, filename, os.O_WRONLY|os.O_APPEND)
-	if err != nil {
-		panic(err.Error())
-		return
-	}
-	defer f.Close()
-	f.Write(bf.Bytes())
-	return bf.String()
-}

@@ -1,12 +1,8 @@
 package main
 
 import (
-	"bytes"
-	"common/file"
 	"fmt"
-	"os"
 	"runtime/debug"
-	"text/template"
 	"time"
 )
 
@@ -62,24 +58,4 @@ func main() {
 	generateErrCode() //生成错误码
 
 	print("Generate success...\n")
-}
-
-func MakeFile(data interface{}, outDir, filename, templateText string) {
-	tpl, err := template.New(filename).Parse(templateText)
-	if err != nil {
-		panic(err.Error())
-		return
-	}
-	var bf bytes.Buffer
-	if err = tpl.Execute(&bf, data); err != nil {
-		panic(err.Error())
-		return
-	}
-	f, err := file.CreateFile(outDir, filename, os.O_WRONLY|os.O_TRUNC)
-	if err != nil {
-		panic(err.Error())
-		return
-	}
-	defer f.Close()
-	f.Write(bf.Bytes())
 }
