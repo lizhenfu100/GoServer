@@ -19,11 +19,6 @@ import (
 	"strings"
 )
 
-const (
-	K_RegistOutDir   = K_OutDir + "rpc/"
-	K_RegistFileName = "generate_rpc.go"
-)
-
 type Func struct {
 	Pack string //函数所在包名
 	Name string //函数名，大写开头

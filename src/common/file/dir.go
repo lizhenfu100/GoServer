@@ -81,8 +81,7 @@ func CreateFile(dir, name string, flag int) (*os.File, error) {
 		return file, nil
 	}
 }
-func CreateTemplate(data interface{}, outDir, filename, tempText string) bytes.Buffer {
-	var bf bytes.Buffer
+func CreateTemplate(data interface{}, outDir, filename, tempText string) (bf bytes.Buffer) {
 	tpl, err := template.New(filename).Parse(tempText)
 	if err != nil {
 		panic(err.Error())

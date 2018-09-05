@@ -23,17 +23,6 @@ import (
 	"strings"
 )
 
-const (
-	K_EnumOutDir     = K_OutDir + "rpc/enum/"
-	K_EnumFileName   = "generate_rpc_enum"
-	K_EnumOutDir_C   = "../../CXServer/src/rpc/"
-	K_EnumOutDir_CS  = "../../GameClient/Assets/RGScript/generate/"
-	K_RpcFuncFile_C  = "../../CXServer/src/rpc/RpcEnum.h"
-	K_RpcFuncFile_CS = "../../GameClient/Assets/RGScript/Net/Player/Player.cs"
-
-	Logic_RpcEnum_Begin = 100 //之前的预留给系统层用
-)
-
 // -------------------------------------
 // 收集各处的 Rpc 函数名，小写开头
 func addRpc_Go(funcs *[]string, info *RpcInfo) {
@@ -75,8 +64,8 @@ func getOldRpc() (enums []common.KeyPair, enumCnt int) {
 			}
 		}
 	})
-	if enumCnt < Logic_RpcEnum_Begin {
-		enumCnt = Logic_RpcEnum_Begin
+	if enumCnt < 100 { //之前的预留给系统层用
+		enumCnt = 100
 	}
 	return
 }
@@ -107,13 +96,13 @@ func generateRpcEnum(funcs []string) bool {
 	}
 	enums = append(enums, common.KeyPair{"RpcEnumCnt", enumCnt})
 
-	if file.IsExist(K_RpcFuncFile_C) {
+	file.CreateTemplate(enums, K_EnumOutDir, K_EnumFileName+".go", codeEnumTemplate_Go)
+	if file.IsExist(K_EnumOutDir_C) {
 		file.CreateTemplate(enums, K_EnumOutDir_C, K_EnumFileName+".h", codeEnumTemplate_C)
 	}
-	if file.IsExist(K_RpcFuncFile_CS) {
+	if file.IsExist(K_EnumOutDir_CS) {
 		file.CreateTemplate(enums, K_EnumOutDir_CS, K_EnumFileName+".cs", codeEnumTemplate_CS)
 	}
-	file.CreateTemplate(enums, K_EnumOutDir, K_EnumFileName+".go", codeEnumTemplate_Go)
 	return true
 }
 

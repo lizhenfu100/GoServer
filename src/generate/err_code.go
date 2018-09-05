@@ -21,13 +21,6 @@ import (
 	"strings"
 )
 
-const (
-	K_ErrOutDir    = K_OutDir + "err/"
-	K_ErrFileName  = "generate_err_code"
-	K_ErrOutDir_C  = "../../CXServer/src/common/generate/"
-	K_ErrOutDir_CS = "../../GameClient/Assets/RGScript/generate/"
-)
-
 type ErrEnum struct {
 	Name string
 	Desc string
@@ -57,9 +50,14 @@ func generateErrCode() {
 		print("no new errCode, don't change enum.h\n")
 		return
 	}
+
 	file.CreateTemplate(enums, K_ErrOutDir, K_ErrFileName+".go", codeErrTemplate_Go)
-	file.CreateTemplate(enums, K_ErrOutDir_C, K_ErrFileName+".h", codeErrTemplate_C)
-	file.CreateTemplate(enums, K_ErrOutDir_CS, K_ErrFileName+".cs", codeErrTemplate_CS)
+	if file.IsExist(K_ErrOutDir_C) {
+		file.CreateTemplate(enums, K_ErrOutDir_C, K_ErrFileName+".h", codeErrTemplate_C)
+	}
+	if file.IsExist(K_ErrOutDir_CS) {
+		file.CreateTemplate(enums, K_ErrOutDir_CS, K_ErrFileName+".cs", codeErrTemplate_CS)
+	}
 }
 func getOldErr() (enums []common.KeyPair, enumCnt int) {
 	enumCnt = 1 //从1起始，更安全

@@ -6,11 +6,6 @@ import (
 	"time"
 )
 
-const (
-	K_SvrDir = "../src/"
-	K_OutDir = "../src/generate_out/"
-)
-
 func main() {
 	svrList := []string{
 		"shared_svr/zookeeper",
