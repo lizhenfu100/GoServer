@@ -2,10 +2,9 @@ package account
 
 import (
 	"dbmgo"
+	"gopkg.in/mgo.v2/bson"
 	"sync"
 	"time"
-
-	"gopkg.in/mgo.v2/bson"
 )
 
 var (

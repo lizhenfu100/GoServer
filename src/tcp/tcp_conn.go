@@ -191,13 +191,13 @@ LOOP:
 				break LOOP
 			}
 		default:
-			var err error
+			//var err error
 			//for i := 0; i < 100; i++ { //还写不完，等下一轮调度吧 //在同一函数帧里多次尝试意义不大,io还是阻塞的
-			if err = self.writer.Flush(); err != io.ErrShortWrite { //见文件头brief.6
-				break
-			}
+			//	if err = self.writer.Flush(); err != io.ErrShortWrite { //见文件头brief.6
+			//		break
+			//	}
 			//}
-			if err != nil {
+			if err := self.writer.Flush(); err != nil {
 				gamelog.Error("(%p)WriteRoutine Flush error: %s", self.conn, err.Error())
 				break LOOP
 			}

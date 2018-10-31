@@ -34,7 +34,7 @@ type RpcInfo struct {
 	RegPlayerRpcPack string //玩家rpc注册函数所在包名
 }
 
-func generateRpcRegist(svr string) *RpcInfo {
+func gatherRpcInfo(svr string) *RpcInfo {
 	pinfo := &RpcInfo{Module: getModuleName(svr), PackDirs: make(map[string]bool)}
 	names, _ := file.WalkDir(K_SvrDir+svr, ".go") //遍历所有go文件，收集rpc函数
 	for _, v := range names {
@@ -60,8 +60,11 @@ func generateRpcRegist(svr string) *RpcInfo {
 			}
 		})
 	}
-	file.CreateTemplate(pinfo, K_RegistOutDir+svr+"/", K_RegistFileName, codeRegistTemplate)
 	return pinfo
+}
+func generateRpcRegist(svr string, pinfo *RpcInfo) {
+	println(K_RegistOutDir+svr+"/", K_RegistFileName)
+	file.CreateTemplate(pinfo, K_RegistOutDir+svr+"/", K_RegistFileName, codeRegistTemplate)
 }
 func getModuleName(svr string) string {
 	if i := strings.LastIndex(svr, "/"); i >= 0 {

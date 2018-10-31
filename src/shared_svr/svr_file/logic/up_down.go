@@ -95,11 +95,11 @@ func Rpc_file_update_list(req, ack *common.NetPack) {
 	if version == netConfig.G_Local_Meta.Version {
 		ack.WriteUInt16(0)
 	} else {
-		//下发 patch 目录下的文件列表
+		//下发patch目录下的文件列表
 		names, _ := file.WalkDir(Patch_File_Dir, "")
 		ack.WriteUInt16(uint16(len(names)))
 		for _, v := range names {
-			ack.WriteString(v[len(Patch_File_Dir):])
+			ack.WriteString(v[len(Patch_File_Dir):]) //patch后的文件路径
 			vv, _ := g_file_md5.Load(v)
 			ack.WriteUInt32(vv.(uint32))
 		}

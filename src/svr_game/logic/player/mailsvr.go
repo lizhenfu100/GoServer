@@ -1,7 +1,7 @@
 package player
 
 import (
-	"common"
+	"common/std"
 	"dbmgo"
 	"gopkg.in/mgo.v2/bson"
 	"sync"
@@ -17,7 +17,7 @@ func InitSvrMailDB() {
 	//只读一个月内的
 	dbmgo.FindAll(kDBMailSvr, bson.M{"time": bson.M{"$gt": time.Now().Unix() - 30*24*3600}}, &g_svr_mail)
 }
-func CreateSvrMail(title, from, content string, items ...common.IntPair) {
+func CreateSvrMail(title, from, content string, items ...std.IntPair) {
 	id := dbmgo.GetNextIncId("SvrMailId")
 	pMail := &TMail{id, time.Now().Unix(), title, from, content, 0, items}
 	dbmgo.InsertToDB(kDBMailSvr, pMail)

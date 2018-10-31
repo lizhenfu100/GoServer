@@ -3,6 +3,7 @@ package main
 import (
 	"common"
 	"common/file"
+	"common/std"
 	"fmt"
 	"gamelog"
 	"net/http"
@@ -12,7 +13,7 @@ import (
 	"time"
 )
 
-const G_OutDir = "./"
+var G_OutDir = "./"
 
 type Leave_req struct {
 	Name string
@@ -60,9 +61,9 @@ func (self *Leave_req) format() (ret LeaveLog, ok bool) {
 		api.CopySameField(&ret, self)
 		for i := 0; i < len(dates); i++ {
 			if i < len(swaps) {
-				ret.List = append(ret.List, common.StrPair{dates[i], swaps[i]})
+				ret.List = append(ret.List, std.StrPair{dates[i], swaps[i]})
 			} else {
-				ret.List = append(ret.List, common.StrPair{K: dates[i]})
+				ret.List = append(ret.List, std.StrPair{K: dates[i]})
 			}
 		}
 		ok = true
@@ -114,7 +115,7 @@ func formatDate(list []string) (ret bool) {
 // 请假信息，输出成文本
 type LeaveLog struct {
 	Name string
-	List []common.StrPair
+	List []std.StrPair
 }
 
 const K_Out_Template = `{

@@ -8,9 +8,9 @@ import (
 	"gamelog"
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
-	"shared_svr/svr_center/gameInfo/HappyDiner"
-	"shared_svr/svr_center/gameInfo/SoulKnight"
+	"shared_svr/svr_center/gameInfo"
 	"strconv"
+	"sync/atomic"
 	"time"
 )
 
@@ -26,11 +26,8 @@ type TAccount struct {
 
 	BindInfo map[string]string //邮箱、手机、微信号
 
-	/* --- db game info --- */
-	// 有需要可参考player的iDBModule改写
-	gameList   map[string]IGameInfo
-	SoulKnight SoulKnight.TGameInfo
-	HappyDiner HappyDiner.TGameInfo
+	// 有需要可参考player的iModule改写
+	GameInfo map[string]gameInfo.TGameInfo
 }
 
 func _NewAccount() *TAccount {
@@ -39,36 +36,7 @@ func _NewAccount() *TAccount {
 	return self
 }
 func (self *TAccount) init() {
-	self.gameList = map[string]IGameInfo{
-		"SoulKnight": &self.SoulKnight,
-		"HappyDiner": &self.HappyDiner,
-	}
-}
-func (self *TAccount) Login(passwd string) (errcode uint16) {
-	if self == nil {
-		errcode = err.Account_none
-	} else if passwd != self.Password {
-		errcode = err.Passwd_err
-	} else if self.IsForbidden {
-		errcode = err.Account_forbidden
-	} else {
-		errcode = err.Success
 
-		self.LoginTime = time.Now().Unix()
-		dbmgo.UpdateToDB(kDBTable, bson.M{"_id": self.AccountID}, bson.M{"$set": bson.M{"logintime": self.LoginTime}})
-		time.AfterFunc(15*time.Minute, func() {
-			if time.Now().Unix()-self.LoginTime >= 15*60 {
-				DelCache(self)
-			}
-		})
-	}
-	return
-}
-func (self *TAccount) GetGameInfo(gameName string) IGameInfo {
-	if p, ok := self.gameList[gameName]; ok {
-		return p
-	}
-	return nil
 }
 
 // -------------------------------------
@@ -86,11 +54,31 @@ func Rpc_center_account_login(req, ack *common.NetPack) {
 		if errcode == err.Success {
 			ack.WriteUInt32(account.AccountID)
 			//附带的游戏数据，可能有的游戏空的
-			if pInfo := account.GetGameInfo(gameName); pInfo != nil {
-				pInfo.DataToBuf(ack)
+			if v, ok := account.GameInfo[gameName]; ok {
+				v.DataToBuf(ack)
 			}
 		}
 	}
+}
+func (self *TAccount) Login(passwd string) (errcode uint16) {
+	if self == nil {
+		errcode = err.Account_none
+	} else if passwd != self.Password {
+		errcode = err.Passwd_err
+	} else if self.IsForbidden {
+		errcode = err.Account_forbidden
+	} else {
+		errcode = err.Success
+		timeNow := time.Now().Unix()
+		atomic.StoreInt64(&self.LoginTime, timeNow)
+		dbmgo.UpdateToDB(kDBTable, bson.M{"_id": self.AccountID}, bson.M{"$set": bson.M{"logintime": timeNow}})
+		time.AfterFunc(15*time.Minute, func() {
+			if time.Now().Unix()-atomic.LoadInt64(&self.LoginTime) >= 15*60 {
+				DelCache(self)
+			}
+		})
+	}
+	return
 }
 func Rpc_center_reg_account(req, ack *common.NetPack) {
 	name := req.ReadString()
@@ -145,4 +133,20 @@ func Rpc_center_visitor_account(req, ack *common.NetPack) {
 	}
 	ack.WriteString(name)
 	ack.WriteString(passwd)
+}
+
+// -------------------------------------
+// 记录于账号上面的游戏信息
+// 一套账号系统可关联多个游戏，复用社交数据
+func Rpc_center_set_game_info(req, ack *common.NetPack) {
+	accountId := req.ReadUInt32()
+	gameName := req.ReadString()
+
+	if account := GetAccountInCache(accountId); account != nil {
+		v := gameInfo.TGameInfo{}
+		v.BufToData(req)
+		account.GameInfo[gameName] = v
+		dbmgo.UpdateToDB(kDBTable, bson.M{"_id": accountId}, bson.M{"$set": bson.M{
+			fmt.Sprintf("gameinfo.%s", gameName): v}})
+	}
 }

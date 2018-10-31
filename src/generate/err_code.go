@@ -17,6 +17,7 @@ package main
 import (
 	"common"
 	"common/file"
+	"common/std"
 	"regexp"
 	"strings"
 )
@@ -42,24 +43,29 @@ func generateErrCode() {
 	}
 	haveNewEnum := false
 	for i := len(enums); i < len(errCsv); i++ {
-		enums = append(enums, common.KeyPair{errCsv[i].Name, enumCnt})
+		enums = append(enums, std.KeyPair{errCsv[i].Name, enumCnt})
 		haveNewEnum = true
 		enumCnt++
 	}
 	if !haveNewEnum { //没有新的，就不改动文件了，编译更友好
-		print("no new errCode, don't change enum.h\n")
+		println("no new errCode, don't change err_code.h")
 		return
 	}
 
-	file.CreateTemplate(enums, K_ErrOutDir, K_ErrFileName+".go", codeErrTemplate_Go)
-	if file.IsExist(K_ErrOutDir_C) {
+	if K_ErrOutDir != "" {
+		println(K_ErrOutDir, K_ErrFileName+".go")
+		file.CreateTemplate(enums, K_ErrOutDir, K_ErrFileName+".go", codeErrTemplate_Go)
+	}
+	if K_ErrOutDir_C != "" {
+		println(K_ErrOutDir_C, K_ErrFileName+".h")
 		file.CreateTemplate(enums, K_ErrOutDir_C, K_ErrFileName+".h", codeErrTemplate_C)
 	}
-	if file.IsExist(K_ErrOutDir_CS) {
+	if K_ErrOutDir_CS != "" {
+		println(K_ErrOutDir_CS, K_ErrFileName+".cs")
 		file.CreateTemplate(enums, K_ErrOutDir_CS, K_ErrFileName+".cs", codeErrTemplate_CS)
 	}
 }
-func getOldErr() (enums []common.KeyPair, enumCnt int) {
+func getOldErr() (enums []std.KeyPair, enumCnt int) {
 	enumCnt = 1 //从1起始，更安全
 	reg := regexp.MustCompile(`^\w+`)
 	file.ReadLine(K_ErrOutDir+K_ErrFileName+".go", func(line string) {
@@ -68,7 +74,7 @@ func getOldErr() (enums []common.KeyPair, enumCnt int) {
 				name := result[0]
 				list := strings.Split(line, " ")
 				rid := common.CheckAtoiName(list[len(list)-1])
-				enums, enumCnt = append(enums, common.KeyPair{name, rid}), rid+1
+				enums, enumCnt = append(enums, std.KeyPair{name, rid}), rid+1
 			}
 		}
 	})
@@ -83,11 +89,11 @@ const (
 package err
 
 import (
-	"common"
 	"common/file"
+	"common/std"
 )
 
-var g_err_csv []common.StrPair
+var g_err_csv []std.StrPair
 
 func ToString(errCode uint16) string {
 	if g_err_csv == nil {

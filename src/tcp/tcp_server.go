@@ -2,6 +2,7 @@ package tcp
 
 import (
 	"common"
+	"common/std"
 	"encoding/binary"
 	"gamelog"
 	"generate_out/rpc/enum"
@@ -190,7 +191,7 @@ func _Rpc_regist(req, ack *common.NetPack, conn *TCPConn) {
 		isRegist = true //该模块有新版本，可覆盖
 	}
 	if isRegist {
-		g_reg_conn_map.Store(common.KeyPair{pMeta.Module, pMeta.SvrID}, conn)
+		g_reg_conn_map.Store(std.KeyPair{pMeta.Module, pMeta.SvrID}, conn)
 		meta.AddMeta(pMeta)
 		gamelog.Info("RegistToSvr: %v", pMeta)
 	}
@@ -200,13 +201,13 @@ func _Rpc_unregist(req, ack *common.NetPack, conn *TCPConn) {
 		if pConn := FindRegModule(pMeta.Module, pMeta.SvrID); pConn == nil || pConn.IsClose() {
 			gamelog.Info("UnRegist Svr: %v", pMeta)
 			meta.DelMeta(pMeta.Module, pMeta.SvrID)
-			g_reg_conn_map.Delete(common.KeyPair{pMeta.Module, pMeta.SvrID})
+			g_reg_conn_map.Delete(std.KeyPair{pMeta.Module, pMeta.SvrID})
 		}
 	}
 }
 
 func FindRegModule(module string, id int) *TCPConn {
-	if v, ok := g_reg_conn_map.Load(common.KeyPair{module, id}); ok {
+	if v, ok := g_reg_conn_map.Load(std.KeyPair{module, id}); ok {
 		return v.(*TCPConn)
 	}
 	gamelog.Error("FindRegModuleConn nil : (%s,%d)", module, id)
@@ -215,8 +216,8 @@ func FindRegModule(module string, id int) *TCPConn {
 
 func GetRegModuleIDs(module string) (ret []int) {
 	g_reg_conn_map.Range(func(k, v interface{}) bool {
-		if k.(common.KeyPair).Name == module {
-			ret = append(ret, k.(common.KeyPair).ID)
+		if k.(std.KeyPair).Name == module {
+			ret = append(ret, k.(std.KeyPair).ID)
 		}
 		return true
 	})

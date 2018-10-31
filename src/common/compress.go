@@ -13,6 +13,7 @@ package common
 import (
 	"bytes"
 	"compress/gzip"
+	"conf"
 	"encoding/binary"
 	"io"
 	"io/ioutil"
@@ -24,9 +25,7 @@ const (
 )
 
 func CompressTo(b []byte, w io.Writer) {
-	if len(b) < Compress_Limit_Size { //不压缩
-		w.Write(b)
-	} else {
+	if conf.Is_Msg_Compress && len(b) > Compress_Limit_Size {
 		var buf bytes.Buffer
 		gw := gzip.NewWriter(&buf)
 		gw.Write(b)
@@ -36,12 +35,12 @@ func CompressTo(b []byte, w io.Writer) {
 		binary.LittleEndian.PutUint32(flag, Flag_Compress)
 		w.Write(flag)
 		w.Write(buf.Bytes())
+	} else {
+		w.Write(b)
 	}
 }
 func Compress(b []byte) (ret []byte) {
-	if len(b) < Compress_Limit_Size { //不压缩
-		return b
-	} else {
+	if conf.Is_Msg_Compress && len(b) > Compress_Limit_Size {
 		var buf bytes.Buffer
 		gw := gzip.NewWriter(&buf)
 		gw.Write(b)
@@ -52,6 +51,8 @@ func Compress(b []byte) (ret []byte) {
 		ret = append(ret, flag...)
 		ret = append(ret, buf.Bytes()...)
 		return ret
+	} else {
+		return b
 	}
 }
 func Decompress(b []byte) []byte {

@@ -19,12 +19,13 @@ package main
 import (
 	"common"
 	"common/file"
+	"common/std"
 	"regexp"
 	"strings"
 )
 
 // -------------------------------------
-// 收集各处的 Rpc 函数名，小写开头
+// 收集各处的 Rpc 函数名
 func addRpc_Go(funcs *[]string, info *RpcInfo) {
 	for _, v := range info.TcpRpc {
 		*funcs = append(*funcs, v.Name)
@@ -52,7 +53,7 @@ func addRpc_CS(funcs *[]string) {
 		}
 	})
 }
-func getOldRpc() (enums []common.KeyPair, enumCnt int) {
+func getOldRpc() (enums []std.KeyPair, enumCnt int) {
 	reg := regexp.MustCompile(`^Rpc_\w+`)
 	file.ReadLine(K_EnumOutDir+K_EnumFileName+".go", func(line string) {
 		if ok, _ := regexp.MatchString(`^Rpc_\w+ uint16 =`, line); ok {
@@ -60,7 +61,7 @@ func getOldRpc() (enums []common.KeyPair, enumCnt int) {
 				name := result[0]
 				list := strings.Split(line, " ")
 				rid := common.CheckAtoiName(list[len(list)-1])
-				enums, enumCnt = append(enums, common.KeyPair{name, rid}), rid+1
+				enums, enumCnt = append(enums, std.KeyPair{name, rid}), rid+1
 			}
 		}
 	})
@@ -69,7 +70,7 @@ func getOldRpc() (enums []common.KeyPair, enumCnt int) {
 	}
 	return
 }
-func IsEnumIn(enums []common.KeyPair, name string) bool {
+func IsEnumIn(enums []std.KeyPair, name string) bool {
 	for _, v := range enums {
 		if v.Name == name {
 			return true
@@ -85,22 +86,27 @@ func generateRpcEnum(funcs []string) bool {
 	haveNewEnum := false
 	for _, name := range funcs {
 		if !IsEnumIn(enums, name) {
-			enums = append(enums, common.KeyPair{name, enumCnt})
+			enums = append(enums, std.KeyPair{name, enumCnt})
 			haveNewEnum = true
 			enumCnt++
 		}
 	}
 	if !haveNewEnum { //没有新的，就不改动文件了，编译更友好
-		print("no new rpc, don't change enum.h\n")
+		println("no new rpc, don't change rpc_enum.h")
 		return false
 	}
-	enums = append(enums, common.KeyPair{"RpcEnumCnt", enumCnt})
+	enums = append(enums, std.KeyPair{"RpcEnumCnt", enumCnt})
 
-	file.CreateTemplate(enums, K_EnumOutDir, K_EnumFileName+".go", codeEnumTemplate_Go)
-	if file.IsExist(K_EnumOutDir_C) {
+	if K_EnumOutDir != "" {
+		println(K_EnumOutDir, K_EnumFileName+".go")
+		file.CreateTemplate(enums, K_EnumOutDir, K_EnumFileName+".go", codeEnumTemplate_Go)
+	}
+	if K_EnumOutDir_C != "" {
+		println(K_EnumOutDir_C, K_EnumFileName+".h")
 		file.CreateTemplate(enums, K_EnumOutDir_C, K_EnumFileName+".h", codeEnumTemplate_C)
 	}
-	if file.IsExist(K_EnumOutDir_CS) {
+	if K_EnumOutDir_CS != "" {
+		println(K_EnumOutDir_CS, K_EnumFileName+".cs")
 		file.CreateTemplate(enums, K_EnumOutDir_CS, K_EnumFileName+".cs", codeEnumTemplate_CS)
 	}
 	return true

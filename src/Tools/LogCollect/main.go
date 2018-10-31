@@ -76,10 +76,8 @@ func isInResult(result [][]string, val []string) bool {
 // 递归提取内容
 func matchTarget(s string) []string { return _matchTarget(0, s) }
 func _matchTarget(lv int, s string) (ret []string) {
-
 	reg := regexp.MustCompile(K_Match[lv])
 	list := reg.FindAllString(s, -1)
-
 	lv++
 	if lv < len(K_Match) {
 		for _, v := range list {

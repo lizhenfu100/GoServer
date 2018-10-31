@@ -31,10 +31,10 @@ func main() {
 }
 
 // --------------------------------------------------------------------------
-// 将本地文件上传至服务器
+// 将SyncPatch.exe所在目录的文件上传至服务器
 func SyncServerPatch(addr string) {
 	http.CallRpc(addr, enum.Rpc_file_update_list, func(buf *common.NetPack) {
-		buf.WriteString("")
+		buf.WriteString("") //version
 	}, func(backBuf *common.NetPack) {
 		if cnt := backBuf.ReadUInt16(); cnt > 0 {
 			//服务器文件列表

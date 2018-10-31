@@ -17,13 +17,12 @@ package logic
 
 import (
 	"common"
-	"common/assert"
 	"generate_out/err"
 	"generate_out/rpc/enum"
 	"http"
 	"netConfig"
 	"netConfig/meta"
-	"shared_svr/svr_center/gameInfo/SoulKnight"
+	"shared_svr/svr_center/gameInfo"
 	"sync"
 	"sync/atomic"
 )
@@ -46,31 +45,32 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 	//临时读取buffer数据
 	oldPos = ack.ReadPos
 	errCode := ack.ReadUInt16()
-	ack.ReadPos = oldPos
-	if errCode == err.Success {
+	if errCode != err.Success {
+		ack.ReadPos = oldPos
+	} else {
 		accountId := ack.ReadUInt32()
-		var gameInfo SoulKnight.TGameInfo //解析账号上的gameInfo
-		gameInfo.BufToData(ack)
+		//println("---------------- Rpc_login_account_login: ", accountId)
+		var gameInfo2 gameInfo.TGameInfo
+		gameInfo2.BufToData(ack)
 		ack.Clear()
 
-		//自动选取空闲节点，并绑定到账号上
-		if gameInfo.SvrId == 0 {
-			if gameInfo.SvrId = GetFreeGameSvrId(version); gameInfo.SvrId > 0 {
+		gameSvrId := gameInfo2.SvrId
+		if gameSvrId == 0 { //自动选取空闲节点，并绑定到账号上
+			if gameSvrId = GetFreeGameSvrId(version); gameSvrId > 0 {
 				netConfig.CallRpcCenter(centerSvrId, enum.Rpc_center_set_game_info, func(buf *common.NetPack) {
 					buf.WriteUInt32(accountId)
 					buf.WriteString(gameName)
-					gameInfo.DataToBuf(buf)
+					gameInfo2.SvrId = gameSvrId
+					gameInfo2.DataToBuf(buf)
 				}, nil)
 			}
 		}
-		assert.True(gameInfo.SvrId > 0)
-		if gameInfo.SvrId <= 0 {
+		if gameSvrId <= 0 {
 			ack.WriteUInt16(err.None_free_game_server)
 			return
 		}
 
 		//登录成功，设置各类信息
-		gameSvrId := gameInfo.SvrId
 		gatewayId := netConfig.HashGatewayID(accountId) //此玩家要连接的gateway
 
 		//生成一个临时token，发给gamesvr、client用以登录验证

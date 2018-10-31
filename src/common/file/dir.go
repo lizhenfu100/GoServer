@@ -12,21 +12,14 @@ import (
 	"text/template"
 )
 
-//dir, name := filepath.Dir(path), filepath.Base(path) //不包含分隔符，且会转换为对应平台的分隔符
-//dir, name := filepath.Split(path) 				   //dir包含分隔符，同参数的分隔符
+//dir, name := filepath.Dir(path), filepath.Base(path) //不包含尾分隔符，且会转换为对应平台的分隔符
+//dir, name := filepath.Split(path) 				   //dir包含尾分隔符，同参数的分隔符
 
 func GetExeDir() string {
 	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	return filepath.ToSlash(dir)
 }
-func IsDirExist(path string) bool {
-	if fi, err := os.Stat(path); err != nil {
-		return os.IsExist(err)
-	} else {
-		return fi.IsDir()
-	}
-}
-func IsExist(path string) bool {
+func IsExist(path string) bool { //file or folder
 	_, err := os.Stat(path)
 	return err == nil || os.IsExist(err)
 }

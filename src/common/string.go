@@ -1,6 +1,7 @@
 package common
 
 import (
+	"common/std"
 	"fmt"
 	"strconv"
 	"strings"
@@ -21,10 +22,10 @@ func CheckAtoiName(s string) int {
 }
 
 // 格式：(id1|num1)(id2|num2)
-func ParseStringToPair(str string) []IntPair {
+func ParseStringToPair(str string) []std.IntPair {
 	sFix := strings.Trim(str, "()")
 	slice := strings.Split(sFix, ")(")
-	items := make([]IntPair, len(slice))
+	items := make([]std.IntPair, len(slice))
 	for i, v := range slice {
 		pv := strings.Split(v, "|")
 		if len(pv) < 2 {

@@ -25,8 +25,8 @@
 package netConfig
 
 import (
-	"common"
 	"common/assert"
+	"common/std"
 	"fmt"
 	"gamelog"
 	"http"
@@ -37,7 +37,7 @@ import (
 
 var (
 	G_Local_Meta   *meta.Meta
-	g_client_conns sync.Map //= make(map[common.KeyPair]*tcp.TCPClient) //本模块，对其它模块的tcp连接
+	g_client_conns sync.Map //= make(map[std.KeyPair]*tcp.TCPClient) //本模块，对其它模块的tcp连接
 )
 
 func RunNetSvr() {
@@ -85,11 +85,11 @@ func ConnectModuleTcp(ptr *meta.Meta, cb func(*tcp.TCPConn)) {
 		return
 	}
 	var client *tcp.TCPClient
-	if v, ok := g_client_conns.Load(common.KeyPair{ptr.Module, ptr.SvrID}); ok {
+	if v, ok := g_client_conns.Load(std.KeyPair{ptr.Module, ptr.SvrID}); ok {
 		client = v.(*tcp.TCPClient)
 	} else {
 		client = new(tcp.TCPClient)
-		g_client_conns.Store(common.KeyPair{ptr.Module, ptr.SvrID}, client)
+		g_client_conns.Store(std.KeyPair{ptr.Module, ptr.SvrID}, client)
 		//Notice：client.ConnectToSvr是异步过程，这里的client.TcpConn还是空指针，不能保存*tcp.TCPConn
 	}
 	client.OnConnect = cb
@@ -98,7 +98,7 @@ func ConnectModuleTcp(ptr *meta.Meta, cb func(*tcp.TCPConn)) {
 
 // TCPConn是对真正net.Conn的包装，发生断线重连时，会执行tcp.TCPConn.ResetConn()，所以外部缓存的tcp.TCPConn仍有效，无需更新
 func GetTcpConn(module string, svrId int) *tcp.TCPConn {
-	if v, ok := g_client_conns.Load(common.KeyPair{module, svrId}); ok {
+	if v, ok := g_client_conns.Load(std.KeyPair{module, svrId}); ok {
 		return v.(*tcp.TCPClient).Conn
 	}
 	// cross(s) - game(c)

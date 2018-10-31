@@ -2,6 +2,7 @@ package player
 
 import (
 	"common"
+	"common/std"
 	"dbmgo"
 	"time"
 )
@@ -32,7 +33,7 @@ type TMail struct {
 	From    string
 	Content string
 	IsRead  byte
-	Items   []common.IntPair
+	Items   []std.IntPair
 }
 
 // -------------------------------------
@@ -62,7 +63,7 @@ func (self *TMailModule) OnLogout() {
 
 // -------------------------------------
 // -- API
-func (self *TMailModule) CreateMail(title, from, content string, items ...common.IntPair) *TMail {
+func (self *TMailModule) CreateMail(title, from, content string, items ...std.IntPair) *TMail {
 	id := dbmgo.GetNextIncId("MailId")
 	pMail := &TMail{id, time.Now().Unix(), title, from, content, 0, items}
 	self.MailLst = append(self.MailLst, *pMail)
@@ -108,7 +109,7 @@ func (self *TMail) BufToData(buf *common.NetPack) {
 	for i := byte(0); i < length; i++ {
 		id := buf.ReadInt()
 		cnt := buf.ReadInt()
-		self.Items = append(self.Items, common.IntPair{id, cnt})
+		self.Items = append(self.Items, std.IntPair{id, cnt})
 	}
 }
 func (self *TMailModule) DataToBuf(buf *common.NetPack, pos int) {

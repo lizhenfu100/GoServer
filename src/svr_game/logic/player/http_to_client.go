@@ -24,6 +24,7 @@ package player
 
 import (
 	"common"
+	"conf"
 	"gamelog"
 )
 
@@ -48,6 +49,9 @@ func BeforeRecvHttpMsg(accountId uint32) *TPlayer {
 	return nil
 }
 func AfterRecvHttpMsg(self *TPlayer, buf *common.NetPack) {
+	if !conf.Open_Http_To_Client {
+		return
+	}
 	accountId := self.AccountID
 
 	//! 先写位标记

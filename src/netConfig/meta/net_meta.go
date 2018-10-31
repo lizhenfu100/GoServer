@@ -27,6 +27,7 @@ package meta
 
 import (
 	"common"
+	"common/std"
 	"gamelog"
 	"sync"
 )
@@ -102,7 +103,7 @@ func InitConf(list []Meta) {
 }
 
 func GetMeta(module string, svrID int) *Meta {
-	if v, ok := G_Metas.Load(common.KeyPair{module, svrID}); ok && !v.(*Meta).IsClosed {
+	if v, ok := G_Metas.Load(std.KeyPair{module, svrID}); ok && !v.(*Meta).IsClosed {
 		return v.(*Meta)
 	}
 	gamelog.Error("{%s %d}: have none SvrNetMeta", module, svrID)
@@ -122,11 +123,11 @@ func GetMeta(module string, svrID int) *Meta {
 //}
 func DelMeta(module string, svrID int) {
 	gamelog.Debug("DelMeta: %s:%d", module, svrID)
-	G_Metas.Delete(common.KeyPair{module, svrID})
+	G_Metas.Delete(std.KeyPair{module, svrID})
 }
 func AddMeta(ptr *Meta) {
 	gamelog.Debug("AddMeta: %s:%d", ptr.Module, ptr.SvrID)
-	G_Metas.Store(common.KeyPair{ptr.Module, ptr.SvrID}, ptr)
+	G_Metas.Store(std.KeyPair{ptr.Module, ptr.SvrID}, ptr)
 }
 
 func GetModuleIDs(module, version string) (ret []int, ok bool) {

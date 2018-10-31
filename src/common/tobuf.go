@@ -6,9 +6,9 @@ import (
 	// "encoding/json"
 )
 
-// stData := common.IntPair{11, 22}
+// stData := std.IntPair{11, 22}
 // b, _ := json.Marshal(&stData)
-// var data common.IntPair
+// var data std.IntPair
 // json.Unmarshal(b, &data)
 // fmt.Println(data)
 
