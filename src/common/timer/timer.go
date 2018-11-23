@@ -151,8 +151,6 @@ type TimerChan struct {
 	timerChan chan func()
 }
 
-var G_TimerChan *TimerChan
-
 func NewTimerChan(chanSize int) *TimerChan { return &TimerChan{make(chan func(), chanSize)} }
 
 /*

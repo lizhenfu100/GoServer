@@ -14,13 +14,13 @@ package logic
 import (
 	"bytes"
 	"common"
+	"common/sign"
 	"dbmgo"
 	"encoding/json"
 	"fmt"
 	"gamelog"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
-	"svr_sdk/api"
 	"svr_sdk/logic/kuaishou"
 	"svr_sdk/logic/x7sy"
 	"svr_sdk/msg"
@@ -43,7 +43,7 @@ func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 
 	//反射解析订单信息
 	var order msg.TOrderInfo
-	api.Unmarshal(&order, r.Form)
+	common.Unmarshal(&order, r.Form)
 
 	//! 创建回复
 	ack := NewPreBuyAck(order.Pf_id)
@@ -56,7 +56,7 @@ func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 
 	//验证签名
 	s := fmt.Sprintf("pf_id=%s&pk_id=%s&pay_id=%d&item_id=%d&item_count=%d&total_price=%d", order.Pf_id, order.Pk_id, order.Pay_id, order.Item_id, order.Item_count, order.Total_price)
-	if r.Form.Get("sign") != msg.CalcSign(s) {
+	if r.Form.Get("sign") != sign.CalcSign(s) {
 		ack.SetRetcode(-2)
 		gamelog.Error("pre_buy_request: sign failed")
 		return
@@ -105,7 +105,7 @@ func Http_query_order(w http.ResponseWriter, r *http.Request) {
 		ack.Retcode = -2
 		return
 	}
-	if r.Form.Get("sign") != msg.CalcSign("order_id="+order.Order_id) { //验证签名
+	if r.Form.Get("sign") != sign.CalcSign("order_id="+order.Order_id) { //验证签名
 		ack.Retcode = -3
 		return
 	}
@@ -113,7 +113,7 @@ func Http_query_order(w http.ResponseWriter, r *http.Request) {
 	if order.Status == 1 && order.Can_send == 1 {
 		ack.Retcode = 0
 		//回复订单信息
-		api.CopySameField(&ack.Order, order)
+		common.CopySameField(&ack.Order, order)
 	}
 }
 
@@ -135,7 +135,7 @@ func Http_confirm_order(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	if order := msg.FindOrder(r.Form.Get("order_id")); order != nil {
-		if r.Form.Get("sign") != msg.CalcSign("order_id="+order.Order_id) { //验证签名
+		if r.Form.Get("sign") != sign.CalcSign("order_id="+order.Order_id) { //验证签名
 			ack.Retcode = -3
 			return
 		}

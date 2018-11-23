@@ -17,6 +17,7 @@
 package main
 
 import (
+	"common/console"
 	"common/file"
 	"conf"
 	"gamelog"
@@ -27,14 +28,16 @@ import (
 )
 
 const (
-	K_Module_Name  = "zookeeper"
-	K_Module_SvrID = 0
+	kModuleName = "zookeeper"
 )
 
 func main() {
 	//初始化日志系统
-	gamelog.InitLogger(K_Module_Name)
+	gamelog.InitLogger(kModuleName)
 	InitConf()
+
+	//设置本节点meta信息
+	netConfig.G_Local_Meta = meta.GetMeta(kModuleName, 0)
 
 	go logic.MainLoop()
 
@@ -48,5 +51,5 @@ func InitConf() {
 	}
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
-	netConfig.G_Local_Meta = meta.GetMeta(K_Module_Name, K_Module_SvrID)
+	console.Init()
 }

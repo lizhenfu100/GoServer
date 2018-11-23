@@ -18,7 +18,7 @@ type TCPServer struct {
 	MaxConnNum int32
 	connCnt    int32
 	autoConnId uint32
-	connmap    sync.Map
+	connmap    sync.Map //<connId, *TCPConn>
 	listener   net.Listener
 	wgLn       sync.WaitGroup
 	wgConns    sync.WaitGroup
@@ -177,7 +177,7 @@ func (self *TCPServer) Close() {
 
 // ------------------------------------------------------------
 // 模块注册
-var g_reg_conn_map sync.Map
+var g_reg_conn_map sync.Map //<{module,svrId}, *TCPConn>
 
 func _Rpc_regist(req, ack *common.NetPack, conn *TCPConn) {
 	pMeta := new(meta.Meta)
@@ -210,7 +210,7 @@ func FindRegModule(module string, id int) *TCPConn {
 	if v, ok := g_reg_conn_map.Load(std.KeyPair{module, id}); ok {
 		return v.(*TCPConn)
 	}
-	gamelog.Error("FindRegModuleConn nil : (%s,%d)", module, id)
+	gamelog.Error("FindRegModule nil : (%s,%d)", module, id)
 	return nil
 }
 

@@ -14,8 +14,12 @@ import (
 //! center -- 账号名hash取模
 func HashCenterID(key string) int {
 	if ids, ok := meta.GetModuleIDs("center", G_Local_Meta.Version); ok {
-		n := common.StringHash(key)
-		return ids[int(n)%len(ids)]
+		if len(ids) == 1 {
+			return ids[0]
+		} else {
+			n := common.StringHash(key)
+			return ids[n%uint32(len(ids))]
+		}
 	}
 	return -1
 }

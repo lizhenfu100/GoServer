@@ -21,7 +21,7 @@ func DoPlayerRpc(this *TFriendModule, rpcId uint16, req, ack *common.NetPack) bo
 		msgFunc(req, ack, this)
 		return true
 	}
-	gamelog.Debug("PlayerMsg(%d) Not Regist", rpcId)
+	gamelog.Error("Msg(%d) Not Regist", rpcId)
 	return false
 }
 
@@ -36,6 +36,6 @@ func Rpc_recv_player_msg(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	if this := FindWithDB(accountId); this != nil {
 		DoPlayerRpc(this, rpcId, req, ack)
 	} else {
-		gamelog.Debug("(%d) not online", accountId)
+		gamelog.Debug("Player(%d) isn't online", accountId)
 	}
 }

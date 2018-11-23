@@ -22,7 +22,7 @@
 * @ author zhoumf
 * @ date 2016-7-20
 ************************************************************************/
-package main
+package labs
 
 import (
 	"bufio"

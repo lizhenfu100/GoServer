@@ -1,6 +1,10 @@
 /***********************************************************************
 * @ game svr list
 * @ brief
+	登录服选择：
+		1、客户端显示大区列表，玩家自己选择
+		2、login iplist 写成前端配置，玩家注册时挨个ping，取延时最小的去注册
+
 	玩家手选区服：
 		1、下发区服列表，client选定具体gamesvr节点登录
 		2、client本地存储gamesvr节点编号，登录时上报
@@ -31,94 +35,112 @@ var g_login_token uint32
 
 func Rpc_login_account_login(req, ack *common.NetPack) {
 	version := req.ReadString()
-	//临时读取buffer数据
+	//1、临时读取buffer数据，排除版本号，将数据转发center
 	oldPos := req.ReadPos
 	gameName := req.ReadString()
-	//gameSvrId := req.ReadInt() //若手选区服方式，则登录时自己上报节点编号
+	//gameSvrId := req.ReadInt() //若手选区服则自己上报gameSvrId
 	account := req.ReadString()
 	req.ReadPos = oldPos
 
-	//同步验证账号信息，取得绑定的gameInfo
 	centerSvrId := netConfig.HashCenterID(account)
-	netConfig.SyncRelayToCenter(centerSvrId, enum.Rpc_center_account_login, req, ack)
 
-	//临时读取buffer数据
-	oldPos = ack.ReadPos
-	errCode := ack.ReadUInt16()
-	if errCode != err.Success {
-		ack.ReadPos = oldPos
-	} else {
-		accountId := ack.ReadUInt32()
-		//println("---------------- Rpc_login_account_login: ", accountId)
-		var gameInfo2 gameInfo.TGameInfo
-		gameInfo2.BufToData(ack)
-		ack.Clear()
-
-		gameSvrId := gameInfo2.SvrId
-		if gameSvrId == 0 { //自动选取空闲节点，并绑定到账号上
-			if gameSvrId = GetFreeGameSvrId(version); gameSvrId > 0 {
-				netConfig.CallRpcCenter(centerSvrId, enum.Rpc_center_set_game_info, func(buf *common.NetPack) {
-					buf.WriteUInt32(accountId)
-					buf.WriteString(gameName)
-					gameInfo2.SvrId = gameSvrId
-					gameInfo2.DataToBuf(buf)
-				}, nil)
-			}
-		}
+	//2、同步转至center验证账号信息，取得accountId、gameInfo
+	if ok, accountId, gameInfo2 := accountLogin2(centerSvrId, req, ack); ok {
+		//3、选取gameSvrId；若手选区服则由客户端上报
+		gameSvrId := accountLogin3(accountId, &gameInfo2, version, gameName, centerSvrId)
 		if gameSvrId <= 0 {
 			ack.WriteUInt16(err.None_free_game_server)
-			return
-		}
-
-		//登录成功，设置各类信息
-		gatewayId := netConfig.HashGatewayID(accountId) //此玩家要连接的gateway
-
-		//生成一个临时token，发给gamesvr、client用以登录验证
-		token := atomic.AddUint32(&g_login_token, 1)
-		var pMetaToClient *meta.Meta //回复client要连接的目标节点
-		//【Notice: CallRpc接口不是线程安全的，http后台不适用】
-		if conn := netConfig.GetTcpConn("gateway", gatewayId); conn != nil {
-			msg := common.NewNetPackCap(32)
-			msg.SetOpCode(enum.Rpc_gateway_login_token)
-			msg.WriteUInt32(token)
-			msg.WriteUInt32(accountId)
-			msg.WriteInt(gameSvrId)
-			conn.WriteMsg(msg)
-
-			pMetaToClient = meta.GetMeta("gateway", gatewayId)
-			errCode = err.None_gateway
-
-		} else if conn := netConfig.GetTcpConn("game", gameSvrId); conn != nil {
-			msg := common.NewNetPackCap(32)
-			msg.SetOpCode(enum.Rpc_game_login_token)
-			msg.WriteUInt32(token)
-			msg.WriteUInt32(accountId)
-			conn.WriteMsg(msg)
-
-			pMetaToClient = meta.GetMeta("game", gameSvrId)
-			errCode = err.None_game_server
-
-		} else if addr := netConfig.GetHttpAddr("game", gameSvrId); addr != "" {
-			http.CallRpc(addr, enum.Rpc_game_login_token, func(buf *common.NetPack) {
-				buf.WriteUInt32(token)
-				buf.WriteUInt32(accountId)
-			}, nil)
-
-			pMetaToClient = meta.GetMeta("game", gameSvrId)
-			errCode = err.None_game_server
-		}
-
-		if pMetaToClient != nil { //回复client要连接的目标节点
-			ack.WriteUInt16(err.Success)
-			ack.WriteUInt32(accountId)
-			ack.WriteString(pMetaToClient.OutIP)
-			ack.WriteUInt16(pMetaToClient.Port())
-			ack.WriteUInt32(token)
 		} else {
-			ack.WriteUInt16(errCode)
+			//4、登录成功，设置各类信息
+			accountLogin4(accountId, gameSvrId, ack)
 		}
 	}
 }
+func accountLogin2(centerSvrId int, req, ack *common.NetPack) (_ok bool, _aid uint32, _info gameInfo.TGameInfo) {
+	//同步至center验证账号信息，取得accountId、gameInfo
+	netConfig.SyncRelayToCenter(centerSvrId, enum.Rpc_center_account_login, req, ack)
+
+	//临时读取buffer数据
+	oldPos := ack.ReadPos
+	if ack.ReadUInt16() != err.Success {
+		ack.ReadPos = oldPos
+		_ok = false
+	} else {
+		_aid = ack.ReadUInt32()
+		_info.BufToData(ack)
+		ack.Clear()
+		_ok = true
+	}
+	return
+}
+func accountLogin3(accountId uint32, pInfo *gameInfo.TGameInfo, version, gameName string, centerSvrId int) (_gameSvrId int) {
+	//选取gameSvrId
+	_gameSvrId = pInfo.SvrId
+	if _gameSvrId == 0 { //自动选取空闲节点，并绑定到账号上
+		if _gameSvrId = GetFreeGameSvrId(version); _gameSvrId > 0 {
+			netConfig.CallRpcCenter(centerSvrId, enum.Rpc_center_set_game_info, func(buf *common.NetPack) {
+				buf.WriteUInt32(accountId)
+				buf.WriteString(gameName)
+				pInfo.SvrId = _gameSvrId
+				pInfo.DataToBuf(buf)
+			}, nil)
+		}
+	}
+	return
+}
+func accountLogin4(accountId uint32, gameSvrId int, ack *common.NetPack) {
+	//登录成功，设置各类信息
+	gatewayId := netConfig.HashGatewayID(accountId) //此玩家要连接的gateway
+	errCode := err.Unknow_error
+
+	//生成一个临时token，发给gamesvr、client用以登录验证
+	token := atomic.AddUint32(&g_login_token, 1)
+	var pMetaToClient *meta.Meta //回复client要连接的目标节点
+	//【Notice: CallRpc接口不是线程安全的，http后台不适用】
+	if conn := netConfig.GetTcpConn("gateway", gatewayId); conn != nil {
+		msg := common.NewNetPackCap(32)
+		msg.SetOpCode(enum.Rpc_gateway_login_token)
+		msg.WriteUInt32(token)
+		msg.WriteUInt32(accountId)
+		msg.WriteInt(gameSvrId)
+		conn.WriteMsg(msg)
+
+		pMetaToClient = meta.GetMeta("gateway", gatewayId)
+		errCode = err.None_gateway
+
+	} else if conn := netConfig.GetTcpConn("game", gameSvrId); conn != nil {
+		msg := common.NewNetPackCap(32)
+		msg.SetOpCode(enum.Rpc_game_login_token)
+		msg.WriteUInt32(token)
+		msg.WriteUInt32(accountId)
+		conn.WriteMsg(msg)
+
+		pMetaToClient = meta.GetMeta("game", gameSvrId)
+		errCode = err.None_game_server
+
+	} else if addr := netConfig.GetHttpAddr("game", gameSvrId); addr != "" {
+		http.CallRpc(addr, enum.Rpc_game_login_token, func(buf *common.NetPack) {
+			buf.WriteUInt32(token)
+			buf.WriteUInt32(accountId)
+		}, nil)
+
+		pMetaToClient = meta.GetMeta("game", gameSvrId)
+		errCode = err.None_game_server
+	}
+
+	if pMetaToClient != nil { //回复client要连接的目标节点
+		ack.WriteUInt16(err.Success)
+		ack.WriteUInt32(accountId)
+		ack.WriteString(pMetaToClient.OutIP)
+		ack.WriteUInt16(pMetaToClient.Port())
+		ack.WriteUInt32(token)
+	} else {
+		ack.WriteUInt16(errCode)
+	}
+}
+
+// ------------------------------------------------------------
+// 转发至center
 func Rpc_login_relay_to_center(req, ack *common.NetPack) {
 	rpcId := req.ReadUInt16() //目标rpc
 	//临时读取buffer数据
@@ -130,28 +152,34 @@ func Rpc_login_relay_to_center(req, ack *common.NetPack) {
 	netConfig.SyncRelayToCenter(svrId, rpcId, req, ack)
 }
 
-// -------------------------------------
-// game svr list
-var g_game_player_cnt sync.Map //gameSvrId-playerCnt
-
-func Rpc_login_get_gamesvr_list(req, ack *common.NetPack) {
+// ------------------------------------------------------------
+// 玩家从登录服取其它节点信息
+func Rpc_login_get_meta_list(req, ack *common.NetPack) {
+	module := req.ReadString() //game、save、file...
 	version := req.ReadString()
 
-	ids, _ := meta.GetModuleIDs("game", version)
+	ids, _ := meta.GetModuleIDs(module, version)
 	ack.WriteByte(byte(len(ids)))
 	for _, id := range ids {
-		pMeta := meta.GetMeta("game", id)
+		p := meta.GetMeta(module, id)
 		ack.WriteInt(id)
-		ack.WriteString(pMeta.SvrName)
-		ack.WriteString(pMeta.OutIP)
-		ack.WriteUInt16(pMeta.Port())
-		playerCnt := int32(0)
-		if v, ok := g_game_player_cnt.Load(id); ok {
-			playerCnt = v.(int32)
+		ack.WriteString(p.SvrName)
+		ack.WriteString(p.OutIP)
+		ack.WriteUInt16(p.Port())
+
+		switch module { //模块节点的附带信息
+		case "game":
+			if v, ok := g_game_player_cnt.Load(id); ok {
+				ack.WriteInt32(v.(int32))
+			} else {
+				ack.WriteInt32(0)
+			}
 		}
-		ack.WriteInt32(playerCnt)
 	}
 }
+
+var g_game_player_cnt sync.Map //<gameSvrId, playerCnt>
+
 func Rpc_login_set_player_cnt(req, ack *common.NetPack) {
 	svrId := req.ReadInt()
 	cnt := req.ReadInt32()

@@ -6,25 +6,24 @@ import (
 	"time"
 )
 
-func InitTimeUpdate() {
-	timer.G_TimerChan = timer.NewTimerChan(40960)
-	UpdateEnterNextDay()
-	UpdateEnterNextHour()
+func InitTimeUpdate(t *timer.TimerChan) {
+	UpdateEnterNextDay(t)
+	UpdateEnterNextHour(t)
 }
 
-func UpdateEnterNextDay() {
+func UpdateEnterNextDay(t *timer.TimerChan) {
 	secCnt := time.Duration(timer.GetTodayLeftSec())
-	timer.G_TimerChan.AfterFunc(secCnt*time.Second, func() {
+	t.AfterFunc(secCnt*time.Second, func() {
 		_OnEnterNextDay()
-		UpdateEnterNextDay()
+		UpdateEnterNextDay(t)
 	})
 }
-func UpdateEnterNextHour() {
+func UpdateEnterNextHour(t *timer.TimerChan) {
 	now := time.Now()
 	secCnt := time.Duration(3600 - now.Minute()*60 - now.Second())
-	timer.G_TimerChan.AfterFunc(secCnt*time.Second, func() {
+	t.AfterFunc(secCnt*time.Second, func() {
 		_OnEnterNextHour()
-		UpdateEnterNextHour()
+		UpdateEnterNextHour(t)
 	})
 }
 func _OnEnterNextDay() {

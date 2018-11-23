@@ -59,7 +59,7 @@ func Rpc_gateway_relay_game_create_player(req, ack *common.NetPack, client *tcp.
 
 // ------------------------------------------------------------
 // -- 后台账号验证
-var g_login_token sync.Map
+var g_login_token sync.Map //<accountId, token>
 
 func Rpc_gateway_login_token(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	token := req.ReadUInt32()

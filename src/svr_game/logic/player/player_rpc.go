@@ -13,7 +13,6 @@ package player
 import (
 	"common"
 	"conf"
-	"encoding/binary"
 	"gamelog"
 	"generate_out/rpc/enum"
 	mhttp "http"
@@ -42,7 +41,7 @@ func DoPlayerRpc(this *TPlayer, rpcId uint16, req, ack *common.NetPack) bool {
 		msgFunc(req, ack, this)
 		return true
 	}
-	gamelog.Debug("PlayerMsg(%d) Not Regist", rpcId)
+	gamelog.Error("PlayerMsg(%d) Not Regist", rpcId)
 	return false
 }
 
@@ -50,8 +49,12 @@ func DoPlayerRpc(this *TPlayer, rpcId uint16, req, ack *common.NetPack) bool {
 // - tcp 直连 player rpc
 // - 将原生tcpRpc的 "conn *tcp.TCPConn" 参数转换为 "player *TPlayer"
 func _HandlePlayerRpc1(req, ack *common.NetPack, conn *tcp.TCPConn) bool {
-	if player, ok := conn.UserPtr.(*TPlayer); ok {
-		return DoPlayerRpc(player, req.GetOpCode(), req, ack)
+	if msgFunc := G_PlayerHandleFunc[req.GetOpCode()]; msgFunc != nil {
+		if player, ok := conn.UserPtr.(*TPlayer); ok {
+			atomic.SwapUint32(&player._idleMin, 0)
+			msgFunc(req, ack, player)
+		}
+		return true
 	}
 	return false
 }
@@ -60,8 +63,11 @@ func _HandlePlayerRpc1(req, ack *common.NetPack, conn *tcp.TCPConn) bool {
 // - http 直连 player rpc
 func _HandlePlayerRpc2(w http.ResponseWriter, r *http.Request) {
 	//! 接收信息
-	req := common.NewNetPackLen(int(r.ContentLength))
-	r.Body.Read(req.Data())
+	req := mhttp.ReadRequest(r)
+	if req == nil {
+		return
+	}
+	defer req.Free()
 
 	//! 创建回复
 	ack := common.NewNetPackCap(128)
@@ -78,7 +84,7 @@ func _HandlePlayerRpc2(w http.ResponseWriter, r *http.Request) {
 	//FIXME: http通信中途安全性不够，能修改client net pack里的uid，进而操作别人数据
 	//FIXME: 账号服登录验证后下发给client的token，client应该保留，附在每个HttpReq里，防止恶意窜改他人数据
 
-	if msgId != enum.Rpc_game_heart_beat {
+	if conf.IsDebug && msgId != enum.Rpc_game_heart_beat {
 		gamelog.Debug("HttpMsg:%d, len:%d, uid:%d", msgId, req.Size(), accountId)
 	}
 	if player := BeforeRecvHttpMsg(accountId); player != nil {
@@ -87,10 +93,7 @@ func _HandlePlayerRpc2(w http.ResponseWriter, r *http.Request) {
 			common.CompressTo(ack.Data(), w)
 		}
 	} else {
-		gamelog.Debug("===> uid:%d isn't in memcache, please relogin", accountId)
-		flag := make([]byte, 4) //重登录标记
-		binary.LittleEndian.PutUint32(flag, conf.Flag_Client_ReLogin)
-		w.Write(flag)
+		gamelog.Debug("Player(%d) isn't online", accountId)
 	}
 }
 
@@ -105,7 +108,7 @@ func Rpc_recv_player_msg(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	if player := FindAccountId(accountId); player != nil {
 		DoPlayerRpc(player, rpcId, req, ack)
 	} else {
-		gamelog.Debug("(%d) not online", accountId)
+		gamelog.Debug("Player(%d) isn't online", accountId)
 	}
 }
 
@@ -122,6 +125,8 @@ func CallRpcPlayer(accountId uint32, msgId uint16, sendFun, recvFun func(*common
 			if recvFun != nil {
 				recvFun(ack)
 			}
+			req.Free()
+			ack.Free()
 			return
 		}
 	}

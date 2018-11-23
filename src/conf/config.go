@@ -1,8 +1,10 @@
 package conf
 
 const (
-	IsDebug = true
+	// 服务器帧率
+	FPS_GameSvr = 1000 / 20
 
+	// 特殊标记
 	Flag_Client_ReLogin = 0xFFFFFFFF
 
 	// 通信的子功能开关

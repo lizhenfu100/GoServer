@@ -11,7 +11,7 @@
 	2、此时若外界缓存了 GetMeta() 返回的指针，其指向很可能变为下个元素
 
 * @ Notice
-	1、G_Metas sync.Map 存的指针，这样就要求外界放入的指针，必须是堆上的，且指向不同内存
+	1、G_Metas sync.Map 若存指针，须要求外界放入的指针，必须是堆上的，且指向不同内存
 	2、最好每次存入，都重新new
 
 * @ 动态更新
@@ -29,6 +29,7 @@ import (
 	"common"
 	"common/std"
 	"gamelog"
+	"strings"
 	"sync"
 )
 
@@ -94,7 +95,7 @@ func (self *Meta) BufToData(buf *common.NetPack) {
 
 // -------------------------------------
 //! meta list
-var G_Metas sync.Map
+var G_Metas sync.Map //<{module,svrId}, pMeta>
 
 func InitConf(list []Meta) {
 	for i := 0; i < len(list); i++ {
@@ -102,11 +103,16 @@ func InitConf(list []Meta) {
 	}
 }
 
+//Notice：ptr必须是堆上的，且指向不同内存
+func AddMeta(ptr *Meta) {
+	gamelog.Debug("AddMeta: %v", ptr)
+	G_Metas.Store(std.KeyPair{ptr.Module, ptr.SvrID}, ptr)
+}
 func GetMeta(module string, svrID int) *Meta {
 	if v, ok := G_Metas.Load(std.KeyPair{module, svrID}); ok && !v.(*Meta).IsClosed {
 		return v.(*Meta)
 	}
-	gamelog.Error("{%s %d}: have none SvrNetMeta", module, svrID)
+	gamelog.Error("{%s %d}: have none meta", module, svrID)
 	return nil
 }
 
@@ -124,10 +130,6 @@ func GetMeta(module string, svrID int) *Meta {
 func DelMeta(module string, svrID int) {
 	gamelog.Debug("DelMeta: %s:%d", module, svrID)
 	G_Metas.Delete(std.KeyPair{module, svrID})
-}
-func AddMeta(ptr *Meta) {
-	gamelog.Debug("AddMeta: %s:%d", ptr.Module, ptr.SvrID)
-	G_Metas.Store(std.KeyPair{ptr.Module, ptr.SvrID}, ptr)
 }
 
 func GetModuleIDs(module, version string) (ret []int, ok bool) {
@@ -158,7 +160,8 @@ func (self *Meta) IsSame(dst *Meta) bool { return self.Module == dst.Module && s
 func (self *Meta) IsMatchVersion(version string) bool {
 	// 版本号格式：1.12.233，前两组一致的版本间可匹配，第三组用于小调整、bug修复
 	// 空版本号能与任意版本匹配
+	idx := strings.LastIndex(self.Version, ".")
 	return version == "" ||
 		self.Version == "" ||
-		self.Version[:4] == version[:4]
+		self.Version[:idx] == version[:idx]
 }

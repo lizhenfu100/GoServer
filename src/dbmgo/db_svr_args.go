@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	g_svr_args_map sync.Map
+	g_svr_args_map sync.Map //<string, interface{}>
 )
 
 type kv struct {

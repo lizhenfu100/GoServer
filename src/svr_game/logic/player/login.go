@@ -35,15 +35,18 @@ func Rpc_game_login(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	accountId := req.ReadUInt32()
 
 	// game直连了login，须校验登录token
-	if meta.GetMeta("login", 0).IsMyClient(netConfig.G_Local_Meta) {
-		token := req.ReadUInt32()
-		if CheckLoginToken(accountId, token) {
-			_NotifyPlayerCnt(netConfig.G_Local_Meta.SvrID, g_player_cnt)
-		} else {
-			ack.WriteUInt16(err.Token_verify_err)
+	for _, v := range netConfig.G_Local_Meta.ConnectLst {
+		if v == "login" {
+			token := req.ReadUInt32()
+			if CheckLoginToken(accountId, token) {
+				_NotifyPlayerCnt(netConfig.G_Local_Meta.SvrID, g_player_cnt)
+			} else {
+				ack.WriteUInt16(err.Token_verify_err)
+				return
+			}
+			break
 		}
 	}
-
 	//TODO:zhoumf: 读数据库同步的，比较耗时，直接读的方式不适合外网；可转入线程池再通知回主线程
 	if this := FindWithDB_AccountId(accountId); this == nil {
 		ack.WriteUInt16(err.Account_have_none_player) //notify client to create new player
@@ -80,7 +83,7 @@ func Rpc_game_get_player_cnt(req, ack *common.NetPack, conn *tcp.TCPConn) {
 
 // -------------------------------------
 // -- 后台账号验证
-var g_login_token sync.Map
+var g_login_token sync.Map //<accountId, token>
 
 func Rpc_game_login_token(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	token := req.ReadUInt32()

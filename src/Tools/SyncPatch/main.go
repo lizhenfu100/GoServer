@@ -12,18 +12,13 @@ import (
 	"time"
 )
 
-var (
-	_addr string
-)
-
-func init() {
-	flag.StringVar(&_addr, "addr", "", "远端地址列表")
-}
-
 func main() {
-	gamelog.InitLogger("SyncPatch")
+	var addr string
+	flag.StringVar(&addr, "addr", "", "远端地址列表")
 	flag.Parse() //内部获取了所有参数：os.Args[1:]
-	list := strings.Split(_addr, " ")
+
+	gamelog.InitLogger("SyncPatch")
+	list := strings.Split(addr, " ")
 	for _, addr := range list {
 		SyncServerPatch(fmt.Sprintf("http://%s/", addr))
 	}

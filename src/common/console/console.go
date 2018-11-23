@@ -2,71 +2,85 @@ package console
 
 import (
 	"bufio"
+	"common"
+	"conf"
 	"fmt"
 	"gamelog"
+	"generate_out/rpc/enum"
+	"http"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
+	"tcp"
 )
 
-type CommandHandler func(args []string) bool
+type Func func(args []string)
 
-var G_HandlerMap = map[string]CommandHandler{
-	"setloglv": HandCmd_SetLogLevel,
+var g_funcs = map[string]Func{
+	"loglv":   cmd_LogLv,
+	"gc":      cmd_gc,
+	"routine": cmd_routine,
+	"cpu":     cmd_cpu,
+	"setcpu":  cmd_setcpu,
 }
 
-func StartConsole() {
-	//go consoleroutine() //线上环境，是在后台执行，无须控制台相关功能
+func Init() {
+	tcp.G_HandleFunc[enum.Rpc_gm_cmd] = _Rpc_cmd_tcp
+	http.G_HandleFunc[enum.Rpc_gm_cmd] = _Rpc_cmd_http
+	//go _loop()
 }
-func consoleroutine() {
+func _Rpc_cmd_tcp(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_cmd_http(req, ack) }
+func _Rpc_cmd_http(req, ack *common.NetPack) {
+	cmd := req.ReadString()
+	HandleCmd(strings.Split(cmd, " "))
+}
+func _loop() {
 	command := make([]byte, 1024)
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		command, _, _ = reader.ReadLine()
 		args := strings.Split(string(command), " ")
-
-		if cmdhandler, ok := G_HandlerMap[args[0]]; ok {
-			cmdhandler(args)
-			continue
-		}
-
-		switch string(args[0]) {
-		case "cpus":
-			fmt.Println(runtime.NumCPU(), " cpus and ", runtime.GOMAXPROCS(0), " in use")
-
-		case "routines":
-			fmt.Println("Current number of goroutines: ", runtime.NumGoroutine())
-
-		case "setcpus":
-			n, _ := strconv.Atoi(args[1])
-			runtime.GOMAXPROCS(n)
-			fmt.Println(runtime.NumCPU(), " cpus and ", runtime.GOMAXPROCS(0), " in use")
-
-		case "startgc":
-			runtime.GC()
-			fmt.Println("gc finished")
-		default:
-			fmt.Println("Command error, try again.")
-		}
+		HandleCmd(args)
 	}
 }
-func RegConsoleCmd(cmd string, mh CommandHandler) {
-	G_HandlerMap[cmd] = mh
+
+func RegCmd(key string, cmd Func) { g_funcs[key] = cmd }
+
+func HandleCmd(args []string) {
+	defer func() {
+		if r := recover(); r != nil {
+			gamelog.Error("recover HandleCmd\n%v: %s", r, debug.Stack())
+		}
+	}()
+	if cmd, ok := g_funcs[args[0]]; ok {
+		cmd(args)
+		return
+	}
 }
 
 // ------------------------------------------------------------
 //! 命令行函数
-func HandCmd_SetLogLevel(args []string) bool {
-	if len(args) < 2 {
-		fmt.Print("Lack of param")
-		return false
+func cmd_LogLv(args []string) {
+	lv, _ := strconv.Atoi(args[1])
+	gamelog.SetLevel(lv)
+	fmt.Println("SetLogLv ", lv)
+}
+func cmd_gc(args []string) {
+	runtime.GC()
+	fmt.Println("GC finished")
+}
+func cmd_routine(args []string) {
+	fmt.Println("Current number of goroutines: ", runtime.NumGoroutine())
+}
+func cmd_cpu(args []string) {
+	fmt.Println(runtime.NumCPU(), " cpus and ", runtime.GOMAXPROCS(0), " in use")
+}
+func cmd_setcpu(args []string) {
+	if conf.IsDebug {
+		n, _ := strconv.Atoi(args[1])
+		runtime.GOMAXPROCS(n)
+		fmt.Println(runtime.NumCPU(), " cpus and ", runtime.GOMAXPROCS(0), " in use")
 	}
-	level, err := strconv.Atoi(args[1])
-	if err != nil {
-		gamelog.Error("HandCmd_SetLogLevel => Invalid param:%s", args[1])
-		return false
-	}
-	gamelog.SetLevel(level)
-	return true
 }

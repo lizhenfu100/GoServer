@@ -1,11 +1,5 @@
 package msg
 
-import (
-	"crypto/md5"
-	"fmt"
-	"strings"
-)
-
 type Retcode_ack struct {
 	Retcode int    `json:"retcode"` //0代表成功，其他失败
 	Msg     string `json:"msg"`     //响应信息（与retcode对应）
@@ -52,16 +46,4 @@ type Query_order_ack struct {
 		Status      int    `json:"status"`      //1成功 0失败
 		Can_send    int    `json:"can_send"`    //1能发货
 	} `json:"order"` //只有retcode是0才会有值，json
-}
-
-// ------------------------------------------------------------
-// 与客户端约定的签名规则
-const (
-	k_pt_key = "yqqs(#(%$(%!$"
-)
-
-func CalcSign(s string) string {
-	key := fmt.Sprintf("%x", md5.Sum([]byte(k_pt_key)))
-	sign := fmt.Sprintf("%s&%s", s, strings.ToLower(key))
-	return fmt.Sprintf("%x", md5.Sum([]byte(sign)))
 }

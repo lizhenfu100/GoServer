@@ -14,7 +14,7 @@ package main
 
 import (
 	"common/file"
-	"path/filepath"
+	"path"
 	"regexp"
 	"strings"
 )
@@ -37,13 +37,14 @@ type RpcInfo struct {
 func gatherRpcInfo(svr string) *RpcInfo {
 	pinfo := &RpcInfo{Module: getModuleName(svr), PackDirs: make(map[string]bool)}
 	names, _ := file.WalkDir(K_SvrDir+svr, ".go") //遍历所有go文件，收集rpc函数
-	for _, v := range names {
+	for _, fileName := range names {
 		packdir, pack := "", ""
-		file.ReadLine(v, func(line string) {
+		file.ReadLine(fileName, func(line string) {
 			fname := "" //func name
 			if packdir == "" {
-				packdir = filepath.ToSlash(filepath.Dir(v)[len(K_SvrDir):])
+				packdir = path.Dir(fileName)[len(K_SvrDir):]
 				pack = getPackage(packdir)
+				//println(v, packdir, pack)
 			} else if fname = getTcpRpc(line); fname != "" {
 				pinfo.TcpRpc = append(pinfo.TcpRpc, Func{pack, fname})
 			} else if fname = getHttpRpc(line); fname != "" {
@@ -78,7 +79,7 @@ func getModuleName(svr string) string {
 
 // -------------------------------------
 // -- 提取 package、RpcFunc
-func getPackage(dir string) string { return filepath.Base(dir) }
+func getPackage(dir string) string { return path.Base(dir) }
 func getTcpRpc(s string) string {
 	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack, \w+ \*tcp.TCPConn\) \{`, s); ok {
 		reg := regexp.MustCompile(`Rpc_\w+`)

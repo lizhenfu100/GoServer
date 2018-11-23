@@ -30,7 +30,7 @@ func Rpc_center_get_account_by_bind_info(req, ack *common.NetPack) { //拿到账
 	account := GetAccountByBindInfo(key, val)
 	if account != nil {
 		ack.WriteUInt16(err.Account_none)
-	} else if passwd != account.Password {
+	} else if !account.CheckPasswd(passwd) {
 		ack.WriteUInt16(err.Passwd_err)
 	} else {
 		ack.WriteUInt16(err.Success)
@@ -41,27 +41,24 @@ func Rpc_center_get_account_by_bind_info(req, ack *common.NetPack) { //拿到账
 // -------------------------------------
 // 辅助函数
 func BindInfoToAccount(name, passwd, k, v string, force int8) (errcode uint16) {
-	dbkey := fmt.Sprintf("bindinfo.%s", k)
 	if account := GetAccountByName(name); account == nil {
 		errcode = err.Account_none
-	} else if passwd != account.Password {
+	} else if !account.CheckPasswd(passwd) {
 		errcode = err.Passwd_err
 	} else if account.IsForbidden {
 		errcode = err.Account_forbidden
 	} else if !format.CheckValue(k, v) {
 		errcode = err.BindInfo_format_err
-	} else if dbmgo.Find(kDBTable, dbkey, v, new(TAccount)) {
+	} else if GetAccountByBindInfo(k, v) != nil {
 		errcode = err.BindInfo_had_been_bound //this_value_already_bind_to_account
 	} else {
-		if account.BindInfo == nil {
-			account.BindInfo = make(map[string]string, 5)
-		}
 		if _, ok := account.BindInfo[k]; ok && force == 0 {
 			errcode = err.Account_had_been_bound //can_force_cover
 		} else {
 			errcode = err.Success
 			account.BindInfo[k] = v
-			dbmgo.UpdateToDB(kDBTable, bson.M{"_id": account.AccountID}, bson.M{"$set": bson.M{dbkey: v}})
+			dbkey := fmt.Sprintf("bindinfo.%s", k)
+			dbmgo.UpdateIdToDB(kDBTable, account.AccountID, bson.M{"$set": bson.M{dbkey: v}})
 		}
 	}
 	return

@@ -154,7 +154,7 @@ func (self *TCPConn) WriteBuf(buf []byte) {
 	select {
 	case self.writeChan <- buf: //chan满后再写即阻塞，select进入default分支报错
 	default:
-		gamelog.Error("WriteBuf: channel full %s", debug.Stack())
+		gamelog.Error("WriteBuf: channel full %v\n %s", self.UserPtr, debug.Stack())
 		/* 连接无效bug
 		1、tcp_conn断开后，业务层还是能调write接口的，消息缓存在writeChan里，它被塞满后，即使重连依然会立即失效
 		2、连接建立流程是：先发首条消息、注册消息，再开读写协程

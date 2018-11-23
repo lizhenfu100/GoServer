@@ -1,13 +1,26 @@
-package api
+package sign
 
 import (
 	"crypto"
+	"crypto/md5"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"fmt"
+	"strings"
 )
+
+// ------------------------------------------------------------
+// 与客户端约定的签名规则
+func CalcSign(s string) string {
+	const k_pt_key = "yqqs(#(%$(%!$"
+	key := fmt.Sprintf("%x", md5.Sum([]byte(k_pt_key)))
+	sign := fmt.Sprintf("%s&%s", s, strings.ToLower(key))
+	//fmt.Println("-----------CalcSign: ", key)
+	return fmt.Sprintf("%x", md5.Sum([]byte(sign)))
+}
 
 // ------------------------------------------------------------
 //

@@ -27,24 +27,24 @@ import (
 )
 
 const (
-	Http_File_Dir   = "net_file"
-	Player_File_Dir = "net_file/upload/"
-	Patch_File_Dir  = "net_file/patch/"
-	Max_Upload_Size = 1024 * 1024
+	kFileDirRoot   = "net_file"
+	kFileDirPlayer = "net_file/upload/"
+	kFileDirPatch  = "net_file/patch/"
+	kMaxSizeUpload = 1024 * 1024
 )
 
 var (
-	g_file_md5    sync.Map
+	g_file_md5    sync.Map //<fileName, md5Hash>
 	g_file_server http.Handler
 	g_file_mutex  sync.RWMutex
 )
 
 func init() {
-	//http.Handle("/", http.FileServer(http.Dir(Http_File_Dir)))
-	g_file_server = http.FileServer(http.Dir(Http_File_Dir))
+	//http.Handle("/", http.FileServer(http.Dir(kFileDirRoot)))
+	g_file_server = http.FileServer(http.Dir(kFileDirRoot))
 	http.HandleFunc("/", Http_download_file)
 
-	names, _ := file.WalkDir(Patch_File_Dir, "")
+	names, _ := file.WalkDir(kFileDirPatch, "")
 	for _, v := range names {
 		md5str := file.CalcMd5(v)
 		g_file_md5.Store(v, common.StringHash(md5str))
@@ -58,17 +58,17 @@ func Http_download_file(w http.ResponseWriter, r *http.Request) {
 	g_file_mutex.RUnlock()
 }
 func Http_upload_player_file(w http.ResponseWriter, r *http.Request) {
-	_upload_file(w, r, Player_File_Dir)
+	_upload_file(w, r, kFileDirPlayer)
 }
 func Http_upload_patch_file(w http.ResponseWriter, r *http.Request) {
 	g_file_mutex.Lock()
-	name := _upload_file(w, r, Patch_File_Dir) //写patch目录下的文件
+	name := _upload_file(w, r, kFileDirPatch) //写patch目录下的文件
 	g_file_mutex.Unlock()
 	md5str := file.CalcMd5(name)
 	g_file_md5.Store(name, common.StringHash(md5str))
 }
 func _upload_file(w http.ResponseWriter, r *http.Request, baseDir string) string {
-	r.ParseMultipartForm(Max_Upload_Size)
+	r.ParseMultipartForm(kMaxSizeUpload)
 	upfile, handler, err := r.FormFile("file")
 	if err != nil {
 		gamelog.Error(err.Error())
@@ -96,10 +96,10 @@ func Rpc_file_update_list(req, ack *common.NetPack) {
 		ack.WriteUInt16(0)
 	} else {
 		//下发patch目录下的文件列表
-		names, _ := file.WalkDir(Patch_File_Dir, "")
+		names, _ := file.WalkDir(kFileDirPatch, "")
 		ack.WriteUInt16(uint16(len(names)))
 		for _, v := range names {
-			ack.WriteString(v[len(Patch_File_Dir):]) //patch后的文件路径
+			ack.WriteString(v[len(kFileDirPatch):]) //patch后的文件路径
 			vv, _ := g_file_md5.Load(v)
 			ack.WriteUInt32(vv.(uint32))
 		}

@@ -56,7 +56,7 @@ func addRpc_CS(funcs *[]string) {
 func getOldRpc() (enums []std.KeyPair, enumCnt int) {
 	reg := regexp.MustCompile(`^Rpc_\w+`)
 	file.ReadLine(K_EnumOutDir+K_EnumFileName+".go", func(line string) {
-		if ok, _ := regexp.MatchString(`^Rpc_\w+ uint16 =`, line); ok {
+		if ok, _ := regexp.MatchString(`^Rpc_\w+\s+uint16 =`, line); ok {
 			if result := reg.FindAllString(line, -1); result != nil {
 				name := result[0]
 				list := strings.Split(line, " ")

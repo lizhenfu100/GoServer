@@ -3,7 +3,10 @@
 * @ brief
 	1、转接网络层buffer中的数据，缓存，以待主逻辑循环处理【因需等待主逻辑，消息响应会加大延时】
 
-    2、同名rpc混乱：client rpc server且有回包；若server那边也有个同名rpc client，那client就不好区分底层收到的包，是自己rpc的回复，还是对方主动rpc
+    2、同名rpc混乱：
+		· client call server且有回包
+		· client 本地也有个同名 rpc
+		· client 不好区分收包，是自己rpc的回复，还是对方call自己的
 
 	3、远程调用其它模块的rpc，应是本模块未声明实现的，避免同名rpc的混乱
 
@@ -79,7 +82,7 @@ func (self *RpcQueue) Loop() { //死循环，阻塞等待
 	}
 }
 
-//Notice：非线程安全的，将 response 改为 sync.Map 才安全的
+//Notice：非线程安全的，安全改造：backBuffer每次new、response改为sync.Map
 func (self *RpcQueue) _Handle(conn *TCPConn, msg *common.NetPack) {
 	msgId := msg.GetOpCode()
 	defer func() {
@@ -108,7 +111,7 @@ func (self *RpcQueue) _Handle(conn *TCPConn, msg *common.NetPack) {
 		rpcRecv(msg)
 		delete(self.response, msg.GetReqKey())
 	} else {
-		gamelog.Error("msgid[%d] havn't msg handler!!", msgId)
+		gamelog.Error("Msg(%d) Not Regist", msgId)
 	}
 }
 

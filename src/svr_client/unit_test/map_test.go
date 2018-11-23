@@ -1,8 +1,9 @@
-package main
+package unit_test
 
 import (
 	"common"
 	"fmt"
+	"testing"
 )
 
 type TTestMap struct {
@@ -10,7 +11,7 @@ type TTestMap struct {
 	val int
 }
 
-func test_List() {
+func Test_List(t *testing.T) {
 	var list []int
 	fmt.Println(len(list)) // 0
 	if list == nil {       //! 判断通过哟！
@@ -49,7 +50,7 @@ func test_List() {
 	fmt.Println(buf, &buf[0], &buf[1])
 	fmt.Println(buf1, &buf1[0], &buf1[1])
 }
-func test_Map() {
+func Test_Map(t *testing.T) {
 	dict := make(map[int]TTestMap)
 	// dict := make(map[int]*TTestMap)
 	dict[1] = TTestMap{"aa", 11}

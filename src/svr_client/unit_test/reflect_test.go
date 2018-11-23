@@ -1,13 +1,14 @@
-package main
+package unit_test
 
 import (
 	"fmt"
 	"reflect"
+	"testing"
 )
 
 // ------------------------------------------------------------
 // Google Go example
-func TestDish() {
+func Test_Dish(t *testing.T) {
 	// iterate through the attributes of a Data Model instance
 	for name, mtype := range attributes(&Dish{}) {
 		fmt.Printf("Name: %s, Type %s\n", name, mtype.Name())
@@ -59,10 +60,10 @@ type TRef struct {
 	private string // 私有变量，无法用反射、空interface编辑
 }
 
-func test_SetStruct() {
-	t := TRef{}
-	SetStruct(&t)
-	fmt.Println("=>", t)
+func Test_SetStruct(t *testing.T) {
+	v := TRef{}
+	SetStruct(&v)
+	fmt.Println("=>", v)
 }
 func SetStruct(ptr interface{}) {
 	data := reflect.ValueOf(ptr).Elem()
@@ -93,7 +94,7 @@ type TMap struct {
 	Array []int
 }
 
-func test_SetMap() {
+func Test_SetMap(t *testing.T) {
 	m := make(map[int]*TMap)
 	SetMap(&m)
 	fmt.Println("=>", *m[0])

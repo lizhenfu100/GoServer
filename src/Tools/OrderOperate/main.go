@@ -17,42 +17,38 @@ import (
 	"time"
 )
 
-var (
-	//命令行标志，须出现于参数之前（否则，该标志会被解析为位置参数）
-	_g, _s, _ip string
-	_port       int
-	g_addr      string
-)
-
-func init() {
+func main() {
+	var (
+		//命令行标志，须出现于参数之前（否则，该标志会被解析为位置参数）
+		_g, _s, _ip string
+		_port       int
+	)
 	flag.StringVar(&_g, "g", "", "查询订单信息")
 	flag.StringVar(&_s, "s", "", "修改失败订单")
 	flag.StringVar(&_ip, "ip", "120.78.152.152", "ip")
 	flag.IntVar(&_port, "port", 7002, "port")
-}
-
-func main() {
-	gamelog.InitLogger("Order")
 	flag.Parse() //内部获取了所有参数：os.Args[1:]
 
-	g_addr = http.Addr(_ip, uint16(_port))
+	gamelog.InitLogger("Order")
+
+	addr := http.Addr(_ip, uint16(_port))
 
 	//fmt.Println(g_addr, flag.Args())
 	//_g = "0091805016400525 0091805016400382 0091805016395545"
 
-	GetOrderInfo(strings.Split(_g, " "))
-	OrderSuccess(strings.Split(_s, " "))
+	GetOrderInfo(addr, strings.Split(_g, " "))
+	OrderSuccess(addr, strings.Split(_s, " "))
 
 	time.Sleep(time.Hour)
 }
 
 // --------------------------------------------------------------------------
 //
-func OrderSuccess(orderIds []string) {
+func OrderSuccess(addr string, orderIds []string) {
 	if len(orderIds) > 0 && orderIds[0] != "" {
 		gamelog.Debug("set: %d %v", len(orderIds), orderIds)
 
-		http.CallRpc(g_addr, enum.Rpc_order_success, func(buf *common.NetPack) {
+		http.CallRpc(addr, enum.Rpc_order_success, func(buf *common.NetPack) {
 			buf.WriteUInt16(uint16(len(orderIds)))
 			for _, v := range orderIds {
 				buf.WriteString(v)
@@ -65,11 +61,11 @@ func OrderSuccess(orderIds []string) {
 		})
 	}
 }
-func GetOrderInfo(orderIds []string) {
+func GetOrderInfo(addr string, orderIds []string) {
 	if len(orderIds) > 0 && orderIds[0] != "" {
 		gamelog.Debug("get: %d %v", len(orderIds), orderIds)
 
-		http.CallRpc(g_addr, enum.Rpc_order_info, func(buf *common.NetPack) {
+		http.CallRpc(addr, enum.Rpc_order_info, func(buf *common.NetPack) {
 			buf.WriteUInt16(uint16(len(orderIds)))
 			for _, v := range orderIds {
 				buf.WriteString(v)

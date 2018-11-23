@@ -1,11 +1,12 @@
 //! 内存数据库事务demo
-package main
+package unit_test
 
 import (
 	"fmt"
 	"testing"
 )
 
+type TransType int
 type TransLog interface {
 	Commit(*Database)
 	Rollback(*Database)
@@ -15,11 +16,6 @@ type PlayerItem struct {
 	ItemId int
 	Num    int
 }
-type Database struct {
-	transLogs  []TransLog
-	playerItem map[int]*PlayerItem
-}
-type TransType int
 type PlayerItemTransLog struct {
 	Type TransType
 	Old  *PlayerItem
@@ -32,12 +28,17 @@ const (
 	UPDATE
 )
 
+type Database struct {
+	transLogs  []TransLog
+	playerItem map[int]*PlayerItem
+}
+
 func NewDatabase() *Database {
 	return &Database{
 		playerItem: make(map[int]*PlayerItem),
 	}
 }
-func (self *Database) Transaction(trans func() int) {
+func (self *Database) TransAction(trans func() int) {
 	if trans() < 0 {
 		for i := len(self.transLogs) - 1; i >= 0; i-- {
 			self.transLogs[i].Rollback(self)
@@ -48,6 +49,34 @@ func (self *Database) Transaction(trans func() int) {
 		}
 	}
 	self.transLogs = self.transLogs[:0] //每次事务过后清空记录
+}
+
+// ------------------------------------------------------------
+//! 数据库操作
+func (self *Database) LookupPlayerItem(id int) *PlayerItem {
+	return self.playerItem[id]
+}
+func (self *Database) InsertPlayerItem(playerItem *PlayerItem) {
+	id := playerItem.Id
+	self.playerItem[id] = playerItem
+	self.transLogs = append(self.transLogs, &PlayerItemTransLog{
+		Type: INSERT, New: playerItem,
+	})
+}
+func (self *Database) DeletePlayerItem(id int) {
+	old := self.playerItem[id]
+	delete(self.playerItem, id)
+	self.transLogs = append(self.transLogs, &PlayerItemTransLog{
+		Type: DELETE, Old: old,
+	})
+}
+func (self *Database) UpdatePlayerItem(playerItem *PlayerItem) {
+	id := playerItem.Id
+	old := self.playerItem[id]
+	self.playerItem[id] = playerItem
+	self.transLogs = append(self.transLogs, &PlayerItemTransLog{
+		Type: UPDATE, Old: old, New: playerItem,
+	})
 }
 
 // ------------------------------------------------------------
@@ -86,37 +115,10 @@ func (self *PlayerItemTransLog) Rollback(db *Database) {
 }
 
 // ------------------------------------------------------------
-//! 数据库操作
-func (self *Database) LookupPlayerItem(id int) *PlayerItem {
-	return self.playerItem[id]
-}
-func (self *Database) InsertPlayerItem(playerItem *PlayerItem) {
-	id := playerItem.Id
-	self.playerItem[id] = playerItem
-	self.transLogs = append(self.transLogs, &PlayerItemTransLog{
-		Type: INSERT, New: playerItem,
-	})
-}
-func (self *Database) DeletePlayerItem(id int) {
-	old := self.playerItem[id]
-	delete(self.playerItem, id)
-	self.transLogs = append(self.transLogs, &PlayerItemTransLog{
-		Type: DELETE, Old: old,
-	})
-}
-func (self *Database) UpdatePlayerItem(playerItem *PlayerItem) {
-	id := playerItem.Id
-	old := self.playerItem[id]
-	self.playerItem[id] = playerItem
-	self.transLogs = append(self.transLogs, &PlayerItemTransLog{
-		Type: UPDATE, Old: old, New: playerItem,
-	})
-}
-
 func Test_main(t *testing.T) {
 	db := NewDatabase()
 
-	db.Transaction(func() int {
+	db.TransAction(func() int {
 		db.InsertPlayerItem(&PlayerItem{
 			Id:     1,
 			ItemId: 100,
@@ -129,9 +131,9 @@ func Test_main(t *testing.T) {
 		})
 		return 1
 	})
-	fmt.Println(db.playerItem, "\n")
+	fmt.Println(db.playerItem)
 
-	db.Transaction(func() int {
+	db.TransAction(func() int {
 		db.UpdatePlayerItem(&PlayerItem{
 			Id:     1,
 			ItemId: 111,
@@ -139,5 +141,5 @@ func Test_main(t *testing.T) {
 		})
 		return -1
 	})
-	fmt.Println(*db.playerItem[1], "\n")
+	fmt.Println(*db.playerItem[1])
 }

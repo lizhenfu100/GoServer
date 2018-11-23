@@ -4,7 +4,7 @@ import (
 	"regexp"
 )
 
-//32长，数字、字母、下划线、横杠、@、.
+//32长，数字、字母、@、.、下划线、横杠
 func CheckAccount(s string) bool {
 	ret, _ := regexp.MatchString(`^[\w-@\.]{3,32}$`, s)
 	return ret

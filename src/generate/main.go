@@ -7,6 +7,39 @@ import (
 	"time"
 )
 
+const (
+	// 源码目录
+	K_SvrDir = "../src/"
+	// 生成文件的根目录
+	K_OutDir = "../src/generate_out/"
+
+	// 生成rpc枚举
+	K_EnumOutDir   = K_OutDir + "rpc/enum/"
+	K_EnumFileName = "generate_rpc_enum"
+
+	// 生成rpc注册文件
+	K_RegistOutDir   = K_OutDir + "rpc/"
+	K_RegistFileName = "generate_rpc.go"
+
+	// 生成error枚举
+	K_ErrOutDir   = K_OutDir + "err/"
+	K_ErrFileName = "generate_err_code"
+)
+
+var (
+	// c++、c# rpc函数所在文件
+	K_RpcFuncFile_C  = "../../CXServer/src/rpc/RpcEnum.h"
+	K_RpcFuncFile_CS = "../../GameClient/Assets/RGScript/Net/Player/Player.cs"
+
+	// c++、c# rpc枚举的输出目录
+	K_EnumOutDir_C  = "../../CXServer/src/rpc/"
+	K_EnumOutDir_CS = "../../GameClient/Assets/RGScript/generate/"
+
+	// c++、c# errCode的输出目录
+	K_ErrOutDir_C  = "../../CXServer/src/common/generate/"
+	K_ErrOutDir_CS = "../../GameClient/Assets/RGScript/generate/"
+)
+
 func init() {
 	flag.StringVar(&K_RpcFuncFile_C, "RpcFunc1", K_RpcFuncFile_C, "c++ Rpc函数文件")
 	flag.StringVar(&K_RpcFuncFile_CS, "RpcFunc2", K_RpcFuncFile_CS, "c# Rpc函数文件")
@@ -28,16 +61,17 @@ func main() {
 
 	//1、收集并注册RpcFunc -- 公共服务器、具体某游戏的业务服务器
 	svrList := []string{
-		"shared_svr/zookeeper",
 		"shared_svr/svr_center",
-		"shared_svr/svr_login",
-		"shared_svr/svr_gateway",
-		"shared_svr/svr_save",
+		"shared_svr/svr_chat",
 		"shared_svr/svr_file",
 		"shared_svr/svr_friend",
+		"shared_svr/svr_gateway",
+		"shared_svr/svr_login",
+		"shared_svr/svr_save",
+		"shared_svr/zookeeper",
 		"svr_cross",
-		"svr_sdk",
 		"svr_game",
+		"svr_sdk",
 	}
 	vec := make([]*RpcInfo, len(svrList))
 	for i, v := range svrList {

@@ -1,5 +1,5 @@
 // +build !debug
 
-package assert //go run main.go
+package assert
 
 func True(cond bool) {}

@@ -22,13 +22,13 @@ func InitDB() {
 	}
 	println("load active account form db: ", len(list))
 }
-func AddNewAccount(name, password string) *TAccount {
+func AddNewAccount(name, passwd string) *TAccount {
 	account := _NewAccount()
 	if dbmgo.Find(kDBTable, "name", name, account) {
 		return nil
 	}
 	account.Name = name
-	account.Password = password
+	account.SetPasswd(passwd)
 	account.CreateTime = time.Now().Unix()
 	account.AccountID = dbmgo.GetNextIncId("AccountId")
 
@@ -50,22 +50,17 @@ func GetAccountByName(name string) *TAccount {
 	}
 	return nil
 }
-func GetAccountInCache(accountId uint32) *TAccount {
+func GetAccountById(accountId uint32) *TAccount {
 	if v, ok := g_aid_cache.Load(accountId); ok {
 		return v.(*TAccount)
-	}
-	return nil
-}
-func ResetPassword(name, password, newpassword string) bool {
-	if account := GetAccountByName(name); account != nil {
-		if account.Password == password {
-			account.Password = newpassword
-			dbmgo.UpdateToDB(kDBTable, bson.M{"_id": account.AccountID}, bson.M{"$set": bson.M{
-				"password": newpassword}})
-			return true
+	} else {
+		account := _NewAccount()
+		if dbmgo.Find(kDBTable, "_id", accountId, account) {
+			AddCache(account)
+			return account
 		}
 	}
-	return false
+	return nil
 }
 
 // -------------------------------------

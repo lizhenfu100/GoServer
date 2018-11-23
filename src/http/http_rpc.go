@@ -37,10 +37,28 @@ import (
 	"common"
 	"gamelog"
 	"generate_out/rpc/enum"
+	"io"
+	"io/ioutil"
 	"net/http"
 )
 
 var G_HandleFunc [enum.RpcEnumCnt]func(req, ack *common.NetPack)
+
+func ReadRequest(r *http.Request) (req *common.NetPack) {
+	var err error
+	var buf []byte
+	if r.ContentLength > 0 {
+		buf = make([]byte, r.ContentLength)
+		_, err = io.ReadFull(r.Body, buf)
+	} else {
+		buf, err = ioutil.ReadAll(r.Body)
+	}
+	if err != nil {
+		gamelog.Error("ReadBody: %s", err.Error())
+		return nil
+	}
+	return common.NewNetPack(buf)
+}
 
 // ------------------------------------------------------------
 //! system rpc
@@ -57,27 +75,28 @@ func CallRpc(addr string, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 func RegHandleRpc() { http.HandleFunc("/client_rpc", _HandleRpc) }
 func _HandleRpc(w http.ResponseWriter, r *http.Request) {
 	//! 接收信息
-	req := common.NewNetPackLen(int(r.ContentLength))
-	r.Body.Read(req.Data())
+	req := ReadRequest(r)
+	if req == nil {
+		return
+	}
+	defer req.Free()
 
 	//! 创建回复
 	ack := common.NewNetPackCap(128)
-	msgId := req.GetOpCode()
 	defer ack.Free()
+	msgId := req.GetOpCode()
+	gamelog.Debug("HttpMsg:%d, len:%d", msgId, req.Size())
 	//defer func() {//库已经有recover了，见net/http/server.go:1918
 	//	if r := recover(); r != nil {
 	//		gamelog.Error("recover msgId:%d\n%v: %s", msgId, r, debug.Stack())
 	//	}
 	//	ack.Free()
 	//}()
-
-	gamelog.Debug("HttpMsg:%d, len:%d", msgId, req.Size())
-
 	if handler := G_HandleFunc[msgId]; handler != nil {
 		handler(req, ack)
 		common.CompressTo(ack.Data(), w)
 	} else {
-		gamelog.Error("HttpMsg(%d) Not Regist", msgId)
+		gamelog.Error("Msg(%d) Not Regist", msgId)
 	}
 }
 

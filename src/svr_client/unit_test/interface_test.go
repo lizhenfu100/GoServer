@@ -1,7 +1,8 @@
-package main
+package unit_test
 
 import (
 	"fmt"
+	"testing"
 )
 
 // interface只关心接口“输入什么、输出什么”，不关心接口具体属于谁，运行时能调到即可
@@ -40,7 +41,7 @@ func (self *T2) Fun2(a int) bool {
 	return true
 }
 
-func TestInterface() {
+func Test_Interface(t *testing.T) {
 	t1 := T1{}
 	t2 := T2{}
 
@@ -50,10 +51,7 @@ func TestInterface() {
 	fun = &t1
 	fun.Fun1()
 }
-
-// ------------------------------------------------------------
-// 接口/类型查询
-func TestInterfaceSelect() {
+func Test_InterfaceSelect(t *testing.T) { //接口/类型查询
 	var i interface{} = T1{1, "龙蛋"}
 
 	switch v := i.(type) {
@@ -64,7 +62,7 @@ func TestInterfaceSelect() {
 	case T1:
 		fmt.Println(i.(T1).b, v.b)
 	case interface{}:
-		fmt.Println("interface{}", v) // 这条也能匹配上
+		fmt.Println("interface{}", v) //这条也能匹配上
 	}
 
 	//! 直接判断interface是否为某类型

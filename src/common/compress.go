@@ -15,6 +15,7 @@ import (
 	"compress/gzip"
 	"conf"
 	"encoding/binary"
+	"gamelog"
 	"io"
 	"io/ioutil"
 )
@@ -36,7 +37,10 @@ func CompressTo(b []byte, w io.Writer) {
 		w.Write(flag)
 		w.Write(buf.Bytes())
 	} else {
-		w.Write(b)
+		n, e := w.Write(b)
+		if n != len(b) || e != nil {
+			gamelog.Error("Http ShortWrite: %s", e.Error())
+		}
 	}
 }
 func Compress(b []byte) (ret []byte) {

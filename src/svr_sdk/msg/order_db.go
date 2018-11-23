@@ -49,7 +49,7 @@ type TOrderInfo struct {
 	Extra          string
 }
 
-var g_order_map sync.Map
+var g_order_map sync.Map //<orderId, *TOrderInfo>
 
 func CreateOrderInDB(ptr *TOrderInfo) bool {
 	//生成订单号

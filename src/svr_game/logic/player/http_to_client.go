@@ -123,7 +123,7 @@ func (self *TPlayer) AsyncNotify(handler func(*TPlayer)) {
 			gamelog.Warn("Player askChan is full !!!")
 			return
 		}
-	} else { //FIXME:zhoumf: 如何安全方便的修改离线玩家数据
+	} else { //FIXME:zhoumf: 如何安全方便的修改离线玩家数据……应该不允许的~囧，除非特殊玩法
 
 		//准备将离线的操作转给mainloop，这样所有离线玩家就都在一个chan里处理了
 		//要是中途玩家上线，mainloop的chan里还有他的操作没处理完怎么整！？囧~

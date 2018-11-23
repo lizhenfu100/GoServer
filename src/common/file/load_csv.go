@@ -65,24 +65,30 @@ func LoadAllCsv() {
 		fmt.Printf("LoadAllCsv error : %s\n", err.Error())
 	}
 	for _, name := range names {
-		LoadOneCsv(name)
+		if getRegPtr(name) == nil {
+			fmt.Printf("%s not regist in G_Csv_Map\n", name)
+		} else {
+			LoadOneCsv(name)
+		}
 	}
-}
-func ReloadCsv(csvName string) {
-	name := fmt.Sprintf("%s/csv/%s.csv", GetExeDir(), csvName)
-	LoadOneCsv(name)
 }
 func LoadOneCsv(name string) {
-	records, err := ReadCsv(name)
-	if err != nil {
-		fmt.Printf("ReadCsv error : %s\n", err.Error())
-		return
-	}
-	if ptr, ok := G_Csv_Map[strings.TrimSuffix(filepath.Base(name), ".csv")]; ok {
-		ParseRefCsv(records, ptr)
-	} else {
+	if ptr := getRegPtr(name); ptr == nil {
 		fmt.Printf("%s not regist in G_Csv_Map\n", name)
+	} else if records, err := ReadCsv(name); err != nil {
+		fmt.Printf("ReadCsv error : %s\n", err.Error())
+	} else {
+		ParseRefCsv(records, ptr)
 	}
+}
+func getRegPtr(fullName string) interface{} {
+	if ptr, ok := G_Csv_Map[strings.TrimSuffix(filepath.Base(fullName), ".csv")]; ok {
+		return ptr
+	}
+	return nil
+}
+func ReloadCsv(csvName string) {
+	LoadOneCsv(fmt.Sprintf("%s/csv/%s.csv", GetExeDir(), csvName))
 }
 
 // -------------------------------------
@@ -266,8 +272,8 @@ func ReadCsv(path string) ([][]string, error) {
 	}
 	return records, nil
 }
-func UpdateCsv(path string, records [][]string) error {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+func UpdateCsv(dir, name string, records [][]string) error {
+	file, err := CreateFile(dir, name, os.O_TRUNC|os.O_WRONLY)
 	if err != nil {
 		return err
 	}
@@ -277,8 +283,8 @@ func UpdateCsv(path string, records [][]string) error {
 	csvWriter.UseCRLF = true
 	return csvWriter.WriteAll(records)
 }
-func AppendCsv(path string, record []string) error {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND, 0666)
+func AppendCsv(dir, name string, record []string) error {
+	file, err := CreateFile(dir, name, os.O_APPEND)
 	if err != nil {
 		return err
 	}

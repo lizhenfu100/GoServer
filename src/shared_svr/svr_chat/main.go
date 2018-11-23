@@ -11,8 +11,10 @@
 package main
 
 import (
+	"common/console"
 	"common/file"
 	"conf"
+	"flag"
 	"gamelog"
 	_ "generate_out/rpc/shared_svr/svr_chat"
 	"netConfig"
@@ -20,18 +22,20 @@ import (
 )
 
 const (
-	K_Module_Name  = "chat"
-	K_Module_SvrID = 1
+	kModuleName = "chat"
 )
 
 func main() {
+	var svrId int
+	flag.IntVar(&svrId, "id", 1, "svrId")
+	flag.Parse()
+
 	//初始化日志系统
-	gamelog.InitLogger(K_Module_Name)
+	gamelog.InitLogger(kModuleName)
 	InitConf()
 
-	//设置mongodb的服务器地址
-	//pMeta := meta.GetMeta("db_chat", 0)
-	//dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
+	//设置本节点meta信息
+	netConfig.G_Local_Meta = meta.GetMeta(kModuleName, svrId)
 
 	netConfig.RunNetSvr()
 }
@@ -43,5 +47,5 @@ func InitConf() {
 	}
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
-	netConfig.G_Local_Meta = meta.GetMeta(K_Module_Name, K_Module_SvrID)
+	console.Init()
 }

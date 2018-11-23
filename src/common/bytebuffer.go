@@ -13,23 +13,17 @@ type ByteBuffer struct {
 
 func NewByteBufferCap(capacity int) *ByteBuffer {
 	self := malloc()
-	if self.buf == nil {
-		self.buf = make([]byte, 0, capacity)
-	} else if cap(self.buf) < capacity {
+	if self.buf == nil || cap(self.buf) < capacity {
 		self.buf = make([]byte, 0, capacity)
 	}
 	return self
 }
 func NewByteBufferLen(length int) *ByteBuffer {
 	self := malloc()
-	if self.buf == nil {
+	if self.buf == nil || cap(self.buf) < length {
 		self.buf = make([]byte, length)
 	} else {
-		if cap(self.buf) < length {
-			self.buf = make([]byte, length)
-		} else {
-			self.buf = self.buf[:length]
-		}
+		self.buf = self.buf[:length]
 	}
 	return self
 }

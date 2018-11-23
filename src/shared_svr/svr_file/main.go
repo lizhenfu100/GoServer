@@ -4,6 +4,7 @@ import (
 	"common/console"
 	"common/file"
 	"conf"
+	"flag"
 	"gamelog"
 	_ "generate_out/rpc/shared_svr/svr_file"
 	"netConfig"
@@ -11,17 +12,20 @@ import (
 )
 
 const (
-	Module_Name  = "file"
-	Module_SvrID = 1
+	kModuleName = "file"
 )
 
 func main() {
+	var svrId int
+	flag.IntVar(&svrId, "id", 1, "svrId")
+	flag.Parse()
+
 	//初始化日志系统
-	gamelog.InitLogger(Module_Name)
+	gamelog.InitLogger(kModuleName)
 	InitConf()
 
-	//开启控制台窗口，可以接受一些调试命令
-	console.StartConsole()
+	//设置本节点meta信息
+	netConfig.G_Local_Meta = meta.GetMeta(kModuleName, svrId)
 
 	netConfig.RunNetSvr()
 }
@@ -33,5 +37,5 @@ func InitConf() {
 	}
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
-	netConfig.G_Local_Meta = meta.GetMeta(Module_Name, Module_SvrID)
+	console.Init()
 }

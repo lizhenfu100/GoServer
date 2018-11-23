@@ -61,7 +61,7 @@ func InsertSync(table string, pData interface{}) bool {
 	coll := g_database.C(table)
 	err := coll.Insert(pData)
 	if err != nil {
-		gamelog.Error("InsertSync error: %v \r\ntable: %s \r\n", err.Error(), table)
+		gamelog.Error("InsertSync error:%v \r\ntable:%s", err.Error(), table)
 		return false
 	}
 	return true
@@ -70,7 +70,7 @@ func UpdateIdSync(table string, id, pData interface{}) bool {
 	coll := g_database.C(table)
 	err := coll.UpdateId(id, pData)
 	if err != nil {
-		gamelog.Error("UpdateSync error: %v \r\ntable: %s \r\nid: %v \r\ndata: %v \r\n",
+		gamelog.Error("UpdateSync error:%v \r\ntable:%s  id:%v  data:%v",
 			err.Error(), table, id, pData)
 		return false
 	}
@@ -80,7 +80,8 @@ func RemoveOneSync(table string, search bson.M) bool {
 	coll := g_database.C(table)
 	err := coll.Remove(search)
 	if err != nil && err != mgo.ErrNotFound {
-		gamelog.Error("RemoveOneSync error: %v \r\ntable: %s \r\nsearch: %v \r\n", err.Error(), table, search)
+		gamelog.Error("RemoveOneSync error:%v \r\ntable:%s  search:%v",
+			err.Error(), table, search)
 		return false
 	}
 	return true
@@ -89,7 +90,8 @@ func RemoveAllSync(table string, search bson.M) bool {
 	coll := g_database.C(table)
 	_, err := coll.RemoveAll(search)
 	if err != nil && err != mgo.ErrNotFound {
-		gamelog.Error("RemoveAllSync error: %v \r\ntable: %s \r\nsearch: %v \r\n", err.Error(), table, search)
+		gamelog.Error("RemoveAllSync error:%v \r\ntable:%s  search:%v",
+			err.Error(), table, search)
 		return false
 	}
 	return true
@@ -99,10 +101,24 @@ func Find(table, key string, value, pData interface{}) bool {
 	err := coll.Find(bson.M{key: value}).One(pData)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			gamelog.Info("Not Find table: %s  find: %s:%v", table, key, value)
+			gamelog.Info("None table:%s  search:%s:%v", table, key, value)
 		} else {
-			gamelog.Error("Find error: %v \r\ntable: %s \r\nfind: %s:%v \r\n",
+			gamelog.Error("Find error:%v \r\ntable:%s  search:%s:%v",
 				err.Error(), table, key, value)
+		}
+		return false
+	}
+	return true
+}
+func FindEx(table string, search bson.M, pData interface{}) bool {
+	coll := g_database.C(table)
+	err := coll.Find(search).One(pData)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			gamelog.Info("None table:%s  search:%v", table, search)
+		} else {
+			gamelog.Error("FindEx error:%v \r\ntable:%s  search:%v",
+				err.Error(), table, search)
 		}
 		return false
 	}
@@ -125,9 +141,9 @@ func FindAll(table string, search bson.M, pSlice interface{}) {
 	err := coll.Find(search).All(pSlice)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			gamelog.Info("Not Find table: %s  findall: %v", table, search)
+			gamelog.Info("None table:%s  search:%v", table, search)
 		} else {
-			gamelog.Error("FindAll error: %v \r\ntable: %s \r\nfindall: %v \r\n",
+			gamelog.Error("FindAll error:%v \r\ntable:%s  search:%v",
 				err.Error(), table, search)
 		}
 	}
@@ -146,9 +162,9 @@ func _find_sort(table, sortKey string, cnt int, pList interface{}) {
 	err := query.All(pList)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			gamelog.Info("Not Find table:%s  sortKey:%s", table, sortKey)
+			gamelog.Info("None table:%s  sortKey:%s", table, sortKey)
 		} else {
-			gamelog.Error("Find_Sort error: %v \r\ntable: %s \r\nsort: %s \r\nlimit: %d\r\n",
+			gamelog.Error("FindSort error:%v \r\ntable:%s  sort:%s  limit:%d",
 				err.Error(), table, sortKey, cnt)
 		}
 	}

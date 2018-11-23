@@ -37,7 +37,7 @@ import (
 
 var (
 	G_Local_Meta   *meta.Meta
-	g_client_conns sync.Map //= make(map[std.KeyPair]*tcp.TCPClient) //本模块，对其它模块的tcp连接
+	g_client_conns sync.Map //<{module,svrId}, *tcp.TCPClient> //本模块主动连其它模块的tcp
 )
 
 func RunNetSvr() {
@@ -59,10 +59,11 @@ func RunNetSvr() {
 
 	//3、开启本模块网络服务(Busy Loop)
 	fmt.Printf("-------%s server start-------\n", G_Local_Meta.Module)
+	addr := fmt.Sprintf(":%d", G_Local_Meta.Port())
 	if G_Local_Meta.HttpPort > 0 {
-		http.NewHttpServer(fmt.Sprintf(":%d", G_Local_Meta.HttpPort))
+		http.NewHttpServer(addr, G_Local_Meta.Module, G_Local_Meta.SvrID)
 	} else if G_Local_Meta.TcpPort > 0 {
-		tcp.NewTcpServer(fmt.Sprintf(":%d", G_Local_Meta.TcpPort), G_Local_Meta.Maxconn)
+		tcp.NewTcpServer(addr, G_Local_Meta.Maxconn)
 	} else {
 		gamelog.Error("%s: have none HttpPort|TcpPort!!!", G_Local_Meta.Module)
 	}
