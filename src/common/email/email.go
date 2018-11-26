@@ -1,6 +1,8 @@
 /***********************************************************************
 * @ 使用第三方服务转发Email
 * @ brief
+	、应交由固定地区的节点来转发，如center，否则容易被第三方当成异地登录，临时封禁~囧
+
 	gmail：
 		1、用户设置 - 转发和POP/IMAP - POP下载 - 对从现在起收到的邮件启用POP
 		2、还须开启“安全性较低的应用的访问权限”
@@ -23,12 +25,13 @@ const (
 	//kPasswd      = "ezblhqfudwfabead"
 	//kHost, kPort = "smtp.qq.com", 465
 	kUser        = "3workman@gmail.com"
+	kPasswd      = "zmf890104"
 	kHost, kPort = "smtp.gmail.com", 465
 )
 
 var (
 	g_msg    = gomail.NewMessage()
-	g_dialer = gomail.NewDialer(kHost, kPort, kUser, "zmf890104")
+	g_dialer = gomail.NewDialer(kHost, kPort, kUser, kPasswd)
 )
 
 func SendMail(subject, target, body string) {
@@ -46,6 +49,6 @@ func SendMail(subject, target, body string) {
 	//msg.Attach("我是附件")
 
 	if err := g_dialer.DialAndSend(msg); err != nil {
-		gamelog.Error("SendMail err: %s", err.Error())
+		gamelog.Error("SendMail: %s\nerr: %s", target, err.Error())
 	}
 }

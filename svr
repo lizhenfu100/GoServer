@@ -1,0 +1,168 @@
+#!/bin/sh
+
+ulimit -c unlimited #设置core大小为无限
+
+root=~/diner
+passwd="123123"
+slave_src=""        #从库的主DB地址
+daemon=0
+
+Init() {
+    # 构建配置环境，连接csv、ThirdParty等
+    ln -s $root/svr ~/bin/svr
+    mkdir -p $root/bin/db
+}
+InitDB() {
+MongoDB='mongo'
+$MongoDB <<EOF
+
+use admin;
+db.createUser({user:"root",pwd:"zhoumf233*",roles:["root"]});
+db.auth("root","zhoumf233*");
+db.createUser({user:"repl",pwd:"db#233*",roles:[{role:"dbOwner", db:"local"}]})
+
+use account;
+db.createUser({user:"chillyroom",pwd:"db#233*",roles:["readWrite"]});
+db.Account.ensureIndex({"name":1},{"unique":true})
+db.Account.ensureIndex({"bindinfo.phone":1})
+db.Account.ensureIndex({"bindinfo.email":1})
+
+use sdk;
+db.createUser({user:"chillyroom",pwd:"db#233*",roles:["readWrite"]});
+
+use save;
+db.createUser({user:"chillyroom",pwd:"db#233*",roles:["readWrite"]});
+db.Save.ensureIndex({"mac":1},{"unique":true})
+
+use diner;
+db.createUser({user:"chillyroom",pwd:"db#233*",roles:["readWrite"]});
+db.Player.ensureIndex({"accountid":1},{"unique":true})
+
+use friend;
+db.createUser({user:"chillyroom",pwd:"db#233*",roles:["readWrite"]});
+
+use other;
+db.createUser({user:"chillyroom",pwd:"db#233*",roles:["readWrite"]});
+
+exit;
+EOF
+}
+
+# --------------------------------------------------------------------------
+RunSvr() {
+    # rm -f core
+    # rm -rf ./log
+    if [ $daemon == 1 ]; then
+        nohup ./svr_$1 ${@:2} > $root/$1.out 2>&1 &
+    else
+        ./svr_$1 ${@:2}
+    fi
+}
+Battle() {
+    cd $root/bin
+    RunSvr battle
+}
+Center() {
+    cd $root/bin
+    RunSvr center
+}
+Cross() {
+    cd $root/bin
+    RunSvr cross
+}
+Game() {
+    cd $root/bin
+    RunSvr game
+}
+Gateway() {
+    cd $root/bin
+    RunSvr gateway
+}
+Friend() {
+    cd $root/bin
+    RunSvr friend
+}
+Sdk() {
+    cd $root/bin
+    RunSvr sdk
+}
+Save() {
+    cd $root/bin
+    RunSvr save
+}
+Login() {
+    cd $root/bin
+    RunSvr login -id 1
+}
+File() {
+    cd $root/bin
+    RunSvr file
+}
+Zookeeper() {
+    cd $root/bin
+    # rm -f core
+    # rm -rf ./log
+    if [ $daemon == 1 ]; then
+        nohup ./zookeeper > $root/zookeeper.out 2>&1 &
+    else
+        ./zookeeper
+    fi
+}
+
+# --------------------------------------------------------------------------
+DB() {
+    nohup echo $passwd | sudo -S mongod --auth --dbpath $root/bin/db >/dev/null 2>$root/db.out &
+}
+DB_Master() {
+    nohup echo $passwd | sudo -S mongod --master --oplogSize 4096 --auth --dbpath $root/bin/db >/dev/null 2>$root/db.out &
+}
+DB_Slave() {
+    nohup echo $passwd | sudo -S mongod --slave --source $slave_src --auth --dbpath $root/bin/db >/dev/null 2>$root/db.out &
+}
+
+# --------------------------------------------------------------------------
+KillAll() {
+    killall -9 svr_battle
+    killall -9 svr_center
+    killall -9 svr_cross
+    killall -9 svr_game
+    killall -9 svr_gateway
+    killall -9 svr_friend
+    killall -9 svr_sdk
+    killall -9 svr_save
+    killall -9 svr_login
+    killall -9 svr_file
+    killall -9 zookeeper
+}
+RunOne() {
+    case $1 in
+        "db")           DB;;
+        "dbMaster")     DB_Master;;
+        "dbSlave")      DB_Slave;;
+        1|"zoo")        Zookeeper;;
+        2|"center")     Center;;
+        3|"cross")      Cross;;
+        4|"login")      Login;;
+        5|"game")       Game;;
+        6|"battle")     Battle;;
+        7|"gateway")    Gateway;;
+        8|"friend")     Friend;;
+        "sdk")          Sdk;;
+        "save")         Save;;
+        "file")         File;;
+        "kill")         KillAll;;
+        "init")         Init;;
+        "initdb")       InitDB;;
+        *) echo "Input a key, like:\n svr [-d] game \n svr [-d] 1";;
+    esac
+}
+# --------------------------------------------------------------------------
+while getopts ":d" opt; do
+    case $opt in
+        d) shift 1; daemon=1;;
+        *) echo "Invalid option: -$OPTARG";;
+    esac
+done
+for arg in $@; do
+    RunOne $arg
+done
