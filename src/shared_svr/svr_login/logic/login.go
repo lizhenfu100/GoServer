@@ -1,7 +1,7 @@
 /***********************************************************************
 * @ game svr list
 * @ brief
-	登录服选择：
+	登录服决议：
 		1、客户端显示大区列表，玩家自己选择
 		2、login iplist 写成前端配置，玩家注册时挨个ping，取延时最小的去注册
 
@@ -51,7 +51,7 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 		if gameSvrId <= 0 {
 			ack.WriteUInt16(err.None_free_game_server)
 		} else {
-			//4、登录成功，设置各类信息
+			//4、登录成功，设置各类信息，回复client待连接的节点(gateway或game)
 			accountLogin4(accountId, gameSvrId, ack)
 		}
 	}
@@ -74,9 +74,8 @@ func accountLogin2(centerSvrId int, req, ack *common.NetPack) (_ok bool, _aid ui
 	return
 }
 func accountLogin3(accountId uint32, pInfo *gameInfo.TGameInfo, version, gameName string, centerSvrId int) (_gameSvrId int) {
-	//选取gameSvrId
-	_gameSvrId = pInfo.SvrId
-	if _gameSvrId == 0 { //自动选取空闲节点，并绑定到账号上
+	//选取gameSvrId：若账户未绑定游戏服，自动选取空闲节点，并绑定到账号上
+	if _gameSvrId = pInfo.SvrId; _gameSvrId == 0 {
 		if _gameSvrId = GetFreeGameSvrId(version); _gameSvrId > 0 {
 			netConfig.CallRpcCenter(centerSvrId, enum.Rpc_center_set_game_info, func(buf *common.NetPack) {
 				buf.WriteUInt32(accountId)
@@ -89,7 +88,7 @@ func accountLogin3(accountId uint32, pInfo *gameInfo.TGameInfo, version, gameNam
 	return
 }
 func accountLogin4(accountId uint32, gameSvrId int, ack *common.NetPack) {
-	//登录成功，设置各类信息
+	//登录成功，设置各类信息，回复client待连接的节点(gateway或game)
 	gatewayId := netConfig.HashGatewayID(accountId) //此玩家要连接的gateway
 	errCode := err.Unknow_error
 
@@ -104,6 +103,7 @@ func accountLogin4(accountId uint32, gameSvrId int, ack *common.NetPack) {
 		msg.WriteUInt32(accountId)
 		msg.WriteInt(gameSvrId)
 		conn.WriteMsg(msg)
+		msg.Free()
 
 		pMetaToClient = meta.GetMeta("gateway", gatewayId)
 		errCode = err.None_gateway
@@ -114,6 +114,7 @@ func accountLogin4(accountId uint32, gameSvrId int, ack *common.NetPack) {
 		msg.WriteUInt32(token)
 		msg.WriteUInt32(accountId)
 		conn.WriteMsg(msg)
+		msg.Free()
 
 		pMetaToClient = meta.GetMeta("game", gameSvrId)
 		errCode = err.None_game_server
@@ -178,6 +179,8 @@ func Rpc_login_get_meta_list(req, ack *common.NetPack) {
 	}
 }
 
+// 在线人数：精确性要求不高，让各节点主动周期性上报
+//【维护不同进程的数据一致，须保证“增删改查”，成本过高】
 var g_game_player_cnt sync.Map //<gameSvrId, playerCnt>
 
 func Rpc_login_set_player_cnt(req, ack *common.NetPack) {
@@ -189,14 +192,12 @@ func GetFreeGameSvrId(version string) int {
 	ret, minCnt := -1, int32(999999)
 	ids, _ := meta.GetModuleIDs("game", version)
 	for _, id := range ids {
-		if pMeta := meta.GetMeta("game", id); pMeta != nil && pMeta.IsMatchVersion(version) {
-			if v, ok := g_game_player_cnt.Load(id); ok {
-				if cnt := v.(int32); cnt < minCnt {
-					ret, minCnt = id, cnt
-				}
-			} else {
-				ret, minCnt = id, 0
+		if v, ok := g_game_player_cnt.Load(id); ok {
+			if cnt := v.(int32); cnt < minCnt {
+				ret, minCnt = id, cnt
 			}
+		} else {
+			ret, minCnt = id, 0
 		}
 	}
 	return ret

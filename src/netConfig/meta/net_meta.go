@@ -112,7 +112,7 @@ func GetMeta(module string, svrID int) *Meta {
 	if v, ok := G_Metas.Load(std.KeyPair{module, svrID}); ok && !v.(*Meta).IsClosed {
 		return v.(*Meta)
 	}
-	gamelog.Error("{%s %d}: have none meta", module, svrID)
+	gamelog.Debug("{%s %d}: have none meta", module, svrID)
 	return nil
 }
 
@@ -158,10 +158,11 @@ func (self *Meta) IsMyClient(dst *Meta) bool { return dst.IsMyServer(self) }
 func (self *Meta) IsSame(dst *Meta) bool { return self.Module == dst.Module && self.SvrID == dst.SvrID }
 
 func (self *Meta) IsMatchVersion(version string) bool {
+	if version == "" || self.Version == "" {
+		return true
+	}
 	// 版本号格式：1.12.233，前两组一致的版本间可匹配，第三组用于小调整、bug修复
 	// 空版本号能与任意版本匹配
 	idx := strings.LastIndex(self.Version, ".")
-	return version == "" ||
-		self.Version == "" ||
-		self.Version[:idx] == version[:idx]
+	return self.Version[:idx] == version[:idx]
 }

@@ -6,29 +6,30 @@ import (
 	"time"
 )
 
-func InitTimeUpdate(t *timer.TimerChan) {
-	UpdateEnterNextDay(t)
-	UpdateEnterNextHour(t)
+func InitTimeUpdate() {
+	updateEnterNextDay()
+	updateEnterNextHour()
+	updatePerMinute()
 }
-
-func UpdateEnterNextDay(t *timer.TimerChan) {
-	secCnt := time.Duration(timer.GetTodayLeftSec())
-	t.AfterFunc(secCnt*time.Second, func() {
-		_OnEnterNextDay()
-		UpdateEnterNextDay(t)
-	})
+func updateEnterNextDay() {
+	delay := float32(timer.GetTodayLeftSec())
+	timer.G_TimerMgr.AddTimerSec(onEnterNextDay, delay, timer.OneDay_SecCnt, -1)
 }
-func UpdateEnterNextHour(t *timer.TimerChan) {
+func updateEnterNextHour() {
 	now := time.Now()
-	secCnt := time.Duration(3600 - now.Minute()*60 - now.Second())
-	t.AfterFunc(secCnt*time.Second, func() {
-		_OnEnterNextHour()
-		UpdateEnterNextHour(t)
-	})
+	delay := float32(3600 - now.Minute()*60 - now.Second())
+	timer.G_TimerMgr.AddTimerSec(onEnterNextHour, delay, 3600, -1)
 }
-func _OnEnterNextDay() {
-	player.OnEnterNextDay_Season()
+func updatePerMinute() {
+	timer.G_TimerMgr.AddTimerSec(perMinute, 0, 60, -1)
 }
-func _OnEnterNextHour() {
 
+// ------------------------------------------------------------
+// logic code
+func onEnterNextDay() {
+}
+func onEnterNextHour() {
+}
+func perMinute() {
+	player.NotifyOnlineNum()
 }

@@ -4,9 +4,6 @@ import (
 	"common"
 	"generate_out/err"
 	"generate_out/rpc/enum"
-	"http"
-	"netConfig"
-	"netConfig/meta"
 	"sync"
 	"tcp"
 )
@@ -69,31 +66,10 @@ func Rpc_gateway_login_token(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	g_login_token.Store(accountId, token)
 
 	AddGameConn(accountId, gameSvrId) //设置此玩家的game路由
-
-	//取游戏服在线人数，发给登录服
-	netConfig.CallRpcGame(gameSvrId, enum.Rpc_game_get_player_cnt, func(buf *common.NetPack) {
-	}, func(backBuf *common.NetPack) {
-		cnt := backBuf.ReadInt32()
-		_NotifyPlayerCnt(gameSvrId, cnt)
-	})
 }
 func CheckLoginToken(accountId, token uint32) bool {
 	if value, ok := g_login_token.Load(accountId); ok {
 		return token == value
 	}
 	return false
-}
-
-// ------------------------------------------------------------
-// -- 游戏服在线人数
-func _NotifyPlayerCnt(gameSvrId int, cnt int32) {
-	ids, _ := meta.GetModuleIDs("login", netConfig.G_Local_Meta.Version)
-	for _, id := range ids {
-		if addr := netConfig.GetHttpAddr("login", id); addr != "" {
-			http.CallRpc(addr, enum.Rpc_login_set_player_cnt, func(buf *common.NetPack) {
-				buf.WriteInt(gameSvrId)
-				buf.WriteInt32(cnt)
-			}, nil)
-		}
-	}
 }

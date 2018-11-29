@@ -17,6 +17,7 @@ const (
 )
 
 // go test -v ./src/svr_client/unit_test/http_test.go
+// 更改测试文件名的"_test"结尾，就能在main()里调测试用例了
 func main() {
 	gamelog.InitLogger(kModuleName)
 	defer func() {

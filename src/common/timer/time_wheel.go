@@ -8,44 +8,51 @@
 package timer
 
 import (
+	"common/assert"
 	"time"
 )
 
 const (
-	WHEEL_NUM     = 5
-	TIME_TICK_LEN = 25
+	kWheelNum    = 5
+	kTimeTickLen = 25 //一格的刻度 ms
 )
 
 var (
-	WHEEL_BIT  = [...]uint{8, 6, 6, 6, 5}
-	WHEEL_SIZE [WHEEL_NUM]uint
-	WHEEL_CAP  [WHEEL_NUM]uint
+	kWheelBit  = [...]uint{8, 6, 6, 6, 5} //每一级的槽位数量；用了累计位移，总和不可超32
+	kWheelSize [kWheelNum]uint
+	kWheelCap  [kWheelNum]uint
+	G_TimerMgr = _NewTimerMgr()
 )
 
 // ------------------------------------------------------------
 // node
-type TimerNode struct {
-	prev     *TimerNode
-	next     *TimerNode
-	timeDead int
+type timeNode struct {
+	prev     *timeNode
+	next     *timeNode
+	timeDead int64
 	interval int
 	total    int
 	callback func()
 }
 
-func NewTimerNode() *TimerNode {
-	ret := new(TimerNode)
-	ret._init()
+func newTimeNode() *timeNode {
+	ret := new(timeNode)
+	ret.init()
 	return ret
 }
-func (self *TimerNode) _init() {
+func (self *timeNode) init() {
 	self.prev = self
 	self.next = self //circle
 }
-func (self *TimerNode) _Callback() {
-	self.total -= self.interval
-	if self.total > 0 {
-		self.timeDead += self.interval
+func (self *timeNode) _Callback() {
+	isJoin := false
+	if self.total < 0 {
+		isJoin = true
+	} else if self.total -= self.interval; self.total > 0 {
+		isJoin = true
+	}
+	if isJoin {
+		self.timeDead += int64(self.interval)
 		G_TimerMgr._AddTimerNode(self.interval, self)
 	}
 	self.callback()
@@ -53,68 +60,63 @@ func (self *TimerNode) _Callback() {
 
 // ------------------------------------------------------------/
 // wheel
-type Wheel struct {
+type stWheel struct {
 	//每个slot维护的node链表为一个环，如此可以简化插入删除的操作
 	//slot.next为node链表中第一个节点，prev为node的最后一个节点
-	slots   []TimerNode
+	slots   []timeNode
 	slotIdx uint
 }
 
-func NewWheel(size int) *Wheel {
-	ret := new(Wheel)
-	ret.slots = make([]TimerNode, size)
-	for i := 0; i < size; i++ {
-		ret.slots[i]._init()
+func (self *stWheel) init(size uint) {
+	self.slots = make([]timeNode, size)
+	for i := uint(0); i < size; i++ {
+		self.slots[i].init()
 	}
-	return ret
 }
-func (self *Wheel) GetCurSlot() *TimerNode {
+func (self *stWheel) GetCurSlot() *timeNode {
 	return &self.slots[self.slotIdx]
 }
-func (self *Wheel) size() uint { return uint(len(self.slots)) }
+func (self *stWheel) size() uint { return uint(len(self.slots)) }
 
 // ------------------------------------------------------------
 // manager
-var G_TimerMgr = _NewTimerMgr()
-
-type TimerMgr struct {
-	wheels    [WHEEL_NUM]Wheel
-	readyNode TimerNode
+type timerMgr struct {
+	wheels     [kWheelNum]stWheel
+	readyNode  timeNode
+	timeElapse int
 }
 
-func _NewTimerMgr() *TimerMgr {
-	if len(WHEEL_BIT) != WHEEL_NUM {
-		panic("WHEEL_NUM isn't matching of WHEEL_BIT")
-	}
-	ret := new(TimerMgr)
-	ret.readyNode._init()
-	for i := 0; i < WHEEL_NUM; i++ {
+func _NewTimerMgr() *timerMgr {
+	assert.True(len(kWheelBit) == kWheelNum)
+	ret := new(timerMgr)
+	ret.readyNode.init()
+	for i := 0; i < kWheelNum; i++ {
 		var wheelCap uint
 		for j := 0; j <= i; j++ {
-			wheelCap += WHEEL_BIT[j]
+			wheelCap += kWheelBit[j]
 		}
-		WHEEL_CAP[i] = 1 << wheelCap
-		WHEEL_SIZE[i] = 1 << WHEEL_BIT[i]
-		ret.wheels[i].slots = make([]TimerNode, WHEEL_SIZE[i])
+		assert.True(wheelCap < 32)
+		kWheelCap[i] = 1 << wheelCap
+		kWheelSize[i] = 1 << kWheelBit[i]
+		ret.wheels[i].init(kWheelSize[i])
 	}
 	return ret
 }
-func (self *TimerMgr) Refresh(time_elapse, timenow int) {
-	tickCnt := time_elapse / TIME_TICK_LEN
+func (self *timerMgr) Refresh(timeElapse int, timenow int64) {
+	self.timeElapse += timeElapse
+	tickCnt := self.timeElapse / kTimeTickLen
+	self.timeElapse %= kTimeTickLen
 	for i := 0; i < tickCnt; i++ { //扫过的slot均超时
 		isCascade := false
 		wheel := &self.wheels[0]
 		slot := wheel.GetCurSlot()
-
-		wheel.slotIdx++
-		if wheel.slotIdx >= wheel.size() {
+		if wheel.slotIdx++; wheel.slotIdx >= wheel.size() {
 			wheel.slotIdx = 0
 			isCascade = true
 		}
 		node := slot.next
-		slot.next = slot //清空当前格子
-		slot.prev = slot
-		for node != slot { //环形链表遍历
+		slot.next, slot.prev = slot, slot //清空当前格子
+		for node != slot {                //环形链表遍历
 			tmp := node
 			node = node.next //得放在前面，后续函数调用，可能会更改node的链接关系
 			self._AddToReadyNode(tmp)
@@ -125,25 +127,27 @@ func (self *TimerMgr) Refresh(time_elapse, timenow int) {
 	}
 	self._DoTimeOutCallBack()
 }
-func (self *TimerMgr) AddTimerSec(callback func(), delay, cd, total int) {
-	node := NewTimerNode()
+
+// total：负值表示无限循环
+func (self *timerMgr) AddTimerSec(callback func(), delay, cd, total float32) {
+	node := newTimeNode()
 	node.callback = callback
-	node.interval = cd * 1000
-	node.total = total * 1000
-	node.timeDead = time.Now().Nanosecond()/int(time.Millisecond) + delay*1000
-	self._AddTimerNode(delay*1000, node)
+	node.interval = int(cd * 1000)
+	node.total = int(total * 1000)
+	node.timeDead = time.Now().UnixNano()/int64(time.Millisecond) + int64(delay*1000)
+	self._AddTimerNode(int(delay*1000), node)
 }
-func (self *TimerMgr) _AddTimerNode(msec int, node *TimerNode) {
-	var slot *TimerNode
-	tickCnt := uint(msec / TIME_TICK_LEN)
-	if tickCnt < WHEEL_CAP[0] {
-		idx := (self.wheels[0].slotIdx + tickCnt) & (WHEEL_SIZE[0] - 1) //2的N次幂位操作取余
+func (self *timerMgr) _AddTimerNode(msec int, node *timeNode) {
+	var slot *timeNode
+	tickCnt := uint(msec / kTimeTickLen)
+	if tickCnt < kWheelCap[0] {
+		idx := (self.wheels[0].slotIdx + tickCnt) & (kWheelSize[0] - 1) //2的N次幂位操作取余
 		slot = &self.wheels[0].slots[idx]
 	} else {
-		for i := 1; i < WHEEL_NUM; i++ {
-			if tickCnt < WHEEL_CAP[i] {
-				preCap := WHEEL_CAP[i-1] //上一级总容量即为本级的一格容量
-				idx := (self.wheels[i].slotIdx + tickCnt/preCap - 1) & (WHEEL_SIZE[i] - 1)
+		for i := 1; i < kWheelNum; i++ {
+			if tickCnt < kWheelCap[i] {
+				preCap := kWheelCap[i-1] //上一级总容量即为本级的一格容量
+				idx := (self.wheels[i].slotIdx + tickCnt/preCap - 1) & (kWheelSize[i] - 1)
 				slot = &self.wheels[i].slots[idx]
 				break
 			}
@@ -154,53 +158,50 @@ func (self *TimerMgr) _AddTimerNode(msec int, node *TimerNode) {
 	node.next = slot
 	slot.prev = node
 }
-func (self *TimerMgr) RemoveTimer(node *TimerNode) {
+func (self *timerMgr) DelTimer(node *timeNode) {
 	if node.prev != nil {
 		node.prev.next = node.next
 	}
 	if node.next != nil {
 		node.next.prev = node.prev
 	}
-	node.prev = nil
-	node.next = nil
+	node.prev, node.next = nil, nil
 }
-func (self *TimerMgr) _Cascade(wheelIdx int, timenow int) {
-	if wheelIdx < 1 || wheelIdx >= WHEEL_NUM {
+func (self *timerMgr) _Cascade(wheelIdx int, timenow int64) {
+	if wheelIdx < 1 || wheelIdx >= kWheelNum {
 		return
 	}
 	isCascade := false
 	wheel := &self.wheels[wheelIdx]
 	slot := wheel.GetCurSlot()
 	//【Bug】须先更新槽位————扫格子时加新Node，不能再放入当前槽位了
-	wheel.slotIdx++
-	if wheel.slotIdx >= wheel.size() {
+	if wheel.slotIdx++; wheel.slotIdx >= wheel.size() {
 		wheel.slotIdx = 0
 		isCascade = true
 	}
-	link := slot.next
-	slot.next = slot //清空当前格子
-	slot.prev = slot
-	for link != slot {
-		node := link
-		link = link.next
-		if node.timeDead <= timenow {
-			self._AddToReadyNode(node)
+	node := slot.next
+	slot.next, slot.prev = slot, slot //清空当前格子
+	for node != slot {
+		tmp := node
+		node = node.next
+		if tmp.timeDead <= timenow {
+			self._AddToReadyNode(tmp)
 		} else {
 			//【Bug】加新Node，须加到其它槽位，本槽位已扫过(失效，等一整轮才会再扫到)
-			self._AddTimerNode(node.timeDead-timenow, node)
+			self._AddTimerNode(int(tmp.timeDead-timenow), tmp)
 		}
 	}
 	if isCascade {
 		self._Cascade(wheelIdx+1, timenow)
 	}
 }
-func (self *TimerMgr) _AddToReadyNode(node *TimerNode) {
+func (self *timerMgr) _AddToReadyNode(node *timeNode) {
 	node.prev = self.readyNode.prev
 	node.prev.next = node
 	node.next = &self.readyNode
 	self.readyNode.prev = node
 }
-func (self *TimerMgr) _DoTimeOutCallBack() {
+func (self *timerMgr) _DoTimeOutCallBack() {
 	node := self.readyNode.next
 	for node != &self.readyNode {
 		tmp := node

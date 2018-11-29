@@ -6,6 +6,7 @@ const (
 
 	// 特殊标记
 	Flag_Client_ReLogin = 0xFFFFFFFF
+	Flag_Compress       = 0x80000000
 
 	// 通信的子功能开关
 	Is_Msg_Compress     = false //消息压缩

@@ -21,6 +21,7 @@ package logic
 import (
 	"bytes"
 	"common"
+	"common/compress"
 	"common/sign"
 	"compress/gzip"
 	"dbmgo"
@@ -172,12 +173,7 @@ func Http_download_save_data(w http.ResponseWriter, r *http.Request) {
 	ack.Retcode = -1
 	defer func() {
 		b, _ := json.Marshal(&ack)
-		var buf bytes.Buffer
-		gw := gzip.NewWriter(&buf) //数据压缩
-		gw.Write(b)
-		gw.Flush()
-		gw.Close()
-		w.Write(buf.Bytes())
+		w.Write(compress.Compress(b))
 		gamelog.Debug("ack: %v", ack)
 	}()
 

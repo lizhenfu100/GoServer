@@ -109,6 +109,6 @@ func GetHttpAddr(module string, svrId int) string {
 	if pMeta := meta.GetMeta(module, svrId); pMeta != nil {
 		return http.Addr(pMeta.IP, pMeta.HttpPort)
 	}
-	gamelog.Error("GetHttpAddr nil : (%s,%d)", module, svrId)
+	gamelog.Debug("GetHttpAddr nil : (%s,%d)", module, svrId)
 	return ""
 }

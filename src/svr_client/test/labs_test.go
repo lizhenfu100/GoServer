@@ -1,4 +1,4 @@
-package unit_test
+package test
 
 import (
 	"fmt"
@@ -7,13 +7,8 @@ import (
 )
 
 //go test -test.bench="."
-var g_x []byte
-var g_xx []byte
-
-func Init() {
-	g_x = []byte("aa.bb.*")
-	g_xx = []byte("aa.bb.**")
-}
+var g_x = []byte("aa.bb.*")
+var g_xx = []byte("aa.bb.**")
 
 func Format1() string {
 	idx := byte(2)
@@ -45,7 +40,6 @@ func TestString1(t *testing.T) {
 	fmt.Println(Format1())
 }
 func TestString2(t *testing.T) {
-	Init()
 	fmt.Println(Format2())
 }
 func Benchmark_Str1(b *testing.B) {

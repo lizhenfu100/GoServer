@@ -7,7 +7,6 @@ import (
 
 var (
 	G_GlobalActivity TGlobalActivity
-	g_act_timer      *timer.Timer
 )
 
 type TGlobalActivity struct {
@@ -45,8 +44,8 @@ func (self *TGlobalActivity) Init() {
 	self.CheckActivityAdd()   //! 检测表中是否有新增活动
 	self.UpdateActivityTime() //! 活动开启/结束时间
 
-	g_act_timer = timer.NewHourTimer(24)
-	g_act_timer.AddTimeFunc(timer.GetTodayLeftSec(), timer.OneDay_SecCnt, -1, self)
+	delay := float32(timer.GetTodayLeftSec())
+	timer.G_TimerMgr.AddTimerSec(self.EnterNextDay, delay, timer.OneDay_SecCnt, -1)
 }
 func (self *TGlobalActivity) CheckActivityAdd() {
 	for _, csv := range G_ActivityCsv {
@@ -86,21 +85,16 @@ func (self *TGlobalActivity) db_LoadGlobalActivity() bool {
 
 // ------------------------------------------------------------
 // 活动数据刷新，在线跨天
-func (self *TGlobalActivity) OnTimerRefresh(now int64) bool {
-	self.EnterNextDay(now)
-	return true
-}
-func (self *TGlobalActivity) OnTimerRunEnd(now int64) {
-}
-func (self *TGlobalActivity) EnterNextDay(now int64) {
+func (self *TGlobalActivity) EnterNextDay() {
 	//! 【坑】range迭代的v是值拷贝，block内更改迭代数据，v的值是不变的
 	//! 【坑】要是循环有先更改状态，再通过v判断的逻辑，就有问题了
 	//! 【坑】涉及逻辑状态的地方，还是老实用 for i := 0... 这样的保险些~
+	timenow := time.Now().Unix()
 	// for i, v := range actList {
 	for i := 0; i < len(self.ActivityLst); i++ {
 		v := &self.ActivityLst[i]
 		if v.Status == 1 {
-			if v.endTime > 0 && now >= v.endTime {
+			if v.endTime > 0 && timenow >= v.endTime {
 				//! 非永久 and 已过结束时间
 				v.Status = 0
 				v.OpenTiems += 1
@@ -108,12 +102,12 @@ func (self *TGlobalActivity) EnterNextDay(now int64) {
 
 				//! 更新下一次开始时间
 				v.beginTime, v.endTime = GetActivityNextBeginTime(v.ActivityID)
-			} else if v.endTime == 0 || now < v.endTime {
+			} else if v.endTime == 0 || timenow < v.endTime {
 				//! 永久 or 没到结束时间
 				v.RunDayCnt += 1
 			}
 		} else if v.Status == 0 {
-			if now >= v.beginTime {
+			if timenow >= v.beginTime {
 				//! 已经关闭的活动到达下一次开启时间
 				v.Status = 1
 				v.RunDayCnt += 1

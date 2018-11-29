@@ -12,6 +12,7 @@ package player
 
 import (
 	"common"
+	"common/compress"
 	"conf"
 	"gamelog"
 	"generate_out/rpc/enum"
@@ -90,7 +91,7 @@ func _HandlePlayerRpc2(w http.ResponseWriter, r *http.Request) {
 	if player := BeforeRecvHttpMsg(accountId); player != nil {
 		if DoPlayerRpc(player, msgId, req, ack) {
 			AfterRecvHttpMsg(player, ack)
-			common.CompressTo(ack.Data(), w)
+			compress.CompressTo(ack.Data(), w)
 		}
 	} else {
 		gamelog.Debug("Player(%d) isn't online", accountId)

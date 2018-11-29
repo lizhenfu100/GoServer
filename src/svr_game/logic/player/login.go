@@ -19,10 +19,7 @@ import (
 	"common/format"
 	"gamelog"
 	"generate_out/err"
-	"generate_out/rpc/enum"
-	"http"
 	"netConfig"
-	"netConfig/meta"
 	"sync"
 	"sync/atomic"
 	"tcp"
@@ -38,9 +35,7 @@ func Rpc_game_login(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	for _, v := range netConfig.G_Local_Meta.ConnectLst {
 		if v == "login" {
 			token := req.ReadUInt32()
-			if CheckLoginToken(accountId, token) {
-				_NotifyPlayerCnt(netConfig.G_Local_Meta.SvrID, g_player_cnt)
-			} else {
+			if false == CheckLoginToken(accountId, token) {
 				ack.WriteUInt16(err.Token_verify_err)
 				return
 			}
@@ -76,11 +71,6 @@ func Rpc_game_logout(req, ack *common.NetPack, this *TPlayer) {
 	this.Logout()
 }
 
-func Rpc_game_get_player_cnt(req, ack *common.NetPack, conn *tcp.TCPConn) {
-	cnt := atomic.LoadInt32(&g_player_cnt)
-	ack.WriteInt32(cnt)
-}
-
 // -------------------------------------
 // -- 后台账号验证
 var g_login_token sync.Map //<accountId, token>
@@ -98,18 +88,4 @@ func CheckLoginToken(accountId, token uint32) bool {
 		return token == value
 	}
 	return false
-}
-
-// ------------------------------------------------------------
-// -- 游戏服在线人数
-func _NotifyPlayerCnt(gameSvrId int, cnt int32) {
-	ids, _ := meta.GetModuleIDs("login", netConfig.G_Local_Meta.Version)
-	for _, id := range ids {
-		if addr := netConfig.GetHttpAddr("login", id); addr != "" {
-			http.CallRpc(addr, enum.Rpc_login_set_player_cnt, func(buf *common.NetPack) {
-				buf.WriteInt(gameSvrId)
-				buf.WriteInt32(cnt)
-			}, nil)
-		}
-	}
 }

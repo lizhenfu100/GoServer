@@ -210,7 +210,7 @@ func FindRegModule(module string, id int) *TCPConn {
 	if v, ok := g_reg_conn_map.Load(std.KeyPair{module, id}); ok {
 		return v.(*TCPConn)
 	}
-	gamelog.Error("FindRegModule nil : (%s,%d)", module, id)
+	gamelog.Debug("FindRegModule nil : (%s,%d)", module, id)
 	return nil
 }
 

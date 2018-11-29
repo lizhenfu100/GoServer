@@ -26,10 +26,8 @@ import (
 func Rpc_gateway_relay_player_msg(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	rpcId := req.ReadUInt16()     //目标rpc
 	accountId := req.ReadUInt32() //目标玩家 accountId := _GetAidOfConn(req, conn)
-
-	gamelog.Debug("relay_player_msg(%d)", rpcId)
-
 	oldReqKey := req.GetReqKey()
+	gamelog.Debug("relay_player_msg(%d)", rpcId)
 
 	if accountId == 0 {
 		gamelog.Debug("accountId nil")
@@ -108,13 +106,13 @@ func _GetSvrNodeConn(module string, aid uint32) *tcp.TCPConn {
 // 与玩家相关的网络连接
 var (
 	g_client_conns = make(map[uint32]*tcp.TCPConn) //accountId-clientConn
-	g_game_conns   = make(map[uint32]*tcp.TCPConn) //accountId-gameConn
+	g_game_ids     = make(map[uint32]int)          //accountId-gameSvrId
 )
 
 func AddClientConn(aid uint32, conn *tcp.TCPConn) { g_client_conns[aid] = conn }
 func DelClientConn(aid uint32)                    { delete(g_client_conns, aid) }
 func GetClientConn(aid uint32) *tcp.TCPConn       { return g_client_conns[aid] }
 
-func AddGameConn(aid uint32, svrId int)   { g_game_conns[aid] = netConfig.GetGameConn(svrId) }
-func DelGameConn(aid uint32)              { delete(g_game_conns, aid) }
-func GetGameConn(aid uint32) *tcp.TCPConn { return g_game_conns[aid] }
+func AddGameConn(aid uint32, svrId int)   { g_game_ids[aid] = svrId }
+func DelGameConn(aid uint32)              { delete(g_game_ids, aid) }
+func GetGameConn(aid uint32) *tcp.TCPConn { return netConfig.GetGameConn(g_game_ids[aid]) }

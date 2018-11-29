@@ -1,4 +1,4 @@
-package unit_test
+package test
 
 import (
 	"common"
@@ -31,7 +31,7 @@ type loginData struct {
 }
 
 func Test_account_reg(t *testing.T) {
-	loginAddr := netConfig.GetHttpAddr("login", 0)
+	loginAddr := netConfig.GetHttpAddr("login", 1)
 	http.CallRpc(loginAddr, enum.Rpc_login_relay_to_center, func(buf *common.NetPack) {
 		buf.WriteUInt16(enum.Rpc_center_account_reg)
 		buf.WriteString(g_loginData.account)
@@ -42,7 +42,7 @@ func Test_account_reg(t *testing.T) {
 	})
 }
 func Test_account_login(t *testing.T) {
-	loginAddr := netConfig.GetHttpAddr("login", 0)
+	loginAddr := netConfig.GetHttpAddr("login", 1)
 	http.CallRpc(loginAddr, enum.Rpc_login_account_login, func(buf *common.NetPack) {
 		buf.WriteString("") //version
 		buf.WriteString("") //游戏名称
@@ -58,9 +58,9 @@ func Test_account_login(t *testing.T) {
 			g_loginData.token = backBuf.ReadUInt32()
 			fmt.Println("-------AccountLogin ok:", "继续登录游戏服...有三种情况：")
 			fmt.Println("    一、直连HttpGamesvr\n    二、直连TcpGamesvr\n    三、Gateway接管")
-			//g_loginData.LoginGamesvr_http()
+			g_loginData.LoginGamesvr_http()
 			//g_loginData.LoginGamesvr_tcp()
-			g_loginData.LoginGateway()
+			//g_loginData.LoginGateway()
 		} else {
 			fmt.Println("-------AccountLogin errCode:", errCode)
 		}
@@ -181,7 +181,7 @@ func (self *loginData) LoginGateway() {
 
 // ------------------------------------------------------------
 func Test_get_gamesvr_list(t *testing.T) {
-	loginAddr := netConfig.GetHttpAddr("login", 0)
+	loginAddr := netConfig.GetHttpAddr("login", 1)
 	http.CallRpc(loginAddr, enum.Rpc_login_get_meta_list, func(buf *common.NetPack) {
 		buf.WriteString("") //version
 	}, func(backBuf *common.NetPack) {

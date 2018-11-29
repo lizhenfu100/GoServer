@@ -1,4 +1,4 @@
-package unit_test
+package test
 
 import (
 	"common/file"
@@ -13,6 +13,7 @@ import (
 )
 
 func init() {
+	fmt.Println("--- unit test init ---")
 	gamelog.InitLogger("test")
 	var metaCfg []meta.Meta
 	file.G_Csv_Map = map[string]interface{}{

@@ -8,7 +8,7 @@
 * @ author zhoumf
 * @ date 2018-4-24
 ***********************************************************************/
-package common
+package compress
 
 import (
 	"bytes"
@@ -20,22 +20,14 @@ import (
 	"io/ioutil"
 )
 
-const (
-	Compress_Limit_Size = 128
-	Flag_Compress       = 0x80000000
-)
+const kLimitSize = 128
 
 func CompressTo(b []byte, w io.Writer) {
-	if conf.Is_Msg_Compress && len(b) > Compress_Limit_Size {
-		var buf bytes.Buffer
-		gw := gzip.NewWriter(&buf)
-		gw.Write(b)
-		gw.Flush()
-		gw.Close()
+	if conf.Is_Msg_Compress && len(b) > kLimitSize {
 		flag := make([]byte, 4) //前四个字节写压缩标记
-		binary.LittleEndian.PutUint32(flag, Flag_Compress)
+		binary.LittleEndian.PutUint32(flag, conf.Flag_Compress)
 		w.Write(flag)
-		w.Write(buf.Bytes())
+		w.Write(Compress(b))
 	} else {
 		n, e := w.Write(b)
 		if n != len(b) || e != nil {
@@ -43,27 +35,20 @@ func CompressTo(b []byte, w io.Writer) {
 		}
 	}
 }
-func Compress(b []byte) (ret []byte) {
-	if conf.Is_Msg_Compress && len(b) > Compress_Limit_Size {
-		var buf bytes.Buffer
-		gw := gzip.NewWriter(&buf)
-		gw.Write(b)
-		gw.Flush()
-		gw.Close()
-		flag := make([]byte, 4) //前四个字节写压缩标记
-		binary.LittleEndian.PutUint32(flag, Flag_Compress)
-		ret = append(ret, flag...)
-		ret = append(ret, buf.Bytes()...)
-		return ret
-	} else {
-		return b
-	}
+func Compress(b []byte) []byte {
+	var buf bytes.Buffer
+	gw := gzip.NewWriter(&buf)
+	gw.Write(b)
+	gw.Flush()
+	gw.Close()
+	return buf.Bytes()
 }
 func Decompress(b []byte) []byte {
-	if Flag_Compress == binary.LittleEndian.Uint32(b) {
+	if conf.Flag_Compress == binary.LittleEndian.Uint32(b) {
 		if gr, err := gzip.NewReader(bytes.NewReader(b[4:])); err == nil {
-			defer gr.Close()
-			if ret, err := ioutil.ReadAll(gr); err == nil {
+			ret, err := ioutil.ReadAll(gr)
+			gr.Close()
+			if err == nil {
 				return ret
 			}
 		}

@@ -35,6 +35,7 @@ package http
 
 import (
 	"common"
+	"common/compress"
 	"gamelog"
 	"generate_out/rpc/enum"
 	"io"
@@ -67,7 +68,7 @@ func CallRpc(addr string, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	req.SetOpCode(rid)
 	sendFun(req)
 	if buf := PostReq(addr+"client_rpc", req.Data()); buf != nil && recvFun != nil {
-		ack := common.NewNetPack(common.Decompress(buf))
+		ack := common.NewNetPack(compress.Decompress(buf))
 		recvFun(ack)
 	}
 	req.Free()
@@ -94,7 +95,7 @@ func _HandleRpc(w http.ResponseWriter, r *http.Request) {
 	//}()
 	if handler := G_HandleFunc[msgId]; handler != nil {
 		handler(req, ack)
-		common.CompressTo(ack.Data(), w)
+		compress.CompressTo(ack.Data(), w)
 	} else {
 		gamelog.Error("Msg(%d) Not Regist", msgId)
 	}
@@ -120,7 +121,7 @@ func (self *PlayerRpc) CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack
 	req.SetReqIdx(self.AccountId)
 	sendFun(req)
 	if buf := PostReq(self.Url, req.Data()); buf != nil {
-		ack := common.NewNetPack(common.Decompress(buf))
+		ack := common.NewNetPack(compress.Decompress(buf))
 		if recvFun != nil {
 			recvFun(ack)
 		}
