@@ -1,3 +1,19 @@
+/***********************************************************************
+* @ 模式匹配算法
+* @ brief
+	S[0]...S[q-k]......S[q-1] S[q]...
+			||			||
+		   P[0]........P[k-1] P[k]...
+		   		 ||		||
+		   		P[0]...P[j-1] P[j]...P[k]...
+
+	P[k]已经失配了，之前的子串又是相同的
+	我们要找个同样也是P[0]打头的子串即P[0]···P[j-1](j==next[k-1])，看看它的下一项P[j]是否能匹配
+	P[j-1]...P[0] 与 P[k-1]...P[k-j] 相同，失配后的游标回置到[j]即可
+
+* @ author zhoumf
+* @ date 2018-11-30
+***********************************************************************/
 package kmp
 
 import (
@@ -8,55 +24,54 @@ import (
 // KMP字符串匹配，用于脏字库排查
 type kmp struct {
 	pattern string
-	prefix  []int
+	next    []int
 	size    int
 }
 
 func NewKMP(pattern string) (*kmp, error) {
-	prefix, err := computePrefix(pattern)
-	if err != nil {
+	if next, err := makeNext(pattern); err != nil {
 		return nil, err
-	}
-	return &kmp{
+	} else {
+		return &kmp{
 			pattern: pattern,
-			prefix:  prefix,
-			size:    len(pattern)},
-		nil
+			next:    next,
+			size:    len(pattern)}, nil
+	}
 }
 func (self *kmp) String() string { //For debugging
-	return fmt.Sprintf("pattern: %v\nprefix: %v", self.pattern, self.prefix)
+	return fmt.Sprintf("pattern: %v\nnext: %v", self.pattern, self.next)
 }
 
 // returns an array containing indexes of matches
 // - error if pattern argument is less than 1 char
-func computePrefix(pattern string) ([]int, error) {
+func makeNext(pattern string) ([]int, error) {
 	// sanity check
-	len_p := len(pattern)
-	if len_p < 2 {
-		if len_p == 0 {
-			return nil, errors.New("'pattern' must contain at least one character")
-		}
+	length := len(pattern)
+	if length == 0 {
+		return nil, errors.New("'pattern' must contain at least one character")
+	}
+	if length == 1 {
 		return []int{-1}, nil
 	}
-	t := make([]int, len_p)
-	t[0], t[1] = -1, 0
+	next := make([]int, length)
+	next[0], next[1] = -1, 0
 
 	pos, count := 2, 0
-	for pos < len_p {
+	for pos < length {
 		if pattern[pos-1] == pattern[count] {
 			count++
-			t[pos] = count
+			next[pos] = count
 			pos++
 		} else {
 			if count > 0 {
-				count = t[count]
+				count = next[count]
 			} else {
-				t[pos] = 0
+				next[pos] = 0
 				pos++
 			}
 		}
 	}
-	return t, nil
+	return next, nil
 }
 
 // return index of first occurence of kmp.pattern in argument 's'
@@ -74,9 +89,9 @@ func (self *kmp) FindStringIndex(s string) int {
 			}
 			i++
 		} else {
-			m = m + i - self.prefix[i]
-			if self.prefix[i] > -1 {
-				i = self.prefix[i]
+			m += i - self.next[i]
+			if self.next[i] > -1 {
+				i = self.next[i]
 			} else {
 				i = 0
 			}
@@ -88,24 +103,24 @@ func (self *kmp) FindStringIndex(s string) int {
 const startSize = 10 //for effeciency, define default array-size
 
 // find every occurence of the kmp.pattern in 's'
-func (kmp *kmp) FindAllStringIndex(s string) []int {
+func (self *kmp) FindAllStringIndex(s string) []int {
 	// precompute
 	len_s := len(s)
-	if len_s < kmp.size {
+	if len_s < self.size {
 		return []int{}
 	}
 
 	match := make([]int, 0, startSize)
 	m, i := 0, 0
 	for m+i < len_s {
-		if kmp.pattern[i] == s[m+i] {
-			if i == kmp.size-1 {
+		if self.pattern[i] == s[m+i] {
+			if i == self.size-1 {
 				// the word was matched
 				match = append(match, m)
 				// simulate miss, and keep running
-				m = m + i - kmp.prefix[i]
-				if kmp.prefix[i] > -1 {
-					i = kmp.prefix[i]
+				m += i - self.next[i]
+				if self.next[i] > -1 {
+					i = self.next[i]
 				} else {
 					i = 0
 				}
@@ -113,9 +128,9 @@ func (kmp *kmp) FindAllStringIndex(s string) []int {
 				i++
 			}
 		} else {
-			m = m + i - kmp.prefix[i]
-			if kmp.prefix[i] > -1 {
-				i = kmp.prefix[i]
+			m += i - self.next[i]
+			if self.next[i] > -1 {
+				i = self.next[i]
 			} else {
 				i = 0
 			}

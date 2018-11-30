@@ -81,7 +81,7 @@ func accountLogin2(centerSvrId int, req, ack *common.NetPack) (_ok bool, _aid ui
 	return
 }
 func accountLogin3(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, version, gameName string, centerSvrId int) {
-	if conf.Hand_Pick_GameSvr == false {
+	if !conf.Hand_Pick_GameSvr {
 		//选取gameSvrId：若账户未绑定游戏服，自动选取空闲节点，并绑定到账号上
 		if *gameSvrId = pInfo.SvrId; *gameSvrId == 0 {
 			if *gameSvrId = GetFreeGameSvrId(version); *gameSvrId > 0 {
