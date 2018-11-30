@@ -1,18 +1,21 @@
 /***********************************************************************
 * @ game svr list
 * @ brief
-	登录服决议：
+	客户端选取登录服：
 		1、客户端显示大区列表，玩家自己选择
 		2、login iplist 写成前端配置，玩家注册时挨个ping，取延时最小的去注册
-
 	玩家手选区服：
 		1、下发区服列表，client选定具体gamesvr节点登录
 		2、client本地存储gamesvr节点编号，登录时上报
-
 	后台自动分服：
 		1、验证账号，若账号中无绑定区服信息，进入创建角色流程
 		2、选择最空闲gamesvr节点，创建角色成功，将区服编号绑账号上
 		3、下次登录，验证账号后即定位具体gamesvr节点
+
+* @ 平行game节点（连接同个db）
+	、常规节点的svrId四位数以内
+	、平行节点是svrId+10000/20000/30000...
+	、svrId % 10000 即为应入库的节点id
 
 * @ author zhoumf
 * @ date 2018-3-19
@@ -21,6 +24,7 @@ package logic
 
 import (
 	"common"
+	"conf"
 	"generate_out/err"
 	"generate_out/rpc/enum"
 	"http"
@@ -38,7 +42,10 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 	//1、临时读取buffer数据，排除版本号，将数据转发center
 	oldPos := req.ReadPos
 	gameName := req.ReadString()
-	//gameSvrId := req.ReadInt() //若手选区服则自己上报gameSvrId
+	var gameSvrId int
+	if conf.Hand_Pick_GameSvr {
+		gameSvrId = req.ReadInt() //若手选区服则由客户端上报
+	}
 	account := req.ReadString()
 	req.ReadPos = oldPos
 
@@ -46,8 +53,8 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 
 	//2、同步转至center验证账号信息，取得accountId、gameInfo
 	if ok, accountId, gameInfo2 := accountLogin2(centerSvrId, req, ack); ok {
-		//3、选取gameSvrId；若手选区服则由客户端上报
-		gameSvrId := accountLogin3(accountId, &gameInfo2, version, gameName, centerSvrId)
+		//3、确定gameSvrId，处理gameInfo
+		accountLogin3(&gameSvrId, &gameInfo2, accountId, version, gameName, centerSvrId)
 		if gameSvrId <= 0 {
 			ack.WriteUInt16(err.None_free_game_server)
 		} else {
@@ -73,19 +80,22 @@ func accountLogin2(centerSvrId int, req, ack *common.NetPack) (_ok bool, _aid ui
 	}
 	return
 }
-func accountLogin3(accountId uint32, pInfo *gameInfo.TGameInfo, version, gameName string, centerSvrId int) (_gameSvrId int) {
-	//选取gameSvrId：若账户未绑定游戏服，自动选取空闲节点，并绑定到账号上
-	if _gameSvrId = pInfo.SvrId; _gameSvrId == 0 {
-		if _gameSvrId = GetFreeGameSvrId(version); _gameSvrId > 0 {
-			netConfig.CallRpcCenter(centerSvrId, enum.Rpc_center_set_game_info, func(buf *common.NetPack) {
-				buf.WriteUInt32(accountId)
-				buf.WriteString(gameName)
-				pInfo.SvrId = _gameSvrId
-				pInfo.DataToBuf(buf)
-			}, nil)
+func accountLogin3(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, version, gameName string, centerSvrId int) {
+	if conf.Hand_Pick_GameSvr == false {
+		//选取gameSvrId：若账户未绑定游戏服，自动选取空闲节点，并绑定到账号上
+		if *gameSvrId = pInfo.SvrId; *gameSvrId == 0 {
+			if *gameSvrId = GetFreeGameSvrId(version); *gameSvrId > 0 {
+				netConfig.CallRpcCenter(centerSvrId, enum.Rpc_center_set_game_info, func(buf *common.NetPack) {
+					buf.WriteUInt32(accountId)
+					buf.WriteString(gameName)
+					pInfo.SvrId = *gameSvrId % 10000
+					pInfo.DataToBuf(buf)
+				}, nil)
+			}
+			return
 		}
 	}
-	return
+	*gameSvrId = ParallelGameSvrId(version, *gameSvrId)
 }
 func accountLogin4(accountId uint32, gameSvrId int, ack *common.NetPack) {
 	//登录成功，设置各类信息，回复client待连接的节点(gateway或game)
@@ -198,6 +208,22 @@ func GetFreeGameSvrId(version string) int {
 			}
 		} else {
 			ret, minCnt = id, 0
+		}
+	}
+	return ret
+}
+func ParallelGameSvrId(version string, svrId int) int { //10000以内id相同的视为平行节点(连接同个db)
+	ret, minCnt := -1, int32(999999)
+	ids, _ := meta.GetModuleIDs("game", version)
+	for _, id := range ids {
+		if id%10000 == svrId%10000 {
+			if v, ok := g_game_player_cnt.Load(id); ok {
+				if cnt := v.(int32); cnt < minCnt {
+					ret, minCnt = id, cnt
+				}
+			} else {
+				ret, minCnt = id, 0
+			}
 		}
 	}
 	return ret
