@@ -183,10 +183,13 @@ const ( //须与ServiceMgr初始化顺序一致
 )
 
 func init() {
-	G_ServiceMgr = service.ServiceMgr{[]service.IService{
-		service.NewServicePatch(_Service_Write_DB, 15*60*1000),
-		service.NewServiceVec(_Service_Check_AFK, 60*1000),
-	}}
+	G_ServiceMgr = service.ServiceMgr{
+		List: []service.IService{
+			service.NewServicePatch(_Service_Write_DB, 15*60*1000),
+			service.NewServiceVec(_Service_Check_AFK, 60*1000),
+		},
+		Chan: make(chan service.Obj, 2048),
+	}
 }
 func _Service_Write_DB(ptr interface{}) {
 	if player, ok := ptr.(*TPlayer); ok {
