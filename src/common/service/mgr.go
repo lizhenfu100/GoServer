@@ -11,8 +11,8 @@ type IService interface {
 	RunSevice(timelapse int, timenow int64)
 }
 type ServiceMgr struct {
-	List []IService
 	Chan chan Obj
+	List []IService
 }
 
 func (self *ServiceMgr) RunAllService(timelapse int, timenow int64) {

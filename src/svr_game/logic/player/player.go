@@ -175,20 +175,20 @@ func (self *TPlayer) IsOnline() bool { return atomic.LoadInt32(&self._isOnlnie) 
 
 // -------------------------------------
 // service
-var G_ServiceMgr service.ServiceMgr
-
 const ( //须与ServiceMgr初始化顺序一致
 	Service_Write_DB  = 0
 	Service_Check_AFK = 1
 )
 
+var G_ServiceMgr service.ServiceMgr
+
 func init() {
 	G_ServiceMgr = service.ServiceMgr{
+		Chan: make(chan service.Obj, 2048),
 		List: []service.IService{
 			service.NewServicePatch(_Service_Write_DB, 15*60*1000),
 			service.NewServiceVec(_Service_Check_AFK, 60*1000),
 		},
-		Chan: make(chan service.Obj, 2048),
 	}
 }
 func _Service_Write_DB(ptr interface{}) {

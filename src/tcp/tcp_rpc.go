@@ -20,6 +20,7 @@ import (
 	"common/assert"
 	"gamelog"
 	"runtime/debug"
+	"sync"
 	"sync/atomic"
 )
 
@@ -32,8 +33,8 @@ type RpcQueue struct {
 	queue      chan objMsg
 	sendBuffer *common.NetPack
 	backBuffer *common.NetPack
-	reqIdx     uint32
-	response   map[uint64]func(*common.NetPack)
+	_reqIdx    uint32
+	response   sync.Map //<reqkey uint64, rpcRecv func(*common.NetPack) >
 
 	//处理与玩家强绑定的rpc
 	_handlePlayerRpc func(req, ack *common.NetPack, conn *TCPConn) bool
@@ -45,7 +46,7 @@ func NewRpcQueue(cap uint32) *RpcQueue {
 	self.queue = make(chan objMsg, cap)
 	self.sendBuffer = common.NewNetPackCap(128)
 	self.backBuffer = common.NewNetPackCap(128)
-	self.response = make(map[uint64]func(*common.NetPack))
+	//self.response = make(map[uint64]func(*common.NetPack))
 	return self
 }
 
@@ -82,7 +83,7 @@ func (self *RpcQueue) Loop() { //死循环，阻塞等待
 	}
 }
 
-//Notice：非线程安全的，安全改造：backBuffer每次new、response改为sync.Map
+//Notice：非线程安全的，安全改造：backBuffer每次new
 func (self *RpcQueue) _Handle(conn *TCPConn, msg *common.NetPack) {
 	msgId := msg.GetOpCode()
 	defer func() {
@@ -106,18 +107,16 @@ func (self *RpcQueue) _Handle(conn *TCPConn, msg *common.NetPack) {
 			conn.WriteMsg(self.backBuffer)
 		}
 		//3、rpc回复(自己发起的调用，对方回复的数据)
-	} else if rpcRecv, ok := self.response[msg.GetReqKey()]; ok {
+	} else if rpcRecv, ok := self.response.Load(msg.GetReqKey()); ok {
 		gamelog.Debug("ResponseMsg:%d, len:%d", msgId, msg.Size())
-		rpcRecv(msg)
-		delete(self.response, msg.GetReqKey())
+		rpcRecv.(func(*common.NetPack))(msg)
+		self.response.Delete(msg.GetReqKey())
 	} else {
 		gamelog.Error("Msg(%d) Not Regist", msgId)
 	}
 }
-
-// 处理与玩家强绑定的rpc
 func RegHandlePlayerRpc(cb func(req, ack *common.NetPack, conn *TCPConn) bool) {
-	G_RpcQueue._handlePlayerRpc = cb
+	G_RpcQueue._handlePlayerRpc = cb // 与玩家强绑定的rpc
 }
 
 //Notice：非线程安全的，仅供主逻辑线程调用，内部操作的同个sendBuffer，多线程下须每次new新的
@@ -127,11 +126,27 @@ func (self *RpcQueue) CallRpc(conn *TCPConn, msgId uint16, sendFun, recvFun func
 	//gamelog.Error("[%d] Server and Client have the same Rpc or Repeat CallRpc", msgID)
 
 	self.sendBuffer.SetOpCode(msgId)
-	self.sendBuffer.SetReqIdx(atomic.AddUint32(&self.reqIdx, 1))
+	self.sendBuffer.SetReqIdx(atomic.AddUint32(&self._reqIdx, 1))
 	if recvFun != nil {
-		self.response[self.sendBuffer.GetReqKey()] = recvFun
+		self.response.Store(self.sendBuffer.GetReqKey(), recvFun)
 	}
 	sendFun(self.sendBuffer)
 	conn.WriteMsg(self.sendBuffer)
 	self.sendBuffer.Clear()
+}
+func (self *TCPConn) CallRpc(msgId uint16, sendFun, recvFun func(*common.NetPack)) {
+	G_RpcQueue.CallRpc(self, msgId, sendFun, recvFun)
+}
+func (self *TCPConn) CallRpcSafe(msgId uint16, sendFun, recvFun func(*common.NetPack)) {
+	assert.True(G_HandleFunc[msgId] == nil)
+	req := common.NewNetPackCap(64)
+	req.SetOpCode(msgId)
+	req.SetReqIdx(atomic.AddUint32(&G_RpcQueue._reqIdx, 1))
+
+	if recvFun != nil {
+		G_RpcQueue.response.Store(req.GetReqKey(), recvFun)
+	}
+	sendFun(req)
+	self.WriteMsg(req)
+	req.Free()
 }
