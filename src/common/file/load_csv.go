@@ -51,7 +51,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -60,36 +59,32 @@ import (
 var G_Csv_Map map[string]interface{}
 
 func LoadAllCsv() {
-	names, err := filepath.Glob("csv/*.csv")
-	if err != nil || len(names) == 0 {
-		fmt.Printf("LoadAllCsv error : %s\n", err.Error())
-	}
-	for _, name := range names {
-		if getRegPtr(name) == nil {
-			fmt.Printf("%s not regist in G_Csv_Map\n", name)
-		} else {
+	if names, err := WalkDir("csv/", ""); err == nil {
+		for _, name := range names {
 			LoadOneCsv(name)
 		}
+	} else {
+		fmt.Printf("LoadAllCsv error : %s\n", err.Error())
 	}
 }
-func LoadOneCsv(name string) {
-	if ptr := getRegPtr(name); ptr == nil {
-		fmt.Printf("%s not regist in G_Csv_Map\n", name)
-	} else if records, err := ReadCsv(name); err != nil {
+func LoadOneCsv(fullName string) {
+	if ptr := getRegPtr(fullName); ptr == nil {
+		fmt.Printf("%s not regist in G_Csv_Map\n", fullName)
+	} else if records, err := ReadCsv(fullName); err != nil {
 		fmt.Printf("ReadCsv error : %s\n", err.Error())
 	} else {
 		ParseRefCsv(records, ptr)
 	}
 }
 func getRegPtr(fullName string) interface{} {
-	if ptr, ok := G_Csv_Map[strings.TrimSuffix(filepath.Base(fullName), ".csv")]; ok {
+	name := strings.TrimSuffix(fullName, ".csv")
+	name = strings.TrimPrefix(name, "csv/")
+	if ptr, ok := G_Csv_Map[name]; ok {
 		return ptr
 	}
 	return nil
 }
-func ReloadCsv(csvName string) {
-	LoadOneCsv(fmt.Sprintf("%s/csv/%s.csv", GetExeDir(), csvName))
-}
+func ReloadCsv(csvName string) { LoadOneCsv(fmt.Sprintf("%s/csv/%s.csv", GetExeDir(), csvName)) }
 
 // -------------------------------------
 // 反射解析
@@ -191,6 +186,9 @@ func _parseData(record []string, nilFlag int64, data reflect.Value) {
 	}
 }
 func SetField(field reflect.Value, s string) {
+	if !field.IsValid() || !field.CanSet() {
+		return
+	}
 	switch field.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		{

@@ -30,9 +30,9 @@ func GetNextIncId(key string) uint32 {
 	g_inc_id_map[key] = ret
 	g_inc_id_mutex.Unlock()
 	if ret == 1 {
-		InsertToDB("IncId", nameId{key, 1})
+		Insert("IncId", nameId{key, 1})
 	} else {
-		UpdateToDB("IncId", bson.M{"_id": key}, bson.M{"$set": bson.M{"id": ret}})
+		UpdateId("IncId", key, bson.M{"$set": bson.M{"id": ret}})
 	}
 	return ret
 }

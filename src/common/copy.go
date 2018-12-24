@@ -13,8 +13,8 @@ func Unmarshal(ptr interface{}, form url.Values) {
 	for i := 0; i < typ.NumField(); i++ {
 		if val.Field(i).CanSet() {
 			name := strings.ToLower(typ.Field(i).Name)
-			if v := form.Get(name); v != "" {
-				file.SetField(val.Field(i), v)
+			if vs := form[name]; len(vs) > 0 {
+				file.SetField(val.Field(i), vs[0])
 			}
 		}
 	}

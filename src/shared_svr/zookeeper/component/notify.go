@@ -31,8 +31,8 @@ func RegisterToZookeeper() {
 	if pZoo := meta.GetMeta("zookeeper", 0); pZoo != nil && g_cache_zoo_conn == nil {
 		netConfig.ConnectModuleTcp(pZoo, func(*tcp.TCPConn) {
 			CallRpcZoo(enum.Rpc_zoo_register, func(buf *common.NetPack) {
-				buf.WriteString(netConfig.G_Local_Meta.Module)
-				buf.WriteInt(netConfig.G_Local_Meta.SvrID)
+				buf.WriteString(meta.G_Local.Module)
+				buf.WriteInt(meta.G_Local.SvrID)
 			}, func(recvBuf *common.NetPack) { //主动连接zoo通告的服务节点
 				count := recvBuf.ReadInt()
 				for i := 0; i < count; i++ {

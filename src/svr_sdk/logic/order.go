@@ -21,21 +21,9 @@ import (
 	"gamelog"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
-	"svr_sdk/logic/kuaishou"
-	"svr_sdk/logic/x7sy"
 	"svr_sdk/msg"
+	"svr_sdk/platform"
 )
-
-//客户端请求生成订单
-func NewPreBuyAck(pf_id string) msg.Pre_buy_ack {
-	switch pf_id {
-	case "kuaishou":
-		return &kuaishou.Pre_buy_ack{}
-	case "xiao7":
-		return &x7sy.Pre_buy_ack{}
-	}
-	return &msg.Pre_buy{}
-}
 
 func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 	//gamelog.Debug("message: %s", r.URL.String())
@@ -46,7 +34,7 @@ func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 	common.Unmarshal(&order, r.Form)
 
 	//! 创建回复
-	ack := NewPreBuyAck(order.Pf_id)
+	ack := platform.NewPreBuyAck(order.Pf_id)
 	ack.SetRetcode(-1)
 	defer func() {
 		b, _ := json.Marshal(&ack)
@@ -68,19 +56,11 @@ func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//特殊渠道，如需后台下单的
-	switch order.Pf_id {
-	case "kuaishou":
-		if !kuaishou.OrderToThirdparty(&order, ack) {
-			return
-		}
-	case "xiao7":
-		if !x7sy.SetPayInfoAndSign(&order, ack) {
-			return
-		}
+	//如需后台下单的，在各自HandleOrder()中处理
+	if ack.HandleOrder(&order) {
+		ack.SetOrderId(order.Order_id)
+		ack.SetRetcode(0)
 	}
-	ack.SetOrderId(order.Order_id)
-	ack.SetRetcode(0)
 }
 
 //客户端查询订单，是否购买成功、是否发货过
@@ -161,7 +141,7 @@ func Rpc_order_success(req, ack *common.NetPack) {
 			} else {
 				order.Status = 1
 				order.Can_send = 1
-				dbmgo.UpdateToDB("Order", bson.M{"_id": order.Order_id}, bson.M{"$set": bson.M{"status": 1, "can_send": 1}})
+				dbmgo.UpdateId("Order", order.Order_id, bson.M{"$set": bson.M{"status": 1, "can_send": 1}})
 			}
 		} else {
 			errInfo.WriteString(orderId)

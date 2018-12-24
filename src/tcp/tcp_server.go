@@ -4,6 +4,7 @@ import (
 	"common"
 	"common/std"
 	"encoding/binary"
+	"fmt"
 	"gamelog"
 	"generate_out/rpc/enum"
 	"io"
@@ -15,28 +16,31 @@ import (
 )
 
 type TCPServer struct {
+	sync.Mutex
+	closer     sync.Cond
+	listener   net.Listener
 	MaxConnNum int32
 	connCnt    int32
 	autoConnId uint32
 	connmap    sync.Map //<connId, *TCPConn>
-	listener   net.Listener
-	wgLn       sync.WaitGroup
 	wgConns    sync.WaitGroup
 }
 
-func NewTcpServer(addr string, maxconn int) { //"ip:port"，ip可缺省
-	var err error
-	svr := TCPServer{MaxConnNum: int32(maxconn)}
-	if svr.listener, err = net.Listen("tcp", addr); err == nil {
-		svr.run()
-		svr.Close()
+var _svr TCPServer
+
+func NewTcpServer(port uint16, maxconn int32) { //"ip:port"，ip可缺省
+	_svr.MaxConnNum = maxconn
+	_svr.closer.L = &_svr.Mutex
+	if l, err := net.Listen("tcp", fmt.Sprintf(":%d", port)); err == nil {
+		_svr.SetListener(l)
+		_svr.run()
 	} else {
 		panic("NewTcpServer failed :%s" + err.Error())
 	}
 }
+func CloseServer() { _svr.Close() }
+
 func (self *TCPServer) run() {
-	self.wgLn.Add(1)
-	defer self.wgLn.Done()
 	var tempDelay time.Duration
 	for {
 		if conn, err := self.listener.Accept(); err == nil {
@@ -56,10 +60,12 @@ func (self *TCPServer) run() {
 				time.Sleep(tempDelay)
 				continue
 			}
-			gamelog.Error("accept error: %s", err.Error())
-			return
+			gamelog.Error("accept closed: %s", err.Error())
+			break
 		}
 	}
+	self.SetListener(nil)
+	self.closer.Signal()
 }
 func (self *TCPServer) _HandleAcceptConn(conn net.Conn) {
 	buf := make([]byte, 2+4)                              //Notice：收第一个包，客户端上报connId
@@ -163,16 +169,24 @@ func (self *TCPServer) _RunConn(conn *TCPConn, connId uint32) {
 }
 
 func (self *TCPServer) Close() {
-	self.listener.Close()
-	self.wgLn.Wait()
+	self.Lock()
+	for self.listener != nil {
+		self.listener.Close()
+		self.closer.Wait()
+	}
+	self.Unlock()
 
 	self.connmap.Range(func(k, v interface{}) bool {
 		v.(*TCPConn).Close()
 		return true
 	})
-
 	self.wgConns.Wait()
-	gamelog.Debug("server been closed!!")
+	gamelog.Info("server been closed!!")
+}
+func (self *TCPServer) SetListener(l net.Listener) {
+	self.Lock()
+	self.listener = l
+	self.Unlock()
 }
 
 // ------------------------------------------------------------
@@ -212,16 +226,6 @@ func FindRegModule(module string, id int) *TCPConn {
 	}
 	gamelog.Debug("FindRegModule nil : (%s,%d)", module, id)
 	return nil
-}
-
-func GetRegModuleIDs(module string) (ret []int) {
-	g_reg_conn_map.Range(func(k, v interface{}) bool {
-		if k.(std.KeyPair).Name == module {
-			ret = append(ret, k.(std.KeyPair).ID)
-		}
-		return true
-	})
-	return
 }
 func ForeachRegModule(f func(v *TCPConn)) {
 	g_reg_conn_map.Range(func(k, v interface{}) bool {

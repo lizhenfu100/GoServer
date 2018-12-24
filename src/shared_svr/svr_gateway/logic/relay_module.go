@@ -28,7 +28,7 @@ func Rpc_gateway_relay_modules(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	rpcId := req.ReadUInt16()
 	oldReqKey := req.GetReqKey()
 
-	ids, _ := meta.GetModuleIDs(module, netConfig.G_Local_Meta.Version)
+	ids, _ := meta.GetModuleIDs(module, meta.G_Local.Version)
 	for _, id := range ids {
 		if p := netConfig.GetTcpConn(module, id); p != nil {
 			p.CallRpc(rpcId, func(buf *common.NetPack) {

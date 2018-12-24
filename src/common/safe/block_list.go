@@ -7,13 +7,13 @@ import (
 
 type BlockList struct {
 	sync.Mutex
-	cond *sync.Cond
+	cond sync.Cond
 	list []*common.NetPack
 }
 
 func NewBlockList() *BlockList {
 	self := new(BlockList)
-	self.cond = sync.NewCond(&self.Mutex)
+	self.cond.L = &self.Mutex
 	return self
 }
 func (self *BlockList) Add(p *common.NetPack) {

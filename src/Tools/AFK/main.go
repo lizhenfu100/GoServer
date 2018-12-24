@@ -83,7 +83,7 @@ func main() {
 	netConfig.RunNetSvr()
 }
 func InitConf() {
-	netConfig.G_Local_Meta = &meta.Meta{
+	meta.G_Local = &meta.Meta{
 		Module:   "AFK",
 		SvrName:  "ChillyRoom_AFK",
 		IP:       g_Template.IP,

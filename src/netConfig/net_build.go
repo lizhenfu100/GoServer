@@ -35,21 +35,18 @@ import (
 	"tcp"
 )
 
-var (
-	G_Local_Meta   *meta.Meta
-	g_client_conns sync.Map //<{module,svrId}, *tcp.TCPClient> //本模块主动连其它模块的tcp
-)
+var g_client_conns sync.Map //<{module,svrId}, *tcp.TCPClient> //本模块主动连其它模块的tcp
 
 func RunNetSvr() {
 	//1、找到当前的配置信息
-	assert.True(G_Local_Meta != nil)
+	assert.True(meta.G_Local != nil)
 
 	//2、连接并注册到其它模块
 	if nil == meta.GetMeta("zookeeper", 0) { //没有zookeeper节点，才依赖配置，否则依赖zookeeper的通知
-		for _, connModule := range G_Local_Meta.ConnectLst {
+		for _, connModule := range meta.G_Local.ConnectLst {
 			meta.G_Metas.Range(func(k, v interface{}) bool {
 				dest := v.(*meta.Meta)
-				if dest.Module == connModule && !dest.IsSame(G_Local_Meta) {
+				if dest.Module == connModule && !dest.IsSame(meta.G_Local) {
 					ConnectModule(dest)
 				}
 				return true
@@ -58,43 +55,42 @@ func RunNetSvr() {
 	}
 
 	//3、开启本模块网络服务(Busy Loop)
-	fmt.Printf("-------%s server start-------\n", G_Local_Meta.Module)
-	addr := fmt.Sprintf(":%d", G_Local_Meta.Port())
-	if G_Local_Meta.HttpPort > 0 {
-		http.NewHttpServer(addr, G_Local_Meta.Module, G_Local_Meta.SvrID)
-	} else if G_Local_Meta.TcpPort > 0 {
-		tcp.NewTcpServer(addr, G_Local_Meta.Maxconn)
+	fmt.Printf("-------%s server start-------\n", meta.G_Local.Module)
+	if meta.G_Local.HttpPort > 0 {
+		http.NewHttpServer(meta.G_Local.HttpPort, meta.G_Local.Module, meta.G_Local.SvrID)
+	} else if meta.G_Local.TcpPort > 0 {
+		tcp.NewTcpServer(meta.G_Local.TcpPort, meta.G_Local.Maxconn)
 	} else {
-		gamelog.Error("%s: have none HttpPort|TcpPort!!!", G_Local_Meta.Module)
+		gamelog.Error("%s: have none HttpPort|TcpPort!!!", meta.G_Local.Module)
 	}
 }
 
 //Notice：参数pMeta会被闭包引用(且会存入容器)，须避免外界变更其内容，最好都是new的
-func ConnectModule(ptr *meta.Meta) {
-	if ptr.HttpPort > 0 {
-		http.RegistToSvr(http.Addr(ptr.IP, ptr.HttpPort), G_Local_Meta)
-		meta.AddMeta(ptr)
-	} else if ptr.TcpPort > 0 {
-		ConnectModuleTcp(ptr, func(*tcp.TCPConn) { meta.AddMeta(ptr) })
+func ConnectModule(dest *meta.Meta) {
+	if dest.HttpPort > 0 {
+		http.RegistToSvr(http.Addr(dest.IP, dest.HttpPort), meta.G_Local)
+		meta.AddMeta(dest)
+	} else if dest.TcpPort > 0 {
+		ConnectModuleTcp(dest, func(*tcp.TCPConn) { meta.AddMeta(dest) })
 	} else {
-		gamelog.Error("%s: have none HttpPort|TcpPort!!!", ptr.Module)
+		gamelog.Error("%s: have none HttpPort|TcpPort!!!", dest.Module)
 	}
 }
-func ConnectModuleTcp(ptr *meta.Meta, cb func(*tcp.TCPConn)) {
-	if ptr.TcpPort == 0 {
-		gamelog.Error("%s: have none TcpPort!!!", ptr.Module)
+func ConnectModuleTcp(dest *meta.Meta, cb func(*tcp.TCPConn)) {
+	if dest.TcpPort == 0 {
+		gamelog.Error("%s: have none TcpPort!!!", dest.Module)
 		return
 	}
 	var client *tcp.TCPClient
-	if v, ok := g_client_conns.Load(std.KeyPair{ptr.Module, ptr.SvrID}); ok {
+	if v, ok := g_client_conns.Load(std.KeyPair{dest.Module, dest.SvrID}); ok {
 		client = v.(*tcp.TCPClient)
 	} else {
 		client = new(tcp.TCPClient)
-		g_client_conns.Store(std.KeyPair{ptr.Module, ptr.SvrID}, client)
-		//Notice：client.ConnectToSvr是异步过程，这里的client.TcpConn还是空指针，不能保存*tcp.TCPConn
+		g_client_conns.Store(std.KeyPair{dest.Module, dest.SvrID}, client)
+		//Notice：client.ConnectToSvr是异步过程，这里的client.TcpConn还是空指针，不能保存*TCPConn
 	}
 	client.OnConnect = cb
-	client.ConnectToSvr(tcp.Addr(ptr.IP, ptr.TcpPort), G_Local_Meta)
+	client.ConnectToSvr(tcp.Addr(dest.IP, dest.TcpPort), meta.G_Local)
 }
 
 // TCPConn是对真正net.Conn的包装，发生断线重连时，会执行tcp.TCPConn.ResetConn()，所以外部缓存的tcp.TCPConn仍有效，无需更新

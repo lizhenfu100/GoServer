@@ -41,7 +41,7 @@ import (
 )
 
 const (
-	Idle_Max_Minute   = 60 //须客户端心跳包
+	Idle_Max_Minute   = 3 //须客户端心跳包
 	ReLogin_Wait_Time = time.Minute * 5
 	kDBPlayer         = "Player"
 	kDBMail           = "Mail"
@@ -130,7 +130,7 @@ func LoadPlayerFromDB(key string, val uint32) *TPlayer {
 	return nil
 }
 func (self *TPlayer) WriteAllToDB() {
-	dbmgo.UpdateIdToDB(kDBPlayer, self.PlayerID, &self.TPlayerBase)
+	dbmgo.UpdateId(kDBPlayer, self.PlayerID, &self.TPlayerBase)
 	for _, v := range self.modules {
 		v.WriteToDB()
 	}
@@ -138,7 +138,7 @@ func (self *TPlayer) WriteAllToDB() {
 func (self *TPlayer) Login(conn *tcp.TCPConn) {
 	atomic.StoreInt32(&self._isOnlnie, 1)
 	atomic.SwapUint32(&self._idleMin, 0)
-	self.LoginTime = time.Now().Unix()
+	atomic.StoreInt64(&self.LoginTime, time.Now().Unix())
 	self.conn = conn
 	if conn != nil && conn.UserPtr == nil { //链接可能是gateway节点
 		conn.UserPtr = self
@@ -152,7 +152,7 @@ func (self *TPlayer) Login(conn *tcp.TCPConn) {
 }
 func (self *TPlayer) Logout() {
 	atomic.StoreInt32(&self._isOnlnie, 0)
-	self.LogoutTime = time.Now().Unix()
+	atomic.StoreInt64(&self.LogoutTime, time.Now().Unix())
 	for _, v := range self.modules {
 		v.OnLogout()
 	}

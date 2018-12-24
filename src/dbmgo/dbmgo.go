@@ -52,7 +52,6 @@ func InitWithUser(ip string, port uint16, dbname, username, password string) {
 	//g_db_session.SetPoolLimit(20)
 	g_database = g_db_session.DB(dbname)
 	_init_inc_ids()
-	_init_svr_args()
 	go _DBProcess()
 }
 
@@ -70,7 +69,7 @@ func UpdateIdSync(table string, id, pData interface{}) bool {
 	coll := g_database.C(table)
 	err := coll.UpdateId(id, pData)
 	if err != nil {
-		gamelog.Error("UpdateSync error:%v \r\ntable:%s  id:%v  data:%v",
+		gamelog.Error("UpdateSync error:%v \r\ntable:%s  id:%v  pData:%v",
 			err.Error(), table, id, pData)
 		return false
 	}
@@ -101,7 +100,7 @@ func Find(table, key string, value, pData interface{}) bool {
 	err := coll.Find(bson.M{key: value}).One(pData)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			gamelog.Info("None table:%s  search:%s:%v", table, key, value)
+			gamelog.Debug("None table:%s  search:%s:%v", table, key, value)
 		} else {
 			gamelog.Error("Find error:%v \r\ntable:%s  search:%s:%v",
 				err.Error(), table, key, value)
@@ -115,7 +114,7 @@ func FindEx(table string, search bson.M, pData interface{}) bool {
 	err := coll.Find(search).One(pData)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			gamelog.Info("None table:%s  search:%v", table, search)
+			gamelog.Debug("None table:%s  search:%v", table, search)
 		} else {
 			gamelog.Error("FindEx error:%v \r\ntable:%s  search:%v",
 				err.Error(), table, search)
@@ -141,7 +140,7 @@ func FindAll(table string, search bson.M, pSlice interface{}) {
 	err := coll.Find(search).All(pSlice)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			gamelog.Info("None table:%s  search:%v", table, search)
+			gamelog.Debug("None table:%s  search:%v", table, search)
 		} else {
 			gamelog.Error("FindAll error:%v \r\ntable:%s  search:%v",
 				err.Error(), table, search)
@@ -162,7 +161,7 @@ func _find_sort(table, sortKey string, cnt int, pList interface{}) {
 	err := query.All(pList)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			gamelog.Info("None table:%s  sortKey:%s", table, sortKey)
+			gamelog.Debug("None table:%s  sortKey:%s", table, sortKey)
 		} else {
 			gamelog.Error("FindSort error:%v \r\ntable:%s  sort:%s  limit:%d",
 				err.Error(), table, sortKey, cnt)

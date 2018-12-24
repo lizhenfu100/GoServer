@@ -44,7 +44,7 @@ func Compress(b []byte) []byte {
 	return buf.Bytes()
 }
 func Decompress(b []byte) []byte {
-	if conf.Flag_Compress == binary.LittleEndian.Uint32(b) {
+	if len(b) >= 4 && conf.Flag_Compress == binary.LittleEndian.Uint32(b) {
 		if gr, err := gzip.NewReader(bytes.NewReader(b[4:])); err == nil {
 			ret, err := ioutil.ReadAll(gr)
 			gr.Close()

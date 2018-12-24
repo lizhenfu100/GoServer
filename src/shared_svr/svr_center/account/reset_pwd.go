@@ -11,7 +11,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"net/url"
-	"netConfig"
+	"netConfig/meta"
 	"strconv"
 	"time"
 )
@@ -31,7 +31,7 @@ func Rpc_center_ask_reset_password(req, ack *common.NetPack) {
 
 		//1、创建url
 		httpAddr := fmt.Sprintf("http://%s:%d/reset_password",
-			netConfig.G_Local_Meta.OutIP, netConfig.G_Local_Meta.Port())
+			meta.G_Local.OutIP, meta.G_Local.Port())
 		u, _ := url.Parse(httpAddr)
 		q := u.Query()
 		//2、写入参数
@@ -70,7 +70,7 @@ func Http_reset_password(w http.ResponseWriter, r *http.Request) {
 		ack = "Error: Account_none"
 	} else {
 		account.SetPasswd(passwd)
-		dbmgo.UpdateIdToDB(kDBTable, account.AccountID, bson.M{"$set": bson.M{
+		dbmgo.UpdateId(kDBTable, account.AccountID, bson.M{"$set": bson.M{
 			"password": passwd}})
 		ack = "Reset password ok"
 	}

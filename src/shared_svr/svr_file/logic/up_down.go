@@ -20,9 +20,10 @@ import (
 	"gamelog"
 	"io"
 	"net/http"
-	"netConfig"
+	"netConfig/meta"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -50,15 +51,11 @@ func init() {
 		g_file_md5.Store(v, common.StringHash(md5str))
 	}
 }
-
 func Http_download_file(w http.ResponseWriter, r *http.Request) {
 	gamelog.Debug("download path: %s", r.URL.Path)
 	g_file_mutex.RLock()
 	g_file_server.ServeHTTP(w, r) //读patch目录下的文件
 	g_file_mutex.RUnlock()
-}
-func Http_upload_player_file(w http.ResponseWriter, r *http.Request) {
-	_upload_file(w, r, kFileDirPlayer)
 }
 func Http_upload_patch_file(w http.ResponseWriter, r *http.Request) {
 	g_file_mutex.Lock()
@@ -66,6 +63,9 @@ func Http_upload_patch_file(w http.ResponseWriter, r *http.Request) {
 	g_file_mutex.Unlock()
 	md5str := file.CalcMd5(name)
 	g_file_md5.Store(name, common.StringHash(md5str))
+}
+func Http_upload_player_file(w http.ResponseWriter, r *http.Request) {
+	_upload_file(w, r, kFileDirPlayer)
 }
 func _upload_file(w http.ResponseWriter, r *http.Request, baseDir string) string {
 	r.ParseMultipartForm(kMaxSizeUpload)
@@ -92,17 +92,22 @@ func _upload_file(w http.ResponseWriter, r *http.Request, baseDir string) string
 
 func Rpc_file_update_list(req, ack *common.NetPack) {
 	version := req.ReadString()
-	if version == netConfig.G_Local_Meta.Version {
-		ack.WriteUInt16(0)
-	} else {
+	destFolder := req.ReadString()
+	if meta.G_Local.IsMatchVersion(version) {
 		//下发patch目录下的文件列表
-		names, _ := file.WalkDir(kFileDirPatch, "")
-		ack.WriteUInt16(uint16(len(names)))
-		for _, v := range names {
-			ack.WriteString(v[len(kFileDirPatch):]) //patch后的文件路径
-			vv, _ := g_file_md5.Load(v)
-			ack.WriteUInt32(vv.(uint32))
-		}
-		ack.WriteString(netConfig.G_Local_Meta.Version)
+		posInBuf, count := ack.BodySize(), uint32(0)
+		ack.WriteUInt32(count)
+		g_file_md5.Range(func(k, v interface{}) bool {
+			fileName := k.(string)[len(kFileDirPatch):] //patch后的文件路径
+			if strings.HasPrefix(fileName, destFolder) {
+				ack.WriteString(fileName)
+				ack.WriteUInt32(v.(uint32))
+				count++
+			}
+			return true
+		})
+		ack.SetPos(posInBuf, count)
+	} else {
+		ack.WriteUInt16(0)
 	}
 }

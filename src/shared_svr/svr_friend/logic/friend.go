@@ -20,7 +20,7 @@ func Rpc_friend_add(req, ack *common.NetPack, this *TFriendModule) {
 
 	if i := this.InFriendLst(aid); i < 0 {
 		this.FriendIDs = append(this.FriendIDs, aid)
-		dbmgo.UpdateToDB(kDBTable, bson.M{"_id": this.AccountId}, bson.M{"$push": bson.M{
+		dbmgo.UpdateId(kDBTable, this.AccountId, bson.M{"$push": bson.M{
 			"friendids": aid}})
 	}
 }
@@ -29,7 +29,7 @@ func Rpc_friend_del(req, ack *common.NetPack, this *TFriendModule) {
 
 	if i := this.InFriendLst(aid); i >= 0 {
 		this.FriendIDs = append(this.FriendIDs[:i], this.FriendIDs[i+1:]...)
-		dbmgo.UpdateToDB(kDBTable, bson.M{"_id": this.AccountId}, bson.M{"$pull": bson.M{
+		dbmgo.UpdateId(kDBTable, this.AccountId, bson.M{"$pull": bson.M{
 			"friendids": aid}})
 	}
 }
@@ -52,7 +52,7 @@ func Rpc_friend_get_friend_list(req, ack *common.NetPack) {
 func FindWithDB(aid uint32) *TFriendModule {
 	ptr := new(TFriendModule)
 	if !dbmgo.Find(kDBTable, "_id", aid, ptr) {
-		dbmgo.InsertToDB(kDBTable, ptr)
+		dbmgo.Insert(kDBTable, ptr)
 	}
 	return ptr
 }

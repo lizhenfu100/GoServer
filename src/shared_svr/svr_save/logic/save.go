@@ -36,7 +36,10 @@ import (
 	"time"
 )
 
-const kDBTable = "Save"
+const (
+	kDBTable         = "Save"
+	kDownCntPerMonth = 1
+)
 
 type TSaveData struct {
 	Key       string `bson:"_id"` // Pf_id + Uid
@@ -44,7 +47,7 @@ type TSaveData struct {
 	Data      []byte
 	UpTime    int64
 	DownTime  int64
-	DownCount byte //限制设备变更的下载(每月3次)
+	DownCount byte //限制设备变更的下载(每月n次)
 }
 
 func Rpc_save_get_meta_info(req, ack *common.NetPack) {
@@ -59,16 +62,15 @@ func Rpc_save_get_meta_info(req, ack *common.NetPack) {
 		ack.WriteInt64(0)
 	}
 }
-func upload(key, mac string, data []byte) (errcode uint16) {
-	ptr := &TSaveData{}
+func upload(pf_id, uid, mac string, data []byte) uint16 {
+	ptr, key := &TSaveData{}, pf_id+"_"+uid
 	if dbmgo.Find(kDBTable, "mac", mac, ptr) {
-		if ptr.Key == key {
+		if ptr.Key != key {
+			return err.Record_repeat
+		} else {
 			ptr.Data = data
 			ptr.UpTime = time.Now().Unix()
-			dbmgo.UpdateIdToDB(kDBTable, ptr.Key, ptr)
-		} else {
-			errcode = err.Record_repeat
-			return
+			dbmgo.UpdateId(kDBTable, ptr.Key, ptr)
 		}
 	} else {
 		ok := dbmgo.Find(kDBTable, "_id", key, ptr)
@@ -77,41 +79,37 @@ func upload(key, mac string, data []byte) (errcode uint16) {
 		ptr.Data = data
 		ptr.UpTime = time.Now().Unix()
 		if ok {
-			dbmgo.UpdateIdToDB(kDBTable, ptr.Key, ptr)
+			dbmgo.UpdateId(kDBTable, ptr.Key, ptr)
 		} else {
-			dbmgo.InsertToDB(kDBTable, ptr)
+			dbmgo.Insert(kDBTable, ptr)
 		}
 	}
-	errcode = err.Success
 	//fmt.Println("---------------upload: ", len(ptr.Data), ptr)
-	return
+	return err.Success
 }
-func download(key, mac string) (ptr *TSaveData, errcode uint16) {
-	ptr = new(TSaveData)
-	if dbmgo.Find(kDBTable, "_id", key, ptr) {
-		if ptr.Mac != mac {
-			timenow := time.Now().Unix()
-			if ptr.DownCount += 1; ptr.DownCount <= 3 { //限制设备变更的下载(每月3次)
-				dbmgo.UpdateToDB(kDBTable, bson.M{"_id": key}, bson.M{"$set": bson.M{
-					"mac":       mac,
-					"downcount": ptr.DownCount}})
-			} else if timenow-ptr.DownTime > 3600*24*30 {
-				ptr.DownTime = timenow
-				ptr.DownCount = 1
-				dbmgo.UpdateToDB(kDBTable, bson.M{"_id": key}, bson.M{"$set": bson.M{
-					"mac":       mac,
-					"downtime":  ptr.DownTime,
-					"downcount": ptr.DownCount}})
-			} else {
-				return nil, err.Record_download_limit
-			}
-		}
-	} else {
+func download(pf_id, uid, mac string) (*TSaveData, uint16) {
+	ptr, key := new(TSaveData), pf_id+"_"+uid
+	if !dbmgo.Find(kDBTable, "_id", key, ptr) {
 		return nil, err.Record_cannot_find
+	} else if pf_id != "IOS" && ptr.Mac != mac {
+		timenow := time.Now().Unix()
+		if ptr.DownCount += 1; ptr.DownCount <= kDownCntPerMonth {
+			dbmgo.UpdateId(kDBTable, key, bson.M{"$set": bson.M{
+				"mac":       mac,
+				"downcount": ptr.DownCount}})
+		} else if timenow-ptr.DownTime > 3600*24*30 {
+			ptr.DownTime = timenow
+			ptr.DownCount = 1
+			dbmgo.UpdateId(kDBTable, key, bson.M{"$set": bson.M{
+				"mac":       mac,
+				"downtime":  ptr.DownTime,
+				"downcount": ptr.DownCount}})
+		} else {
+			return nil, err.Record_download_limit
+		}
 	}
-	errcode = err.Success
 	//fmt.Println("----------------download: ", len(ptr.Data), ptr)
-	return
+	return ptr, err.Success
 }
 
 // -------------------------------------
@@ -157,8 +155,7 @@ func Http_upload_save_data(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	key := info.Pf_id + "_" + info.Uid
-	errcode := upload(key, info.Mac, []byte(info.Data))
+	errcode := upload(info.Pf_id, info.Uid, info.Mac, []byte(info.Data))
 	if errcode == err.Success {
 		ack.Retcode = 0
 	} else {
@@ -189,8 +186,7 @@ func Http_download_save_data(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	key := pf_id + "_" + uid
-	if ptr, errcode := download(key, mac); errcode == err.Success {
+	if ptr, errcode := download(pf_id, uid, mac); errcode == err.Success {
 		ack.Retcode = 0
 		ack.Data = string(ptr.Data)
 	} else {
@@ -219,8 +215,7 @@ func Rpc_save_upload_binary(req, ack *common.NetPack) {
 		return
 	}
 
-	key := pf_id + "_" + uid
-	errcode := upload(key, mac, data)
+	errcode := upload(pf_id, uid, mac, data)
 	ack.WriteUInt16(errcode)
 }
 func Rpc_save_download_binary(req, ack *common.NetPack) {
@@ -237,8 +232,7 @@ func Rpc_save_download_binary(req, ack *common.NetPack) {
 		return
 	}
 
-	key := pf_id + "_" + uid
-	if ptr, errcode := download(key, mac); errcode == err.Success {
+	if ptr, errcode := download(pf_id, uid, mac); errcode == err.Success {
 		ack.WriteUInt16(err.Success)
 		ack.WriteBuf(ptr.Data)
 	} else {

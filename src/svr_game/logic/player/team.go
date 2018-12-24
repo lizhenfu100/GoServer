@@ -21,6 +21,7 @@ import (
 	"gamelog"
 	"generate_out/rpc/enum"
 	"netConfig"
+	"netConfig/meta"
 )
 
 type Team struct {
@@ -67,7 +68,7 @@ func Rpc_game_battle_begin(req, ack *common.NetPack, this *TPlayer) {
 	gameMode := req.ReadUInt8()
 
 	netConfig.CallRpcCross(enum.Rpc_cross_relay_battle_data, func(buf *common.NetPack) {
-		buf.WriteString(netConfig.G_Local_Meta.Version)
+		buf.WriteString(meta.G_Local.Version)
 		buf.WriteUInt8(gameMode)
 		this.team.DataToBuf(buf)
 	}, func(recvBuf *common.NetPack) {

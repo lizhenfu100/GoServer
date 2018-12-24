@@ -12,10 +12,10 @@
 		2、选择最空闲gamesvr节点，创建角色成功，将区服编号绑账号上
 		3、下次登录，验证账号后即定位具体gamesvr节点
 
-* @ 平行game节点（连接同个db）
+* @ 分流节点（game连接同个db）
 	、常规节点的svrId四位数以内
-	、平行节点是svrId+10000/20000/30000...
-	、svrId % 10000 即为应入库的节点id
+	、分流节点是svrId+10000/20000/30000...
+	、svrId%10000 即入库的节点id
 
 * @ author zhoumf
 * @ date 2018-3-19
@@ -76,55 +76,66 @@ func accountLogin2(centerSvrId int, req, ack *common.NetPack) (_ok bool, _aid ui
 		_aid = ack.ReadUInt32()
 		_info.BufToData(ack)
 		ack.Clear()
-		_ok = true
+
+		//Notice: 玩家不是这个大区的，更换大区再登录
+		if _info.LoginSvrId > 0 && _info.LoginSvrId != meta.G_Local.SvrID {
+			ack.WriteUInt16(err.LoginSvr_not_match)
+			_ok = false
+		} else {
+			_ok = true
+		}
 	}
 	return
 }
 func accountLogin3(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, version, gameName string, centerSvrId int) {
 	if !conf.Hand_Pick_GameSvr {
 		//选取gameSvrId：若账户未绑定游戏服，自动选取空闲节点，并绑定到账号上
-		if *gameSvrId = pInfo.SvrId; *gameSvrId == 0 {
-			if *gameSvrId = GetFreeGameSvrId(version); *gameSvrId > 0 {
+		if *gameSvrId = pInfo.GameSvrId; *gameSvrId == 0 {
+			if *gameSvrId = GetFreeGameSvr(version); *gameSvrId > 0 {
 				netConfig.CallRpcCenter(centerSvrId, enum.Rpc_center_set_game_info, func(buf *common.NetPack) {
 					buf.WriteUInt32(accountId)
 					buf.WriteString(gameName)
-					pInfo.SvrId = *gameSvrId % 10000
+					pInfo.GameSvrId = *gameSvrId % 10000
+					pInfo.LoginSvrId = meta.G_Local.SvrID % 10000
 					pInfo.DataToBuf(buf)
 				}, nil)
 			}
 			return
 		}
 	}
-	*gameSvrId = ParallelGameSvrId(version, *gameSvrId)
+	*gameSvrId = ShuntGameSvr(version, *gameSvrId)
 }
 func accountLogin4(accountId uint32, gameSvrId int, ack *common.NetPack) {
-	//登录成功，设置各类信息，回复client待连接的节点(gateway或game)
+	//登录成功，回复client待连接的节点(gateway或game)
 	gatewayId := netConfig.HashGatewayID(accountId) //此玩家要连接的gateway
 	errCode := err.Unknow_error
 
 	//生成一个临时token，发给gamesvr、client用以登录验证
 	token := atomic.AddUint32(&g_login_token, 1)
+
 	var pMetaToClient *meta.Meta //回复client要连接的目标节点
-	//【Notice: CallRpc接口不是线程安全的，http后台不适用】
+	//【Notice: tcp.CallRpc接口不是线程安全的，http后台不适用】
 	if conn := netConfig.GetTcpConn("gateway", gatewayId); conn != nil {
-		msg := common.NewNetPackCap(32)
-		msg.SetOpCode(enum.Rpc_gateway_login_token)
-		msg.WriteUInt32(token)
-		msg.WriteUInt32(accountId)
-		msg.WriteInt(gameSvrId)
-		conn.WriteMsg(msg)
-		msg.Free()
+		conn.CallRpcSafe(enum.Rpc_gateway_login_token, func(buf *common.NetPack) {
+			buf.WriteUInt32(token)
+			buf.WriteUInt32(accountId)
+			buf.WriteInt(gameSvrId)
+		}, func(backBuf *common.NetPack) {
+			cnt := backBuf.ReadInt32()
+			g_game_player_cnt.Store(gameSvrId, cnt)
+		})
 
 		pMetaToClient = meta.GetMeta("gateway", gatewayId)
 		errCode = err.None_gateway
 
 	} else if conn := netConfig.GetTcpConn("game", gameSvrId); conn != nil {
-		msg := common.NewNetPackCap(32)
-		msg.SetOpCode(enum.Rpc_game_login_token)
-		msg.WriteUInt32(token)
-		msg.WriteUInt32(accountId)
-		conn.WriteMsg(msg)
-		msg.Free()
+		conn.CallRpcSafe(enum.Rpc_game_login_token, func(buf *common.NetPack) {
+			buf.WriteUInt32(token)
+			buf.WriteUInt32(accountId)
+		}, func(backBuf *common.NetPack) {
+			cnt := backBuf.ReadInt32()
+			g_game_player_cnt.Store(gameSvrId, cnt)
+		})
 
 		pMetaToClient = meta.GetMeta("game", gameSvrId)
 		errCode = err.None_game_server
@@ -133,7 +144,10 @@ func accountLogin4(accountId uint32, gameSvrId int, ack *common.NetPack) {
 		http.CallRpc(addr, enum.Rpc_game_login_token, func(buf *common.NetPack) {
 			buf.WriteUInt32(token)
 			buf.WriteUInt32(accountId)
-		}, nil)
+		}, func(backBuf *common.NetPack) {
+			cnt := backBuf.ReadInt32()
+			g_game_player_cnt.Store(gameSvrId, cnt)
+		})
 
 		pMetaToClient = meta.GetMeta("game", gameSvrId)
 		errCode = err.None_game_server
@@ -189,16 +203,11 @@ func Rpc_login_get_meta_list(req, ack *common.NetPack) {
 	}
 }
 
-// 在线人数：精确性要求不高，让各节点主动周期性上报
 //【维护不同进程的数据一致，须保证“增删改查”，成本过高】
+// 登录流程中附带，或，各节点主动周期性上报
 var g_game_player_cnt sync.Map //<gameSvrId, playerCnt>
 
-func Rpc_login_set_player_cnt(req, ack *common.NetPack) {
-	svrId := req.ReadInt()
-	cnt := req.ReadInt32()
-	g_game_player_cnt.Store(svrId, cnt)
-}
-func GetFreeGameSvrId(version string) int {
+func GetFreeGameSvr(version string) int {
 	ret, minCnt := -1, int32(999999)
 	ids, _ := meta.GetModuleIDs("game", version)
 	for _, id := range ids {
@@ -212,11 +221,11 @@ func GetFreeGameSvrId(version string) int {
 	}
 	return ret
 }
-func ParallelGameSvrId(version string, svrId int) int { //10000以内id相同的视为平行节点(连接同个db)
+func ShuntGameSvr(version string, svrId int) int { //选空闲的分流节点
 	ret, minCnt := -1, int32(999999)
 	ids, _ := meta.GetModuleIDs("game", version)
 	for _, id := range ids {
-		if id%10000 == svrId%10000 {
+		if id%10000 == svrId%10000 { //svrId%10000相同，视为分流节点
 			if v, ok := g_game_player_cnt.Load(id); ok {
 				if cnt := v.(int32); cnt < minCnt {
 					ret, minCnt = id, cnt

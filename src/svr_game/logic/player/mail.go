@@ -40,14 +40,14 @@ type TMail struct {
 // -- 框架接口
 func (self *TMailModule) InitAndInsert(player *TPlayer) {
 	self.PlayerID = player.PlayerID
-	dbmgo.InsertToDB(kDBMail, self)
+	dbmgo.Insert(kDBMail, self)
 }
 func (self *TMailModule) LoadFromDB(player *TPlayer) {
 	if !dbmgo.Find(kDBMail, "_id", player.PlayerID, self) {
 		self.InitAndInsert(player)
 	}
 }
-func (self *TMailModule) WriteToDB() { dbmgo.UpdateIdToDB(kDBMail, self.PlayerID, self) }
+func (self *TMailModule) WriteToDB() { dbmgo.UpdateId(kDBMail, self.PlayerID, self) }
 func (self *TMailModule) OnLogin() {
 	// 删除过期已读邮件
 	timenow := time.Now().Unix()
@@ -67,7 +67,7 @@ func (self *TMailModule) CreateMail(title, from, content string, items ...std.In
 	id := dbmgo.GetNextIncId("MailId")
 	pMail := &TMail{id, time.Now().Unix(), title, from, content, 0, items}
 	self.MailLst = append(self.MailLst, *pMail)
-	//dbmgo.UpdateToDB("Mail", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"maillst": pMail}})
+	//dbmgo.Update("Mail", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"maillst": pMail}})
 	return pMail
 }
 func (self *TMailModule) DelMailRead() {
@@ -76,7 +76,7 @@ func (self *TMailModule) DelMailRead() {
 			self.MailLst = append(self.MailLst[:i], self.MailLst[i+1:]...)
 		}
 	}
-	//dbmgo.UpdateToDB("Mail", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
+	//dbmgo.Update("Mail", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
 	//	"maillst": bson.M{"isread": 1}}})
 }
 

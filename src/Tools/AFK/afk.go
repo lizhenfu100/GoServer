@@ -99,7 +99,7 @@ func Http_afk(w http.ResponseWriter, r *http.Request) {
 		if ack = req.check(); ack == "" {
 			req.ID = dbmgo.GetNextIncId("AfkId")
 			req.Time = time.Now().Unix()
-			dbmgo.InsertToDB(kDBTable, &req)
+			dbmgo.Insert(kDBTable, &req)
 			ack = req.format()
 		}
 	}

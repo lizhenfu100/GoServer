@@ -16,15 +16,19 @@ import (
 //idx1 := strings.Index(addr, "//") + 2
 //idx2 := strings.LastIndex(addr, ":")
 //ip := addr[idx1:idx2]
-//port := common.CheckAtoiName(addr[idx2+1 : len(addr)-1])
-func Addr(ip string, port uint16) string { return fmt.Sprintf("http://%s:%d/", ip, port) }
+//port := common.CheckAtoiName(addr[idx2+1:])
+func Addr(ip string, port uint16) string { return fmt.Sprintf("http://%s:%d", ip, port) }
 
-func NewHttpServer(addr, module string, svrId int) error {
+var _svr http.Server
+
+func NewHttpServer(port uint16, module string, svrId int) error {
 	g_svraddr_path = fmt.Sprintf("%s/%s/%d/reg_addr.csv", file.GetExeDir(), module, svrId)
 	loadCacheNetMeta()
 	http.HandleFunc("/reg_to_svr", _reg_to_svr)
-	return http.ListenAndServe(addr, nil)
+	_svr.Addr = fmt.Sprintf(":%d", port)
+	return _svr.ListenAndServe()
 }
+func CloseServer() { _svr.Close() }
 
 // ------------------------------------------------------------
 //! 模块注册

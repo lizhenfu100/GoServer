@@ -7,13 +7,13 @@ import (
 // 放开容量限制的channel，添加不阻塞，接收可能阻塞等待
 type Pipe struct {
 	sync.Mutex
-	cond *sync.Cond
+	cond sync.Cond
 	list []interface{}
 }
 
 func NewPipe() *Pipe {
-	self := &Pipe{}
-	self.cond = sync.NewCond(&self.Mutex)
+	self := new(Pipe)
+	self.cond.L = &self.Mutex
 	return self
 }
 

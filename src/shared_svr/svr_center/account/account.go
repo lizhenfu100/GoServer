@@ -9,6 +9,7 @@ import (
 	"gamelog"
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
+	"netConfig/meta"
 	"shared_svr/svr_center/gameInfo"
 	"strconv"
 	"sync/atomic"
@@ -83,7 +84,7 @@ func (self *TAccount) Login(passwd string) (errcode uint16) {
 		errcode = err.Success
 		timeNow := time.Now().Unix()
 		atomic.StoreInt64(&self.LoginTime, timeNow)
-		dbmgo.UpdateIdToDB(kDBTable, self.AccountID, bson.M{"$set": bson.M{"logintime": timeNow}})
+		dbmgo.UpdateId(kDBTable, self.AccountID, bson.M{"$set": bson.M{"logintime": timeNow}})
 		time.AfterFunc(15*time.Minute, func() {
 			if time.Now().Unix()-atomic.LoadInt64(&self.LoginTime) >= 15*60 {
 				DelCache(self)
@@ -130,7 +131,7 @@ func Rpc_center_change_password(req, ack *common.NetPack) {
 		ack.WriteUInt16(err.Passwd_err)
 	} else {
 		account.SetPasswd(newpasswd)
-		dbmgo.UpdateIdToDB(kDBTable, account.AccountID, bson.M{"$set": bson.M{
+		dbmgo.UpdateId(kDBTable, account.AccountID, bson.M{"$set": bson.M{
 			"password": newpasswd}})
 		ack.WriteUInt16(err.Success)
 	}
@@ -156,10 +157,31 @@ func Rpc_center_set_game_info(req, ack *common.NetPack) {
 	gameName := req.ReadString()
 
 	if account := GetAccountById(accountId); account != nil {
-		v := gameInfo.TGameInfo{}
+		var v gameInfo.TGameInfo
 		v.BufToData(req)
 		account.GameInfo[gameName] = v
-		dbmgo.UpdateIdToDB(kDBTable, accountId, bson.M{"$set": bson.M{
+		dbmgo.UpdateId(kDBTable, accountId, bson.M{"$set": bson.M{
 			fmt.Sprintf("gameinfo.%s", gameName): v}})
 	}
+}
+
+// 玩家在哪个大区登录的
+func Rpc_center_player_login_addr(req, ack *common.NetPack) {
+	gameName := req.ReadString()
+	accountName := req.ReadString()
+
+	if account := GetAccountByName(accountName); account != nil {
+		if v, ok := account.GameInfo[gameName]; ok {
+			if p := meta.GetMeta("login", v.LoginSvrId); p == nil {
+				ack.WriteUInt16(err.Svr_not_working) //玩家有对应的登录服，但该服未启动
+				return
+			} else {
+				ack.WriteUInt16(err.Success)
+				ack.WriteString(p.OutIP)
+				ack.WriteUInt16(p.Port())
+				return
+			}
+		}
+	}
+	ack.WriteUInt16(err.Not_found) //玩家没有对应的登录服，应选取之
 }

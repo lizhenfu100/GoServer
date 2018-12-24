@@ -15,6 +15,7 @@ type Pre_buy_ack interface {
 	SetRetcode(int)
 	SetMsg(string)
 	SetOrderId(string)
+	HandleOrder(*TOrderInfo) bool
 }
 
 type Pre_buy struct { //默认
@@ -22,9 +23,10 @@ type Pre_buy struct { //默认
 	Order_id string `json:"order_id"`
 }
 
-func (self *Pre_buy) SetRetcode(v int)    { self.Retcode = v }
-func (self *Pre_buy) SetMsg(v string)     { self.Msg = v }
-func (self *Pre_buy) SetOrderId(v string) { self.Order_id = v }
+func (self *Pre_buy) SetRetcode(v int)             { self.Retcode = v }
+func (self *Pre_buy) SetMsg(v string)              { self.Msg = v }
+func (self *Pre_buy) SetOrderId(v string)          { self.Order_id = v }
+func (self *Pre_buy) HandleOrder(*TOrderInfo) bool { return true }
 
 // ------------------------------------------------------------
 // 订单查询回复

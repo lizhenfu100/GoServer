@@ -7,6 +7,7 @@ import (
 	"generate_out/rpc/enum"
 	"http"
 	"netConfig"
+	"netConfig/meta"
 	"tcp"
 	"testing"
 )
@@ -135,7 +136,7 @@ func (self *loginData) LoginGamesvr_tcp() {
 			}
 		})
 	}
-	gamesvr.ConnectToSvr(tcp.Addr(self.ip, self.port), netConfig.G_Local_Meta)
+	gamesvr.ConnectToSvr(tcp.Addr(self.ip, self.port), meta.G_Local)
 }
 
 // ------------------------------------------------------------
@@ -176,7 +177,7 @@ func (self *loginData) LoginGateway() {
 			}
 		})
 	}
-	gateway.ConnectToSvr(tcp.Addr(self.ip, self.port), netConfig.G_Local_Meta)
+	gateway.ConnectToSvr(tcp.Addr(self.ip, self.port), meta.G_Local)
 }
 
 // ------------------------------------------------------------

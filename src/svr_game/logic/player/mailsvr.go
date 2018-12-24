@@ -20,7 +20,7 @@ func InitSvrMailDB() {
 func CreateSvrMail(title, from, content string, items ...std.IntPair) {
 	id := dbmgo.GetNextIncId("SvrMailId")
 	pMail := &TMail{id, time.Now().Unix(), title, from, content, 0, items}
-	dbmgo.InsertToDB(kDBMailSvr, pMail)
+	dbmgo.Insert(kDBMailSvr, pMail)
 
 	g_mail_mutex.Lock()
 	g_svr_mail = append(g_svr_mail, *pMail)
@@ -32,7 +32,7 @@ func (self *TMailModule) SendSvrMail(mail *TMail) bool {
 	}
 	self.SvrMailId = mail.ID
 	mail.ID = dbmgo.GetNextIncId("MailId")
-	dbmgo.UpdateToDB(kDBMail, bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"maillst": mail}})
+	dbmgo.UpdateId(kDBMail, self.PlayerID, bson.M{"$push": bson.M{"maillst": mail}})
 	self.MailLst = append(self.MailLst, *mail)
 	// self.owner.WriteMsg( mail.MailToBuf() )
 	return true

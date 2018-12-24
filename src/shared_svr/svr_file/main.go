@@ -25,7 +25,7 @@ func main() {
 	InitConf()
 
 	//设置本节点meta信息
-	netConfig.G_Local_Meta = meta.GetMeta(kModuleName, svrId)
+	meta.G_Local = meta.GetMeta(kModuleName, svrId)
 
 	netConfig.RunNetSvr()
 }

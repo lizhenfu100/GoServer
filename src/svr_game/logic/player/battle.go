@@ -4,7 +4,7 @@ import (
 	"common"
 	"conf"
 	"dbmgo"
-	"netConfig"
+	"netConfig/meta"
 )
 
 type TBattleModule struct {
@@ -29,7 +29,7 @@ type THeroInfo struct {
 // -- 框架接口
 func (self *TBattleModule) InitAndInsert(player *TPlayer) {
 	self.PlayerID = player.PlayerID
-	dbmgo.InsertToDB(kDBBattle, self)
+	dbmgo.Insert(kDBBattle, self)
 	self._InitTempData(player)
 }
 func (self *TBattleModule) LoadFromDB(player *TPlayer) {
@@ -38,7 +38,7 @@ func (self *TBattleModule) LoadFromDB(player *TPlayer) {
 	}
 	self._InitTempData(player)
 }
-func (self *TBattleModule) WriteToDB() { dbmgo.UpdateIdToDB(kDBBattle, self.PlayerID, self) }
+func (self *TBattleModule) WriteToDB() { dbmgo.UpdateId(kDBBattle, self.PlayerID, self) }
 func (self *TBattleModule) OnLogin() {
 }
 func (self *TBattleModule) OnLogout() {
@@ -47,7 +47,7 @@ func (self *TBattleModule) _InitTempData(player *TPlayer) {
 	self.owner = player
 	self.aid = player.AccountID
 	self.name = player.Name
-	self.svrId = netConfig.G_Local_Meta.SvrID
+	self.svrId = meta.G_Local.SvrID
 }
 
 // ------------------------------------------------------------

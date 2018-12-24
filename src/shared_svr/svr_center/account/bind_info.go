@@ -58,7 +58,7 @@ func BindInfoToAccount(name, passwd, k, v string, force int8) (errcode uint16) {
 			errcode = err.Success
 			account.BindInfo[k] = v
 			dbkey := fmt.Sprintf("bindinfo.%s", k)
-			dbmgo.UpdateIdToDB(kDBTable, account.AccountID, bson.M{"$set": bson.M{dbkey: v}})
+			dbmgo.UpdateId(kDBTable, account.AccountID, bson.M{"$set": bson.M{dbkey: v}})
 		}
 	}
 	return

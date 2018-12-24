@@ -5,7 +5,6 @@ import (
 	"conf"
 	"fmt"
 	"gamelog"
-	"netConfig"
 	"netConfig/meta"
 	"strings"
 	"sync"
@@ -22,7 +21,7 @@ func init() {
 	}
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
-	netConfig.G_Local_Meta = meta.GetMeta("client", 0)
+	meta.G_Local = meta.GetMeta("client", 0)
 }
 
 func Test_1(t *testing.T) {

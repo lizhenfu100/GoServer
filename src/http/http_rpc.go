@@ -67,7 +67,7 @@ func CallRpc(addr string, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	req := common.NewNetPackCap(64)
 	req.SetOpCode(rid)
 	sendFun(req)
-	if buf := PostReq(addr+"client_rpc", req.Data()); buf != nil && recvFun != nil {
+	if buf := PostReq(addr+"/client_rpc", req.Data()); buf != nil && recvFun != nil {
 		ack := common.NewNetPack(compress.Decompress(buf))
 		recvFun(ack)
 	}
@@ -113,7 +113,7 @@ func RegHandlePlayerRpc(cb func(http.ResponseWriter, *http.Request)) {
 }
 
 func NewPlayerRpc(addr string, accountId uint32) *PlayerRpc {
-	return &PlayerRpc{addr + "player_rpc", accountId}
+	return &PlayerRpc{addr + "/player_rpc", accountId}
 }
 func (self *PlayerRpc) CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	req := common.NewNetPackCap(64)

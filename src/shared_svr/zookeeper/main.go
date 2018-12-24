@@ -37,11 +37,10 @@ func main() {
 	InitConf()
 
 	//设置本节点meta信息
-	netConfig.G_Local_Meta = meta.GetMeta(kModuleName, 0)
+	meta.G_Local = meta.GetMeta(kModuleName, 0)
 
-	go logic.MainLoop()
-
-	netConfig.RunNetSvr()
+	go netConfig.RunNetSvr()
+	logic.MainLoop()
 }
 func InitConf() {
 	var metaCfg []meta.Meta

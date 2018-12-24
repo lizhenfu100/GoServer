@@ -35,17 +35,13 @@ func generateErrCode() {
 	file.LoadOneCsv("csv/err_code.csv")
 
 	enums, enumCnt := getOldErr() //旧枚举，追加新增入后重新生成
-	for i := 0; i < len(enums); i++ {
-		if enums[i].Name != errCsv[i].Name {
-			panic("ErrCode had changed! New err can only add to csv int the tail")
-			return
-		}
-	}
 	haveNewEnum := false
-	for i := len(enums); i < len(errCsv); i++ {
-		enums = append(enums, std.KeyPair{errCsv[i].Name, enumCnt})
-		haveNewEnum = true
-		enumCnt++
+	for _, v := range errCsv {
+		if !IsEnumIn(enums, v.Name) {
+			enums = append(enums, std.KeyPair{v.Name, enumCnt})
+			haveNewEnum = true
+			enumCnt++
+		}
 	}
 	if !haveNewEnum { //没有新的，就不改动文件了，编译更友好
 		println("no new errCode, don't change err_code.h")
@@ -66,7 +62,6 @@ func generateErrCode() {
 	}
 }
 func getOldErr() (enums []std.KeyPair, enumCnt int) {
-	enumCnt = 1 //从1起始，更安全
 	reg := regexp.MustCompile(`^\w+`)
 	file.ReadLine(K_ErrOutDir+K_ErrFileName+".go", func(line string) {
 		if ok, _ := regexp.MatchString(`^\w+ uint16 =`, line); ok {
@@ -78,6 +73,9 @@ func getOldErr() (enums []std.KeyPair, enumCnt int) {
 			}
 		}
 	})
+	if enumCnt < 100 { //之前的预留给系统层用
+		enumCnt = 100
+	}
 	return
 }
 
@@ -88,7 +86,7 @@ const (
 // Don't edit !
 package err
 
-const (
+const ( //the top 100 are reserved for system
 	{{range $_, $v := .}}{{$v.Name}} uint16 = {{$v.ID}}
 	{{end}}
 )

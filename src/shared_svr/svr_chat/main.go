@@ -19,6 +19,8 @@ import (
 	_ "generate_out/rpc/shared_svr/svr_chat"
 	"netConfig"
 	"netConfig/meta"
+	"shared_svr/svr_chat/logic"
+	"shared_svr/zookeeper/component"
 )
 
 const (
@@ -35,9 +37,12 @@ func main() {
 	InitConf()
 
 	//设置本节点meta信息
-	netConfig.G_Local_Meta = meta.GetMeta(kModuleName, svrId)
+	meta.G_Local = meta.GetMeta(kModuleName, svrId)
 
-	netConfig.RunNetSvr()
+	component.RegisterToZookeeper()
+
+	go netConfig.RunNetSvr()
+	logic.MainLoop()
 }
 func InitConf() {
 	var metaCfg []meta.Meta

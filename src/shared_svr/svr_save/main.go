@@ -26,7 +26,7 @@ func main() {
 	InitConf()
 
 	//设置本节点meta信息
-	netConfig.G_Local_Meta = meta.GetMeta(kModuleName, svrId)
+	meta.G_Local = meta.GetMeta(kModuleName, svrId)
 
 	//设置mongodb的服务器地址
 	pMeta := meta.GetMeta("db_save", svrId)

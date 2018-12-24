@@ -29,7 +29,7 @@ func (self *TCPClient) ConnectToSvr(addr string, myMeta *meta.Meta) {
 	}
 }
 func (self *TCPClient) connectRoutine(myMeta *meta.Meta) {
-	regMsg := common.NewNetPackCap(32)
+	regMsg := common.NewNetPackCap(128)
 	regMsg.SetOpCode(enum.Rpc_regist)
 	myMeta.DataToBuf(regMsg)
 

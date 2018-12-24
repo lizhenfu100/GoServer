@@ -61,13 +61,14 @@ func RandShuffle(slice []int) {
 	}
 }
 
-//生成随机字符串
+//生成随机字符串s
+var g_strBase = []byte("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
 func RandString(length int) string {
-	bytes := []byte("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 	result := make([]byte, length)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < length; i++ {
-		result[i] = bytes[r.Intn(len(bytes))]
+		result[i] = g_strBase[r.Intn(len(g_strBase))]
 	}
 	return string(result)
 }

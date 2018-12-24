@@ -53,7 +53,7 @@ func RegistToSvr(destAddr string, meta *meta.Meta) {
 func _registToSvr(destAddr string, meta *meta.Meta) {
 	buf, _ := common.ToBytes(meta)
 	for {
-		if PostReq(destAddr+"reg_to_svr", buf) == nil {
+		if PostReq(destAddr+"/reg_to_svr", buf) == nil {
 			time.Sleep(3 * time.Second)
 		} else {
 			return

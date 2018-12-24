@@ -32,7 +32,7 @@ func Rpc_gateway_relay_player_msg(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	if accountId == 0 {
 		gamelog.Debug("accountId nil")
 		return
-	} else if netConfig.HashGatewayID(accountId) == netConfig.G_Local_Meta.SvrID { //应连本节点的玩家
+	} else if netConfig.HashGatewayID(accountId) == meta.G_Local.SvrID { //应连本节点的玩家
 		RelayPlayerMsg(accountId, rpcId, req.LeftBuf(), oldReqKey, conn)
 	} else {
 		//非本节点玩家，转至其它gateway
@@ -94,7 +94,7 @@ func _GetSvrNodeConn(module string, aid uint32) *tcp.TCPConn {
 		return GetGameConn(aid)
 	} else {
 		// 其它节点无状态的，AccountId取模得节点id
-		if ids, ok := meta.GetModuleIDs(module, netConfig.G_Local_Meta.Version); ok {
+		if ids, ok := meta.GetModuleIDs(module, meta.G_Local.Version); ok {
 			id := ids[int(aid)%len(ids)]
 			return netConfig.GetTcpConn(module, id)
 		}
@@ -105,13 +105,14 @@ func _GetSvrNodeConn(module string, aid uint32) *tcp.TCPConn {
 // ------------------------------------------------------------
 // 与玩家相关的网络连接
 var (
-	g_client_conns = make(map[uint32]*tcp.TCPConn) //accountId-clientConn
-	g_game_ids     = make(map[uint32]int)          //accountId-gameSvrId
+	g_clients    = make(map[uint32]*tcp.TCPConn) //accountId-clientConn
+	g_game_ids   = make(map[uint32]int)          //accountId-gameSvrId
+	g_player_cnt int32
 )
 
-func AddClientConn(aid uint32, conn *tcp.TCPConn) { g_client_conns[aid] = conn }
-func DelClientConn(aid uint32)                    { delete(g_client_conns, aid) }
-func GetClientConn(aid uint32) *tcp.TCPConn       { return g_client_conns[aid] }
+func AddClientConn(aid uint32, conn *tcp.TCPConn) { g_clients[aid] = conn; g_player_cnt++ }
+func DelClientConn(aid uint32)                    { delete(g_clients, aid); g_player_cnt-- }
+func GetClientConn(aid uint32) *tcp.TCPConn       { return g_clients[aid] }
 
 func AddGameConn(aid uint32, svrId int)   { g_game_ids[aid] = svrId }
 func DelGameConn(aid uint32)              { delete(g_game_ids, aid) }

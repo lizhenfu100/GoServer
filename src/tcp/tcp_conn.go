@@ -70,6 +70,7 @@ import (
 	"io"
 	"net"
 	"runtime/debug"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -254,4 +255,21 @@ func (self *TCPConn) readRoutine() {
 // 非线程安全的
 func (self *TCPConn) CallRpc(msgId uint16, sendFun, recvFun func(*common.NetPack)) {
 	G_RpcQueue.CallRpc(self, msgId, sendFun, recvFun)
+}
+
+var _mutex sync.Mutex
+
+func (self *TCPConn) CallRpcSafe(msgId uint16, sendFun, recvFun func(*common.NetPack)) {
+	req := common.NewNetPackCap(64)
+	req.SetOpCode(msgId)
+	req.SetReqIdx(atomic.AddUint32(&G_RpcQueue.reqIdx, 1))
+
+	if recvFun != nil {
+		_mutex.Lock()
+		G_RpcQueue.response[req.GetReqKey()] = recvFun
+		_mutex.Unlock()
+	}
+	sendFun(req)
+	self.WriteMsg(req)
+	req.Free()
 }

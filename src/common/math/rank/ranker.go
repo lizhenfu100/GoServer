@@ -8,7 +8,7 @@
 * @ author zhoumf
 * @ date 2017-9-30
 ***********************************************************************/
-package math
+package rank
 
 import (
 	"common/assert"
@@ -50,7 +50,7 @@ func (self *TRanker) Clear() {
 		self._arr[i] = nil
 	}
 	self._last = 0
-	dbmgo.RemoveAllToDB(self._table, nil)
+	dbmgo.RemoveAll(self._table, nil)
 }
 func (self *TRanker) GetRanker(rank uint) IRankItem {
 	if rank <= self._last {
@@ -63,7 +63,7 @@ func (self *TRanker) GetLastRanker() IRankItem { return self._arr[self._last] }
 func (self *TRanker) _WriteDB(obj IRankItem) {
 	if dbmgo.InsertSync(self._table, obj) {
 	} else {
-		dbmgo.UpdateIdToDB(self._table, obj.GetRank(), obj)
+		dbmgo.UpdateId(self._table, obj.GetRank(), obj)
 	}
 }
 

@@ -3,34 +3,42 @@ package player
 import (
 	"dbmgo"
 	"gopkg.in/mgo.v2/bson"
+	"svr_game/logic/fullsvr"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
 var (
-	g_player_cache  sync.Map //make(map[uint32]*TPlayer, 5000)
-	g_account_cache sync.Map //make(map[uint32]*TPlayer, 5000)
+	G_player_cache  sync.Map //<pid, *TPlayer>
+	g_account_cache sync.Map //<aid, *TPlayer>
 	g_player_cnt    int32
 )
 
 func InitDB() {
 	//只载入一个月内登录过的
-	var list []TPlayer
-	dbmgo.FindAll(kDBPlayer, bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - 30*24*3600}}, &list)
+	var list1 []TPlayerBase
+	dbmgo.FindAll(kDBPlayer, bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - 30*24*3600}}, &list1)
+	list := make([]TPlayer, len(list1))
 	for i := 0; i < len(list); i++ {
-		list[i].init()
-		AddCache(&list[i])
+		ptr := &list[i]
+		ptr.init()
+		ptr.TPlayerBase = list1[i]
+		for _, v := range ptr.modules {
+			v.LoadFromDB(ptr)
+		}
+		AddCache(ptr)
 	}
 	println("load active player form db: ", len(list))
 
 	InitSvrMailDB()
 	InitSeasonDB()
+	fullsvr.InitAwardDB()
 }
 
 //! 若多线程架构，玩家内存，只能他自己直接修改，别人须转给他后间接改(异步)
 func FindPlayerId(pid uint32) *TPlayer {
-	if v, ok := g_player_cache.Load(pid); ok {
+	if v, ok := G_player_cache.Load(pid); ok {
 		return v.(*TPlayer)
 	}
 	return nil
@@ -60,12 +68,12 @@ func FindWithDB_AccountId(aid uint32) *TPlayer {
 // -------------------------------------
 //! 辅助函数
 func AddCache(player *TPlayer) {
-	g_player_cache.Store(player.PlayerID, player)
+	G_player_cache.Store(player.PlayerID, player)
 	g_account_cache.Store(player.AccountID, player)
 	atomic.AddInt32(&g_player_cnt, 1)
 }
 func DelCache(player *TPlayer) {
-	g_player_cache.Delete(player.PlayerID)
+	G_player_cache.Delete(player.PlayerID)
 	g_account_cache.Delete(player.AccountID)
 	atomic.AddInt32(&g_player_cnt, -1)
 }

@@ -6,7 +6,6 @@ import (
 	"conf"
 	"fmt"
 	"gamelog"
-	"netConfig"
 	"netConfig/meta"
 	"runtime/debug"
 	"time"
@@ -27,7 +26,7 @@ func main() {
 		}
 	}()
 	InitConf()
-	netConfig.G_Local_Meta = meta.GetMeta(kModuleName, 0)
+	meta.G_Local = meta.GetMeta(kModuleName, 0)
 
 	//netConfig.RunNetSvr()
 }

@@ -19,7 +19,7 @@ import (
 	"common/format"
 	"gamelog"
 	"generate_out/err"
-	"netConfig"
+	"netConfig/meta"
 	"sync"
 	"sync/atomic"
 	"tcp"
@@ -32,7 +32,7 @@ func Rpc_game_login(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	accountId := req.ReadUInt32()
 
 	// game直连了login，须校验登录token
-	for _, v := range netConfig.G_Local_Meta.ConnectLst {
+	for _, v := range meta.G_Local.ConnectLst {
 		if v == "login" {
 			token := req.ReadUInt32()
 			if false == CheckLoginToken(accountId, token) {

@@ -1,14 +1,12 @@
 package console
 
 import (
-	"bufio"
 	"common"
 	"conf"
 	"fmt"
 	"gamelog"
 	"generate_out/rpc/enum"
 	"http"
-	"os"
 	"runtime"
 	"runtime/debug"
 	"strconv"
@@ -16,9 +14,9 @@ import (
 	"tcp"
 )
 
-type Func func(args []string)
+type cmdFunc func(args []string)
 
-var g_funcs = map[string]Func{
+var g_cmds = map[string]cmdFunc{ //Notice：注意下列函数的线程安全性
 	"loglv":   cmd_LogLv,
 	"gc":      cmd_gc,
 	"routine": cmd_routine,
@@ -29,36 +27,25 @@ var g_funcs = map[string]Func{
 func Init() {
 	tcp.G_HandleFunc[enum.Rpc_gm_cmd] = _Rpc_cmd_tcp
 	http.G_HandleFunc[enum.Rpc_gm_cmd] = _Rpc_cmd_http
-	//go _loop()
+
+	go SIGTERM() //监控进程终止信号
 }
 func _Rpc_cmd_tcp(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_cmd_http(req, ack) }
 func _Rpc_cmd_http(req, ack *common.NetPack) {
 	cmd := req.ReadString()
-	HandleCmd(strings.Split(cmd, " "))
-}
-func _loop() {
-	command := make([]byte, 1024)
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		command, _, _ = reader.ReadLine()
-		args := strings.Split(string(command), " ")
-		HandleCmd(args)
-	}
-}
 
-func RegCmd(key string, cmd Func) { g_funcs[key] = cmd }
-
-func HandleCmd(args []string) {
+	args := strings.Split(cmd, " ")
 	defer func() {
 		if r := recover(); r != nil {
 			gamelog.Error("recover HandleCmd\n%v: %s", r, debug.Stack())
 		}
 	}()
-	if cmd, ok := g_funcs[args[0]]; ok {
+	if cmd, ok := g_cmds[args[0]]; ok {
 		cmd(args)
 		return
 	}
 }
+func RegCmd(key string, f cmdFunc) { g_cmds[key] = f }
 
 // ------------------------------------------------------------
 //! 命令行函数

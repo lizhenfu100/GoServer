@@ -33,6 +33,11 @@ import (
 	"sync"
 )
 
+var (
+	G_Metas sync.Map //<{module,svrId}, pMeta>
+	G_Local *Meta
+)
+
 type Meta struct {
 	Module     string
 	SvrID      int
@@ -42,7 +47,7 @@ type Meta struct {
 	OutIP      string
 	TcpPort    uint16
 	HttpPort   uint16
-	Maxconn    int
+	Maxconn    int32
 	ConnectLst []string //待连接的模块名
 
 	//需动态同步的数据
@@ -68,7 +73,7 @@ func (self *Meta) DataToBuf(buf *common.NetPack) {
 	buf.WriteString(self.OutIP)
 	buf.WriteUInt16(self.TcpPort)
 	buf.WriteUInt16(self.HttpPort)
-	buf.WriteInt(self.Maxconn)
+	buf.WriteInt32(self.Maxconn)
 	length := len(self.ConnectLst)
 	buf.WriteByte(byte(length))
 	for i := 0; i < length; i++ {
@@ -84,7 +89,7 @@ func (self *Meta) BufToData(buf *common.NetPack) {
 	self.OutIP = buf.ReadString()
 	self.TcpPort = buf.ReadUInt16()
 	self.HttpPort = buf.ReadUInt16()
-	self.Maxconn = buf.ReadInt()
+	self.Maxconn = buf.ReadInt32()
 	length := buf.ReadByte()
 	self.ConnectLst = self.ConnectLst[:0]
 	for i := byte(0); i < length; i++ {
@@ -95,8 +100,6 @@ func (self *Meta) BufToData(buf *common.NetPack) {
 
 // -------------------------------------
 //! meta list
-var G_Metas sync.Map //<{module,svrId}, pMeta>
-
 func InitConf(list []Meta) {
 	for i := 0; i < len(list); i++ {
 		AddMeta(&list[i])

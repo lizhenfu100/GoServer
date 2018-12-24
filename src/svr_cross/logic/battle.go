@@ -41,7 +41,7 @@ func Rpc_cross_relay_battle_data(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		playerCnt := backBuf.ReadUInt32() //选中战斗服的已有人数
 		g_battle_player_cnt[svrId] = playerCnt
 
-		//【Notice：异步回调里不能用非线程安全的数据，直接用ack回复错的】
+		//异步回调，不能直接用ack
 		backBuf.SetReqKey(oldReqKey)
 		conn.WriteMsg(backBuf)
 	})

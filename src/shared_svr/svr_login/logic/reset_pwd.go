@@ -3,10 +3,12 @@ package logic
 import (
 	"common"
 	"common/format"
+	"fmt"
 	"generate_out/err"
 	"generate_out/rpc/enum"
 	"net/http"
 	"netConfig"
+	"time"
 )
 
 func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) {
@@ -42,4 +44,8 @@ func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) {
 			ack = "Error: Account_without_bind_info"
 		}
 	})
+}
+
+func Http_timestamp(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(fmt.Sprintf("%d", time.Now().Unix())))
 }
