@@ -36,11 +36,13 @@ package http
 import (
 	"common"
 	"common/compress"
+	"conf"
 	"gamelog"
 	"generate_out/rpc/enum"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"svr_client/test/qps"
 )
 
 var G_HandleFunc [enum.RpcEnumCnt]func(req, ack *common.NetPack)
@@ -68,8 +70,9 @@ func CallRpc(addr string, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	req.SetOpCode(rid)
 	sendFun(req)
 	if buf := PostReq(addr+"/client_rpc", req.Data()); buf != nil && recvFun != nil {
-		ack := common.NewNetPack(compress.Decompress(buf))
-		recvFun(ack)
+		if ack := common.NewNetPack(compress.Decompress(buf)); ack != nil {
+			recvFun(ack)
+		}
 	}
 	req.Free()
 }
@@ -85,6 +88,11 @@ func _HandleRpc(w http.ResponseWriter, r *http.Request) {
 	//! 创建回复
 	ack := common.NewNetPackCap(128)
 	defer ack.Free()
+
+	if conf.Open_Calc_QPS {
+		qps.AddQps()
+	}
+
 	msgId := req.GetOpCode()
 	gamelog.Debug("HttpMsg:%d, len:%d", msgId, req.Size())
 	//defer func() {//库已经有recover了，见net/http/server.go:1918
@@ -121,11 +129,12 @@ func (self *PlayerRpc) CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack
 	req.SetReqIdx(self.AccountId)
 	sendFun(req)
 	if buf := PostReq(self.Url, req.Data()); buf != nil {
-		ack := common.NewNetPack(compress.Decompress(buf))
-		if recvFun != nil {
-			recvFun(ack)
+		if ack := common.NewNetPack(compress.Decompress(buf)); ack != nil {
+			if recvFun != nil {
+				recvFun(ack)
+			}
+			_RecvHttpSvrData(ack) //服务器主动下发的数据
 		}
-		_RecvHttpSvrData(ack) //服务器主动下发的数据
 	}
 	req.Free()
 }

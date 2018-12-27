@@ -16,6 +16,7 @@ package logic
 
 import (
 	"dbmgo"
+	"gamelog"
 	"http"
 	"os"
 	"svr_game/logic/player"
@@ -23,6 +24,7 @@ import (
 )
 
 func Shutdown(args []string) {
+	gamelog.Info("Begin Shutdown")
 	tcp.CloseServer()
 	http.CloseServer()
 

@@ -63,6 +63,7 @@ package tcp
 import (
 	"bufio"
 	"common"
+	"conf"
 	"encoding/binary"
 	"errors"
 	"gamelog"
@@ -70,6 +71,7 @@ import (
 	"io"
 	"net"
 	"runtime/debug"
+	"svr_client/test/qps"
 	"sync/atomic"
 	"time"
 )
@@ -233,13 +235,18 @@ func (self *TCPConn) readRoutine() {
 		}
 		//packet.Reset(msgBuf[:msgLen]) //每次都操作的同片内存
 		packet := common.NewNetPackLen(msgLen)
-
+		if packet == nil {
+			gamelog.Error("invalid packLen: %d", msgLen)
+			break
+		}
 		_, err = io.ReadFull(self.reader, packet.Data())
 		if err != nil {
 			gamelog.Error("(%p)ReadFull msgData error: %s", self.conn, err.Error())
 			break
 		}
-
+		if conf.Open_Calc_QPS {
+			qps.AddQps()
+		}
 		//FIXME: 消息加密、验证有效性，不通过即踢掉
 
 		//【Notice: 在io线程直接调消息响应函数(多线程处理玩家操作)，玩家之间互改数据须考虑竞态问题(可用actor模式解决)】

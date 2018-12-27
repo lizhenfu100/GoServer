@@ -2,7 +2,7 @@ package logic
 
 import (
 	"common/timer"
-	"svr_game/logic/player"
+	"svr_game/logic/player/season"
 	"time"
 )
 
@@ -27,9 +27,9 @@ func updatePerMinute() {
 // ------------------------------------------------------------
 // logic code
 func onEnterNextDay() {
+	season.OnEnterNextDay()
 }
 func onEnterNextHour() {
 }
 func perMinute() {
-	player.NotifyOnlineNum()
 }

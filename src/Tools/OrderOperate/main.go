@@ -38,8 +38,8 @@ func main() {
 
 	GetOrderInfo(addr, strings.Split(_g, " "))
 	OrderSuccess(addr, strings.Split(_s, " "))
-
-	time.Sleep(time.Hour)
+	fmt.Println("\n...finish...")
+	time.Sleep(time.Minute)
 }
 
 // --------------------------------------------------------------------------

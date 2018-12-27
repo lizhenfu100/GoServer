@@ -37,16 +37,16 @@ func SyncServerPatch(addr string) {
 		if cnt := backBuf.ReadUInt32(); cnt > 0 {
 			//服务器文件列表
 			for i := uint32(0); i < cnt; i++ {
-				filename := backBuf.ReadString()
+				name := backBuf.ReadString()
 				md5hash := backBuf.ReadUInt32()
-				svrList[filename] = md5hash //记录远端文件名、MD5
+				svrList[name] = md5hash //记录远端文件名、MD5
 			}
 		}
 		//本地文件列表
 		localList := make(map[string]uint32, 32)
 		names, _ := file.WalkDir("./", "")
 		for _, v := range names {
-			v = strings.TrimLeft(v, "./")
+			v = strings.TrimPrefix(v, "./")
 			if !strings.HasPrefix(v, "SyncPatch") {
 				localList[v] = common.StringHash(file.CalcMd5(v))
 			}

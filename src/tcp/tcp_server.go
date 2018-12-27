@@ -3,6 +3,7 @@ package tcp
 import (
 	"common"
 	"common/std"
+	"conf"
 	"encoding/binary"
 	"fmt"
 	"gamelog"
@@ -10,6 +11,7 @@ import (
 	"io"
 	"net"
 	"netConfig/meta"
+	"svr_client/test/qps"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -29,6 +31,9 @@ type TCPServer struct {
 var _svr TCPServer
 
 func NewTcpServer(port uint16, maxconn int32) { //"ip:port"，ip可缺省
+	if conf.Open_Calc_QPS {
+		go qps.WatchLoop()
+	}
 	_svr.MaxConnNum = maxconn
 	_svr.closer.L = &_svr.Mutex
 	if l, err := net.Listen("tcp", fmt.Sprintf(":%d", port)); err == nil {

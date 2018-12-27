@@ -23,8 +23,9 @@ func PostReq(url string, b []byte) []byte {
 	if ack, err := http.Post(url, "text/HTML", bytes.NewReader(b)); err == nil {
 		//如果Response.Body既没有被完全读取，也没有被关闭，那么这次http事务就没有完成
 		//除非连接因超时终止了，否则相关资源无法被回收
-		defer ack.Body.Close()
-		return ReadResponse(ack)
+		ret := ReadResponse(ack)
+		ack.Body.Close()
+		return ret
 	} else {
 		gamelog.Error("PostReq url: %s \r\nerr: %s \r\n", url, err.Error())
 		return nil
@@ -64,25 +65,26 @@ func _registToSvr(destAddr string, meta *meta.Meta) {
 // ------------------------------------------------------------
 //! 上传下载文件
 func UploadFile(url, filename string) error {
-	bodyBuf := &bytes.Buffer{}
-	bodyWriter := multipart.NewWriter(bodyBuf)
-	fw, err := bodyWriter.CreateFormFile("file", filename)
+	buf := &bytes.Buffer{}
+	w := multipart.NewWriter(buf)
+	fw, err := w.CreateFormFile("file", filename)
 	if err != nil {
 		gamelog.Error("writing to buffer: %s", err.Error())
 		return err
 	}
-	fh, err := os.Open(filename)
+	fd, err := os.Open(filename)
 	if err != nil {
 		gamelog.Error("opening file(%s): %s", filename, err.Error())
 		return err
 	}
-	if _, err = io.Copy(fw, fh); err != nil {
+	defer fd.Close()
+	if _, err = io.Copy(fw, fd); err != nil {
 		gamelog.Error("io.Copy: %s: %s", filename, err.Error())
 		return err
 	}
-	contentType := bodyWriter.FormDataContentType()
-	bodyWriter.Close()
-	if resp, err := http.Post(url, contentType, bodyBuf); err == nil {
+	contentType := w.FormDataContentType()
+	w.Close()
+	if resp, err := http.Post(url, contentType, buf); err == nil {
 		resp.Body.Close()
 		return nil
 	} else {

@@ -3,6 +3,7 @@ package http
 import (
 	"common"
 	"common/file"
+	"conf"
 	"encoding/json"
 	"fmt"
 	"gamelog"
@@ -10,6 +11,7 @@ import (
 	"net/http"
 	"netConfig/meta"
 	"path"
+	"svr_client/test/qps"
 	"sync"
 )
 
@@ -22,6 +24,9 @@ func Addr(ip string, port uint16) string { return fmt.Sprintf("http://%s:%d", ip
 var _svr http.Server
 
 func NewHttpServer(port uint16, module string, svrId int) error {
+	if conf.Open_Calc_QPS {
+		go qps.WatchLoop()
+	}
 	g_svraddr_path = fmt.Sprintf("%s/%s/%d/reg_addr.csv", file.GetExeDir(), module, svrId)
 	loadCacheNetMeta()
 	http.HandleFunc("/reg_to_svr", _reg_to_svr)

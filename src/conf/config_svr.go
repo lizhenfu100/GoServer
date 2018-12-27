@@ -12,10 +12,7 @@ const (
 	Is_Msg_Compress     = false //消息压缩
 	Is_Msg_Encode       = false //消息加密
 	Open_Http_To_Client = false //Http推送
-)
 
-var SvrCsv struct {
-	// 数据库
-	DBuser   string
-	DBpasswd string
-}
+	// 统计信息
+	Open_Calc_QPS = false //后台qps
+)
