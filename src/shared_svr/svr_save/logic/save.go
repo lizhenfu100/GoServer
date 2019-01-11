@@ -37,17 +37,18 @@ import (
 )
 
 const (
-	kDBTable         = "Save"
-	kDownCntPerMonth = 1
+	kDBTable      = "Save"
+	kChangeMax    = 1
+	kChangePeriod = 3600 * 24 * 7
 )
 
 type TSaveData struct {
-	Key       string `bson:"_id"` // Pf_id + Uid
-	Mac       string //机器码，取自存档，中途不用API取
-	Data      []byte
-	UpTime    int64
-	DownTime  int64
-	DownCount byte //限制设备变更的下载(每月n次)
+	Key    string `bson:"_id"` // Pf_id + Uid
+	Mac    string //机器码，取自存档，中途不用API取
+	Data   []byte
+	UpTime int64
+	ChTime int64 //换设备的时刻
+	ChCnt  byte  //限制设备变更的下载(每月n次)
 }
 
 func Rpc_save_get_meta_info(req, ack *common.NetPack) {
@@ -91,19 +92,18 @@ func download(pf_id, uid, mac string) (*TSaveData, uint16) {
 	ptr, key := new(TSaveData), pf_id+"_"+uid
 	if !dbmgo.Find(kDBTable, "_id", key, ptr) {
 		return nil, err.Record_cannot_find
-	} else if pf_id != "IOS" && ptr.Mac != mac {
-		timenow := time.Now().Unix()
-		if ptr.DownCount += 1; ptr.DownCount <= kDownCntPerMonth {
+	} else if ptr.Mac != mac {
+		if ptr.ChCnt += 1; ptr.ChCnt <= kChangeMax {
 			dbmgo.UpdateId(kDBTable, key, bson.M{"$set": bson.M{
-				"mac":       mac,
-				"downcount": ptr.DownCount}})
-		} else if timenow-ptr.DownTime > 3600*24*30 {
-			ptr.DownTime = timenow
-			ptr.DownCount = 1
+				"mac":   mac,
+				"chcnt": ptr.ChCnt}})
+		} else if now := time.Now().Unix(); now-ptr.ChTime > kChangePeriod {
+			ptr.ChTime = now
+			ptr.ChCnt = 1
 			dbmgo.UpdateId(kDBTable, key, bson.M{"$set": bson.M{
-				"mac":       mac,
-				"downtime":  ptr.DownTime,
-				"downcount": ptr.DownCount}})
+				"mac":    mac,
+				"chtime": ptr.ChTime,
+				"chcnt":  ptr.ChCnt}})
 		} else {
 			return nil, err.Record_download_limit
 		}

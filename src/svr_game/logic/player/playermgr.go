@@ -5,14 +5,13 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"svr_game/logic/fullsvr"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
 var (
 	G_player_cache  sync.Map //<pid, *TPlayer>
 	g_account_cache sync.Map //<aid, *TPlayer>
-	g_player_cnt    int32
+	g_online_cnt    int32
 )
 
 func InitDB() {
@@ -70,17 +69,15 @@ func FindWithDB_AccountId(aid uint32) *TPlayer {
 func AddCache(player *TPlayer) {
 	G_player_cache.Store(player.PlayerID, player)
 	g_account_cache.Store(player.AccountID, player)
-	atomic.AddInt32(&g_player_cnt, 1)
 }
 func DelCache(player *TPlayer) {
 	G_player_cache.Delete(player.PlayerID)
 	g_account_cache.Delete(player.AccountID)
-	atomic.AddInt32(&g_player_cnt, -1)
 }
 
 // ------------------------------------------------------------
 //! 访问玩家部分数据，包括离线的
-func GetPlayerBaseData(pid uint32) *TPlayerBase {
+func GetPlayerBase(pid uint32) *TPlayerBase {
 	if player := FindPlayerId(pid); player != nil {
 		return &player.TPlayerBase
 	} else {

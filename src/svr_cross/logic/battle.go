@@ -49,7 +49,7 @@ func Rpc_cross_relay_battle_data(req, ack *common.NetPack, conn *tcp.TCPConn) {
 func _SelectBattleSvrId(version string) int {
 	//moba类的，应该有个专门的匹配服，供自由玩家【快速】组房间
 	//io向的，允许中途加入，应尽量分配到人多的战斗服
-	if ids, ok := meta.GetModuleIDs("battle", version); ok {
+	if ids := meta.GetModuleIDs("battle", version); len(ids) > 0 {
 		sort.Ints(ids)
 		//1、优先在各个服务器分配一定人数
 		for _, id := range ids {

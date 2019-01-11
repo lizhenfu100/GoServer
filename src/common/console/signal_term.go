@@ -8,7 +8,7 @@ import (
 
 func RegShutdown(f cmdFunc) { RegCmd("shutdown", f) }
 
-func SIGTERM() { // 监控进程终止信号
+func sigTerm() { // 监控进程终止信号
 	c := make(chan os.Signal)
 	signal.Notify(c, syscall.SIGTERM)
 	_ = <-c //阻塞直至有信号传入

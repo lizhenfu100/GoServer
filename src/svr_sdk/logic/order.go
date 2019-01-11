@@ -43,7 +43,8 @@ func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	//验证签名
-	s := fmt.Sprintf("pf_id=%s&pk_id=%s&pay_id=%d&item_id=%d&item_count=%d&total_price=%d", order.Pf_id, order.Pk_id, order.Pay_id, order.Item_id, order.Item_count, order.Total_price)
+	s := fmt.Sprintf("pf_id=%s&pk_id=%s&pay_id=%d&item_id=%d&item_count=%d&total_price=%d",
+		order.Pf_id, order.Pk_id, order.Pay_id, order.Item_id, order.Item_count, order.Total_price)
 	if r.Form.Get("sign") != sign.CalcSign(s) {
 		ack.SetRetcode(-2)
 		gamelog.Error("pre_buy_request: sign failed")

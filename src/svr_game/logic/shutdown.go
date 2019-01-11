@@ -32,10 +32,9 @@ func Shutdown(args []string) {
 		v.(*player.TPlayer).Logout()
 		return true
 	})
-	close(dbmgo.G_actions)
 
 	//关服任务，阻塞，等待任务都完成才能关服
-	<-dbmgo.G_Finished
+	dbmgo.WaitStop()
 
 	os.Exit(0)
 }

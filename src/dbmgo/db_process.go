@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	G_actions   = make(chan *action, 4096)
-	G_Finished  = make(chan bool) //告知DBProcess结束
+	_actions    = make(chan *action, 4096)
+	_finished   = make(chan bool) //告知DBProcess结束
 	_last_table string
 )
 
@@ -32,7 +32,7 @@ type action struct {
 func _DBProcess() {
 	var pColl *mgo.Collection
 	var err error
-	for v := range G_actions {
+	for v := range _actions {
 		if v.table != _last_table {
 			pColl = g_database.C(v.table)
 			_last_table = v.table
@@ -56,11 +56,12 @@ func _DBProcess() {
 				v.optype, v.table, v.search, v.pData, err.Error())
 		}
 	}
-
-	G_Finished <- true
+	_finished <- true
 }
+func WaitStop() { close(_actions); <-_finished }
+
 func Update(table string, search, update bson.M) {
-	G_actions <- &action{
+	_actions <- &action{
 		optype: DB_Update_Field,
 		table:  table,
 		search: search,
@@ -68,7 +69,7 @@ func Update(table string, search, update bson.M) {
 	}
 }
 func UpdateId(table string, id, pData interface{}) {
-	G_actions <- &action{
+	_actions <- &action{
 		optype: DB_Update_Id,
 		table:  table,
 		search: id,
@@ -76,7 +77,7 @@ func UpdateId(table string, id, pData interface{}) {
 	}
 }
 func UpdateAll(table string, search, data bson.M) {
-	G_actions <- &action{
+	_actions <- &action{
 		optype: DB_Update_All,
 		table:  table,
 		search: search,
@@ -84,21 +85,21 @@ func UpdateAll(table string, search, data bson.M) {
 	}
 }
 func Remove(table string, search bson.M) {
-	G_actions <- &action{
+	_actions <- &action{
 		optype: DB_Remove_One,
 		table:  table,
 		search: search,
 	}
 }
 func RemoveAll(table string, search bson.M) {
-	G_actions <- &action{
+	_actions <- &action{
 		optype: DB_Remove_All,
 		table:  table,
 		search: search,
 	}
 }
 func Insert(table string, pData interface{}) {
-	G_actions <- &action{
+	_actions <- &action{
 		optype: DB_Insert,
 		table:  table,
 		pData:  pData,

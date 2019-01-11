@@ -21,7 +21,7 @@ const kDBTable = "Account"
 type TAccount struct {
 	AccountID   uint32 `bson:"_id"`
 	Name        string //账户名
-	Password    string //密码
+	Password    string //密码 //FIXME:可以StringHash后存成uint32，省不少字节
 	CreateTime  int64
 	LoginTime   int64
 	IsForbidden bool //是否禁用
@@ -156,7 +156,7 @@ func Rpc_center_set_game_info(req, ack *common.NetPack) {
 	accountId := req.ReadUInt32()
 	gameName := req.ReadString()
 
-	if account := GetAccountById(accountId); account != nil {
+	if account := GetAccountById(accountId); account != nil && gameName != "" {
 		var v gameInfo.TGameInfo
 		v.BufToData(req)
 		account.GameInfo[gameName] = v

@@ -5,46 +5,40 @@ import (
 	"time"
 )
 
-type RandItem struct {
-	ID         int
-	Weight     int
-	isSelected bool
+type Weight interface {
+	ID() int
+	Weight() int
+	SetFlag(bool)
+	GetFlag() bool
 }
 
 // 按权重随机选出cnt个，不重复
-func RandSelect(list []RandItem, count int) (ret []int) {
+func RandSelect(list []Weight, count int) (ids []int) {
 	total, length := 0, len(list)
-	// for _, v := range list {
-	// 	total += v.Weight
-	// 	v.isSelected = false //【Bug】range值拷贝迭代的坑啊
-	// }
 	for i := 0; i < length; i++ {
-		list[i].isSelected = false
-		total += list[i].Weight
+		list[i].SetFlag(false)
+		total += list[i].Weight()
 	}
-
-	if count > length {
-		return nil
-	}
-
-	for j := 0; j < count; j++ {
-		rand := rand.Intn(total)
-		for i := 0; i < length; i++ {
-			data := &list[i]
-			if data.isSelected {
-				continue
-			}
-			if rand < data.Weight {
-				ret = append(ret, data.ID)
-				data.isSelected = true
-				total -= data.Weight
-				break
-			} else {
-				rand -= data.Weight
+	if total > 0 {
+		for j := 0; j < count; j++ {
+			w := rand.Intn(total)
+			for i := 0; i < length; i++ {
+				p := list[i]
+				if p.GetFlag() {
+					continue
+				}
+				if w < p.Weight() {
+					ids = append(ids, p.ID())
+					p.SetFlag(true)
+					total -= p.Weight()
+					break
+				} else {
+					w -= p.Weight()
+				}
 			}
 		}
 	}
-	return ret
+	return
 }
 
 // [left, right]

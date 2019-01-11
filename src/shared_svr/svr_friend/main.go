@@ -43,7 +43,7 @@ func main() {
 	meta.G_Local = meta.GetMeta(kModuleName, svrId)
 
 	//设置mongodb的服务器地址
-	pMeta := meta.GetMeta("db_friend", 0)
+	pMeta := meta.GetMeta("db_friend", svrId)
 	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
 
 	component.RegisterToZookeeper()

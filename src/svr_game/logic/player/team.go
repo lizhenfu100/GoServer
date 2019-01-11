@@ -63,7 +63,7 @@ func (self *Team) BufToData(buf *common.NetPack) {
 // -- Rpc
 func Rpc_game_battle_begin(req, ack *common.NetPack, this *TPlayer) {
 	if this.team.IsEmpty() {
-		this.team.list = append(this.team.list, this.Battle)
+		this.team.list = append(this.team.list, this.battle)
 	}
 	gameMode := req.ReadUInt8()
 
@@ -103,7 +103,7 @@ func Rpc_game_join_team(req, ack *common.NetPack, this *TPlayer) {
 	v.BufToData(req)
 
 	if this.team.IsEmpty() {
-		this.team.list = append(this.team.list, this.Battle)
+		this.team.list = append(this.team.list, this.battle)
 	}
 	this.JoinMyTeam(&v)
 }
@@ -112,7 +112,7 @@ func Rpc_game_agree_invite(req, ack *common.NetPack, this *TPlayer) {
 
 	if len(this.team.list) <= 1 {
 		CallRpcPlayer(captainId, enum.Rpc_game_join_team, func(buf *common.NetPack) {
-			this.Battle.DataToBuf(buf)
+			this.battle.DataToBuf(buf)
 		}, nil)
 	}
 }

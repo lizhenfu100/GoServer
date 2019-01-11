@@ -4,17 +4,15 @@ import (
 	"common/console"
 	"common/file"
 	"conf"
-	"dbmgo"
 	"gamelog"
-	_ "generate_out/rpc/svr_sdk"
+	"generate_out/rpc/enum"
 	"netConfig"
 	"netConfig/meta"
-	"svr_sdk/logic"
-	"svr_sdk/msg"
+	"netConfig/register"
 )
 
 const (
-	kModuleName = "sdk"
+	kModuleName = "file"
 )
 
 func main() {
@@ -23,13 +21,10 @@ func main() {
 	InitConf()
 
 	//设置本节点meta信息
-	meta.G_Local = meta.GetMeta(kModuleName, 0)
-
-	//设置mongodb的服务器地址
-	pMeta := meta.GetMeta("db_sdk", 0)
-	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
-	msg.InitDB()
-
+	meta.G_Local = &meta.Meta{
+		Module:   kModuleName,
+		HttpPort: 7071,
+	}
 	netConfig.RunNetSvr()
 }
 func InitConf() {
@@ -41,5 +36,11 @@ func InitConf() {
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
 	console.Init()
-	console.RegShutdown(logic.Shutdown)
+
+	register.RegHttpRpc(map[uint16]register.HttpRpc{
+		enum.Rpc_file_update_list: Rpc_file_update_list,
+	})
+	register.RegHttpHandler(map[string]register.HttpHandle{
+		"/upload_patch_file":  Http_upload_patch_file,
+	})
 }

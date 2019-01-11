@@ -27,9 +27,21 @@ var g_cmds = map[string]cmdFunc{ //Notice：注意下列函数的线程安全性
 func Init() {
 	tcp.G_HandleFunc[enum.Rpc_gm_cmd] = _Rpc_cmd_tcp
 	http.G_HandleFunc[enum.Rpc_gm_cmd] = _Rpc_cmd_http
-
-	go SIGTERM() //监控进程终止信号
+	tcp.G_HandleFunc[enum.Rpc_log] = _Rpc_log_tcp
+	http.G_HandleFunc[enum.Rpc_log] = _Rpc_log_http
+	go sigTerm() //监控进程终止信号
 }
+
+func _Rpc_log_tcp(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_log_http(req, ack) }
+func _Rpc_log_http(req, ack *common.NetPack) {
+	log := req.ReadString()
+	uuid := req.ReadString()
+	version := req.ReadString()
+	platform := req.ReadString()
+	gamelog.Info("Client Log: %s\nUUID: %s version: %s platform: %s", log, uuid, version, platform)
+}
+
+func RegCmd(key string, f cmdFunc)                          { g_cmds[key] = f }
 func _Rpc_cmd_tcp(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_cmd_http(req, ack) }
 func _Rpc_cmd_http(req, ack *common.NetPack) {
 	cmd := req.ReadString()
@@ -45,7 +57,6 @@ func _Rpc_cmd_http(req, ack *common.NetPack) {
 		return
 	}
 }
-func RegCmd(key string, f cmdFunc) { g_cmds[key] = f }
 
 // ------------------------------------------------------------
 //! 命令行函数

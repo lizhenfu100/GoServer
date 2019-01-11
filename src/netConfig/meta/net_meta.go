@@ -135,7 +135,7 @@ func DelMeta(module string, svrID int) {
 	G_Metas.Delete(std.KeyPair{module, svrID})
 }
 
-func GetModuleIDs(module, version string) (ret []int, ok bool) {
+func GetModuleIDs(module, version string) (ret []int) { //Notice:排序是不稳定的
 	G_Metas.Range(func(k, v interface{}) bool {
 		ptr := v.(*Meta)
 		if ptr.Module == module && !ptr.IsClosed && ptr.IsMatchVersion(version) {
@@ -143,7 +143,7 @@ func GetModuleIDs(module, version string) (ret []int, ok bool) {
 		}
 		return true
 	})
-	return ret, len(ret) > 0
+	return
 }
 
 // -------------------------------------

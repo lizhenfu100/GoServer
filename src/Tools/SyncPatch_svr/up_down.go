@@ -11,7 +11,7 @@
 * @ author zhoumf
 * @ date 2017-8-23
 ***********************************************************************/
-package logic
+package main
 
 import (
 	"common"
@@ -27,44 +27,25 @@ import (
 )
 
 const (
-	kFileDirRoot   = "net_file/"
-	kFileDirPlayer = kFileDirRoot + "upload/"
-	kFileDirPatch  = kFileDirRoot + "patch/"
+	kFileDirRoot   = "game/"
+	kFileDirPatch  = kFileDirRoot
 )
 
 var (
 	g_file_md5    sync.Map //<fileName, md5Hash>
-	g_file_server http.Handler
 )
 
 func init() {
-	//http.Handle("/", http.FileServer(http.Dir(kFileDirRoot)))
-	//带url路由的文件服务
-	//http.Handle("/chillyroom_res/", http.StripPrefix("/chillyroom_res/", http.FileServer(http.Dir(kFileDirRoot))))
-	//g_file_server = http.StripPrefix("/chillyroom_res/", http.FileServer(http.Dir(kFileDirRoot))）
-	g_file_server = http.FileServer(http.Dir(kFileDirRoot))
-	http.HandleFunc("/", Http_download_file)
-
 	names, _ := file.WalkDir(kFileDirPatch, "")
 	for _, v := range names {
 		md5str := file.CalcMd5(v)
 		g_file_md5.Store(v, common.StringHash(md5str))
 	}
 }
-func Http_download_file(w http.ResponseWriter, r *http.Request) {
-	gamelog.Debug("download path: %s", r.URL.Path)
-	m := GetRWMutex(r.URL.Path)
-	m.RLock()
-	g_file_server.ServeHTTP(w, r)
-	m.RUnlock()
-}
 func Http_upload_patch_file(w http.ResponseWriter, r *http.Request) {
 	if name := _upload_file(w, r, kFileDirPatch); name != "" {
 		g_file_md5.Store(name, common.StringHash(file.CalcMd5(name)))
 	}
-}
-func Http_upload_player_file(w http.ResponseWriter, r *http.Request) {
-	_upload_file(w, r, kFileDirPlayer)
 }
 func _upload_file(w http.ResponseWriter, r *http.Request, baseDir string) string {
 	upfile, handler, err := r.FormFile("file")
@@ -87,10 +68,7 @@ func _upload_file(w http.ResponseWriter, r *http.Request, baseDir string) string
 		return ""
 	}
 	// 加锁，用临时文件替代旧文件
-	m := GetRWMutex(strings.TrimPrefix(fullname, kFileDirRoot))
-	m.Lock()
 	os.Rename(fullname+"_2", fullname)
-	m.Unlock()
 	return fullname
 }
 
@@ -115,23 +93,4 @@ func Rpc_file_update_list(req, ack *common.NetPack) {
 	} else {
 		ack.WriteUInt32(0)
 	}
-}
-
-// ------------------------------------------------------------
-// 细粒度的文件读写锁
-var (
-	_mutex_    sync.Mutex
-	_rw_mutexs = make(map[string]*sync.RWMutex)
-)
-
-func GetRWMutex(name string) (ret *sync.RWMutex) {
-	_mutex_.Lock()
-	if v, ok := _rw_mutexs[name]; ok {
-		ret = v
-	} else {
-		ret = new(sync.RWMutex)
-		_rw_mutexs[name] = ret
-	}
-	_mutex_.Unlock()
-	return
 }

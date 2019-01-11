@@ -13,8 +13,7 @@
 		3、下次登录，验证账号后即定位具体gamesvr节点
 
 * @ 分流节点（game连接同个db）
-	、常规节点的svrId四位数以内
-	、分流节点是svrId+10000/20000/30000...
+	、常规节点的svrId四位数以内，分流节点是svrId+10000
 	、svrId%10000 即入库的节点id
 
 * @ author zhoumf
@@ -31,6 +30,7 @@ import (
 	"netConfig"
 	"netConfig/meta"
 	"shared_svr/svr_center/gameInfo"
+	"sort"
 	"sync"
 	"sync/atomic"
 )
@@ -183,7 +183,8 @@ func Rpc_login_get_meta_list(req, ack *common.NetPack) {
 	module := req.ReadString() //game、save、file...
 	version := req.ReadString()
 
-	ids, _ := meta.GetModuleIDs(module, version)
+	ids := meta.GetModuleIDs(module, version)
+	sort.Ints(ids)
 	ack.WriteByte(byte(len(ids)))
 	for _, id := range ids {
 		p := meta.GetMeta(module, id)
@@ -209,7 +210,7 @@ var g_game_player_cnt sync.Map //<gameSvrId, playerCnt>
 
 func GetFreeGameSvr(version string) int {
 	ret, minCnt := -1, int32(999999)
-	ids, _ := meta.GetModuleIDs("game", version)
+	ids := meta.GetModuleIDs("game", version)
 	for _, id := range ids {
 		if v, ok := g_game_player_cnt.Load(id); ok {
 			if cnt := v.(int32); cnt < minCnt {
@@ -223,7 +224,7 @@ func GetFreeGameSvr(version string) int {
 }
 func ShuntGameSvr(version string, svrId int) int { //选空闲的分流节点
 	ret, minCnt := -1, int32(999999)
-	ids, _ := meta.GetModuleIDs("game", version)
+	ids := meta.GetModuleIDs("game", version)
 	for _, id := range ids {
 		if id%10000 == svrId%10000 { //svrId%10000相同，视为分流节点
 			if v, ok := g_game_player_cnt.Load(id); ok {

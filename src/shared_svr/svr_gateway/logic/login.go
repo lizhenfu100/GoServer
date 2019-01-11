@@ -66,7 +66,7 @@ func Rpc_gateway_login_token(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	g_login_token.Store(accountId, token)
 	AddGameConn(accountId, gameSvrId) //设置此玩家的game路由
 
-	ack.WriteInt32(g_player_cnt)
+	ack.WriteInt32(g_game_online[gameSvrId])
 }
 func CheckLoginToken(accountId, token uint32) bool {
 	if value, ok := g_login_token.Load(accountId); ok {

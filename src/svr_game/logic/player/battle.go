@@ -7,6 +7,8 @@ import (
 	"netConfig/meta"
 )
 
+const kDBBattle = "battle"
+
 type TBattleModule struct {
 	PlayerID uint32 `bson:"_id"`
 	Diamond  uint32
@@ -117,7 +119,7 @@ func (self *TBattleModule) _DBToBuf(buf *common.NetPack) {
 // ------------------------------------------------------------
 // --
 func Rpc_game_write_db_battle_info(req, ack *common.NetPack, this *TPlayer) {
-	this.Battle._BufToDB(req)
+	this.battle._BufToDB(req)
 }
 func Rpc_game_on_battle_end(req, ack *common.NetPack, this *TPlayer) {
 	isWin := req.ReadBool()
@@ -127,13 +129,13 @@ func Rpc_game_on_battle_end(req, ack *common.NetPack, this *TPlayer) {
 	exp := uint32(0)
 	if isWin {
 		exp = conf.SvrCsv.Exp_Win
-		this.Season.winStreak++
+		this.season.winStreak++
 	} else {
 		exp = conf.SvrCsv.Exp_Fail
-		this.Season.winStreak = 0
+		this.season.winStreak = 0
 	}
-	score := this.Season.calcScore(isWin, rank)
+	score := this.season.calcScore(isWin, rank)
 
-	this.Battle.AddExp(exp)
-	this.Season.AddScore(score)
+	this.battle.AddExp(exp)
+	this.season.AddScore(score)
 }

@@ -13,42 +13,45 @@ import (
 )
 
 func main() {
-	var addrList string
+	var sleep bool
+	var addrList, dirList string
 	flag.StringVar(&addrList, "addr", "", "远端地址列表")
+	flag.StringVar(&dirList, "dir", "", "本地目录列表")
+	flag.BoolVar(&sleep, "sleep", true, "")
 	flag.Parse() //内部获取了所有参数：os.Args[1:]
-
 	gamelog.InitLogger("SyncPatch")
-	list := strings.Split(addrList, " ")
-	for _, addr := range list {
-		SyncServerPatch(fmt.Sprintf("http://%s", addr))
+
+	//本地文件列表
+	localMap := make(map[string]uint32, 32)
+	for _, dir := range strings.Split(dirList, " ") {
+		if dir != "" {
+			readDir(dir, localMap)
+		}
 	}
-	fmt.Println("\n...finish...")
-	time.Sleep(time.Minute)
+	for _, addr := range strings.Split(addrList, " ") {
+		if addr != "" {
+			SyncServerPatch(fmt.Sprintf("http://%s", addr), localMap)
+		}
+	}
+	if fmt.Println("\n...finish..."); sleep {
+		time.Sleep(time.Hour)
+	}
 }
 
 // --------------------------------------------------------------------------
 // 将SyncPatch.exe所在目录的文件上传至服务器
-func SyncServerPatch(addr string) {
+func SyncServerPatch(addr string, localMap map[string]uint32) {
 	http.CallRpc(addr, enum.Rpc_file_update_list, func(buf *common.NetPack) {
 		buf.WriteString("") //version
 		buf.WriteString("")
 	}, func(backBuf *common.NetPack) {
-		svrList := make(map[string]uint32, 32)
+		svrMap := make(map[string]uint32, 32)
 		if cnt := backBuf.ReadUInt32(); cnt > 0 {
 			//服务器文件列表
 			for i := uint32(0); i < cnt; i++ {
 				name := backBuf.ReadString()
 				md5hash := backBuf.ReadUInt32()
-				svrList[name] = md5hash //记录远端文件名、MD5
-			}
-		}
-		//本地文件列表
-		localList := make(map[string]uint32, 32)
-		names, _ := file.WalkDir("./", "")
-		for _, v := range names {
-			v = strings.TrimPrefix(v, "./")
-			if !strings.HasPrefix(v, "SyncPatch") {
-				localList[v] = common.StringHash(file.CalcMd5(v))
+				svrMap[name] = md5hash //记录远端文件名、MD5
 			}
 		}
 
@@ -57,8 +60,8 @@ func SyncServerPatch(addr string) {
 
 		//比对本地、服务器，有新增或变更才上传
 		fmt.Println("\nSync File: ")
-		for k, v1 := range localList {
-			if v2, ok := svrList[k]; ok {
+		for k, v1 := range localMap {
+			if v2, ok := svrMap[k]; ok {
 				if v1 != v2 { //变动文件
 					if http.UploadFile(addr+"/upload_patch_file", k) == nil {
 						fmt.Println("    ", k)
@@ -79,4 +82,11 @@ func SyncServerPatch(addr string) {
 			fmt.Println("    ", v)
 		}
 	})
+}
+func readDir(dir string, localMap map[string]uint32) {
+	names, _ := file.WalkDir(dir, "")
+	for _, v := range names {
+		v = strings.TrimPrefix(v, "./")
+		localMap[v] = common.StringHash(file.CalcMd5(v))
+	}
 }

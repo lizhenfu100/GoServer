@@ -9,6 +9,8 @@ import (
 
 const (
 	Read_Mail_Delete_Time = 24 * 3600 * 7 //已读邮件多久后删除
+	kDBMail               = "mail"
+	kDBMailSvr            = "MailSvr"
 )
 
 type TMailModule struct {
@@ -67,7 +69,7 @@ func (self *TMailModule) CreateMail(title, from, content string, items ...std.In
 	id := dbmgo.GetNextIncId("MailId")
 	pMail := &TMail{id, time.Now().Unix(), title, from, content, 0, items}
 	self.MailLst = append(self.MailLst, *pMail)
-	//dbmgo.Update("Mail", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"maillst": pMail}})
+	//dbmgo.Update("mail", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"maillst": pMail}})
 	return pMail
 }
 func (self *TMailModule) DelMailRead() {
@@ -76,7 +78,7 @@ func (self *TMailModule) DelMailRead() {
 			self.MailLst = append(self.MailLst[:i], self.MailLst[i+1:]...)
 		}
 	}
-	//dbmgo.Update("Mail", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
+	//dbmgo.Update("mail", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
 	//	"maillst": bson.M{"isread": 1}}})
 }
 
@@ -134,7 +136,7 @@ func (self *TMailModule) GetNoSendIdx() int {
 // -------------------------------------
 //! rpc
 func Rpc_game_get_mail(req, ack *common.NetPack, this *TPlayer) {
-	self := this.Mail
+	self := this.mail
 	if pos := self.GetNoSendIdx(); pos >= 0 {
 		ack.WriteInt8(1)
 		self.DataToBuf(ack, pos)
@@ -145,7 +147,7 @@ func Rpc_game_get_mail(req, ack *common.NetPack, this *TPlayer) {
 func Rpc_game_read_mail(req, ack *common.NetPack, this *TPlayer) {
 	id := req.ReadUInt32()
 
-	self := this.Mail
+	self := this.mail
 	for i := 0; i < len(self.MailLst); i++ {
 		mail := &self.MailLst[i]
 		if mail.ID == id {
@@ -160,7 +162,7 @@ func Rpc_game_read_mail(req, ack *common.NetPack, this *TPlayer) {
 func Rpc_game_del_mail(req, ack *common.NetPack, this *TPlayer) {
 	id := req.ReadUInt32()
 
-	self := this.Mail
+	self := this.mail
 	for i := len(self.MailLst) - 1; i >= 0; i-- { //倒过来遍历，删除就安全的
 		mail := &self.MailLst[i]
 		if mail.ID == id {
@@ -173,8 +175,8 @@ func Rpc_game_del_mail(req, ack *common.NetPack, this *TPlayer) {
 	}
 }
 func Rpc_game_take_all_mail_item(req, ack *common.NetPack, this *TPlayer) {
-	self := this.Mail
-	//self.Mail.CreateMail(0, "测试", "zhoumf", "content")
+	self := this.mail
+	//self.mail.CreateMail(0, "测试", "zhoumf", "content")
 	for i := len(self.MailLst) - 1; i >= 0; i-- { //倒过来遍历，删除就安全的
 		mail := &self.MailLst[i]
 		if len(mail.Items) > 0 {

@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	_ "svr_client/test/init"
 	"testing"
 )
 

@@ -35,6 +35,8 @@ import (
 	"common/service"
 	"dbmgo"
 	"gamelog"
+	"netConfig/meta"
+	"svr_game/version"
 	"sync/atomic"
 	"tcp"
 	"time"
@@ -44,10 +46,6 @@ const (
 	Idle_Max_Minute   = 3 //须客户端心跳包
 	ReLogin_Wait_Time = time.Minute * 5
 	kDBPlayer         = "Player"
-	kDBMail           = "Mail"
-	kDBMailSvr        = "MailSvr"
-	kDBBattle         = "Battle"
-	kDBSeason         = "Season"
 )
 
 type TPlayerBase struct {
@@ -57,6 +55,9 @@ type TPlayerBase struct {
 	Head       string
 	LoginTime  int64
 	LogoutTime int64
+
+	Version string //用于数据升级、玩家匹配
+	//服务器开多个版本节点，未及时更新的客户端，连接与自己版本匹配的节点
 }
 type iModule interface {
 	InitAndInsert(*TPlayer)
@@ -74,11 +75,11 @@ type TPlayer struct {
 	/* --- db data --- */
 	TPlayerBase
 	modules []iModule
-	Mail    TMailModule
-	Friend  TFriendModule
+	mail    TMailModule
+	friend  TFriendModule
 	team    Team
-	Battle  TBattleModule
-	Season  TSeasonModule
+	battle  TBattleModule
+	season  TSeasonModule
 }
 
 func _NewPlayer() *TPlayer {
@@ -89,11 +90,11 @@ func _NewPlayer() *TPlayer {
 func (self *TPlayer) init() {
 	//self.askchan = make(chan func(*TPlayer), 128)
 	self.modules = []iModule{ //regist
-		&self.Mail,
-		&self.Friend,
+		&self.mail,
+		&self.friend,
 		&self.team,
-		&self.Battle,
-		&self.Season,
+		&self.battle,
+		&self.season,
 	}
 }
 
@@ -108,6 +109,7 @@ func NewPlayerInDB(accountId uint32, name string) *TPlayer {
 	player.AccountID = accountId
 	player.PlayerID = accountId //一个账户下仅一个角色的游戏，可令pid=aid
 	//player.PlayerID = dbmgo.GetNextIncId("PlayerId")
+	player.Version = meta.G_Local.Version
 
 	if dbmgo.InsertSync(kDBPlayer, &player.TPlayerBase) {
 		for _, v := range player.modules {
@@ -121,6 +123,9 @@ func NewPlayerInDB(accountId uint32, name string) *TPlayer {
 func LoadPlayerFromDB(key string, val uint32) *TPlayer {
 	player := _NewPlayer()
 	if dbmgo.Find(kDBPlayer, key, val, &player.TPlayerBase) {
+		if player.Version != meta.G_Local.Version {
+			version.Upgrade(player.PlayerID, player.Version, meta.G_Local.Version)
+		}
 		for _, v := range player.modules {
 			v.LoadFromDB(player)
 		}
@@ -139,6 +144,7 @@ func (self *TPlayer) Login(conn *tcp.TCPConn) {
 	atomic.StoreInt32(&self._isOnlnie, 1)
 	atomic.SwapUint32(&self._idleMin, 0)
 	atomic.StoreInt64(&self.LoginTime, time.Now().Unix())
+	atomic.AddInt32(&g_online_cnt, 1)
 	self.conn = conn
 	if conn != nil && conn.UserPtr == nil { //链接可能是gateway节点
 		conn.UserPtr = self
@@ -153,6 +159,7 @@ func (self *TPlayer) Login(conn *tcp.TCPConn) {
 func (self *TPlayer) Logout() {
 	atomic.StoreInt32(&self._isOnlnie, 0)
 	atomic.StoreInt64(&self.LogoutTime, time.Now().Unix())
+	atomic.AddInt32(&g_online_cnt, -1)
 	for _, v := range self.modules {
 		v.OnLogout()
 	}

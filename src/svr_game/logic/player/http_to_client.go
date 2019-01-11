@@ -43,7 +43,7 @@ const (
 func BeforeRecvHttpMsg(accountId uint32) *TPlayer {
 	if player := FindAccountId(accountId); player != nil {
 		//player._HandleAsyncNotify()
-		//player.Mail.SendSvrMailAll()
+		//player.mail.SendSvrMailAll()
 		return player
 	}
 	return nil
@@ -61,7 +61,7 @@ func AfterRecvHttpMsg(self *TPlayer, buf *common.NetPack) {
 
 	//! 再写数据块
 	/*
-		if pos := self.Mail.GetNoSendIdx(); pos >= 0 {
+		if pos := self.mail.GetNoSendIdx(); pos >= 0 {
 			common.SetBit32(&bit, Bit_Mail_Lst, true)
 			//界面红点提示
 		}
@@ -82,9 +82,9 @@ func AfterRecvHttpMsg(self *TPlayer, buf *common.NetPack) {
 			common.SetBit32(&bit, Bit_Team_Update, true)
 			self.pTeam.isChange = false
 		}
-		if self.Battle.isShowWaitUI { //队长开始匹配，队员得到通知
+		if self.battle.isShowWaitUI { //队长开始匹配，队员得到通知
 			common.SetBit32(&bit, Bit_Show_UI_Wait, true)
-			self.Battle.isShowWaitUI = false
+			self.battle.isShowWaitUI = false
 		}
 		if self.pTeam != nil { //队伍聊天
 			if pos := self.pTeam.GetNoSendIdx(accountId); pos >= 0 {

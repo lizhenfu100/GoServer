@@ -6,6 +6,7 @@ import (
 	"generate_out/rpc/enum"
 	"http"
 	"netConfig"
+	_ "svr_client/test/init"
 	"testing"
 )
 

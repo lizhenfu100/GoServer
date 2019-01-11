@@ -80,7 +80,7 @@ func Rpc_game_login_token(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	accountId := req.ReadUInt32()
 	g_login_token.Store(accountId, token)
 
-	cnt := atomic.LoadInt32(&g_player_cnt)
+	cnt := atomic.LoadInt32(&g_online_cnt)
 	ack.WriteInt32(cnt)
 }
 func CheckLoginToken(accountId, token uint32) bool {

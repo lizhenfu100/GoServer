@@ -32,7 +32,7 @@ func main() {
 	meta.G_Local = meta.GetMeta(kModuleName, svrId)
 
 	//设置mongodb的服务器地址
-	pMeta := meta.GetMeta("db_account", 0)
+	pMeta := meta.GetMeta("db_account", svrId)
 	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
 	account.InitDB()
 
