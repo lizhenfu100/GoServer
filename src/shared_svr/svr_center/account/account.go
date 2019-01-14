@@ -154,14 +154,17 @@ func Rpc_center_create_visitor(req, ack *common.NetPack) {
 // 记录于账号上面的游戏信息，一套账号系统可关联多个游戏
 func Rpc_center_set_game_info(req, ack *common.NetPack) {
 	accountId := req.ReadUInt32()
-	gameName := req.ReadString()
+	gameName, info := req.ReadString(), gameInfo.TGameInfo{}
+	info.BufToData(req)
 
 	if account := GetAccountById(accountId); account != nil && gameName != "" {
-		var v gameInfo.TGameInfo
-		v.BufToData(req)
-		account.GameInfo[gameName] = v
+		account.GameInfo[gameName] = info
 		dbmgo.UpdateId(kDBTable, accountId, bson.M{"$set": bson.M{
-			fmt.Sprintf("gameinfo.%s", gameName): v}})
+			fmt.Sprintf("gameinfo.%s", gameName): info}})
+		ack.WriteUInt16(err.Success)
+	} else {
+		ack.WriteUInt16(err.GameInfo_set_fail)
+		gamelog.Error("set_game_info: %d %s %v", accountId, gameName, info)
 	}
 }
 

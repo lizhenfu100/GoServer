@@ -51,13 +51,11 @@ const (
 type TPlayerBase struct {
 	PlayerID   uint32 `bson:"_id"`
 	AccountID  uint32 //用于网络通信：一个账号下可能有多个角色，但仅可能一个在线
-	Name       string
-	Head       string
 	LoginTime  int64
 	LogoutTime int64
-
-	Version string //用于数据升级、玩家匹配
-	//服务器开多个版本节点，未及时更新的客户端，连接与自己版本匹配的节点
+	Name       string
+	Head       string
+	Version    string //用于数据升级；客户端连接与自己版本匹配的节点
 }
 type iModule interface {
 	InitAndInsert(*TPlayer)
@@ -141,10 +139,11 @@ func (self *TPlayer) WriteAllToDB() {
 	}
 }
 func (self *TPlayer) Login(conn *tcp.TCPConn) {
-	atomic.StoreInt32(&self._isOnlnie, 1)
+	if atomic.SwapInt32(&self._isOnlnie, 1) == 0 {
+		atomic.AddInt32(&g_online_cnt, 1)
+	}
 	atomic.SwapUint32(&self._idleMin, 0)
 	atomic.StoreInt64(&self.LoginTime, time.Now().Unix())
-	atomic.AddInt32(&g_online_cnt, 1)
 	self.conn = conn
 	if conn != nil && conn.UserPtr == nil { //链接可能是gateway节点
 		conn.UserPtr = self

@@ -13,11 +13,11 @@ import (
 )
 
 func main() {
-	var sleep bool
+	var noSleep bool
 	var addrList, dirList string
 	flag.StringVar(&addrList, "addr", "", "远端地址列表")
 	flag.StringVar(&dirList, "dir", "", "本地目录列表")
-	flag.BoolVar(&sleep, "sleep", true, "")
+	flag.BoolVar(&noSleep, "nosleep", false, "")
 	flag.Parse() //内部获取了所有参数：os.Args[1:]
 	gamelog.InitLogger("SyncPatch")
 
@@ -33,7 +33,7 @@ func main() {
 			SyncServerPatch(fmt.Sprintf("http://%s", addr), localMap)
 		}
 	}
-	if fmt.Println("\n...finish..."); sleep {
+	if fmt.Println("\n...finish..."); !noSleep {
 		time.Sleep(time.Hour)
 	}
 }

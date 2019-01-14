@@ -10,7 +10,7 @@ import (
 const (
 	Read_Mail_Delete_Time = 24 * 3600 * 7 //已读邮件多久后删除
 	kDBMail               = "mail"
-	kDBMailSvr            = "MailSvr"
+	kDBMailSvr            = "mailsvr"
 )
 
 type TMailModule struct {

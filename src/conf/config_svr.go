@@ -1,8 +1,8 @@
 package conf
 
 const (
-	FPS_GameSvr       = 1000 / 20 //服务器帧率
-	Hand_Pick_GameSvr = false     //玩家手选区服
+	FPS_GameSvr      = 1000 / 20 //服务器帧率
+	HandPick_GameSvr = false     //玩家手选区服
 
 	// 特殊标记
 	Flag_Client_ReLogin = 0xFFFFFFFF

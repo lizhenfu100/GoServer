@@ -41,9 +41,8 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 	version := req.ReadString()
 	//1、临时读取buffer数据，排除版本号，将数据转发center
 	oldPos := req.ReadPos
-	gameName := req.ReadString()
-	var gameSvrId int
-	if conf.Hand_Pick_GameSvr {
+	gameName, gameSvrId := req.ReadString(), 0
+	if conf.HandPick_GameSvr {
 		gameSvrId = req.ReadInt() //若手选区服则由客户端上报
 	}
 	account := req.ReadString()
@@ -54,12 +53,11 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 	//2、同步转至center验证账号信息，取得accountId、gameInfo
 	if ok, accountId, gameInfo2 := accountLogin2(centerSvrId, req, ack); ok {
 		//3、确定gameSvrId，处理gameInfo
-		accountLogin3(&gameSvrId, &gameInfo2, accountId, version, gameName, centerSvrId)
-		if gameSvrId <= 0 {
-			ack.WriteUInt16(err.None_free_game_server)
-		} else {
+		if errCode := accountLogin3(&gameSvrId, &gameInfo2, accountId, version, gameName, centerSvrId); errCode == err.Success {
 			//4、登录成功，设置各类信息，回复client待连接的节点(gateway或game)
 			accountLogin4(accountId, gameSvrId, ack)
+		} else {
+			ack.WriteUInt16(errCode)
 		}
 	}
 }
@@ -87,23 +85,32 @@ func accountLogin2(centerSvrId int, req, ack *common.NetPack) (_ok bool, _aid ui
 	}
 	return
 }
-func accountLogin3(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, version, gameName string, centerSvrId int) {
-	if !conf.Hand_Pick_GameSvr {
+func accountLogin3(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, version, gameName string, centerSvrId int) uint16 {
+	if !conf.HandPick_GameSvr {
 		//选取gameSvrId：若账户未绑定游戏服，自动选取空闲节点，并绑定到账号上
-		if *gameSvrId = pInfo.GameSvrId; *gameSvrId == 0 {
-			if *gameSvrId = GetFreeGameSvr(version); *gameSvrId > 0 {
+		if *gameSvrId = pInfo.GameSvrId; *gameSvrId <= 0 {
+			if *gameSvrId = GetFreeGameSvr(version); *gameSvrId <= 0 {
+				return err.None_free_game_server
+			} else {
+				errCode := err.Unknow_error
 				netConfig.CallRpcCenter(centerSvrId, enum.Rpc_center_set_game_info, func(buf *common.NetPack) {
 					buf.WriteUInt32(accountId)
 					buf.WriteString(gameName)
 					pInfo.GameSvrId = *gameSvrId % 10000
 					pInfo.LoginSvrId = meta.G_Local.SvrID % 10000
 					pInfo.DataToBuf(buf)
-				}, nil)
+				}, func(backBuf *common.NetPack) {
+					errCode = backBuf.ReadUInt16()
+				})
+				return errCode
 			}
-			return
 		}
 	}
-	*gameSvrId = ShuntGameSvr(version, *gameSvrId)
+	if *gameSvrId = ShuntGameSvr(version, *gameSvrId); *gameSvrId <= 0 {
+		return err.None_free_game_server
+	} else {
+		return err.Success
+	}
 }
 func accountLogin4(accountId uint32, gameSvrId int, ack *common.NetPack) {
 	//登录成功，回复client待连接的节点(gateway或game)

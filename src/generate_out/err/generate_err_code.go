@@ -40,5 +40,5 @@ const ( //the top 100 are reserved for system
 	Already_get_it uint16 = 129
 	Pf_id_not_match uint16 = 130
 	LoginSvr_not_match uint16 = 131
-	
+	GameInfo_set_fail uint16 = 132
 )

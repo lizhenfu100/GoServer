@@ -82,7 +82,7 @@ func (self *TCPServer) _HandleAcceptConn(conn net.Conn) {
 	}
 	connId := binary.LittleEndian.Uint32(buf[2:])
 	gamelog.Debug("_HandleAcceptConn: %d", connId)
-
+	//FIXME：IP黑/白名单
 	conn.SetReadDeadline(time.Time{}) //后续无超时限制
 
 	if connId > 0 {
