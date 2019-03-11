@@ -56,7 +56,7 @@ func InitWithUser(ip string, port uint16, dbname, username, password string) {
 		panic("Mongodb Run Failed:" + err.Error())
 	}
 
-	go _DBProcess()
+	go _loop()
 	_init_inc_ids()
 }
 func DataBase() *mgo.Database { return g_database }

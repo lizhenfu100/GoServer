@@ -48,3 +48,18 @@ type Query_order_ack struct {
 		Can_send    int    `json:"can_send"`    //1能发货
 	} `json:"order"` //只有retcode是0才会有值，json
 }
+type Order_unfinished_ack struct {
+	Orders []UnfinishedOrder `json:"orders"`
+}
+type UnfinishedOrder struct {
+	Order_id       string `json:"order_id"`
+	Third_order_id string `json:"third_order_id"`
+	Item_id        int    `json:"item_id"`     //物品id
+	Item_name      string `json:"item_name"`   //物品名（中文需要urlencode）
+	Item_count     int    `json:"item_count"`  //物品数量
+	Item_price     int    `json:"item_price"`  //物品价格（单位是分）
+	Total_price    int    `json:"total_price"` //物品总价格（单位是分）
+	Currency       string `json:"currency"`    //货币（在大陆，直接填RMB即可）
+	Status         int    `json:"status"`      //1成功 0失败
+	Can_send       int    `json:"can_send"`    //1能发货
+}

@@ -81,15 +81,8 @@ func ConfirmOrder(ptr *TOrderInfo) {
 	dbmgo.UpdateId(KDBTable, ptr.Order_id, bson.M{"$set": bson.M{"can_send": 0}})
 	g_order_map.Delete(ptr.Order_id)
 }
-func DeleteTimeOutOrder() { //删除内存中滞留一天的订单
-	timenow := time.Now().Unix()
-	g_order_map.Range(func(k, v interface{}) bool {
-		if timenow-v.(*TOrderInfo).Time > 24*3600 {
-			g_order_map.Delete(k)
-		}
-		return true
-	})
-}
+func OrderRange(f func(k, v interface{}) bool) { g_order_map.Range(f) }
+
 func InitDB() {
 	now := time.Now().Unix()
 	//删除超过7天的无效订单
@@ -112,4 +105,14 @@ func InitDB() {
 			DeleteTimeOutOrder()
 		}
 	}()
+}
+func DeleteTimeOutOrder() { //删除内存中滞留一天的订单(完成的、无效的)
+	timenow := time.Now().Unix()
+	g_order_map.Range(func(k, v interface{}) bool {
+		p := v.(*TOrderInfo)
+		if p.Can_send == 0 && timenow-p.Time > 24*3600 {
+			g_order_map.Delete(k)
+		}
+		return true
+	})
 }

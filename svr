@@ -4,51 +4,54 @@ ulimit -c unlimited #设置core大小为无限
 
 root=~/diner
 passwd="123123"
-slave_src=""        #从库的主DB地址
-daemon=0
+
+#从库的主DB地址 192.168.1.111:27017
+masterAddr=""
+
+#db的对外ip，默认本地，其它机器不能访问
+db_ip="127.0.0.1"
 
 Init() {
     # 构建配置环境，连接csv、ThirdParty等
+    mkdir -p ~/bin $root/bin/db $root/bin/csv $root/bin/net_file
     ln -s $root/svr ~/bin/svr
-    mkdir -p $root/bin/db
 }
 InitDB() {
-MongoDB='mongo'
-$MongoDB <<EOF
+mongo $db_ip <<EOF
 
-use admin;
-db.createUser({user:"root",pwd:"zhoumf233*",roles:["root"]});
-db.auth("root","zhoumf233*");
+use admin
+db.createUser({user:"root",pwd:"zhoumf233*",roles:["root"]})
+db.auth("root","zhoumf233*")
 db.createUser({user:"repl",pwd:"db#233*",roles:[{role:"dbOwner", db:"local"}]})
 
-use account;
-db.createUser({user:"chillyroom",pwd:"db#233*",roles:["readWrite"]});
+use account
+db.createUser({user:"chillyroom",pwd:"db#233*",roles:["readWrite"]})
 db.Account.ensureIndex({"name":1},{"unique":true})
 db.Account.ensureIndex({"bindinfo.phone":1})
 db.Account.ensureIndex({"bindinfo.email":1})
 
-use sdk;
-db.createUser({user:"chillyroom",pwd:"db#233*",roles:["readWrite"]});
+use sdk
+db.createUser({user:"chillyroom",pwd:"db#233*",roles:["readWrite"]})
 
-use save;
-db.createUser({user:"chillyroom",pwd:"db#233*",roles:["readWrite"]});
-db.Save.ensureIndex({"mac":1},{"unique":true})
+use save
+db.createUser({user:"chillyroom",pwd:"db#233*",roles:["readWrite"]})
 
-use diner;
-db.createUser({user:"chillyroom",pwd:"db#233*",roles:["readWrite"]});
-db.Player.ensureIndex({"accountid":1},{"unique":true})
+use diner
+db.createUser({user:"chillyroom",pwd:"db#233*",roles:["readWrite"]})
 
-use friend;
-db.createUser({user:"chillyroom",pwd:"db#233*",roles:["readWrite"]});
+use friend
+db.createUser({user:"chillyroom",pwd:"db#233*",roles:["readWrite"]})
 
-use other;
-db.createUser({user:"chillyroom",pwd:"db#233*",roles:["readWrite"]});
+use login
+db.createUser({user:"chillyroom",pwd:"db#233*",roles:["readWrite"]})
 
-exit;
+exit
 EOF
 }
 
 # --------------------------------------------------------------------------
+daemon=0
+
 RunSvr() {
     # rm -f core
     # rm -rf ./log
@@ -70,14 +73,6 @@ Cross() {
     cd $root/bin
     RunSvr cross
 }
-Game() {
-    cd $root/bin
-    RunSvr game
-}
-Gateway() {
-    cd $root/bin
-    RunSvr gateway
-}
 Friend() {
     cd $root/bin
     RunSvr friend
@@ -86,17 +81,25 @@ Sdk() {
     cd $root/bin
     RunSvr sdk
 }
+File() {
+    cd $root/bin
+    RunSvr file
+}
+Gateway() {
+    cd $root/bin
+    RunSvr gateway
+}
 Save() {
     cd $root/bin
-    RunSvr save
+    RunSvr save -id 1
+}
+Game() {
+    cd $root/bin
+    RunSvr game -id 1
 }
 Login() {
     cd $root/bin
     RunSvr login -id 1
-}
-File() {
-    cd $root/bin
-    RunSvr file
 }
 Zookeeper() {
     cd $root/bin
@@ -111,48 +114,50 @@ Zookeeper() {
 
 # --------------------------------------------------------------------------
 DB() {
-    nohup echo $passwd | sudo -S mongod --auth --dbpath $root/bin/db >/dev/null 2>$root/db.out &
+    nohup echo $passwd | sudo -S mongod --bind_ip $db_ip --auth --dbpath $root/bin/db >/dev/null 2>$root/db.out &
 }
 DB_Master() {
-    nohup echo $passwd | sudo -S mongod --master --oplogSize 4096 --auth --dbpath $root/bin/db >/dev/null 2>$root/db.out &
+    nohup echo $passwd | sudo -S mongod --bind_ip $db_ip --master --oplogSize 4096 --auth --dbpath $root/bin/db >/dev/null 2>$root/db.out &
 }
 DB_Slave() {
-    nohup echo $passwd | sudo -S mongod --slave --source $slave_src --auth --dbpath $root/bin/db >/dev/null 2>$root/db.out &
+    nohup echo $passwd | sudo -S mongod --bind_ip $db_ip --slave --source $masterAddr --auth --dbpath $root/bin/db >/dev/null 2>$root/db.out &
 }
 
 # --------------------------------------------------------------------------
 KillAll() {
-    killall -9 svr_battle
-    killall -9 svr_center
-    killall -9 svr_cross
-    killall -9 svr_game
-    killall -9 svr_gateway
-    killall -9 svr_friend
-    killall -9 svr_sdk
-    killall -9 svr_save
-    killall -9 svr_login
-    killall -9 svr_file
-    killall -9 zookeeper
+    killall svr_battle
+    killall svr_center
+    killall svr_cross
+    killall svr_game
+    killall svr_gateway
+    killall svr_friend
+    killall svr_sdk
+    killall svr_save
+    killall svr_login
+    killall svr_file
+    killall zookeeper
 }
 RunOne() {
     case $1 in
-        "db")           DB;;
-        "dbMaster")     DB_Master;;
-        "dbSlave")      DB_Slave;;
-        1|"zoo")        Zookeeper;;
-        2|"center")     Center;;
-        3|"cross")      Cross;;
-        4|"login")      Login;;
-        5|"game")       Game;;
-        6|"battle")     Battle;;
-        7|"gateway")    Gateway;;
-        8|"friend")     Friend;;
-        "sdk")          Sdk;;
-        "save")         Save;;
-        "file")         File;;
-        "kill")         KillAll;;
-        "init")         Init;;
-        "initdb")       InitDB;;
+        "db")       DB;;
+        "dbMaster") DB_Master;;
+        "dbSlave")  DB_Slave;;
+        "mongo")    mongo $db_ip;;
+        "csv")      vim $root/bin/csv/conf_net.csv;;
+        "zoo")      Zookeeper;;
+        "center")   Center;;
+        "cross")    Cross;;
+        "login")    Login;;
+        "game")     Game;;
+        "battle")   Battle;;
+        "gateway")  Gateway;;
+        "friend")   Friend;;
+        "sdk")      Sdk;;
+        "save")     Save;;
+        "file")     File;;
+        "kill")     KillAll;;
+        "init")     Init;;
+        "initdb")   InitDB;;
         *) echo "Input a key, like:\n svr [-d] game \n svr [-d] 1";;
     esac
 }

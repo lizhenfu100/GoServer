@@ -70,12 +70,13 @@ func Http_query_order(w http.ResponseWriter, r *http.Request) {
 	//gamelog.Debug("%v", r.Form)
 
 	//! 创建回复
-	var ack msg.Query_order_ack
-	ack.Retcode = -1
+	ack := msg.Retcode_ack{Retcode: -1}
+	var pResult interface{}
+	pResult = &ack
 	defer func() {
-		b, _ := json.Marshal(&ack)
+		b, _ := json.Marshal(pResult)
 		w.Write(b)
-		gamelog.Debug("ack: %v", ack)
+		gamelog.Debug("ack: %v", pResult)
 	}()
 
 	order := msg.FindOrder(r.Form.Get("order_id"))
@@ -89,9 +90,10 @@ func Http_query_order(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if order.Status == 1 && order.Can_send == 1 {
-		ack.Retcode = 0
+		stOk := msg.Query_order_ack{}
 		//回复订单信息
-		common.CopySameField(&ack.Order, order)
+		common.CopySameField(&stOk.Order, order)
+		pResult = &stOk
 	}
 }
 
@@ -119,6 +121,30 @@ func Http_confirm_order(w http.ResponseWriter, r *http.Request) {
 	} else {
 		ack.Retcode = -2
 	}
+}
+
+func Http_query_order_unfinished(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	third := r.Form.Get("third_account")
+
+	//! 创建回复
+	var ack msg.Order_unfinished_ack
+	defer func() {
+		b, _ := json.Marshal(&ack)
+		w.Write(b)
+		gamelog.Debug("ack: %v", ack)
+	}()
+
+	var order msg.UnfinishedOrder
+	msg.OrderRange(func(k, v interface{}) bool {
+		p := v.(*msg.TOrderInfo)
+		if p.Third_account == third && p.Can_send == 1 {
+			common.CopySameField(&order, p)
+			ack.Orders = append(ack.Orders, order)
+		}
+		return true
+	})
 }
 
 // --------------------------------------------------------------------------

@@ -30,9 +30,9 @@ type action struct {
 	pData  interface{} //数据，可bson.M指定更新字段，详见dbmgo.go头部注释
 }
 
-func _DBProcess() {
-	var pColl *mgo.Collection
+func _loop() {
 	var err error
+	var pColl *mgo.Collection
 	for v := range _actions {
 		if v.table != _last_table {
 			pColl = g_database.C(v.table)
