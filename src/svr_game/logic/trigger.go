@@ -2,12 +2,12 @@ package logic
 
 import (
 	"fmt"
-	"svr_game/logic/player"
+	"svr_game/player"
 	"time"
 )
 
 var (
-	G_TriggerCsv  map[int]*TriggerCsv
+	G_TriggerCsv  = make(map[int]*TriggerCsv)
 	g_trigger_fun = []func(*player.TPlayer, int, int) bool{
 		nil,          //0
 		_during_time, //1

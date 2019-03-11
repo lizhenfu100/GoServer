@@ -11,9 +11,7 @@ import (
 	"netConfig/meta"
 )
 
-const (
-	kModuleName = "file"
-)
+const kModuleName = "file"
 
 func main() {
 	var svrId int

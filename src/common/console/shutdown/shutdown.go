@@ -12,7 +12,7 @@
 * @ author zhoumf
 * @ date 2018-12-19
 ***********************************************************************/
-package logic
+package shutdown
 
 import (
 	"dbmgo"
@@ -22,8 +22,8 @@ import (
 	"tcp"
 )
 
-func Shutdown(args []string) {
-	gamelog.Info("Begin Shutdown")
+func Default(args []string) {
+	gamelog.Info("Begin Default")
 	tcp.CloseServer()
 	http.CloseServer()
 

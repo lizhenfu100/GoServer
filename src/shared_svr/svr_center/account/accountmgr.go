@@ -13,9 +13,11 @@ var (
 )
 
 func InitDB() {
-	//只载入一个月内登录过的
-	var list []TAccount
-	dbmgo.FindAll(kDBTable, bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - 30*24*3600}}, &list)
+	G_WhiteList.InitDB()
+
+	return              //人太多，启动过慢，不批量载入了
+	var list []TAccount //只载入近期登录过的
+	dbmgo.FindAll(KDBTable, bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - 7*24*3600}}, &list)
 	for i := 0; i < len(list); i++ {
 		list[i].init()
 		AddCache(&list[i])
@@ -24,7 +26,7 @@ func InitDB() {
 }
 func AddNewAccount(name, passwd string) *TAccount {
 	account := _NewAccount()
-	if dbmgo.Find(kDBTable, "name", name, account) {
+	if ok, _ := dbmgo.Find(KDBTable, "name", name, account); ok {
 		return nil
 	}
 	account.Name = name
@@ -32,7 +34,7 @@ func AddNewAccount(name, passwd string) *TAccount {
 	account.CreateTime = time.Now().Unix()
 	account.AccountID = dbmgo.GetNextIncId("AccountId")
 
-	if dbmgo.InsertSync(kDBTable, account) {
+	if dbmgo.InsertSync(KDBTable, account) {
 		AddCache(account)
 		return account
 	}
@@ -43,7 +45,7 @@ func GetAccountByName(name string) *TAccount {
 		return v.(*TAccount)
 	} else {
 		account := _NewAccount()
-		if dbmgo.Find(kDBTable, "name", name, account) {
+		if ok, _ := dbmgo.Find(KDBTable, "name", name, account); ok {
 			AddCache(account)
 			return account
 		}
@@ -55,7 +57,7 @@ func GetAccountById(accountId uint32) *TAccount {
 		return v.(*TAccount)
 	} else {
 		account := _NewAccount()
-		if dbmgo.Find(kDBTable, "_id", accountId, account) {
+		if ok, _ := dbmgo.Find(KDBTable, "_id", accountId, account); ok {
 			AddCache(account)
 			return account
 		}
@@ -63,7 +65,7 @@ func GetAccountById(accountId uint32) *TAccount {
 	return nil
 }
 
-// -------------------------------------
+// ------------------------------------------------------------
 //! 辅助函数
 func AddCache(account *TAccount) {
 	g_name_cache.Store(account.Name, account)

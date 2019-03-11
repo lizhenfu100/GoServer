@@ -8,7 +8,7 @@ import (
 )
 
 //填充同名field，将url中的参数(小写)解析为结构体
-func Unmarshal(ptr interface{}, form url.Values) {
+func CopyForm(ptr interface{}, form url.Values) {
 	val, typ := reflect.ValueOf(ptr).Elem(), reflect.TypeOf(ptr).Elem()
 	for i := 0; i < typ.NumField(); i++ {
 		if val.Field(i).CanSet() {

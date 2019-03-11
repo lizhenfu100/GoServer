@@ -30,6 +30,7 @@ const (
 	kFileDirRoot   = "net_file/"
 	kFileDirPlayer = kFileDirRoot + "upload/"
 	kFileDirPatch  = kFileDirRoot + "patch/"
+	kMaxUploadSize = 1024 * 1024 * 20
 )
 
 var (
@@ -67,6 +68,12 @@ func Http_upload_player_file(w http.ResponseWriter, r *http.Request) {
 	_upload_file(w, r, kFileDirPlayer)
 }
 func _upload_file(w http.ResponseWriter, r *http.Request, baseDir string) string {
+	r.Body = http.MaxBytesReader(w, r.Body, kMaxUploadSize)
+	if err := r.ParseMultipartForm(kMaxUploadSize); err != nil {
+		gamelog.Error(err.Error())
+		return ""
+	}
+
 	upfile, handler, err := r.FormFile("file")
 	if err != nil {
 		gamelog.Error(err.Error())

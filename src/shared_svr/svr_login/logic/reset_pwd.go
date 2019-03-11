@@ -3,20 +3,16 @@ package logic
 import (
 	"common"
 	"common/format"
-	"fmt"
 	"generate_out/err"
 	"generate_out/rpc/enum"
 	"net/http"
 	"netConfig"
-	"time"
 )
 
 func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	name := q.Get("name")
 	passwd := q.Get("passwd")
-
-	//FIXME:zhoumf: 限制同ip调用频率
 
 	//! 创建回复
 	ack := "Error: unknown"
@@ -44,8 +40,4 @@ func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) {
 			ack = "Error: Account_without_bind_info"
 		}
 	})
-}
-
-func Http_timestamp(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(fmt.Sprintf("%d", time.Now().Unix())))
 }

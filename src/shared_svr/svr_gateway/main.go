@@ -13,9 +13,7 @@ import (
 	"shared_svr/zookeeper/component"
 )
 
-const (
-	kModuleName = "gateway"
-)
+const kModuleName = "gateway"
 
 func main() {
 	var svrId int

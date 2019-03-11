@@ -42,16 +42,10 @@ func (self *ByteBuffer) Clear() {
 }
 
 //! Write
-func (self *ByteBuffer) WriteByte(v byte) {
-	self.buf = append(self.buf, v)
-}
-func (self *ByteBuffer) WriteInt(v int) { self.WriteInt32(int32(v)) }
-func (self *ByteBuffer) WriteInt8(v int8) {
-	self.buf = append(self.buf, byte(v))
-}
-func (self *ByteBuffer) WriteUInt8(v uint8) {
-	self.buf = append(self.buf, byte(v))
-}
+func (self *ByteBuffer) WriteByte(v byte)   { self.buf = append(self.buf, v) }
+func (self *ByteBuffer) WriteInt(v int)     { self.WriteInt32(int32(v)) }
+func (self *ByteBuffer) WriteInt8(v int8)   { self.buf = append(self.buf, byte(v)) }
+func (self *ByteBuffer) WriteUInt8(v uint8) { self.buf = append(self.buf, byte(v)) }
 func (self *ByteBuffer) WriteInt16(v int16) {
 	self.buf = append(self.buf, byte(v), byte(v>>8))
 }
@@ -78,17 +72,21 @@ func (self *ByteBuffer) WriteString(v string) {
 	self.WriteUInt16(uint16(len(bytes)))
 	self.WriteBuf(bytes)
 }
-func (self *ByteBuffer) WriteBuf(v []byte) {
+func (self *ByteBuffer) WriteBuf(v []byte) { self.buf = append(self.buf, v...) }
+func (self *ByteBuffer) WriteLenBuf(v []byte) {
+	self.WriteUInt16(uint16(len(v)))
 	self.buf = append(self.buf, v...)
+}
+func (self *ByteBuffer) ReadLenBuf() []byte {
+	cnt := self.ReadUInt16()
+	old := self.ReadPos
+	self.ReadPos += int(cnt)
+	return self.buf[old:self.ReadPos]
 }
 
 //! Read
 func (self *ByteBuffer) readableBytes() int { //剩余多少字节没读
 	return len(self.buf) - self.ReadPos
-}
-func (self *ByteBuffer) ReadFloat() (ret float32) {
-	bits := self.ReadUInt32()
-	return math.Float32frombits(bits)
 }
 func (self *ByteBuffer) ReadString() (ret string) {
 	length := int(self.ReadUInt16())
@@ -165,6 +163,10 @@ func (self *ByteBuffer) ReadUInt64() (ret uint64) {
 		self.ReadPos += 8
 	}
 	return
+}
+func (self *ByteBuffer) ReadFloat() (ret float32) {
+	bits := self.ReadUInt32()
+	return math.Float32frombits(bits)
 }
 
 //! Set

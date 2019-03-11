@@ -39,29 +39,15 @@ import (
 	"conf"
 	"gamelog"
 	"generate_out/rpc/enum"
-	"io"
-	"io/ioutil"
 	"net/http"
+	"strings"
 	"svr_client/test/qps"
 )
 
-var G_HandleFunc [enum.RpcEnumCnt]func(req, ack *common.NetPack)
-
-func ReadRequest(r *http.Request) (req *common.NetPack) {
-	var err error
-	var buf []byte
-	if r.ContentLength > 0 {
-		buf = make([]byte, r.ContentLength)
-		_, err = io.ReadFull(r.Body, buf)
-	} else {
-		buf, err = ioutil.ReadAll(r.Body)
-	}
-	if err != nil {
-		gamelog.Error("ReadBody: %s", err.Error())
-		return nil
-	}
-	return common.NewNetPack(buf)
-}
+var (
+	G_HandleFunc [enum.RpcEnumCnt]func(req, ack *common.NetPack)
+	G_Intercept  func(req, ack *common.NetPack, clientIp string) bool
+)
 
 // ------------------------------------------------------------
 //! system rpc
@@ -78,22 +64,27 @@ func CallRpc(addr string, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 }
 func RegHandleRpc() { http.HandleFunc("/client_rpc", _HandleRpc) }
 func _HandleRpc(w http.ResponseWriter, r *http.Request) {
-	//! 接收信息
-	req := ReadRequest(r)
+	req := ReadRequest(r) //! 接收信息
 	if req == nil {
 		return
 	}
 	defer req.Free()
 
-	//! 创建回复
-	ack := common.NewNetPackCap(128)
-	defer ack.Free()
+	ack := common.NewNetPackCap(128) //! 创建回复
+	defer func() {
+		compress.CompressTo(ack.Data(), w)
+		ack.Free()
+	}()
 
 	if conf.Open_Calc_QPS {
 		qps.AddQps()
 	}
 
 	msgId := req.GetOpCode()
+	if msgId >= enum.RpcEnumCnt {
+		gamelog.Error("Msg(%d) Not Regist", msgId)
+		return
+	}
 	gamelog.Debug("HttpMsg:%d, len:%d", msgId, req.Size())
 	//defer func() {//库已经有recover了，见net/http/server.go:1918
 	//	if r := recover(); r != nil {
@@ -101,9 +92,15 @@ func _HandleRpc(w http.ResponseWriter, r *http.Request) {
 	//	}
 	//	ack.Free()
 	//}()
+	if G_Intercept != nil { //拦截器
+		ip := strings.Split(r.RemoteAddr, ":")[0]
+		if G_Intercept(req, ack, ip) {
+			gamelog.Info("Intercept msg:%d ip:%s", msgId, ip)
+			return
+		}
+	}
 	if handler := G_HandleFunc[msgId]; handler != nil {
 		handler(req, ack)
-		compress.CompressTo(ack.Data(), w)
 	} else {
 		gamelog.Error("Msg(%d) Not Regist", msgId)
 	}
@@ -112,7 +109,7 @@ func _HandleRpc(w http.ResponseWriter, r *http.Request) {
 // ------------------------------------------------------------
 //! player rpc
 type PlayerRpc struct {
-	Url       string
+	url       string
 	AccountId uint32
 }
 
@@ -128,7 +125,7 @@ func (self *PlayerRpc) CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack
 	req.SetOpCode(rid)
 	req.SetReqIdx(self.AccountId)
 	sendFun(req)
-	if buf := PostReq(self.Url, req.Data()); buf != nil {
+	if buf := PostReq(self.url, req.Data()); buf != nil {
 		if ack := common.NewNetPack(compress.Decompress(buf)); ack != nil {
 			if recvFun != nil {
 				recvFun(ack)

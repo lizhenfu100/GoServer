@@ -1,7 +1,9 @@
 /***********************************************************************
-* @ 使用第三方服务转发Email
+* @ 使用第三方服务转发email
 * @ brief
 	、应交由固定地区的节点来转发，如center，否则容易被第三方当成异地登录，临时封禁~囧
+
+	、国际服gmail，国内qq，天朝用gmail转发超时严重~真是蛋疼啊
 
 	gmail：
 		1、用户设置 - 转发和POP/IMAP - POP下载 - 对从现在起收到的邮件启用POP
@@ -16,29 +18,27 @@
 package email
 
 import (
-	"gamelog"
+	"conf"
 	"gopkg.in/gomail"
-)
-
-const (
-	//kUser        = "734688714@qq.com"
-	//kPasswd      = "ezblhqfudwfabead"
-	//kHost, kPort = "smtp.qq.com", 465
-	kUser        = "3workman@gmail.com"
-	kPasswd      = "zmf890104"
-	kHost, kPort = "smtp.gmail.com", 465
 )
 
 var (
 	g_msg    = gomail.NewMessage()
-	g_dialer = gomail.NewDialer(kHost, kPort, kUser, kPasswd)
+	g_dialer *gomail.Dialer
 )
 
-func SendMail(subject, target, body string) {
+func SendMail(subject, target, body string) error {
+	if g_dialer == nil {
+		g_dialer = gomail.NewDialer(
+			conf.SvrCsv.EmailHost,
+			conf.SvrCsv.EmailPort,
+			conf.SvrCsv.EmailUser,
+			conf.SvrCsv.EmailPasswd)
+	}
 	g_msg.Reset()
 	msg := g_msg
 
-	msg.SetAddressHeader("From", kUser, "ChillyRoom")
+	msg.SetAddressHeader("From", g_dialer.Username, "ChillyRoom")
 	msg.SetHeader("To", target)
 	//msg.SetHeader("Cc" /*抄送*/, "xxxx@foxmail.com")
 	//msg.SetHeader("Bcc" /*暗送*/, "xxxx@gmail.com")
@@ -48,7 +48,5 @@ func SendMail(subject, target, body string) {
 
 	//msg.Attach("我是附件")
 
-	if err := g_dialer.DialAndSend(msg); err != nil {
-		gamelog.Error("SendMail: %s\nerr: %s", target, err.Error())
-	}
+	return g_dialer.DialAndSend(msg)
 }

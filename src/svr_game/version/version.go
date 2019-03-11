@@ -25,11 +25,11 @@ import (
 func Upgrade(pid uint32, oldVersion, newVersion string) {
 	//1、找到 [old, new) 两者之间的版本目录
 	oldIdx, newIdx := 0, 0
-	for k, v := range g_api {
-		if v.version == oldVersion {
-			oldIdx = k
-		} else if v.version == newVersion {
-			newIdx = k
+	for i, v := range g_api {
+		if oldVersion >= v.version {
+			oldIdx = i
+		} else if newVersion >= v.version {
+			newIdx = i
 		}
 	}
 	//2、依次执行升级接口（不包括new版本）

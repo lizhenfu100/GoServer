@@ -26,9 +26,7 @@ import (
 	"shared_svr/zookeeper/component"
 )
 
-const (
-	kModuleName = "friend"
-)
+const kModuleName = "friend"
 
 func main() {
 	var svrId int

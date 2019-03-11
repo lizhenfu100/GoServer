@@ -13,9 +13,7 @@ import (
 	"svr_cross/logic"
 )
 
-const (
-	kModuleName = "cross"
-)
+const kModuleName = "cross"
 
 func main() {
 	var svrId int

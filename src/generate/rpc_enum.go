@@ -11,6 +11,9 @@
 	、编辑 generate_rpc_enum.go 删除尾部其它枚举，再次生成即可
 	、开头几个 Rpc 是系统保留的，供底层使用，不要删除
 
+* @ 预定义的模板全局函数
+	、{{index x 1 2 3}} 返回x[1][2][3]，x必须是一个map、slice或数组
+
 * @ author zhoumf
 * @ date 2017-10-17
 ***********************************************************************/
@@ -82,7 +85,7 @@ func IsEnumIn(enums []std.KeyPair, name string) bool {
 // -------------------------------------
 // 生成枚举代码
 func generateRpcEnum(funcs []string) bool {
-	enums, enumCnt := getOldRpc() //旧枚举，追加新增入后重新生成
+	enums, enumCnt := getOldRpc() //旧枚举，追加新的重新生成
 	haveNewEnum := false
 	for _, name := range funcs {
 		if !IsEnumIn(enums, name) {

@@ -5,19 +5,19 @@ import (
 	"common/file"
 	"conf"
 	"dbmgo"
+	"encoding/json"
 	"flag"
+	"fmt"
 	"gamelog"
 	_ "generate_out/rpc/svr_game"
 	"netConfig"
 	"netConfig/meta"
 	"shared_svr/zookeeper/component"
+	conf2 "svr_game/conf"
 	"svr_game/logic"
-	"svr_game/logic/player"
 )
 
-const (
-	kModuleName = "game"
-)
+const kModuleName = "game"
 
 func main() {
 	var svrId int
@@ -34,7 +34,6 @@ func main() {
 	//设置mongodb的服务器地址
 	pMeta := meta.GetMeta("db_game", svrId)
 	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
-	player.InitDB()
 
 	component.RegisterToZookeeper()
 
@@ -44,11 +43,16 @@ func main() {
 func InitConf() {
 	var metaCfg []meta.Meta
 	file.G_Csv_Map = map[string]interface{}{
-		"conf_net": &metaCfg,
-		"conf_svr": &conf.SvrCsv,
+		"conf_net":   &metaCfg,
+		"conf_svr":   &conf.SvrCsv,
+		"game/const": &conf2.CsvConst,
 	}
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
 	console.Init()
 	console.RegShutdown(logic.Shutdown)
+
+	//展示重要配置数据
+	buf, _ := json.MarshalIndent(&conf2.CsvConst, "", "     ")
+	fmt.Println("CsvConst: ", string(buf))
 }

@@ -212,13 +212,13 @@ func _Rpc_regist(req, ack *common.NetPack, conn *TCPConn) {
 	if isRegist {
 		g_reg_conn_map.Store(std.KeyPair{pMeta.Module, pMeta.SvrID}, conn)
 		meta.AddMeta(pMeta)
-		gamelog.Info("RegistToSvr: %v", pMeta)
+		fmt.Println("RegistToSvr: ", pMeta)
 	}
 }
 func _Rpc_unregist(req, ack *common.NetPack, conn *TCPConn) {
 	if pMeta, ok := conn.UserPtr.(*meta.Meta); ok {
 		if pConn := FindRegModule(pMeta.Module, pMeta.SvrID); pConn == nil || pConn.IsClose() {
-			gamelog.Info("UnRegist Svr: %v", pMeta)
+			fmt.Println("UnRegist Svr: ", pMeta)
 			meta.DelMeta(pMeta.Module, pMeta.SvrID)
 			g_reg_conn_map.Delete(std.KeyPair{pMeta.Module, pMeta.SvrID})
 		}

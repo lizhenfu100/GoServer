@@ -6,6 +6,8 @@ import (
 	"sync/atomic"
 )
 
+// 若goroutine会执行很长时间，且不是通过io阻塞或channel来同步，就需要主动调用Gosched()让出CPU
+
 // https://zhuanlan.zhihu.com/p/23863915
 // https://github.com/yireyun/go-queue
 type SafeQueue struct { //lock free queue

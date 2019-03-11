@@ -23,10 +23,9 @@ func CalcSign(s string) string {
 }
 
 // ------------------------------------------------------------
-//
 type RSA struct {
-	PrivateKey *rsa.PrivateKey
-	PublicKey  *rsa.PublicKey
+	PrivateKey *rsa.PrivateKey //私钥，自己保留：给数据签名，产生sign发给用户
+	PublicKey  *rsa.PublicKey  //公钥，发给用户：验证数据是否来自公钥发放者
 }
 
 func (this *RSA) Encrypt(plaintext []byte) ([]byte, error) {
@@ -49,7 +48,6 @@ func (this *RSA) Verify(src []byte, sign []byte, hash crypto.Hash) error {
 }
 
 // ------------------------------------------------------------
-//
 func NewRSA(privateKey, publicKey []byte) (ret *RSA, err error) {
 	ret = &RSA{}
 	if err == nil && privateKey != nil { //生成私钥

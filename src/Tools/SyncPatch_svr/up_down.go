@@ -27,8 +27,7 @@ import (
 )
 
 const (
-	kFileDirRoot   = "game/"
-	kFileDirPatch  = kFileDirRoot
+	kFileDirPatch  = "game/"
 )
 
 var (

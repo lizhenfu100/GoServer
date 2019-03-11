@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gamelog"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"netConfig/meta"
@@ -35,6 +36,22 @@ func NewHttpServer(port uint16, module string, svrId int) error {
 }
 func CloseServer() { _svr.Close() }
 
+func ReadRequest(r *http.Request) (req *common.NetPack) {
+	var err error
+	var buf []byte
+	if r.ContentLength > 0 { //http读大数据，r.ContentLength是-1
+		buf = make([]byte, r.ContentLength)
+		_, err = io.ReadFull(r.Body, buf)
+	} else {
+		buf, err = ioutil.ReadAll(r.Body)
+	}
+	if r.Body.Close(); err != nil {
+		gamelog.Error("ReadBody: %s", err.Error())
+		return nil
+	}
+	return common.NewNetPack(buf)
+}
+
 // ------------------------------------------------------------
 //! 模块注册
 func _reg_to_svr(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +64,7 @@ func _reg_to_svr(w http.ResponseWriter, r *http.Request) {
 
 	meta.AddMeta(pMeta)
 	appendNetMeta(pMeta)
-	gamelog.Info("RegistToSvr: %v", pMeta)
+	fmt.Println("RegistToSvr: ", pMeta)
 }
 
 // ------------------------------------------------------------
@@ -68,7 +85,7 @@ func loadCacheNetMeta() {
 	for i := 0; i < len(records); i++ {
 		json.Unmarshal([]byte(records[i][0]), &metas[i])
 		meta.AddMeta(&metas[i])
-		gamelog.Info("loadCache: %v", &metas[i])
+		fmt.Println("load meta cache: ", metas[i])
 	}
 }
 func appendNetMeta(pMeta *meta.Meta) {

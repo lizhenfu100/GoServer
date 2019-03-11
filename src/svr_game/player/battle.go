@@ -2,9 +2,9 @@ package player
 
 import (
 	"common"
-	"conf"
 	"dbmgo"
 	"netConfig/meta"
+	"svr_game/conf"
 )
 
 const kDBBattle = "battle"
@@ -35,7 +35,7 @@ func (self *TBattleModule) InitAndInsert(player *TPlayer) {
 	self._InitTempData(player)
 }
 func (self *TBattleModule) LoadFromDB(player *TPlayer) {
-	if !dbmgo.Find(kDBBattle, "_id", player.PlayerID, self) {
+	if ok, _ := dbmgo.Find(kDBBattle, "_id", player.PlayerID, self); !ok {
 		self.InitAndInsert(player)
 	}
 	self._InitTempData(player)
@@ -55,14 +55,14 @@ func (self *TBattleModule) _InitTempData(player *TPlayer) {
 // ------------------------------------------------------------
 // -- API
 func (self *TBattleModule) AddExp(exp uint32) {
-	if exp > conf.SvrCsv.Exp_Once_Max {
-		exp = conf.SvrCsv.Exp_Once_Max
+	if exp > conf.CsvConst.Exp_Once_Max {
+		exp = conf.CsvConst.Exp_Once_Max
 	}
 	levelUpExp := uint32(0)
-	if int(self.Level) < len(conf.SvrCsv.Exp_LvUp) {
-		levelUpExp = conf.SvrCsv.Exp_LvUp[self.Level]
+	if int(self.Level) < len(conf.CsvConst.Exp_LvUp) {
+		levelUpExp = conf.CsvConst.Exp_LvUp[self.Level]
 	} else {
-		levelUpExp = conf.SvrCsv.Exp_LvUp_Max
+		levelUpExp = conf.CsvConst.Exp_LvUp_Max
 	}
 	if self.Exp += exp; self.Exp >= levelUpExp {
 		self.Exp -= levelUpExp
@@ -128,10 +128,10 @@ func Rpc_game_on_battle_end(req, ack *common.NetPack, this *TPlayer) {
 	//TODO:zhoumf: 特定动作加经验，比如连杀
 	exp := uint32(0)
 	if isWin {
-		exp = conf.SvrCsv.Exp_Win
+		exp = conf.CsvConst.Exp_Win
 		this.season.winStreak++
 	} else {
-		exp = conf.SvrCsv.Exp_Fail
+		exp = conf.CsvConst.Exp_Fail
 		this.season.winStreak = 0
 	}
 	score := this.season.calcScore(isWin, rank)

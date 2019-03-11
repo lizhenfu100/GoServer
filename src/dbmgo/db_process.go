@@ -1,6 +1,7 @@
 package dbmgo
 
 import (
+	"common/wechat"
 	"gamelog"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -52,8 +53,9 @@ func _DBProcess() {
 			_, err = pColl.RemoveAll(v.search)
 		}
 		if err != nil {
-			gamelog.Error("DBProcess Failed: op[%d] table[%s] search[%v], pData[%v], Error[%s]",
+			gamelog.Error("DBProcess Failed: op[%d] table[%s] search[%v], data[%v], Error[%s]",
 				v.optype, v.table, v.search, v.pData, err.Error())
+			wechat.SendMsg("DBProcess: " + err.Error())
 		}
 	}
 	_finished <- true

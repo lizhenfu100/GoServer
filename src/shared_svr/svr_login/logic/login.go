@@ -15,6 +15,9 @@
 * @ 分流节点（game连接同个db）
 	、常规节点的svrId四位数以内，分流节点是svrId+10000
 	、svrId%10000 即入库的节点id
+* @ 动态分流
+	、无zookeeper的架构，只能重启扩容
+	、取模方式的，不能动态分流，如：gateway、friend、game
 
 * @ author zhoumf
 * @ date 2018-3-19
@@ -106,7 +109,7 @@ func accountLogin3(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, 
 			}
 		}
 	}
-	if *gameSvrId = ShuntGameSvr(version, *gameSvrId); *gameSvrId <= 0 {
+	if *gameSvrId = ShuntGameSvr(version, *gameSvrId, accountId); *gameSvrId <= 0 {
 		return err.None_free_game_server
 	} else {
 		return err.Success
@@ -186,27 +189,23 @@ func Rpc_login_relay_to_center(req, ack *common.NetPack) {
 
 // ------------------------------------------------------------
 // 玩家从登录服取其它节点信息
-func Rpc_login_get_meta_list(req, ack *common.NetPack) {
-	module := req.ReadString() //game、save、file...
+func Rpc_login_get_game_list(req, ack *common.NetPack) {
 	version := req.ReadString()
 
-	ids := meta.GetModuleIDs(module, version)
+	ids := meta.GetModuleIDs("game", version)
 	sort.Ints(ids)
 	ack.WriteByte(byte(len(ids)))
 	for _, id := range ids {
-		p := meta.GetMeta(module, id)
+		p := meta.GetMeta("game", id)
 		ack.WriteInt(id)
 		ack.WriteString(p.SvrName)
 		ack.WriteString(p.OutIP)
 		ack.WriteUInt16(p.Port())
 
-		switch module { //模块节点的附带信息
-		case "game":
-			if v, ok := g_game_player_cnt.Load(id); ok {
-				ack.WriteInt32(v.(int32))
-			} else {
-				ack.WriteInt32(0)
-			}
+		if v, ok := g_game_player_cnt.Load(id); ok {
+			ack.WriteInt32(v.(int32))
+		} else {
+			ack.WriteInt32(0)
 		}
 	}
 }
@@ -229,19 +228,15 @@ func GetFreeGameSvr(version string) int {
 	}
 	return ret
 }
-func ShuntGameSvr(version string, svrId int) int { //选空闲的分流节点
-	ret, minCnt := -1, int32(999999)
-	ids := meta.GetModuleIDs("game", version)
-	for _, id := range ids {
+func ShuntGameSvr(version string, svrId int, accountId uint32) int {
+	_ids, ids := meta.GetModuleIDs("game", version), []int{}
+	for _, id := range _ids {
 		if id%10000 == svrId%10000 { //svrId%10000相同，视为分流节点
-			if v, ok := g_game_player_cnt.Load(id); ok {
-				if cnt := v.(int32); cnt < minCnt {
-					ret, minCnt = id, cnt
-				}
-			} else {
-				ret, minCnt = id, 0
-			}
+			ids = append(ids, id)
 		}
 	}
-	return ret
+	if length := uint32(len(ids)); length > 0 { //hash选择分流节点
+		return ids[accountId%length]
+	}
+	return -1
 }

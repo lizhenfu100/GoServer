@@ -51,7 +51,7 @@ func Rpc_friend_get_friend_list(req, ack *common.NetPack) {
 // - 辅助函数
 func FindWithDB(aid uint32) *TFriendModule {
 	ptr := new(TFriendModule)
-	if !dbmgo.Find(kDBTable, "_id", aid, ptr) {
+	if ok, _ := dbmgo.Find(kDBTable, "_id", aid, ptr); !ok {
 		dbmgo.Insert(kDBTable, ptr)
 	}
 	return ptr

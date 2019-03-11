@@ -84,7 +84,6 @@ func getRegPtr(fullName string) interface{} {
 	}
 	return nil
 }
-func ReloadCsv(csvName string) { LoadOneCsv(fmt.Sprintf("%s/csv/%s.csv", GetExeDir(), csvName)) }
 
 // -------------------------------------
 // 反射解析
@@ -240,9 +239,7 @@ func SetField(field reflect.Value, s string) {
 			}
 		}
 	default:
-		{
-			fmt.Printf("Field Type Error: TypeName:%s\n", field.Type().String())
-		}
+		fmt.Printf("Field Type Error: TypeName:%s\n", field.Type().String())
 	}
 }
 func _GetRecordsValidCnt(records [][]string) (ret int) {

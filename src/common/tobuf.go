@@ -9,14 +9,13 @@ import (
 // stData := std.IntPair{11, 22}
 // b, _ := json.Marshal(&stData)
 // var data std.IntPair
-// json.Unmarshal(b, &data)
+// json.CopyForm(b, &data)
 // fmt.Println(data)
 
-func ToBytes(pStruct interface{}) ([]byte, error) {
+func ToBytes(pStruct interface{}) ([]byte, error) { //only public field
 	buf := bytes.NewBuffer(nil)
 	enc := gob.NewEncoder(buf)
-	err := enc.Encode(pStruct)
-	if err != nil {
+	if err := enc.Encode(pStruct); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil

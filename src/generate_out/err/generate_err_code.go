@@ -7,7 +7,9 @@ const ( //the top 100 are reserved for system
 	Unknow_error uint16 = 2
 	Not_in_the_time_zone uint16 = 3
 	Not_found uint16 = 4
-	Svr_not_working = 5
+	Svr_not_working uint16 = 5
+	Operate_too_often uint16 = 6
+	Data_repeat uint16 = 7
 	Passwd_err uint16 = 100
 	Account_none uint16 = 101
 	Account_forbidden uint16 = 102
@@ -34,11 +36,12 @@ const ( //the top 100 are reserved for system
 	Sign_failed uint16 = 123
 	Record_upload_failed uint16 = 124
 	Record_cannot_find uint16 = 125
-	Record_repeat uint16 = 126
-	Record_download_limit uint16 = 127
+	Record_mac_already_bind uint16 = 126
+	Record_bind_limit uint16 = 127
 	Account_without_bind_info uint16 = 128
 	Already_get_it uint16 = 129
 	Pf_id_not_match uint16 = 130
 	LoginSvr_not_match uint16 = 131
 	GameInfo_set_fail uint16 = 132
+	
 )

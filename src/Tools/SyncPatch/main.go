@@ -15,10 +15,10 @@ import (
 func main() {
 	var noSleep bool
 	var addrList, dirList string
-	flag.StringVar(&addrList, "addr", "", "远端地址列表")
-	flag.StringVar(&dirList, "dir", "", "本地目录列表")
+	flag.StringVar(&addrList, "addr", "", "远端地址列表,空格隔开")
+	flag.StringVar(&dirList, "dir", "", "本地目录列表,空格隔开")
 	flag.BoolVar(&noSleep, "nosleep", false, "")
-	flag.Parse() //内部获取了所有参数：os.Args[1:]
+	flag.Parse()
 	gamelog.InitLogger("SyncPatch")
 
 	//本地文件列表
@@ -38,8 +38,7 @@ func main() {
 	}
 }
 
-// --------------------------------------------------------------------------
-// 将SyncPatch.exe所在目录的文件上传至服务器
+// ------------------------------------------------------------
 func SyncServerPatch(addr string, localMap map[string]uint32) {
 	http.CallRpc(addr, enum.Rpc_file_update_list, func(buf *common.NetPack) {
 		buf.WriteString("") //version

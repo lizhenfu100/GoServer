@@ -18,7 +18,7 @@ func CheckPasswd(s string) bool {
 
 //32长，任意非空字符，FIXME：脏字库排查
 func CheckName(s string) bool {
-	ret, _ := regexp.MatchString(`^\S{1,32}$`, s)
+	ret, _ := regexp.MatchString(`^\S{0,32}$`, s)
 	return ret
 }
 
@@ -29,9 +29,9 @@ func CheckValue(key, s string) (ret bool) {
 	case "email":
 		ret, _ = regexp.MatchString(`^[\w-\.]+@[\w-]+(\.[\w-]+)+$`, s)
 	case "qq":
-		ret, _ = regexp.MatchString(`^[0-9]{3,13}$`, s)
+		ret, _ = regexp.MatchString(`^[0-9]{3,32}$`, s)
 	case "wechat":
-		ret, _ = regexp.MatchString(`^[\w-]{6,20}$`, s)
+		ret, _ = regexp.MatchString(`^[\w-]{6,32}$`, s)
 	default:
 		ret = false
 	}

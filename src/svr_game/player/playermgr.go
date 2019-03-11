@@ -3,7 +3,6 @@ package player
 import (
 	"dbmgo"
 	"gopkg.in/mgo.v2/bson"
-	"svr_game/logic/fullsvr"
 	"sync"
 	"time"
 )
@@ -15,8 +14,10 @@ var (
 )
 
 func InitDB() {
-	//只载入近期登录过的
-	var list1 []TPlayerBase
+	InitSvrMailDB()
+	InitSeasonDB()
+	return                  //人太多，启动过慢，不批量载入了
+	var list1 []TPlayerBase //只载入近期登录过的
 	dbmgo.FindAll(kDBPlayer, bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - 7*24*3600}}, &list1)
 	list := make([]TPlayer, len(list1))
 	for i := 0; i < len(list); i++ {
@@ -29,10 +30,6 @@ func InitDB() {
 		AddCache(ptr)
 	}
 	println("load active player form db: ", len(list))
-
-	InitSvrMailDB()
-	InitSeasonDB()
-	fullsvr.InitAwardDB()
 }
 
 //! 若多线程架构，玩家内存，只能他自己直接修改，别人须转给他后间接改(异步)
@@ -48,19 +45,11 @@ func FindAccountId(aid uint32) *TPlayer {
 	}
 	return nil
 }
-
-func FindWithDB_PlayerId(pid uint32) *TPlayer {
+func FindWithDB(pid uint32) *TPlayer {
 	if player := FindPlayerId(pid); player != nil {
 		return player
 	} else {
 		return LoadPlayerFromDB("_id", pid)
-	}
-}
-func FindWithDB_AccountId(aid uint32) *TPlayer {
-	if player := FindAccountId(aid); player != nil {
-		return player
-	} else {
-		return LoadPlayerFromDB("accountid", aid)
 	}
 }
 
@@ -82,7 +71,7 @@ func GetPlayerBase(pid uint32) *TPlayerBase {
 		return &player.TPlayerBase
 	} else {
 		ptr := new(TPlayerBase)
-		if dbmgo.Find(kDBPlayer, "_id", pid, ptr) {
+		if ok, _ := dbmgo.Find(kDBPlayer, "_id", pid, ptr); ok {
 			return ptr
 		}
 		return nil

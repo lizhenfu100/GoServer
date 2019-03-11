@@ -129,8 +129,8 @@ func makeFile(vec []msg.TOrderInfo) {
 		panic(err.Error())
 		return
 	}
-	defer f.Close()
 	f.Write(bf.Bytes())
+	f.Close()
 
 	if len(vec) < 5 {
 		fmt.Println(bf.String())

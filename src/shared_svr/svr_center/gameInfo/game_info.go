@@ -30,5 +30,7 @@ func (self *TGameInfo) DataToBuf(buf *common.NetPack) {
 func (self *TGameInfo) BufToData(buf *common.NetPack) {
 	self.LoginSvrId = buf.ReadInt()
 	self.GameSvrId = buf.ReadInt()
-	self.JsonData = buf.ReadString()
+	if data := buf.ReadString(); data != "" {
+		self.JsonData = data
+	}
 }

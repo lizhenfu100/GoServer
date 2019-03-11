@@ -73,14 +73,14 @@ func main() {
 		"svr_game",
 		"svr_sdk",
 	}
-	vec := make([]*RpcInfo, len(svrList))
+	rpcInfos := make([]*RpcInfo, len(svrList))
 	for i, v := range svrList {
-		vec[i] = gatherRpcInfo(v)
+		rpcInfos[i] = gatherRpcInfo(v)
 	}
 
 	//2、收集并注册RpcFunc -- 战斗服、客户端
 	funcs := make([]string, 0, 1024)
-	for _, ptr := range vec {
+	for _, ptr := range rpcInfos {
 		addRpc_Go(&funcs, ptr)
 	}
 	addRpc_C(&funcs)  //svr_battle
@@ -89,7 +89,7 @@ func main() {
 	//3、RpcFunc收集完毕，生成RpcEunm
 	if generateRpcEnum(funcs) {
 		modules := []string{"client"}
-		for i, ptr := range vec {
+		for i, ptr := range rpcInfos {
 			modules = append(modules, ptr.Module)
 			generateRpcRegist(svrList[i], ptr)
 		}

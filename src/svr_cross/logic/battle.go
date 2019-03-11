@@ -49,24 +49,23 @@ func Rpc_cross_relay_battle_data(req, ack *common.NetPack, conn *tcp.TCPConn) {
 func _SelectBattleSvrId(version string) int {
 	//moba类的，应该有个专门的匹配服，供自由玩家【快速】组房间
 	//io向的，允许中途加入，应尽量分配到人多的战斗服
-	if ids := meta.GetModuleIDs("battle", version); len(ids) > 0 {
-		sort.Ints(ids)
-		//1、优先在各个服务器分配一定人数
-		for _, id := range ids {
-			if g_battle_player_cnt[id] < K_Player_Base {
-				return id
-			}
+	ids := meta.GetModuleIDs("battle", version)
+	sort.Ints(ids)
+	//1、优先在各个服务器分配一定人数
+	for _, id := range ids {
+		if g_battle_player_cnt[id] < K_Player_Base {
+			return id
 		}
-		//2、基础人数够了，再各服均分
-		for i := 0; i < len(ids); i++ {
-			//先自增判断越界，防止中途有战斗服宕机
-			if g_cur_select_idx++; g_cur_select_idx >= len(ids) {
-				g_cur_select_idx = 0
-			}
-			svrId := ids[g_cur_select_idx]
-			if g_battle_player_cnt[svrId] < K_Player_Limit {
-				return svrId
-			}
+	}
+	//2、基础人数够了，再各服均分
+	for i := 0; i < len(ids); i++ {
+		//先自增判断越界，防止中途有战斗服宕机
+		if g_cur_select_idx++; g_cur_select_idx >= len(ids) {
+			g_cur_select_idx = 0
+		}
+		svrId := ids[g_cur_select_idx]
+		if g_battle_player_cnt[svrId] < K_Player_Limit {
+			return svrId
 		}
 	}
 	return -1

@@ -27,9 +27,7 @@ import (
 	"shared_svr/zookeeper/logic"
 )
 
-const (
-	kModuleName = "zookeeper"
-)
+const kModuleName = "zookeeper"
 
 func main() {
 	//初始化日志系统

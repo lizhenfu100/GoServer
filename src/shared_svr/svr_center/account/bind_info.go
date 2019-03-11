@@ -37,6 +37,18 @@ func Rpc_center_get_account_by_bind_info(req, ack *common.NetPack) { //拿到账
 		ack.WriteString(account.Name)
 	}
 }
+func Rpc_center_get_bind_info(req, ack *common.NetPack) {
+	name := req.ReadString()
+	key := req.ReadString()
+
+	if account := GetAccountByName(name); account == nil {
+		if v, ok := account.BindInfo[key]; ok {
+			ack.WriteString(v)
+			return
+		}
+	}
+	ack.WriteString("")
+}
 
 // -------------------------------------
 // 辅助函数
@@ -58,7 +70,7 @@ func BindInfoToAccount(name, passwd, k, v string, force int8) (errcode uint16) {
 			errcode = err.Success
 			account.BindInfo[k] = v
 			dbkey := fmt.Sprintf("bindinfo.%s", k)
-			dbmgo.UpdateId(kDBTable, account.AccountID, bson.M{"$set": bson.M{dbkey: v}})
+			dbmgo.UpdateId(KDBTable, account.AccountID, bson.M{"$set": bson.M{dbkey: v}})
 		}
 	}
 	return
@@ -68,7 +80,7 @@ func GetAccountByBindInfo(k, v string) *TAccount {
 	//客户端通过绑定信息查到账号后，将账号名保存至本地，之后用账户名登录
 	dbkey := fmt.Sprintf("bindinfo.%s", k)
 	account := new(TAccount)
-	if dbmgo.Find(kDBTable, dbkey, v, account) {
+	if ok, _ := dbmgo.Find(KDBTable, dbkey, v, account); ok {
 		return account
 	}
 	return nil

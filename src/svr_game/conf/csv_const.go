@@ -1,10 +1,6 @@
 package conf
 
-var SvrCsv struct {
-	// 数据库
-	DBuser   string
-	DBpasswd string
-
+var CsvConst struct {
 	// 赛季
 	Season_Begin_Month        []int       //开始月份
 	Season_Level_Max          uint8       //赛季档次，从0开始

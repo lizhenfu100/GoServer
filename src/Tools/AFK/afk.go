@@ -8,6 +8,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"html/template"
 	"net/http"
+	"netConfig/meta"
 	"sort"
 	"strings"
 	"time"
@@ -54,10 +55,7 @@ func (self *Afk_req) check() (err string) {
 		err = "调班失败：未注明补班时间"
 	}
 
-	if dbmgo.FindEx(kDBTable, bson.M{
-		"name":    self.Name,
-		"afktime": self.AfkTime,
-	}, &Afk_req{}) {
+	if ok, _ := dbmgo.FindEx(kDBTable, bson.M{"name": self.Name, "afktime": self.AfkTime}, &Afk_req{}); ok {
 		err = "失败：重复请假：" + self.AfkTime
 	}
 	return
@@ -71,7 +69,7 @@ func replyHtml(w http.ResponseWriter, name string) {
 	if t, err := template.ParseFiles(kFileDirRoot + name); err != nil {
 		fmt.Fprintf(w, "parse template error: %s", err.Error())
 	} else {
-		t.Execute(w, &g_Template)
+		t.Execute(w, meta.G_Local)
 	}
 }
 
@@ -83,7 +81,7 @@ func Http_afk(w http.ResponseWriter, r *http.Request) {
 
 		//反射解析
 		var req Afk_req
-		common.Unmarshal(&req, r.Form)
+		common.CopyForm(&req, r.Form)
 
 		//! 创建回复
 		ack := "失败"

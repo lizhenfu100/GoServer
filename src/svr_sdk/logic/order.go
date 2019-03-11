@@ -26,12 +26,12 @@ import (
 )
 
 func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
-	//gamelog.Debug("message: %s", r.URL.String())
 	r.ParseForm()
+	//gamelog.Debug("%v", r.Form)
 
 	//反射解析订单信息
 	var order msg.TOrderInfo
-	common.Unmarshal(&order, r.Form)
+	common.CopyForm(&order, r.Form)
 
 	//! 创建回复
 	ack := platform.NewPreBuyAck(order.Pf_id)
@@ -53,7 +53,7 @@ func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 	//生成订单
 	if !msg.CreateOrderInDB(&order) {
 		ack.SetRetcode(-3)
-		gamelog.Error("pre_buy_request: create order failed")
+		gamelog.Error("pre_buy_request: crea te order failed")
 		return
 	}
 
@@ -66,8 +66,8 @@ func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 
 //客户端查询订单，是否购买成功、是否发货过
 func Http_query_order(w http.ResponseWriter, r *http.Request) {
-	//gamelog.Debug("message: %s", r.URL.String())
 	r.ParseForm()
+	//gamelog.Debug("%v", r.Form)
 
 	//! 创建回复
 	var ack msg.Query_order_ack
@@ -75,10 +75,7 @@ func Http_query_order(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		b, _ := json.Marshal(&ack)
 		w.Write(b)
-
-		if ack.Retcode != 0 {
-			gamelog.Debug("ack: %v, req: %s", ack, r.URL.String())
-		}
+		gamelog.Debug("ack: %v", ack)
 	}()
 
 	order := msg.FindOrder(r.Form.Get("order_id"))
@@ -86,7 +83,7 @@ func Http_query_order(w http.ResponseWriter, r *http.Request) {
 		ack.Retcode = -2
 		return
 	}
-	if r.Form.Get("sign") != sign.CalcSign("order_id="+order.Order_id) { //验证签名
+	if r.Form.Get("sign") != sign.CalcSign("order_id="+order.Order_id) {
 		ack.Retcode = -3
 		return
 	}
@@ -100,8 +97,8 @@ func Http_query_order(w http.ResponseWriter, r *http.Request) {
 
 //客户端发货成功，通告后台，避免重复发货
 func Http_confirm_order(w http.ResponseWriter, r *http.Request) {
-	//gamelog.Debug("message: %s", r.URL.String())
 	r.ParseForm()
+	//gamelog.Debug("%v", r.Form)
 
 	//! 创建回复
 	var ack msg.Retcode_ack
@@ -109,14 +106,11 @@ func Http_confirm_order(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		b, _ := json.Marshal(&ack)
 		w.Write(b)
-
-		if ack.Retcode != 0 {
-			gamelog.Debug("ack: %v, req: %s", ack, r.URL.String())
-		}
+		gamelog.Debug("ack: %v", ack)
 	}()
 
 	if order := msg.FindOrder(r.Form.Get("order_id")); order != nil {
-		if r.Form.Get("sign") != sign.CalcSign("order_id="+order.Order_id) { //验证签名
+		if r.Form.Get("sign") != sign.CalcSign("order_id="+order.Order_id) {
 			ack.Retcode = -3
 			return
 		}
@@ -142,7 +136,8 @@ func Rpc_order_success(req, ack *common.NetPack) {
 			} else {
 				order.Status = 1
 				order.Can_send = 1
-				dbmgo.UpdateId("Order", order.Order_id, bson.M{"$set": bson.M{"status": 1, "can_send": 1}})
+				dbmgo.UpdateId("Order", order.Order_id, bson.M{"$set": bson.M{
+					"status": 1, "can_send": 1}})
 			}
 		} else {
 			errInfo.WriteString(orderId)

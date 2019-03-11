@@ -45,7 +45,7 @@ func (self *TMailModule) InitAndInsert(player *TPlayer) {
 	dbmgo.Insert(kDBMail, self)
 }
 func (self *TMailModule) LoadFromDB(player *TPlayer) {
-	if !dbmgo.Find(kDBMail, "_id", player.PlayerID, self) {
+	if ok, _ := dbmgo.Find(kDBMail, "_id", player.PlayerID, self); !ok {
 		self.InitAndInsert(player)
 	}
 }

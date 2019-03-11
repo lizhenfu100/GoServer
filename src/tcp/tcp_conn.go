@@ -92,7 +92,7 @@ var (
 	G_RpcQueue = NewRpcQueue(Msg_Queue_Cap)
 )
 
-type TCPConn struct {
+type TCPConn struct { //TODO:zhoumf: pprof性能测试
 	conn          net.Conn
 	reader        *bufio.Reader //包装conn减少conn.Read的io次数，见【common/net.go】
 	writer        *bufio.Writer
@@ -200,7 +200,7 @@ LOOP:
 			//	}
 			//}
 			if err := self.writer.Flush(); err != nil {
-				gamelog.Error("(%p)WriteRoutine Flush error: %s", self.conn, err.Error())
+				gamelog.Error("(%p)WriteRoutine Flush: %s", self.conn, err.Error())
 				break LOOP
 			}
 			//FIXME: 这里能不能加句 sleep(10ms)，让包更易积累，合并发送；不加的话，调度权就完全依赖golang了，其实只要不是写一个包就唤醒一次，问题不大
@@ -248,11 +248,14 @@ func (self *TCPConn) readRoutine() {
 			qps.AddQps()
 		}
 		//FIXME: 消息加密、验证有效性，不通过即踢掉
-
-		//【Notice: 在io线程直接调消息响应函数(多线程处理玩家操作)，玩家之间互改数据须考虑竞态问题(可用actor模式解决)】
-		//【Notice: 若友好支持玩家强交互，可将packet放入主逻辑循环的消息队列(SafeQueue)】
-		G_RpcQueue.Insert(self, packet) //转至逻辑线程处理消息
-		//G_RpcQueue._Handle(self, packet) //直接在io线程处理消息，响应函数中须考虑竞态问题了
+		if packet.GetOpCode() >= enum.RpcEnumCnt {
+			gamelog.Error("Msg(%d) Not Regist", msgId)
+		} else {
+			//【Notice: 在io线程直接调消息响应函数(多线程处理玩家操作)，玩家之间互改数据须考虑竞态问题(可用actor模式解决)】
+			//【Notice: 若友好支持玩家强交互，可将packet放入主逻辑循环的消息队列(SafeQueue)】
+			G_RpcQueue.Insert(self, packet) //转至逻辑线程处理消息
+			//G_RpcQueue._Handle(self, packet) //直接在io线程处理消息，响应函数中须考虑竞态问题了
+		}
 	}
 	self.Close()
 }

@@ -13,7 +13,6 @@ package player
 import (
 	"common"
 	"common/compress"
-	"conf"
 	"gamelog"
 	"generate_out/rpc/enum"
 	mhttp "http"
@@ -33,65 +32,62 @@ func RegPlayerRpc(list map[uint16]PlayerRpc) {
 	for k, v := range list {
 		G_PlayerHandleFunc[k] = v
 	}
-	tcp.RegHandlePlayerRpc(_HandlePlayerRpc1)   //tcp 直连
-	mhttp.RegHandlePlayerRpc(_HandlePlayerRpc2) //http 直连
+	tcp.RegHandlePlayerRpc(_PlayerRpcTcp)    //tcp 直连
+	mhttp.RegHandlePlayerRpc(_PlayerRpcHttp) //http 直连
 }
 func DoPlayerRpc(this *TPlayer, rpcId uint16, req, ack *common.NetPack) bool {
 	if msgFunc := G_PlayerHandleFunc[rpcId]; msgFunc != nil {
-		atomic.SwapUint32(&this._idleMin, 0)
+		atomic.StoreUint32(&this._idleMin, 0)
 		msgFunc(req, ack, this)
 		return true
 	}
-	gamelog.Error("PlayerMsg(%d) Not Regist", rpcId)
 	return false
 }
 
 // ------------------------------------------------------------
-// - tcp 直连 player rpc
 // - 将原生tcpRpc的 "conn *tcp.TCPConn" 参数转换为 "player *TPlayer"
-func _HandlePlayerRpc1(req, ack *common.NetPack, conn *tcp.TCPConn) bool {
-	if msgFunc := G_PlayerHandleFunc[req.GetOpCode()]; msgFunc != nil {
-		if player, ok := conn.UserPtr.(*TPlayer); ok {
-			atomic.SwapUint32(&player._idleMin, 0)
-			msgFunc(req, ack, player)
-		}
-		return true
+func _PlayerRpcTcp(req, ack *common.NetPack, conn *tcp.TCPConn) bool {
+	rpcId := req.GetOpCode()
+	if player, ok := conn.UserPtr.(*TPlayer); ok {
+		DoPlayerRpc(player, rpcId, req, ack)
 	}
-	return false
+	return G_PlayerHandleFunc[rpcId] != nil
 }
-
-// ------------------------------------------------------------
-// - http 直连 player rpc
-func _HandlePlayerRpc2(w http.ResponseWriter, r *http.Request) {
-	//! 接收信息
-	req := mhttp.ReadRequest(r)
+func _PlayerRpcHttp(w http.ResponseWriter, r *http.Request) {
+	req := mhttp.ReadRequest(r) //! 接收信息
 	if req == nil {
 		return
 	}
 	defer req.Free()
 
-	//! 创建回复
-	ack := common.NewNetPackCap(128)
+	ack := common.NewNetPackCap(128) //! 创建回复
+	defer func() {
+		compress.CompressTo(ack.Data(), w)
+		ack.Free()
+	}()
+
 	msgId := req.GetOpCode()
-	accountId := req.GetReqIdx()
-	defer ack.Free()
+	if msgId >= enum.RpcEnumCnt {
+		gamelog.Error("PlayerMsg(%d) Not Regist", msgId)
+		return
+	}
+	if msgId != enum.Rpc_game_heart_beat {
+		gamelog.Debug("HttpMsg:%d, len:%d", msgId, req.Size())
+	}
 	//defer func() {//库已经有recover了，见net/http/server.go:1918
 	//	if r := recover(); r != nil {
 	//		gamelog.Error("recover msgId:%d\n%v: %s", msgId, r, debug.Stack())
 	//	}
 	//	ack.Free()
 	//}()
-	//FIXME: 验证消息安全性，防改包
+	accountId := req.GetReqIdx()
 	//FIXME: http通信中途安全性不够，能修改client net pack里的uid，进而操作别人数据
 	//FIXME: 账号服登录验证后下发给client的token，client应该保留，附在每个HttpReq里，防止恶意窜改他人数据
-
-	if conf.IsDebug && msgId != enum.Rpc_game_heart_beat {
-		gamelog.Debug("HttpMsg:%d, len:%d, uid:%d", msgId, req.Size(), accountId)
-	}
 	if player := BeforeRecvHttpMsg(accountId); player != nil {
 		if DoPlayerRpc(player, msgId, req, ack) {
 			AfterRecvHttpMsg(player, ack)
-			compress.CompressTo(ack.Data(), w)
+		} else {
+			gamelog.Error("PlayerMsg(%d) Not Regist", msgId)
 		}
 	} else {
 		gamelog.Debug("Player(%d) isn't online", accountId)
@@ -107,7 +103,9 @@ func Rpc_recv_player_msg(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	gamelog.Debug("PlayerMsg:%d", rpcId)
 
 	if player := FindAccountId(accountId); player != nil {
-		DoPlayerRpc(player, rpcId, req, ack)
+		if !DoPlayerRpc(player, rpcId, req, ack) {
+			gamelog.Error("PlayerMsg(%d) Not Regist", rpcId)
+		}
 	} else {
 		gamelog.Debug("Player(%d) isn't online", accountId)
 	}

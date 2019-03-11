@@ -26,8 +26,7 @@ func IsExist(path string) bool { //file or folder
 
 //获取指定目录下(不递归子目录)的所有文件 --- names, err := filepath.Glob("csv/*.csv")
 //获取指定目录及子目录下的所有文件，可以匹配后缀过滤 --- names, err := WalkDir("csv/", ".csv")
-func WalkDir(dir, suffix string) ([]string, error) {
-	ret := make([]string, 0, 16)
+func WalkDir(dir, suffix string) (ret []string, err error) {
 	//filepath.Walk【对软连接无效】
 	//err := filepath.Walk(dir, func(filename string, fi os.FileInfo, err error) error {
 	//	if err != nil {
@@ -41,10 +40,13 @@ func WalkDir(dir, suffix string) ([]string, error) {
 	//	}
 	//	return nil
 	//})
-	err := _walkDir(dir, suffix, &ret)
-	return ret, err
+	err = _walkDir(dir, suffix, &ret)
+	return
 }
 func _walkDir(dir, suffix string, names *[]string) error {
+	if len(dir) == 0 {
+		return nil
+	}
 	if dir[len(dir)-1] != '/' {
 		dir += "/"
 	}
@@ -101,24 +103,24 @@ func CreateFile(dir, name string, flag int) (*os.File, error) {
 		return file, nil
 	}
 }
-func CreateTemplate(data interface{}, outDir, filename, tempText string) (bf bytes.Buffer) {
+func CreateTemplate(data interface{}, outDir, filename, tempText string) {
+	var bf bytes.Buffer
 	tpl, err := template.New(filename).Parse(tempText)
 	if err != nil {
 		panic(err.Error())
-		return bf
+		return
 	}
 	if err = tpl.Execute(&bf, data); err != nil {
 		panic(err.Error())
-		return bf
+		return
 	}
 	f, err := CreateFile(outDir, filename, os.O_WRONLY|os.O_TRUNC)
 	if err != nil {
 		panic(err.Error())
-		return bf
+		return
 	}
 	f.Write(bf.Bytes())
 	f.Close()
-	return bf
 }
 
 // ------------------------------------------------------------
@@ -128,9 +130,8 @@ func CalcMd5(name string) string {
 	if err != nil {
 		return ""
 	}
-	defer f.Close()
-
 	md5hash := md5.New()
 	io.Copy(md5hash, f)
+	f.Close()
 	return fmt.Sprintf("%x", md5hash.Sum(nil))
 }

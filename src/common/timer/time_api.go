@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	OneDay_SecCnt = 24 * 3600
+	OneDaySecCnt = 24 * 3600
 )
 
 func IsToday(sec int64) bool { return time.Unix(sec, 0).YearDay() == time.Now().YearDay() }
@@ -14,19 +14,19 @@ func WeekInYear() int {
 	_, ret := time.Now().ISOWeek()
 	return ret
 }
-func GetTodayBeginSec() int64 {
+func TodayBeginSec() int64 {
 	now := time.Now()
 	todayTime := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	return todayTime.Unix()
 }
-func GetTodayEndSec() int64 {
-	return GetTodayBeginSec() + OneDay_SecCnt
+func TodayEndSec() int64 {
+	return TodayBeginSec() + OneDaySecCnt
 }
-func GetTodayRunSec() int {
+func TodayRunSec() int {
 	now := time.Now()
 	return now.Hour()*3600 + now.Minute()*60 + now.Second()
 }
-func GetTodayLeftSec() int { return OneDay_SecCnt - GetTodayRunSec() }
+func TodayLeftSec() int { return OneDaySecCnt - TodayRunSec() }
 
 // 时间戳--日期
 const g_time_layout = "2006/01/02 15:04:05"

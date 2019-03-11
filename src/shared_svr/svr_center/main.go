@@ -2,6 +2,7 @@ package main
 
 import (
 	"common/console"
+	"common/console/shutdown"
 	"common/file"
 	"conf"
 	"dbmgo"
@@ -10,14 +11,11 @@ import (
 	_ "generate_out/rpc/shared_svr/svr_center"
 	"netConfig"
 	"netConfig/meta"
-	"shared_svr/svr_center/account"
 	"shared_svr/svr_center/logic"
 	"shared_svr/zookeeper/component"
 )
 
-const (
-	kModuleName = "center"
-)
+const kModuleName = "center"
 
 func main() {
 	var svrId int
@@ -34,7 +32,6 @@ func main() {
 	//设置mongodb的服务器地址
 	pMeta := meta.GetMeta("db_account", svrId)
 	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
-	account.InitDB()
 
 	component.RegisterToZookeeper()
 
@@ -50,5 +47,5 @@ func InitConf() {
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
 	console.Init()
-	console.RegShutdown(logic.Shutdown)
+	console.RegShutdown(shutdown.Default)
 }

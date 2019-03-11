@@ -9,10 +9,11 @@
 ***********************************************************************/
 package dbmgo
 
-const KDBSvrArgs = "SvrArgs"
+const KTableArgs = "args"
 
 //type IArgs interface {
-//	ReadDB() bool //return Find(dbmgo.KDBSvrArgs, "_id", key, pVal)
-//	UpdateDB()    //UpdateId(dbmgo.KDBSvrArgs, key, pVal)
-//	InsertDB()    //Insert(dbmgo.KDBSvrArgs, pVal)
+//	ReadDB() bool //return Find(dbmgo.KTableArgs, "_id", DBKey, pVal)
+//	UpdateDB()    //UpdateId(dbmgo.KTableArgs, DBKey, pVal)
+//	InsertDB()    //Insert(dbmgo.KTableArgs, pVal)
+//	InitDB()      // if !Find() { Insert() }
 //}

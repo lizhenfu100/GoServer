@@ -15,6 +15,10 @@ const (
 	kModuleName = "file"
 )
 
+/* 用于官网接收推广文件
+执行程序路径：~/web/public/SyncPatch_svr
+推广资源路径：~/web/public/game/promotion/
+*/
 func main() {
 	//初始化日志系统
 	gamelog.InitLogger(kModuleName)
@@ -41,6 +45,6 @@ func InitConf() {
 		enum.Rpc_file_update_list: Rpc_file_update_list,
 	})
 	register.RegHttpHandler(map[string]register.HttpHandle{
-		"/upload_patch_file":  Http_upload_patch_file,
+		"/upload_patch_file": Http_upload_patch_file,
 	})
 }

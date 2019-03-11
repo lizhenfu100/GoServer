@@ -120,7 +120,7 @@ func NewPlayerInDB(accountId uint32, name string) *TPlayer {
 }
 func LoadPlayerFromDB(key string, val uint32) *TPlayer {
 	player := _NewPlayer()
-	if dbmgo.Find(kDBPlayer, key, val, &player.TPlayerBase) {
+	if ok, _ := dbmgo.Find(kDBPlayer, key, val, &player.TPlayerBase); ok {
 		if player.Version != meta.G_Local.Version {
 			version.Upgrade(player.PlayerID, player.Version, meta.G_Local.Version)
 		}
@@ -142,7 +142,7 @@ func (self *TPlayer) Login(conn *tcp.TCPConn) {
 	if atomic.SwapInt32(&self._isOnlnie, 1) == 0 {
 		atomic.AddInt32(&g_online_cnt, 1)
 	}
-	atomic.SwapUint32(&self._idleMin, 0)
+	atomic.StoreUint32(&self._idleMin, 0)
 	atomic.StoreInt64(&self.LoginTime, time.Now().Unix())
 	self.conn = conn
 	if conn != nil && conn.UserPtr == nil { //链接可能是gateway节点
@@ -156,9 +156,10 @@ func (self *TPlayer) Login(conn *tcp.TCPConn) {
 	G_ServiceMgr.Register(Service_Check_AFK, self)
 }
 func (self *TPlayer) Logout() {
-	atomic.StoreInt32(&self._isOnlnie, 0)
+	if atomic.SwapInt32(&self._isOnlnie, 0) > 0 {
+		atomic.AddInt32(&g_online_cnt, -1)
+	}
 	atomic.StoreInt64(&self.LogoutTime, time.Now().Unix())
-	atomic.AddInt32(&g_online_cnt, -1)
 	for _, v := range self.modules {
 		v.OnLogout()
 	}

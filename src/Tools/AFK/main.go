@@ -40,14 +40,8 @@ import (
 	"time"
 )
 
-type HtmlTemplate struct {
-	IP   string
-	Port uint
-}
-
 var (
-	g_Template = HtmlTemplate{}
-	g_TypeLv   = map[string]int{
+	g_TypeLv = map[string]int{
 		"日调": 1,
 		"补班": 2,
 		"调班": 2,
@@ -58,17 +52,25 @@ var (
 )
 
 func main() {
-	var strBeginEnd string
-	flag.StringVar(&g_Template.IP, "ip", "120.78.152.152", "ip")
-	flag.UintVar(&g_Template.Port, "port", 7701, "port")
+	meta.G_Local = &meta.Meta{
+		Module:  "AFK",
+		SvrName: "ChillyRoom_AFK",
+	}
+	ip, port, strBeginEnd := "", 0, ""
+	flag.StringVar(&ip, "ip", "120.78.152.152", "ip")
+	flag.IntVar(&port, "port", 7701, "port")
 	flag.StringVar(&strBeginEnd, "t", "", "开始结束日期，如2018.1.15 2018.2.15")
 	flag.Parse() //内部获取了所有参数：os.Args[1:]
+
+	meta.G_Local.IP = ip
+	meta.G_Local.OutIP = ip
+	meta.G_Local.HttpPort = uint16(port)
 
 	//初始化日志系统
 	gamelog.InitLogger("afk")
 	InitConf()
+	defer time.Sleep(time.Minute)
 
-	defer func() { time.Sleep(time.Minute) }()
 	if strBeginEnd != "" {
 		v := strings.Split(strBeginEnd, " ")
 		if len(v) < 2 {
@@ -78,19 +80,10 @@ func main() {
 		}
 		return
 	}
-
 	dbmgo.InitWithUser("", 27017, "other", conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
 	netConfig.RunNetSvr()
 }
 func InitConf() {
-	meta.G_Local = &meta.Meta{
-		Module:   "AFK",
-		SvrName:  "ChillyRoom_AFK",
-		IP:       g_Template.IP,
-		OutIP:    g_Template.IP,
-		HttpPort: uint16(g_Template.Port),
-	}
-
 	file.G_Csv_Map = map[string]interface{}{
 		"conf_svr": &conf.SvrCsv,
 	}
@@ -109,7 +102,7 @@ func InitConf() {
 // ------------------------------------------------------------
 // 统计所有人的请假信息
 func countAll(beginDate, endDate string) {
-	addr := http.Addr(g_Template.IP, uint16(g_Template.Port))
+	addr := http.Addr(meta.G_Local.IP, meta.G_Local.HttpPort)
 	http.CallRpc(addr, 20, func(buf *common.NetPack) {
 		buf.WriteString(beginDate)
 		buf.WriteString(endDate)
@@ -118,14 +111,16 @@ func countAll(beginDate, endDate string) {
 			fmt.Println(err)
 		} else {
 			filename := "afk_" + time.Now().Format("20060102") + ".log"
-			f, err := file.CreateFile("./", filename, os.O_WRONLY|os.O_TRUNC)
-			if err != nil {
+			if f, err := file.CreateFile("./", filename, os.O_WRONLY|os.O_TRUNC); err != nil {
 				fmt.Println(err.Error())
 				return
+			} else {
+				data := recvBuf.LeftBuf()
+				f.Write(data)
+				f.Close()
+				fmt.Println("成功，当前目录可查看文本...")
+				fmt.Println(string(data))
 			}
-			defer f.Close()
-			f.Write(recvBuf.LeftBuf())
-			fmt.Println("成功，当前目录下查看结果...")
 		}
 	})
 }

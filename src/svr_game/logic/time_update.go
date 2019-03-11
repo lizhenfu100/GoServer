@@ -2,7 +2,7 @@ package logic
 
 import (
 	"common/timer"
-	"svr_game/logic/player/season"
+	"svr_game/player/season"
 	"time"
 )
 
@@ -12,8 +12,8 @@ func InitTimeUpdate() {
 	updatePerMinute()
 }
 func updateEnterNextDay() {
-	delay := float32(timer.GetTodayLeftSec())
-	timer.G_TimerMgr.AddTimerSec(onEnterNextDay, delay, timer.OneDay_SecCnt, -1)
+	delay := float32(timer.TodayLeftSec())
+	timer.G_TimerMgr.AddTimerSec(onEnterNextDay, delay, timer.OneDaySecCnt, -1)
 }
 func updateEnterNextHour() {
 	now := time.Now()

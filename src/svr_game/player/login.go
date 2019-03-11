@@ -19,7 +19,6 @@ import (
 	"common/format"
 	"gamelog"
 	"generate_out/err"
-	"netConfig/meta"
 	"sync"
 	"sync/atomic"
 	"tcp"
@@ -30,20 +29,16 @@ import (
 // Notice：登录、创建角色，可做成普通rpc，用以建立玩家缓存
 func Rpc_game_login(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	accountId := req.ReadUInt32()
+	token := req.ReadUInt32()
 
-	// game直连了login，须校验登录token
-	for _, v := range meta.G_Local.ConnectLst {
-		if v == "login" {
-			token := req.ReadUInt32()
-			if false == CheckLoginToken(accountId, token) {
-				ack.WriteUInt16(err.Token_verify_err)
-				return
-			}
-			break
-		}
+	if false == CheckLoginToken(accountId, token) {
+		ack.WriteUInt16(err.Token_verify_err)
+		return
 	}
-	//TODO:zhoumf: 读数据库同步的，比较耗时，直接读的方式不适合外网；可转入线程池再通知回主线程
-	if this := FindWithDB_AccountId(accountId); this == nil {
+	//账户下可有多个角色的游戏，此处应下发角色列表，供client选取后再进游戏
+
+	//FIXME: 读数据库同步的，比较耗时，直接读的方式不适合外网；可转入线程池再通知回主线程
+	if this := FindWithDB(accountId); this == nil {
 		ack.WriteUInt16(err.Account_have_none_player) //notify client to create new player
 	} else {
 		this.Login(conn)

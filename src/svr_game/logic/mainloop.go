@@ -4,12 +4,16 @@ import (
 	"common"
 	"common/timer"
 	"conf"
-	"svr_game/logic/player"
+	"svr_game/gm"
+	"svr_game/player"
 	"tcp"
 	"time"
 )
 
 func MainLoop() {
+	gm.InitAwardDB()
+	player.InitDB()
+
 	InitTimeUpdate()
 
 	timeNow, timeOld, timeElapse := time.Now().UnixNano()/int64(time.Millisecond), int64(0), 0

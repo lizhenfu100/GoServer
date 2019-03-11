@@ -25,15 +25,15 @@ type TOrderInfo struct {
 	Third_order_id string
 	Pf_id          string //平台名（如oppo）
 	Pk_id          string //包id
+	App_id         string //应用id
 	Pay_id         int    //支付商id（不同平台下的同一种支付渠道pay_id必须一样）
 	Op_id          int    //运营商 注：1代表移动 2代表联通 3代表电信
-	App_id         string //应用id
 	Server_id      int    //服务器id（只有一个服务器的话，默认传1）
 	Account        string //账号（没有必须传空字符）
 	Third_account  string //第三方账号，相当于登录账号
 	Role_id        string //角色id
-	Item_id        int    //物品id
 	Item_name      string //物品名（中文需要urlencode）
+	Item_id        int    //物品id
 	Item_count     int    //物品数量
 	Item_price     int    //物品价格（单位是分）
 	Total_price    int    //物品总价格（单位是分）
@@ -52,8 +52,10 @@ type TOrderInfo struct {
 var g_order_map sync.Map //<orderId, *TOrderInfo>
 
 func CreateOrderInDB(ptr *TOrderInfo) bool {
-	//生成订单号
-	ptr.Order_id = fmt.Sprintf("%03d%s%06d", ptr.Pay_id, time.Now().Format("060102"), dbmgo.GetNextIncId("OrderId"))
+	ptr.Order_id = fmt.Sprintf("%03d%s%06d", //生成订单号
+		ptr.Pay_id,
+		time.Now().Format("060102"),
+		dbmgo.GetNextIncId("OrderId"))
 	ptr.Time = time.Now().Unix()
 	if dbmgo.InsertSync(KDBTable, ptr) {
 		g_order_map.Store(ptr.Order_id, ptr)
@@ -67,7 +69,8 @@ func FindOrder(orderId string) *TOrderInfo {
 	} else if v, ok := g_order_map.Load(orderId); ok {
 		return v.(*TOrderInfo)
 	} else {
-		if ptr := new(TOrderInfo); dbmgo.Find(KDBTable, "_id", orderId, ptr) {
+		ptr := new(TOrderInfo)
+		if ok, _ := dbmgo.Find(KDBTable, "_id", orderId, ptr); ok {
 			return ptr
 		}
 	}
@@ -88,14 +91,15 @@ func DeleteTimeOutOrder() { //删除内存中滞留一天的订单
 	})
 }
 func InitDB() {
+	now := time.Now().Unix()
 	//删除超过7天的无效订单
 	dbmgo.RemoveAllSync(KDBTable, bson.M{
 		"status": 0, "can_send": 0,
-		"time": bson.M{"$lt": time.Now().Unix() - 7*24*3600},
+		"time": bson.M{"$lt": now - 7*24*3600},
 	})
-	//删除数据库里超过30天的订单
-	dbmgo.RemoveAllSync(KDBTable, bson.M{"time": bson.M{"$lt": time.Now().Unix() - 30*24*3600}})
-	//载入所有未完成订单
+	//删除超过30天的
+	dbmgo.RemoveAllSync(KDBTable, bson.M{"time": bson.M{"$lt": now - 30*24*3600}})
+	//载入所有未完成的
 	var list []TOrderInfo
 	dbmgo.FindAll(KDBTable, bson.M{"can_send": 1}, &list)
 	for i := 0; i < len(list); i++ {

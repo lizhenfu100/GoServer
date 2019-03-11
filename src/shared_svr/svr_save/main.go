@@ -2,6 +2,7 @@ package main
 
 import (
 	"common/console"
+	"common/console/shutdown"
 	"common/file"
 	"conf"
 	"dbmgo"
@@ -12,9 +13,7 @@ import (
 	"netConfig/meta"
 )
 
-const (
-	kModuleName = "save"
-)
+const kModuleName = "save"
 
 func main() {
 	var svrId int
@@ -43,4 +42,5 @@ func InitConf() {
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
 	console.Init()
+	console.RegShutdown(shutdown.Default)
 }

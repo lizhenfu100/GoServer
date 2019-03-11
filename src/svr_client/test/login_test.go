@@ -13,18 +13,6 @@ import (
 	"testing"
 )
 
-var (
-	g_loginData = loginData{
-		account:    "tester0chillyroom.com",
-		passwd:     "tester0",
-		playerName: "test",
-	}
-	g_httpPlayer *http.PlayerRpc //http svr登录成功后，用以CallRpc业务功能
-	g_loginAddr  string
-	g_version    = ""
-	g_gameName   = "HappyDiner"
-)
-
 type loginData struct {
 	account    string
 	passwd     string
@@ -36,10 +24,29 @@ type loginData struct {
 	playerId   uint32
 }
 
-func Test_init(t *testing.T) {
-	g_loginAddr = netConfig.GetHttpAddr("login", 1)
-	g_loginAddr = "http://13.229.215.168:7030"
+var (
+	g_gameName  = "HappyDiner"
+	g_loginData = loginData{
+		account:    "166@qq.com",
+		passwd:     "123123",
+		playerName: "test",
+	}
+	g_centerAddr = netConfig.GetHttpAddr("center", 1)
+	g_loginList  = []string{
+		"http://192.168.1.111:7030",
+		"http://52.14.1.205:7030",    //1 北美
+		"http://13.229.215.168:7030", //2 亚洲
+		"http://54.94.211.178:7030",  //3 南美
+		"http://18.185.80.202:7030",  //4 欧洲
+		"http://39.96.196.250:7030",  //5 华北
+		"http://47.106.35.74:7030",   //6 华南
+	}
+	g_loginAddr = g_loginList[0]
+	g_version = ""
+)
 
+// go test -v ./src/svr_client/test/login_test.go
+func Test_login_init(t *testing.T) {
 	//for i := 0; i < 100; i++ {
 	//	g_loginData.account = fmt.Sprintf("tester%dchillyroom.com", i)
 	//	g_loginData.passwd = fmt.Sprintf("tester%d", i)
@@ -47,7 +54,44 @@ func Test_init(t *testing.T) {
 	//	Test_account_login(t)
 	//}
 }
-func Test_account_reg(t *testing.T) {
+
+// ------------------------------------------------------------
+func Test_get_gamesvr_list(t *testing.T) {
+	http.CallRpc(g_loginAddr, enum.Rpc_login_get_game_list, func(buf *common.NetPack) {
+		buf.WriteString(g_version)
+	}, func(backBuf *common.NetPack) {
+		cnt := backBuf.ReadByte()
+		for i := byte(0); i < cnt; i++ {
+			id := backBuf.ReadInt()
+			svrName := backBuf.ReadString()
+			outIp := backBuf.ReadString()
+			port := backBuf.ReadUInt16()
+
+			onlineCnt := backBuf.ReadInt32()
+			fmt.Println("-------GamesvrList:", id, svrName, outIp, port, onlineCnt)
+		}
+	})
+}
+func tTest_player_gameinfo_addr(t *testing.T) {
+	http.CallRpc(g_centerAddr, enum.Rpc_center_player_login_addr, func(buf *common.NetPack) {
+		buf.WriteString(g_gameName)
+		buf.WriteString(g_loginData.account)
+	}, func(backBuf *common.NetPack) {
+		if e := backBuf.ReadUInt16(); e == err.Success {
+			loginIp := backBuf.ReadString()
+			loginPort := backBuf.ReadUInt16()
+			gameIp := backBuf.ReadString()
+			gamePort := backBuf.ReadUInt16()
+			fmt.Println("GameInfo Addr: ", loginIp, loginPort, gameIp, gamePort)
+		} else {
+			fmt.Println("ameInfo Addr Err: ", e)
+		}
+	})
+}
+
+// ------------------------------------------------------------
+// -- 注册
+func tTest_account_reg(t *testing.T) {
 	http.CallRpc(g_loginAddr, enum.Rpc_login_relay_to_center, func(buf *common.NetPack) {
 		buf.WriteUInt16(enum.Rpc_center_account_reg)
 		buf.WriteString(g_loginData.account)
@@ -57,7 +101,10 @@ func Test_account_reg(t *testing.T) {
 		fmt.Println("-------AccountReg errCode:", errCode)
 	})
 }
-func Test_account_login(t *testing.T) {
+
+// ------------------------------------------------------------
+// -- 登录，三种方式
+func tTest_account_login(t *testing.T) {
 	http.CallRpc(g_loginAddr, enum.Rpc_login_account_login, func(buf *common.NetPack) {
 		buf.WriteString(g_version)
 		buf.WriteString(g_gameName)
@@ -81,10 +128,8 @@ func Test_account_login(t *testing.T) {
 		}
 	})
 }
-
-// ------------------------------------------------------------
-// -- 方式一：直接登录Http游戏服
-func (self *loginData) LoginGamesvr_http() {
+func (self *loginData) LoginGamesvr_http() { //方式一：直接登录Http游戏服
+	var playerRpc *http.PlayerRpc
 	gameAddr := http.Addr(self.ip, self.port)
 	http.CallRpc(gameAddr, enum.Rpc_game_login, func(buf *common.NetPack) {
 		buf.WriteUInt32(self.accountId)
@@ -96,7 +141,7 @@ func (self *loginData) LoginGamesvr_http() {
 			self.playerId = backBuf.ReadUInt32()
 			self.playerName = backBuf.ReadString()
 			fmt.Println("-------GameLogin ok:", self.accountId, self.playerId, self.playerName)
-			g_httpPlayer = http.NewPlayerRpc(gameAddr, self.accountId)
+			playerRpc = http.NewPlayerRpc(gameAddr, self.accountId)
 		} else if errCode == err.Account_have_none_player {
 			fmt.Println("-------GameLogin:", "请创建角色")
 			http.CallRpc(gameAddr, enum.Rpc_game_create_player, func(buf *common.NetPack) {
@@ -106,7 +151,7 @@ func (self *loginData) LoginGamesvr_http() {
 				if playerId := backBuf.ReadUInt32(); playerId > 0 {
 					self.playerId = playerId
 					fmt.Println("-------CreatePlayer ok:", playerId, self.playerName)
-					g_httpPlayer = http.NewPlayerRpc(gameAddr, self.accountId)
+					playerRpc = http.NewPlayerRpc(gameAddr, self.accountId)
 				} else {
 					fmt.Println("-------CreatePlayer:", "创建角色失败")
 				}
@@ -114,10 +159,7 @@ func (self *loginData) LoginGamesvr_http() {
 		}
 	})
 }
-
-// ------------------------------------------------------------
-// -- 方式二：直接登录Tcp游戏服
-func (self *loginData) LoginGamesvr_tcp() {
+func (self *loginData) LoginGamesvr_tcp() { //方式二：直接登录Tcp游戏服
 	gamesvr := new(tcp.TCPClient)
 	gamesvr.OnConnect = func(conn *tcp.TCPConn) {
 		conn.CallRpc(enum.Rpc_game_login, func(buf *common.NetPack) {
@@ -150,10 +192,7 @@ func (self *loginData) LoginGamesvr_tcp() {
 	}
 	gamesvr.ConnectToSvr(tcp.Addr(self.ip, self.port), meta.G_Local)
 }
-
-// ------------------------------------------------------------
-// -- 方式三：Gateway网关转接消息
-func (self *loginData) LoginGateway() {
+func (self *loginData) LoginGateway() { //方式三：Gateway网关转接消息
 	gateway := new(tcp.TCPClient)
 	gateway.OnConnect = func(conn *tcp.TCPConn) {
 		conn.CallRpc(enum.Rpc_gateway_login, func(buf *common.NetPack) {
@@ -193,20 +232,4 @@ func (self *loginData) LoginGateway() {
 }
 
 // ------------------------------------------------------------
-func Test_get_gamesvr_list(t *testing.T) {
-	http.CallRpc(g_loginAddr, enum.Rpc_login_get_meta_list, func(buf *common.NetPack) {
-		buf.WriteString("game")
-		buf.WriteString(g_version)
-	}, func(backBuf *common.NetPack) {
-		cnt := backBuf.ReadByte()
-		for i := byte(0); i < cnt; i++ {
-			id := backBuf.ReadInt()
-			svrName := backBuf.ReadString()
-			outIp := backBuf.ReadString()
-			port := backBuf.ReadUInt16()
-
-			onlineCnt := backBuf.ReadInt32()
-			fmt.Println("-------GamesvrList:", id, svrName, outIp, port, onlineCnt)
-		}
-	})
-}
+// --

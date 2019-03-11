@@ -50,9 +50,7 @@ func Http_reset_password(w http.ResponseWriter, r *http.Request) {
 	aid, _ := strconv.Atoi(q.Get("id"))
 	passwd := q.Get("pwd")
 	flag := q.Get("flag")
-	timeFlag, _ := strconv.ParseInt(flag, 10, 0)
-
-	//FIXME:zhoumf: 限制同ip调用频率
+	timeFlag, _ := strconv.ParseInt(flag, 10, 64)
 
 	//! 创建回复
 	ack := "Error: unknown"
@@ -70,8 +68,8 @@ func Http_reset_password(w http.ResponseWriter, r *http.Request) {
 		ack = "Error: Account_none"
 	} else {
 		account.SetPasswd(passwd)
-		dbmgo.UpdateId(kDBTable, account.AccountID, bson.M{"$set": bson.M{
-			"password": passwd}})
+		dbmgo.UpdateId(KDBTable, account.AccountID, bson.M{"$set": bson.M{
+			"password": account.Password}})
 		ack = "Reset password ok"
 	}
 }

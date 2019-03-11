@@ -19,7 +19,7 @@ import (
 	"gamelog"
 	"http"
 	"os"
-	"svr_game/logic/player"
+	"svr_game/player"
 	"tcp"
 )
 

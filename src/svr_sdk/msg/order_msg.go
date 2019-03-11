@@ -17,7 +17,6 @@ type Pre_buy_ack interface {
 	SetOrderId(string)
 	HandleOrder(*TOrderInfo) bool
 }
-
 type Pre_buy struct { //默认
 	Retcode_ack
 	Order_id string `json:"order_id"`
