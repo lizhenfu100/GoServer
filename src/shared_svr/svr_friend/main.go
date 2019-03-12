@@ -42,7 +42,8 @@ func main() {
 
 	//设置mongodb的服务器地址
 	pMeta := meta.GetMeta("db_friend", svrId)
-	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
+	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName,
+		conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
 
 	component.RegisterToZookeeper()
 

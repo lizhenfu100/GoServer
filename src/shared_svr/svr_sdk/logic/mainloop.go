@@ -2,7 +2,7 @@ package logic
 
 import (
 	"common"
-	"svr_sdk/msg"
+	"shared_svr/svr_sdk/msg"
 	"tcp"
 )
 

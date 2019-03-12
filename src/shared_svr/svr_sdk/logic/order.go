@@ -21,8 +21,8 @@ import (
 	"gamelog"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
-	"svr_sdk/msg"
-	"svr_sdk/platform"
+	"shared_svr/svr_sdk/msg"
+	"shared_svr/svr_sdk/platform"
 )
 
 func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
@@ -130,7 +130,9 @@ func Http_query_order_unfinished(w http.ResponseWriter, r *http.Request) {
 		w.Write(b)
 		gamelog.Debug("ack: %v", ack)
 	}()
-
+	if third == "" {
+		return
+	}
 	var order msg.UnfinishedOrder
 	msg.OrderRange(func(k, v interface{}) bool {
 		p := v.(*msg.TOrderInfo)

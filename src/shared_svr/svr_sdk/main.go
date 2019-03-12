@@ -8,10 +8,10 @@ import (
 	"dbmgo"
 	"flag"
 	"gamelog"
-	_ "generate_out/rpc/svr_sdk"
+	_ "generate_out/rpc/shared_svr/svr_sdk"
 	"netConfig"
 	"netConfig/meta"
-	"svr_sdk/logic"
+	"shared_svr/svr_sdk/logic"
 )
 
 const kModuleName = "sdk"
@@ -30,7 +30,8 @@ func main() {
 
 	//设置mongodb的服务器地址
 	pMeta := meta.GetMeta("db_sdk", svrId)
-	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
+	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName,
+		conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
 
 	go netConfig.RunNetSvr()
 	logic.MainLoop()

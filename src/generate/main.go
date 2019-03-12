@@ -68,10 +68,10 @@ func main() {
 		"shared_svr/svr_gateway",
 		"shared_svr/svr_login",
 		"shared_svr/svr_save",
+		"shared_svr/svr_sdk",
 		"shared_svr/zookeeper",
 		"svr_cross",
 		"svr_game",
-		"svr_sdk",
 	}
 	rpcInfos := make([]*RpcInfo, len(svrList))
 	for i, v := range svrList {

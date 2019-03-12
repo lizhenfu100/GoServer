@@ -14,10 +14,10 @@
 package platform
 
 import (
-	"svr_sdk/msg"
-	"svr_sdk/platform/iapppay"
-	"svr_sdk/platform/kuaishou"
-	"svr_sdk/platform/x7sy"
+	"shared_svr/svr_sdk/msg"
+	"shared_svr/svr_sdk/platform/iapppay"
+	"shared_svr/svr_sdk/platform/kuaishou"
+	"shared_svr/svr_sdk/platform/x7sy"
 )
 
 //客户端请求生成订单【各渠道可能回复数据不同】
