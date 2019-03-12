@@ -69,6 +69,8 @@ func Http_query_order(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	//gamelog.Debug("%v", r.Form)
 
+	orderId := r.Form.Get("order_id")
+
 	//! 创建回复
 	ack := msg.Retcode_ack{Retcode: -1}
 	var pResult interface{}
@@ -79,19 +81,12 @@ func Http_query_order(w http.ResponseWriter, r *http.Request) {
 		gamelog.Debug("ack: %v", pResult)
 	}()
 
-	order := msg.FindOrder(r.Form.Get("order_id"))
-	if order == nil {
+	if order := msg.FindOrder(orderId); order == nil {
 		ack.Retcode = -2
-		return
-	}
-	if r.Form.Get("sign") != sign.CalcSign("order_id="+order.Order_id) {
+	} else if r.Form.Get("sign") != sign.CalcSign("order_id="+order.Order_id) {
 		ack.Retcode = -3
-		return
-	}
-
-	if order.Status == 1 && order.Can_send == 1 {
+	} else if order.Status == 1 && order.Can_send == 1 {
 		stOk := msg.Query_order_ack{}
-		//回复订单信息
 		common.CopySameField(&stOk.Order, order)
 		pResult = &stOk
 	}
@@ -102,6 +97,8 @@ func Http_confirm_order(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	//gamelog.Debug("%v", r.Form)
 
+	orderId := r.Form.Get("order_id")
+
 	//! 创建回复
 	var ack msg.Retcode_ack
 	ack.Retcode = -1
@@ -111,15 +108,13 @@ func Http_confirm_order(w http.ResponseWriter, r *http.Request) {
 		gamelog.Debug("ack: %v", ack)
 	}()
 
-	if order := msg.FindOrder(r.Form.Get("order_id")); order != nil {
-		if r.Form.Get("sign") != sign.CalcSign("order_id="+order.Order_id) {
-			ack.Retcode = -3
-			return
-		}
+	if order := msg.FindOrder(orderId); order == nil {
+		ack.Retcode = -2
+	} else if r.Form.Get("sign") != sign.CalcSign("order_id="+order.Order_id) {
+		ack.Retcode = -3
+	} else {
 		ack.Retcode = 0
 		msg.ConfirmOrder(order)
-	} else {
-		ack.Retcode = -2
 	}
 }
 

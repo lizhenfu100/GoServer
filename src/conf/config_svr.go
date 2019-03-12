@@ -15,8 +15,8 @@ const (
 	Is_Msg_Encode       = false //消息加密
 	Open_Http_To_Client = false //Http推送
 
-	// 统计信息
-	Open_Calc_QPS = false //后台qps
+	// 测试标记
+	TestFlag_CalcQPS = false //后台qps
 
 	// GM相关
 	GM_Passwd = "chillyroom_gm_*"

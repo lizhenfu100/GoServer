@@ -86,9 +86,10 @@ func UploadFile(url, fullname string) error {
 	}
 }
 func DownloadFile(url, localDir, localName string) error {
-	if res, err := http.Get(url); err == nil {
-		defer res.Body.Close()
-		if result, err := ioutil.ReadAll(res.Body); err == nil {
+	if resp, err := http.Get(url); err == nil {
+		result, err := ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err == nil {
 			if fd, err := file.CreateFile(localDir, localName, os.O_WRONLY|os.O_TRUNC); err == nil {
 				fd.Write(result)
 				fd.Close()

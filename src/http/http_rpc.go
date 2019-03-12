@@ -68,17 +68,12 @@ func _HandleRpc(w http.ResponseWriter, r *http.Request) {
 	if req == nil {
 		return
 	}
-	defer req.Free()
-
 	ack := common.NewNetPackCap(128) //! 创建回复
 	defer func() {
 		compress.CompressTo(ack.Data(), w)
 		ack.Free()
+		req.Free()
 	}()
-
-	if conf.Open_Calc_QPS {
-		qps.AddQps()
-	}
 
 	msgId := req.GetOpCode()
 	if msgId >= enum.RpcEnumCnt {
@@ -86,6 +81,10 @@ func _HandleRpc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	gamelog.Debug("HttpMsg:%d, len:%d", msgId, req.Size())
+
+	if conf.TestFlag_CalcQPS {
+		qps.AddQps()
+	}
 	//defer func() {//库已经有recover了，见net/http/server.go:1918
 	//	if r := recover(); r != nil {
 	//		gamelog.Error("recover msgId:%d\n%v: %s", msgId, r, debug.Stack())

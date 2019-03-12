@@ -78,7 +78,6 @@ func ReadLine(filename string, cb func(string)) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 	rd := bufio.NewReader(f)
 	for {
 		line, err := rd.ReadString('\n')
@@ -87,6 +86,7 @@ func ReadLine(filename string, cb func(string)) error {
 		}
 		cb(strings.TrimSpace(line))
 	}
+	f.Close()
 	return nil
 }
 

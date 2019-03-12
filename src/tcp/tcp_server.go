@@ -31,7 +31,7 @@ type TCPServer struct {
 var _svr TCPServer
 
 func NewTcpServer(port uint16, maxconn int32) { //"ip:port"，ip可缺省
-	if conf.Open_Calc_QPS {
+	if conf.TestFlag_CalcQPS {
 		go qps.WatchLoop()
 	}
 	_svr.MaxConnNum = maxconn

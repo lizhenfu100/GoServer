@@ -24,9 +24,10 @@ func Test_email(t *testing.T) {
 	q.Set("passwd", passwd)
 	//3、生成完整url
 	u.RawQuery = q.Encode()
-	if res, err := http.Get(u.String()); err == nil {
-		defer res.Body.Close()
-		if buf, err := ioutil.ReadAll(res.Body); err == nil {
+	if resp, err := http.Get(u.String()); err == nil {
+		buf, err := ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err == nil {
 			fmt.Println(string(buf))
 		}
 	}

@@ -244,7 +244,7 @@ func (self *TCPConn) readRoutine() {
 			gamelog.Error("(%p)ReadFull msgData error: %s", self.conn, err.Error())
 			break
 		}
-		if conf.Open_Calc_QPS {
+		if conf.TestFlag_CalcQPS {
 			qps.AddQps()
 		}
 		//FIXME: 消息加密、验证有效性，不通过即踢掉

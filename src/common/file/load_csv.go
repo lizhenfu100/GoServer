@@ -258,33 +258,31 @@ func ReadCsv(path string) ([][]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-	r := csv.NewReader(file)
-	records, err := r.ReadAll()
-	if err != nil {
-		return nil, err
-	}
-	return records, nil
+	ret, err := csv.NewReader(file).ReadAll()
+	file.Close()
+	return ret, err
 }
 func UpdateCsv(dir, name string, records [][]string) error {
 	file, err := CreateFile(dir, name, os.O_TRUNC|os.O_WRONLY)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 	w := csv.NewWriter(file)
-	return w.WriteAll(records)
+	err = w.WriteAll(records)
+	file.Close()
+	return err
 }
 func AppendCsv(dir, name string, record []string) error {
 	file, err := CreateFile(dir, name, os.O_APPEND|os.O_WRONLY)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 	w := csv.NewWriter(file)
 	if err := w.Write(record); err != nil {
+		file.Close()
 		return err
 	}
 	w.Flush()
+	file.Close()
 	return nil
 }

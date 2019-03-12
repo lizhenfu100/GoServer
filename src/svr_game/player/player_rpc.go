@@ -58,17 +58,10 @@ func _PlayerRpcHttp(w http.ResponseWriter, r *http.Request) {
 	if req == nil {
 		return
 	}
-	defer req.Free()
-
-	ack := common.NewNetPackCap(128) //! 创建回复
-	defer func() {
-		compress.CompressTo(ack.Data(), w)
-		ack.Free()
-	}()
-
 	msgId := req.GetOpCode()
 	if msgId >= enum.RpcEnumCnt {
 		gamelog.Error("PlayerMsg(%d) Not Regist", msgId)
+		req.Free()
 		return
 	}
 	if msgId != enum.Rpc_game_heart_beat {
@@ -80,6 +73,7 @@ func _PlayerRpcHttp(w http.ResponseWriter, r *http.Request) {
 	//	}
 	//	ack.Free()
 	//}()
+	ack := common.NewNetPackCap(128) //! 创建回复
 	accountId := req.GetReqIdx()
 	//FIXME: http通信中途安全性不够，能修改client net pack里的uid，进而操作别人数据
 	//FIXME: 账号服登录验证后下发给client的token，client应该保留，附在每个HttpReq里，防止恶意窜改他人数据
@@ -92,6 +86,10 @@ func _PlayerRpcHttp(w http.ResponseWriter, r *http.Request) {
 	} else {
 		gamelog.Debug("Player(%d) isn't online", accountId)
 	}
+
+	compress.CompressTo(ack.Data(), w)
+	ack.Free()
+	req.Free()
 }
 
 // ------------------------------------------------------------
