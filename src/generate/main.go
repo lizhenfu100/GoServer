@@ -76,6 +76,7 @@ func main() {
 	rpcInfos := make([]*RpcInfo, len(svrList))
 	for i, v := range svrList {
 		rpcInfos[i] = gatherRpcInfo(v)
+		generateRpcRegist(v, rpcInfos[i])
 	}
 
 	//2、收集并注册RpcFunc -- 战斗服、客户端
@@ -89,9 +90,8 @@ func main() {
 	//3、RpcFunc收集完毕，生成RpcEunm
 	if generateRpcEnum(funcs) {
 		modules := []string{"client"}
-		for i, ptr := range rpcInfos {
+		for _, ptr := range rpcInfos {
 			modules = append(modules, ptr.Module)
-			generateRpcRegist(svrList[i], ptr)
 		}
 		//4、生成golang服务器的路由信息
 		generateRpcRoute(modules, funcs)

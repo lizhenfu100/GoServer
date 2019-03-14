@@ -1,0 +1,52 @@
+<html>
+
+<head>
+    <title>公告发布</title>
+    <link rel="stylesheet" href="../main.css">
+    <script src="../app.js"></script>
+</head>
+
+<body bgcolor="white">
+    <div class="all-wrapper">
+        <h1>公告发布</h1>
+        <div class="form-wrapper">
+            <form action="" method="post" onsubmit="SetSelectAddr(this)">
+                <label for="addr">大区:</label>
+                <select name="addr">
+                    <option value="{{index .LoginAddrs 1}}/bulletin">北美</option>
+                    <option value="{{index .LoginAddrs 2}}/bulletin">亚洲</option>
+                    <option value="{{index .LoginAddrs 3}}/bulletin">欧洲</option>
+                    <option value="{{index .LoginAddrs 4}}/bulletin">南美</option>
+                    <option value="{{index .LoginAddrs 5}}/bulletin">中国华南</option>
+                    <option value="{{index .LoginAddrs 6}}/bulletin">中国华北</option>
+                </select>
+                <label for="zh">中文简体:</label>
+                <input type="text" name="zh"><br>
+                <label for="zh_hant">中文繁体:</label>
+                <input type="text" name="zhhant"><br>
+                <label for="en">英语:</label>
+                <input type="text" name="en"><br>
+                <label for="jp">日语:</label>
+                <input type="text" name="jp"><br>
+                <label for="ru">俄语:</label>
+                <input type="text" name="ru"><br>
+                <label for="kr">韩语:</label>
+                <input type="text" name="kr"><br>
+                <label for="es">西班牙语:</label>
+                <input type="text" name="es"><br>
+                <label for="pt_br">葡萄牙语:</label>
+                <input type="text" name="pt_br"><br>
+                <label for="fr">法语:</label>
+                <input type="text" name="fr"><br>
+                <label for="id">印尼语:</label>
+                <input type="text" name="id"><br>
+                <label for="de">德语:</label>
+                <input type="text" name="de"><br>
+                <br>
+                <input type="submit" value="确认发布">
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

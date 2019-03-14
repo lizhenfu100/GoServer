@@ -2,12 +2,16 @@ package main
 
 import (
 	"common"
+	"common/sign"
 	"conf"
 	"fmt"
 	"generate_out/err"
 	"generate_out/rpc/enum"
 	mhttp "http"
 	"net/http"
+	"net/url"
+	"strconv"
+	"time"
 )
 
 func Http_query_account_login_addr(w http.ResponseWriter, r *http.Request) {
@@ -31,5 +35,25 @@ func Http_query_account_login_addr(w http.ResponseWriter, r *http.Request) {
 					loginIp, loginPort, gameIp, gamePort)))
 			}
 		})
+	}
+}
+func Http_reset_password(w http.ResponseWriter, r *http.Request) {
+	q1 := r.URL.Query()
+	aid := q1.Get("id")
+	passwd := q1.Get("pwd")
+
+	//1、创建url
+	u, _ := url.Parse(g_templateData.CenterAddr + "/reset_password")
+	q := u.Query()
+	//2、写入参数
+	q.Set("id", aid)
+	q.Set("pwd", passwd)
+	flag := strconv.FormatInt(time.Now().Unix(), 10)
+	q.Set("flag", flag)
+	q.Set("sign", sign.CalcSign(passwd+flag))
+	//3、生成完整url
+	u.RawQuery = q.Encode()
+	if buf := mhttp.Get(u.String()); buf != nil {
+		w.Write(buf)
 	}
 }

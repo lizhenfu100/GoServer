@@ -2,16 +2,12 @@ package account
 
 import (
 	"common"
-	"common/email"
 	"common/format"
 	"common/sign"
 	"dbmgo"
-	"fmt"
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
-	"net/url"
-	"netConfig/meta"
 	"strconv"
 	"time"
 )
@@ -28,21 +24,8 @@ func Rpc_center_ask_reset_password(req, ack *common.NetPack) {
 		ack.WriteUInt16(err.Account_without_bind_info)
 	} else {
 		ack.WriteUInt16(err.Success)
-
-		//1、创建url
-		httpAddr := fmt.Sprintf("http://%s:%d/reset_password",
-			meta.G_Local.OutIP, meta.G_Local.Port())
-		u, _ := url.Parse(httpAddr)
-		q := u.Query()
-		//2、写入参数
-		q.Set("id", strconv.Itoa(int(account.AccountID)))
-		q.Set("pwd", passwd)
-		flag := strconv.FormatInt(time.Now().Unix(), 10)
-		q.Set("flag", flag)
-		q.Set("sign", sign.CalcSign(passwd+flag))
-		//3、生成完整url
-		u.RawQuery = q.Encode()
-		email.SendMail("密码重置", emailAddr, u.String())
+		ack.WriteUInt32(account.AccountID)
+		ack.WriteString(emailAddr)
 	}
 }
 func Http_reset_password(w http.ResponseWriter, r *http.Request) {

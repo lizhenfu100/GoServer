@@ -12,12 +12,10 @@
 package wechat
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
+	"http"
 )
 
 var (
@@ -70,32 +68,26 @@ type errMsg struct {
 }
 
 func updateToken(corpId, secret string) error {
-	resp, err := http.Get(kUrlGetToken + corpId + "&corpsecret=" + secret)
-	if err != nil {
-		return err
-	}
-	buf, _ := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-
-	var val token
-	json.Unmarshal(buf, &val)
-	if g_token = val.Access_token; g_token == "" {
-		return errors.New(string(buf))
+	if buf := http.Get(kUrlGetToken + corpId + "&corpsecret=" + secret); buf == nil {
+		return errors.New("http get failed")
+	} else {
+		var val token
+		json.Unmarshal(buf, &val)
+		if g_token = val.Access_token; g_token == "" {
+			return errors.New(string(buf))
+		}
 	}
 	return nil
 }
 func sendMsg(b []byte) error {
-	resp, err := http.Post(kUrlSend+g_token, "application/json", bytes.NewBuffer(b))
-	if err != nil {
-		return err
-	}
-	buf, _ := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-
-	var msg errMsg
-	json.Unmarshal(buf, &msg)
-	if msg.Errcode != 0 && msg.Errmsg != "ok" {
-		return errors.New(string(buf))
+	if buf := http.Post(kUrlSend+g_token, "application/json", b); buf == nil {
+		return errors.New("http post failed")
+	} else {
+		var msg errMsg
+		json.Unmarshal(buf, &msg)
+		if msg.Errcode != 0 && msg.Errmsg != "ok" {
+			return errors.New(string(buf))
+		}
 	}
 	return nil
 }

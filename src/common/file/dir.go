@@ -43,7 +43,7 @@ func WalkDir(dir, suffix string) (ret []string, err error) {
 	err = _walkDir(dir, suffix, &ret)
 	return
 }
-func _walkDir(dir, suffix string, names *[]string) error {
+func _walkDir(dir, suffix string, ret *[]string) error {
 	if len(dir) == 0 {
 		return nil
 	}
@@ -57,11 +57,11 @@ func _walkDir(dir, suffix string, names *[]string) error {
 			for _, fi := range list {
 				name := dir + fi.Name()
 				if fi.Mode()&(os.ModeDir|os.ModeSymlink) != 0 {
-					if err = _walkDir(name, suffix, names); err != nil {
+					if err = _walkDir(name, suffix, ret); err != nil {
 						return err
 					}
 				} else if strings.HasSuffix(name, suffix) {
-					*names = append(*names, name)
+					*ret = append(*ret, name)
 				}
 			}
 			return nil
@@ -103,13 +103,15 @@ func CreateFile(dir, name string, flag int) (*os.File, error) {
 		return file, nil
 	}
 }
+
+// 内置模板函数：template/funcs.go -> builtins: index/len/...
 func CreateTemplate(data interface{}, outDir, filename, tempText string) {
-	var bf bytes.Buffer
 	tpl, err := template.New(filename).Parse(tempText)
 	if err != nil {
 		panic(err.Error())
 		return
 	}
+	var bf bytes.Buffer
 	if err = tpl.Execute(&bf, data); err != nil {
 		panic(err.Error())
 		return

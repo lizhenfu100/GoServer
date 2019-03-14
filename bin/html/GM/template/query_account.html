@@ -1,0 +1,28 @@
+<html>
+
+<head>
+    <title>查看账号</title>
+    <link rel="stylesheet" href="../main.css">
+    <script src="../app.js"></script>
+</head>
+
+<body bgcolor="white">
+    <div class="all-wrapper">
+        <h1>查看账号信息</h1>
+        <div class="form-wrapper">
+            <form action="" method="get" onsubmit="SetSelectAddr(this)">
+                <label for="addr">操作类型:</label>
+                <select name="addr">
+                    <option value="{{.CenterAddr}}/show_account_info">基本信息</option>
+                    <option value="{{.LocalAddr}}/query_account_login_addr">所在大区</option>
+                </select>
+                <label for="name">账户名:</label>
+                <input type="text" name="name"><br>
+                <br>
+                <input type="submit" value="确认">
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

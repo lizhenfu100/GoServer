@@ -37,17 +37,17 @@ var (
 	g_database   *mgo.Database
 )
 
-func InitWithUser(ip string, port uint16, dbname, username, password string) {
+func InitWithUser(ip string, port uint16, dbname, user, pwd string) {
 	pInfo := &mgo.DialInfo{
 		Addrs:    []string{fmt.Sprintf("%s:%d", ip, port)},
 		Timeout:  10 * time.Second,
 		Database: dbname,
-		Username: username,
-		Password: password,
+		Username: user,
+		Password: pwd,
 	}
 	var err error
 	if g_db_session, err = mgo.DialWithInfo(pInfo); err != nil {
-		panic("Mongodb Init Failed:" + err.Error())
+		panic(fmt.Sprintf("Mongodb Init: %s:%d %s %s %s", ip, port, dbname, user, pwd))
 	}
 	g_database = g_db_session.DB(dbname)
 

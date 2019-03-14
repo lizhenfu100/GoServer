@@ -127,25 +127,25 @@ import (
 	{{end}}
 )
 func init() {
-	{{if .TcpRpcCnt}}
+	{{if len .TcpRpc}}
 		register.RegTcpRpc(map[uint16]register.TcpRpc{
 			{{range .TcpRpc}}enum.{{.Name}}: {{.Pack}}.{{.Name}},
 			{{end}}
 		})
 	{{end}}
-	{{if .HttpRpcCnt}}
+	{{if len .HttpRpc}}
 		register.RegHttpRpc(map[uint16]register.HttpRpc{
 			{{range .HttpRpc}}enum.{{.Name}}: {{.Pack}}.{{.Name}},
 			{{end}}
 		})
 	{{end}}
-	{{if .PlayerRpcCnt}}
+	{{if len .PlayerRpc}}
 		{{.RegPlayerRpcPack}}.RegPlayerRpc(map[uint16]{{.RegPlayerRpcPack}}.PlayerRpc{
 			{{range .PlayerRpc}}enum.{{.Name}}: {{.Pack}}.{{.Name}},
 			{{end}}
 		})
 	{{end}}
-	{{if .HttpHandleCnt}}
+	{{if len .HttpHandle}}
 		register.RegHttpHandler(map[string]register.HttpHandle{
 			{{range .HttpHandle}}"/{{.Name}}": {{.Pack}}.Http_{{.Name}},
 			{{end}}
@@ -154,8 +154,4 @@ func init() {
 }
 `
 
-func (p *RpcInfo) RpcCnt() int        { return len(p.TcpRpc) + len(p.HttpRpc) + len(p.PlayerRpc) }
-func (p *RpcInfo) TcpRpcCnt() int     { return len(p.TcpRpc) }
-func (p *RpcInfo) HttpRpcCnt() int    { return len(p.HttpRpc) }
-func (p *RpcInfo) PlayerRpcCnt() int  { return len(p.PlayerRpc) }
-func (p *RpcInfo) HttpHandleCnt() int { return len(p.HttpHandle) }
+func (p *RpcInfo) RpcCnt() int { return len(p.TcpRpc) + len(p.HttpRpc) + len(p.PlayerRpc) }

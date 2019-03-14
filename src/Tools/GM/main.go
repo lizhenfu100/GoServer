@@ -24,8 +24,6 @@ import (
 
 const (
 	kFileDirRoot = "html/GM/"
-	kCenterAddr  = "http://52.14.1.205:7000"
-	//kCenterAddr  = "http://192.168.1.111:7000"
 	kNeedPasswd  = false
 )
 
@@ -47,7 +45,6 @@ func main() {
 	meta.G_Local.OutIP = ip
 	meta.G_Local.HttpPort = uint16(port)
 	g_templateData.LocalAddr = mhttp.Addr(ip, uint16(port))
-	g_templateData.CenterAddr = kCenterAddr
 
 	//初始化日志系统
 	gamelog.InitLogger("gm")
@@ -64,6 +61,7 @@ func main() {
 func InitConf() {
 	register.RegHttpHandler(map[string]register.HttpHandle{
 		"/query_account_login_addr": Http_query_account_login_addr,
+		"/reset_password":           Http_reset_password,
 		"/check_passwd":             Http_check_passwd,
 	})
 	g_file_server = http.FileServer(http.Dir(kFileDirRoot))

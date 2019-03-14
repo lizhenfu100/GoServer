@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"common"
 	"common/file"
 	"common/timer"
@@ -10,16 +9,13 @@ import (
 	"gamelog"
 	"generate_out/rpc/enum"
 	"http"
-	"os"
 	"strings"
 	"svr_sdk/msg"
-	"text/template"
 	"time"
 )
 
 func main() {
-	var (
-		//命令行标志，须出现于参数之前（否则，该标志会被解析为位置参数）
+	var ( //命令行标志，须出现于参数之前（否则，该标志会被解析为位置参数）
 		_g, _s, _ip string
 		_port       int
 	)
@@ -42,8 +38,7 @@ func main() {
 	time.Sleep(time.Minute)
 }
 
-// --------------------------------------------------------------------------
-//
+// ------------------------------------------------------------
 func OrderSuccess(addr string, orderIds []string) {
 	if len(orderIds) > 0 && orderIds[0] != "" {
 		gamelog.Debug("set: %d %v", len(orderIds), orderIds)
@@ -90,12 +85,13 @@ func GetOrderInfo(addr string, orderIds []string) {
 					fmt.Println(vec[i].Order_id)
 				}
 			}
-			makeFile(vec)
+			filename := time.Now().Format("20060102_150405") + ".log"
+			file.CreateTemplate(vec, "Order/", filename, K_Out_Template)
 		})
 	}
 }
 
-// --------------------------------------------------------------------------
+// ------------------------------------------------------------
 // 查到的订单，输出成文本
 const K_Out_Template = `{{range .}}
 {
@@ -111,28 +107,3 @@ const K_Out_Template = `{{range .}}
 }
 {{end}}
 `
-
-func makeFile(vec []msg.TOrderInfo) {
-	filename := time.Now().Format("20060102_150405") + ".log"
-	tpl, err := template.New(filename).Parse(K_Out_Template)
-	if err != nil {
-		panic(err.Error())
-		return
-	}
-	var bf bytes.Buffer
-	if err = tpl.Execute(&bf, vec); err != nil {
-		panic(err.Error())
-		return
-	}
-	f, err := file.CreateFile("Order/", filename, os.O_WRONLY|os.O_APPEND)
-	if err != nil {
-		panic(err.Error())
-		return
-	}
-	f.Write(bf.Bytes())
-	f.Close()
-
-	if len(vec) < 5 {
-		fmt.Println(bf.String())
-	}
-}

@@ -12,8 +12,7 @@ package area
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
+	"http"
 )
 
 const (
@@ -39,38 +38,26 @@ type retTaobao struct {
 }
 
 func GetArea() (ret TArea) {
-	if resp, err := http.Get(kTaobaoLoacl); err == nil {
-		buf, err := ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
-		if err == nil {
-			var ack retTaobao
-			json.Unmarshal(buf, &ack)
-			ret = ack.Data
-		}
+	if buf := http.Get(kTaobaoLoacl); buf != nil {
+		var ack retTaobao
+		json.Unmarshal(buf, &ack)
+		ret = ack.Data
 	}
 	return
 }
 func GetAreaEx(ip string) (ret TArea) {
-	if resp, err := http.Get(kTaobaoApi + ip); err == nil {
-		buf, err := ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
-		if err == nil {
-			var ack retTaobao
-			json.Unmarshal(buf, &ack)
-			ret = ack.Data
-		}
+	if buf := http.Get(kTaobaoApi + ip); buf != nil {
+		var ack retTaobao
+		json.Unmarshal(buf, &ack)
+		ret = ack.Data
 	}
 	return
 }
 func GetCountryId() string {
-	if resp, err := http.Get(kCountryApi); err == nil {
-		buf, err := ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
-		if err == nil {
-			s := string(buf)
-			fmt.Println(s)
-			return s
-		}
+	if buf := http.Get(kCountryApi); buf != nil {
+		s := string(buf)
+		fmt.Println(s)
+		return s
 	}
 	return ""
 }

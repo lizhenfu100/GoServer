@@ -18,13 +18,16 @@
 package email
 
 import (
+	"bytes"
 	"conf"
+	"gamelog"
 	"gopkg.in/gomail"
+	"text/template"
 )
 
 var (
-	g_msg    = gomail.NewMessage()
 	g_dialer *gomail.Dialer
+	_msg     = gomail.NewMessage()
 )
 
 func SendMail(subject, target, body string) error {
@@ -35,8 +38,8 @@ func SendMail(subject, target, body string) error {
 			conf.SvrCsv.EmailUser,
 			conf.SvrCsv.EmailPasswd)
 	}
-	g_msg.Reset()
-	msg := g_msg
+	_msg.Reset()
+	msg := _msg
 
 	msg.SetAddressHeader("From", g_dialer.Username, "ChillyRoom")
 	msg.SetHeader("To", target)
@@ -49,4 +52,14 @@ func SendMail(subject, target, body string) error {
 	//msg.Attach("我是附件")
 
 	return g_dialer.DialAndSend(msg)
+}
+func CreateTemplate(fileName, body string) string {
+	if t, e := template.ParseFiles(fileName); e == nil {
+		var bf bytes.Buffer
+		t.Execute(&bf, &body)
+		return bf.String()
+	} else {
+		gamelog.Error(e.Error())
+		return body
+	}
 }

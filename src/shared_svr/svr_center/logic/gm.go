@@ -35,5 +35,7 @@ func Http_show_account_info(w http.ResponseWriter, r *http.Request) {
 	if p := account.GetAccountByName(name); p != nil {
 		ack, _ := json.MarshalIndent(p, "", "     ")
 		w.Write(ack)
+	} else {
+		w.Write([]byte("none account"))
 	}
 }

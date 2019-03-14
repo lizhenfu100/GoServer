@@ -1,25 +1,21 @@
 /***********************************************************************
 * @ 单机游戏充值
 * @ brief
-    1、client先向后台请求，生成充值订单
-    2、client得到订单号后，通知第三方SDK，待其回复后(SDK回同时通知client/server)，查询游戏后台能否发货
-    3、发货后，通告后台“发货确认”，后台将发货标记 Can_send 置空
+    1、client先跟后台请求，生成充值订单
+    2、client收到订单号，调第三方SDK下单，待回复后(SDK会同时通知client/server)，查询游戏后台能否发货
+    3、先通知后台“发货确认”（Can_send = 0），成功后client再发货
     4、后续同一订单的发货查询随即失效
-
 * @ author zhoumf
 * @ date 2017-10-10
 ***********************************************************************/
 package logic
 
 import (
-	"bytes"
 	"common"
 	"common/sign"
-	"dbmgo"
 	"encoding/json"
 	"fmt"
 	"gamelog"
-	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"shared_svr/svr_sdk/msg"
 	"shared_svr/svr_sdk/platform"
@@ -92,7 +88,7 @@ func Http_query_order(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//客户端发货成功，通告后台，避免重复发货
+//【先通知后台，再才发货，避免通知不成功重复发】
 func Http_confirm_order(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	//gamelog.Debug("%v", r.Form)
@@ -142,52 +138,4 @@ func Http_query_order_unfinished(w http.ResponseWriter, r *http.Request) {
 		}
 		return true
 	})
-}
-
-// --------------------------------------------------------------------------
-// 运维用，修改订单
-func Rpc_order_success(req, ack *common.NetPack) {
-	var errInfo bytes.Buffer
-	cnt := req.ReadUInt16()
-	for i := uint16(0); i < cnt; i++ {
-		orderId := req.ReadString()
-
-		if order := msg.FindOrder(orderId); order != nil {
-			if order.Status == 1 {
-				errInfo.WriteString(orderId)
-				errInfo.WriteString(": order already success\n")
-			} else {
-				order.Status = 1
-				order.Can_send = 1
-				dbmgo.UpdateId("Order", order.Order_id, bson.M{"$set": bson.M{
-					"status": 1, "can_send": 1}})
-			}
-		} else {
-			errInfo.WriteString(orderId)
-			errInfo.WriteString(": order not exists\n")
-		}
-	}
-
-	ack.WriteString(errInfo.String())
-}
-func Rpc_order_info(req, ack *common.NetPack) {
-	cnt := req.ReadUInt16()
-	ack.WriteUInt16(cnt)
-	for i := uint16(0); i < cnt; i++ {
-		orderId := req.ReadString()
-
-		if order := msg.FindOrder(orderId); order != nil {
-			ack.WriteInt8(1)
-			ack.WriteString(order.Third_order_id)
-			ack.WriteString(order.Third_account)
-			ack.WriteString(order.Item_name)
-			ack.WriteInt(order.Item_count)
-			ack.WriteInt(order.Total_price)
-			ack.WriteInt64(order.Time)
-			ack.WriteInt(order.Status)
-			ack.WriteInt(order.Can_send)
-		} else {
-			ack.WriteInt8(-1)
-		}
-	}
 }

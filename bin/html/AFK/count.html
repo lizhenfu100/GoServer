@@ -1,0 +1,30 @@
+<html>
+
+<head>
+	<title>统计</title>
+	<link rel="stylesheet" href="../main.css">
+	<script src="../app.js"></script>
+</head>
+
+<body bgcolor="white">
+	<div class="all-wrapper">
+		<h1>请假信息 - 统计</h1>
+		<div class="link-wrapper">
+			<a href="http://{{.IP}}:{{.HttpPort}}/afk">请假</a>
+			<a href="http://{{.IP}}:{{.HttpPort}}/count">统计</a>
+			<a href="http://{{.IP}}:{{.HttpPort}}/delete">删除</a>
+		</div>
+		<div class="form-wrapper">
+			<form action="http://{{.IP}}:{{.HttpPort}}/count" method="post">
+				<label for="name">姓名:</label><input type="text" name="name" id="name"><br>
+				<label for="passwd">密码:</label><input type="password" name="passwd" id="passwd"><br>
+				<label for="begin">起始:</label><input type="date" name="begin" id="begin"><br>
+				<label for="end">结束:</label><input type="date" name="end" id="end"><br>
+				<br>
+				<input type="submit" value="开始统计">
+			</form>
+		</div>
+	</div>
+</body>
+
+</html>

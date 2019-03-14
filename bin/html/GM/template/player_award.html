@@ -1,0 +1,52 @@
+<html>
+
+<head>
+    <title>玩家补偿</title>
+    <link rel="stylesheet" href="../main.css">
+    <script src="../app.js"></script>
+</head>
+
+<body bgcolor="white">
+    <div class="all-wrapper">
+        <h1>玩家补偿 - 新增</h1>
+        <div class="form-wrapper">
+            <script>
+                function setActionAddr(form) {
+                    var select = form.getElementsByTagName("select")[0];
+                    var urlkey = select.options[select.selectedIndex].value;
+                    // window.alert(document.getElementById("gameaddr").value)
+                    form.action="http://"+document.getElementById("gameaddr").value+urlkey;
+                    // window.alert(form.action)
+                }
+            </script>
+            <form action="" method="post" onsubmit="setActionAddr(this)">
+                <label for="urlkey">操作类型:</label>
+                <select name="urlkey">
+                    <option value="/player_award_add">新增</option>
+                    <option value="/player_award_set">修改</option>
+                    <option value="/player_award_del">删除</option>
+                </select>
+                <label for="passwd" title="我们自己约定的操作权限密码，一般不会变">
+                    权限密码:
+                </label>
+                <input type="password" name="passwd"><br>
+                <label for="addr" title="玩家所在GameServer地址，可由“查看账号信息”得到">
+                    游戏服:
+                </label>
+                <input type="text" name="addr" id="gameaddr" placeholder="127.0.0.1:7040"><br>
+                <label for="uid">玩家账号:</label>
+                <input type="text" name="uid"><br>
+                <label for="json" title='{"type":"coin", "count":1200000}&#10;{"type":"oil", "count":900}'>
+                    Json内容:
+                </label>
+                <input type="text" name="json"><br>
+                <label for="id">待删除ID:</label>
+                <input type="text" name="id"><br>
+                <br>
+                <input type="submit" value="确认">
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

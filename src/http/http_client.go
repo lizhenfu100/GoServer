@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"netConfig/meta"
 	"os"
 	"time"
@@ -29,6 +30,24 @@ func PostReq(url string, b []byte) []byte {
 		gamelog.Error(err.Error())
 		return nil
 	}
+}
+func Get(url string) []byte {
+	if r, e := http.Get(url); e == nil {
+		return ReadResponse(r)
+	}
+	return nil
+}
+func Post(url string, contentType string, b []byte) []byte {
+	if r, e := http.Post(url, contentType, bytes.NewReader(b)); e == nil {
+		return ReadResponse(r)
+	}
+	return nil
+}
+func PostForm(url string, data url.Values) []byte {
+	if r, e := http.PostForm(url, data); e == nil {
+		return ReadResponse(r)
+	}
+	return nil
 }
 func ReadResponse(r *http.Response) (ret []byte) {
 	var err error
