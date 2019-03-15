@@ -20,6 +20,7 @@ func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	name := q.Get("name")
 	passwd := q.Get("passwd")
+	language := q.Get("language")
 
 	//! 创建回复
 	errCode := err.Unknow_error
@@ -52,8 +53,7 @@ func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) {
 			q.Set("sign", sign.CalcSign(passwd+flag))
 			//3、生成完整url
 			u.RawQuery = q.Encode()
-			body := email.CreateTemplate("csv/email/reset_pwd.txt", u.String())
-			email.SendMail("Reset Password", emailAddr, body)
+			email.SendMail("Reset Password", emailAddr, u.String(), language)
 		}
 	})
 }

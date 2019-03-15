@@ -14,6 +14,7 @@ package main
 
 import (
 	"common/console"
+	"common/email"
 	"common/file"
 	"conf"
 	"dbmgo"
@@ -53,8 +54,9 @@ func main() {
 func InitConf() {
 	var metaCfg []meta.Meta
 	file.G_Csv_Map = map[string]interface{}{
-		"conf_net": &metaCfg,
-		"conf_svr": &conf.SvrCsv,
+		"conf_net":    &metaCfg,
+		"conf_svr":    &conf.SvrCsv,
+		"email/email": &email.G_Email,
 	}
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)

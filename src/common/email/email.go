@@ -20,8 +20,8 @@ package email
 import (
 	"bytes"
 	"conf"
-	"gamelog"
 	"gopkg.in/gomail"
+	"reflect"
 	"text/template"
 )
 
@@ -30,7 +30,7 @@ var (
 	_msg     = gomail.NewMessage()
 )
 
-func SendMail(subject, target, body string) error {
+func SendMail(subject, target, body, language string) error {
 	if g_dialer == nil {
 		g_dialer = gomail.NewDialer(
 			conf.SvrCsv.EmailHost,
@@ -40,6 +40,8 @@ func SendMail(subject, target, body string) error {
 	}
 	_msg.Reset()
 	msg := _msg
+
+	body = PackBody(subject, body, language) //嵌入模板，并本地化
 
 	msg.SetAddressHeader("From", g_dialer.Username, "ChillyRoom")
 	msg.SetHeader("To", target)
@@ -53,13 +55,17 @@ func SendMail(subject, target, body string) error {
 
 	return g_dialer.DialAndSend(msg)
 }
-func CreateTemplate(fileName, body string) string {
-	if t, e := template.ParseFiles(fileName); e == nil {
-		var bf bytes.Buffer
-		t.Execute(&bf, &body)
-		return bf.String()
-	} else {
-		gamelog.Error(e.Error())
-		return body
+
+func PackBody(subject, body, language string) string {
+	if csv, ok := G_Email[subject]; ok {
+		ref := reflect.ValueOf(csv).Elem()
+		if v := ref.FieldByName(language); v.IsValid() {
+			if t, e := template.New(subject).Parse(v.String()); e == nil {
+				var bf bytes.Buffer
+				t.Execute(&bf, &body)
+				return bf.String()
+			}
+		}
 	}
+	return body
 }

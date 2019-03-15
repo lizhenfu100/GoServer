@@ -104,17 +104,16 @@ func ParseRefCsvByMap(records [][]string, pMap interface{}) {
 	typ := table.Type().Elem().Elem() // map内保存的指针，第二次Elem()得到所指对象类型
 	table.Set(reflect.MakeMap(table.Type()))
 
-	total, idx := _GetRecordsValidCnt(records), 0
+	total, idx := _validCnt(records), 0
 	slice := reflect.MakeSlice(reflect.SliceOf(typ), total, total) // 避免多次new对象，直接new数组，拆开用
 
-	bParsedName, nilFlag := false, int64(0)
+	isParsedHead, nilFlag := false, uint64(0)
 	for _, v := range records {
-		if strings.Index(v[0], "#") == -1 { // "#"起始的不读
-			if !bParsedName {
+		if !strings.HasPrefix(v[0], "#") { // "#"起始的不读
+			if !isParsedHead {
 				nilFlag = _parseHead(v)
-				bParsedName = true
+				isParsedHead = true
 			} else {
-				// data := reflect.New(typ).Elem()
 				data := slice.Index(idx)
 				idx++
 				_parseData(v, nilFlag, data)
@@ -131,15 +130,15 @@ func ParseRefCsvBySlice(records [][]string, pSlice interface{}) { // slice可减
 	slice := reflect.ValueOf(pSlice).Elem() // 这里slice是nil
 	typ := reflect.TypeOf(pSlice).Elem()
 
-	total, idx := _GetRecordsValidCnt(records), 0
+	total, idx := _validCnt(records), 0
 	slice.Set(reflect.MakeSlice(typ, total, total))
 
-	bParsedName, nilFlag := false, int64(0)
+	isParsedHead, nilFlag := false, uint64(0)
 	for _, v := range records {
-		if strings.Index(v[0], "#") == -1 { // "#"起始的不读
-			if !bParsedName {
+		if !strings.HasPrefix(v[0], "#") { // "#"起始的不读
+			if !isParsedHead {
 				nilFlag = _parseHead(v)
-				bParsedName = true
+				isParsedHead = true
 			} else {
 				data := slice.Index(idx)
 				idx++
@@ -151,39 +150,40 @@ func ParseRefCsvBySlice(records [][]string, pSlice interface{}) { // slice可减
 func ParseRefCsvByStruct(records [][]string, pStruct interface{}) {
 	st := reflect.ValueOf(pStruct).Elem()
 	for _, v := range records {
-		if strings.Index(v[0], "#") == -1 { // "#"起始的不读
+		if !strings.HasPrefix(v[0], "#") { // "#"起始的不读
 			SetField(st.FieldByName(v[0]), v[1])
 		}
 	}
 }
-func _parseHead(record []string) (nilFlag int64) { // 不读的列：没命名/前缀"_"
+func _parseHead(record []string) (nilFlag uint64) { // 不读的列：没命名/前缀"_"
 	length := len(record)
 	if length > 64 {
 		panic("csv column is over to 64 !!!\n")
 	}
 	for i := 0; i < length; i++ {
-		if record[i] == "" || strings.Index(record[i], "_") == 0 {
-			nilFlag |= (1 << uint(i))
+		if record[i] == "" || strings.HasPrefix(record[i], "_") {
+			nilFlag |= (1 << byte(i))
 		}
 	}
 	return nilFlag
 }
-func _parseData(record []string, nilFlag int64, data reflect.Value) {
-	idx := 0
+func _parseData(record []string, nilFlag uint64, data reflect.Value) {
 	for i, s := range record {
-		if nilFlag&(1<<uint(i)) > 0 { // 跳过没命名的列
+		if s == "" || nilFlag&(1<<uint(i)) > 0 { // 跳过空只、没命名的列
 			continue
 		}
-
-		field := data.Field(idx)
-		idx++
-
-		if s == "" { // 没填的就不必解析了，跳过，idx还是要自增哟
-			continue
-		}
-		SetField(field, s)
+		SetField(data.Field(i), s)
 	}
 }
+func _validCnt(records [][]string) (ret int) {
+	for _, v := range records {
+		if strings.HasPrefix(v[0], "#") { // "#"起始的不读
+			ret++
+		}
+	}
+	return ret - 1 //减掉表头那一行
+}
+
 func SetField(field reflect.Value, s string) {
 	if !field.IsValid() || !field.CanSet() {
 		return
@@ -213,8 +213,8 @@ func SetField(field reflect.Value, s string) {
 		}
 	case reflect.Struct, reflect.Map:
 		{
-			if err := json.Unmarshal([]byte(s), field.Addr().Interface()); err != nil {
-				fmt.Errorf("Field Parse Error: (content=%v): %v", s, err)
+			if e := json.Unmarshal([]byte(s), field.Addr().Interface()); e != nil {
+				fmt.Sprintf("Field Parse Error: %s: %s", s, e.Error())
 			}
 		}
 	case reflect.Slice:
@@ -228,27 +228,19 @@ func SetField(field reflect.Value, s string) {
 				}
 			case reflect.Int, reflect.Uint32, reflect.Float32, reflect.Struct, reflect.Slice:
 				{
-					if err := json.Unmarshal([]byte(s), field.Addr().Interface()); err != nil {
-						fmt.Errorf("Field Parse Error: (content=%v): %v", s, err)
+					if e := json.Unmarshal([]byte(s), field.Addr().Interface()); e != nil {
+						fmt.Sprintf("Field Parse Error: %s: %s", s, e.Error())
 					}
 				}
 			default:
 				{
-					fmt.Printf("Field Type Error: TypeName:%s", field.Type().String())
+					fmt.Println("Field Type Error: ", field.Type().String())
 				}
 			}
 		}
 	default:
-		fmt.Printf("Field Type Error: TypeName:%s\n", field.Type().String())
+		fmt.Println("Field Type Error: ", field.Type().String())
 	}
-}
-func _GetRecordsValidCnt(records [][]string) (ret int) {
-	for _, v := range records {
-		if strings.Index(v[0], "#") == -1 { // "#"起始的不读
-			ret++
-		}
-	}
-	return ret - 1 //减掉表头那一行
 }
 
 // -------------------------------------

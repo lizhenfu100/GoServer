@@ -1,0 +1,179 @@
+﻿Title,英文,简体中文,繁体中文,日语,俄语,韩语,西班牙语,葡萄牙语,法语,印尼语,德语
+Reset Password,"Greetings!<br>
+<br>
+Recently a request was submitted to reset your password. Please visit the URL below to complete the process:<br>
+{{.}}<br>
+<br>
+If you did not request this, please ignore this email. It will expire and become useless in 1 hour. If you encounter any issues, please contact us via email (info@chillyroom.com).<br>
+<br>
+Thanks，<br>
+ChillyRoom<br>","你好，<br>
+<br>
+我们收到你的账号密码重置请求。请点击以下链接重置密码：<br>
+{{.}}<br>
+<br>
+若非本人操作，请忽略此邮件，链接将在1小时候失效。若有其他问题，请联系我们的客服QQ：1597374718。<br>
+<br>
+感谢支持！<br>
+凉屋游戏<br>","你好，<br>
+<br>
+我們收到你的賬號密碼重置請求。請點擊以下鏈接重置密碼：<br>
+{{.}}<br>
+<br>
+若非本人操作，請忽略此郵件，鏈接將在1小時候失效。若有其他問題，請聯繫我們的客服QQ：1597374718。<br>
+<br>
+感謝支持！<br>
+涼屋遊戲<br>","こんにちは！<br>
+<br>
+パスワードのリセット要求がありました。以下のURLにアクセスして手順を完了してください。<br>
+{{.}}<br>
+<br>
+要求していない場合は、このメールは無視してください。このURLは1時間で失効します。不明な点がありましたらメールで info@chillyroom.com までお問い合わせください。<br>
+<br>
+よろしくお願いします。<br>
+ChillyRoom<br>","Здравствуйте!<br>
+<br>
+Мы получили запрос на сброс пароля. Для завершения процесса перейдите по ссылке: <br>
+{{.}}<br>
+<br>
+Если вы не отправляли такой запрос, проигнорируйте письмо. Ссылка действительна в течение 1 часа. При возникновении каких-либо проблем свяжитесь с нами по электронной почте (info@chillyroom.com).<br>
+<br>
+Спасибо! <br>
+ChillyRoom<br>","안녕하세요.<br>
+<br>
+최근에 귀하의 암호 재설정 요청을 받았습니다. 아래 URL로 이동하여 절차를 완료하세요.<br>
+{{.}}<br>
+<br>
+귀하의 요청 사항이 아니라면 본 이메일은 무시하세요. URL은 1시간 동안 사용할 수 있습니다. 문제가 발생하면 이메일(info@chillyroom.com)로 문의하시기 바랍니다.<br>
+<br>
+감사합니다.<br>
+ChillyRoom<br>","¡Saludos!<br>
+<br>
+Hace poco se envió una solicitud para restablecer tu contraseña. Visita la siguiente URL para completar el proceso:<br>
+{{.}}<br>
+<br>
+Si tú no hiciste esta solicitud, ignora este correo electrónico. En una hora expirará y no servirá más. Si tienes algún problema, contáctanos por correo electrónico (info@chillyroom.com).<br>
+<br>
+Gracias.<br>
+ChillyRoom<br>","Saudações!<br>
+<br>
+Uma solicitação para redefinição de senha foi enviada recentemente. Visite a URL abaixo para completar o processo:<br>
+{{.}}<br>
+<br>
+Caso não tenha solicitado isso, ignore este e-mail. Ele expirará e ficará sem utilidade em uma hora. Caso encontre algum problema, entre em contato conosco por e-mail (info@chillyroom.com).<br>
+<br>
+Obrigado,<br>
+ChillyRoom<br>","Bonjour !<br>
+<br>
+Une demande de réinitialisation de votre mot de passe a été récemment effectuée. Accédez à l'URL ci-dessous pour terminer le processus :<br>
+{{.}}<br>
+<br>
+Si vous n'êtes pas à l'origine de la demande, ignorez cet e-mail. Elle expirera et sera inutilisable dans 1 heure. Si vous rencontrez un problème, envoyez-nous un e-mail (info@chillyroom.com).<br>
+<br>
+Merci,<br>
+ChillyRoom<br>","Halo!<br>
+<br>
+Baru-baru ini permintaan diajukan untuk menyetel ulang kata sandi Anda. Kunjungi URL di bawah untuk menyelesaikan proses:<br>
+{{.}}<br>
+<br>
+Jika Anda tidak meminta ini, abaikan email ini. Ini akan kedaluwarsa dan menjadi tidak berguna dalam 1 jam. Jika Anda mengalami masalah, silakan hubungi kami melalui email (info@chillyroom.com).<br>
+<br>
+Terima kasih,<br>
+ChillyRoom<br>","Hallo!<br>
+<br>
+Wir haben eine Anforderung erhalten, dein Passwort zurückzusetzen. Mithilfe der folgenden URL kannst du den Prozess abschließen:<br>
+{{.}}<br>
+<br>
+Falls du dies nicht angefordert hast, kannst du diese E-Mail ignorieren. Die URL wird in 1 Stunde ablaufen und ist dann nutzlos. Sollten Probleme auftreten, sende uns bitte eine E-Mail: info@chillyroom.com.<br>
+<br>
+Vielen Dank!<br>
+ChillyRoom<br>"
+Unbind Device,"Greetings!<br>
+<br>
+Recently a request was submitted to unbind your device. Please visit the URL below to complete the process:<br>
+{{.}}<br>
+<br>
+If you did not request this, please ignore this email. It will expire and become useless in 1 hour. If you encounter any issues, please contact us via email (info@chillyroom.com).<br>
+<br>
+Thanks，<br>
+ChillyRoom<br>","你好，<br>
+<br>
+我们收到你的设备解绑请求。请点击以下链接解绑设备：<br>
+{{.}}<br>
+<br>
+若非本人操作，请忽略此邮件，链接将在1小时后失效。若有其他问题，请联系我们的客服QQ：1597374718。<br>
+<br>
+感谢支持！<br>
+凉屋游戏<br>","你好，<br>
+<br>
+我們收到你的設備解綁請求。請點擊以下鏈接解綁設備：<br>
+{{.}}<br>
+<br>
+若非本人操作，請忽略此郵件，鏈接將在1小時後失效。若有其他問題，請聯繫我們的客服QQ：1597374718。<br>
+<br>
+感謝支持！<br>
+涼屋遊戲<br>","こんにちは！<br>
+<br>
+デバイスの連携解除要求がありました。以下のURLにアクセスして手順を完了してください。<br>
+{{.}}<br>
+<br>
+要求していない場合は、このメールは無視してください。このURLは1時間で失効します。不明な点がありましたらメールで info@chillyroom.com までお問い合わせください。<br>
+<br>
+よろしくお願いします。<br>
+ChillyRoom<br>","Здравствуйте!<br>
+<br>
+Мы получили запрос на отмену привязки вашего устройства. Для завершения процесса перейдите по ссылке: <br>
+{{.}}<br>
+<br>
+Если вы не отправляли такой запрос, проигнорируйте письмо. Ссылка действительна в течение 1 часа. При возникновении каких-либо проблем свяжитесь с нами по электронной почте (info@chillyroom.com).<br>
+<br>
+Спасибо! <br>
+ChillyRoom<br>","안녕하세요.<br>
+<br>
+최근에 귀하의 장치 연결 해제 요청을 받았습니다. 아래 URL로 이동하여 절차를 완료하세요.<br>
+{{.}}<br>
+<br>
+귀하의 요청 사항이 아니라면 본 이메일은 무시하세요. URL은 1시간 동안 사용할 수 있습니다. 문제가 발생하면 이메일(info@chillyroom.com)로 문의하시기 바랍니다.<br>
+<br>
+감사합니다.<br>
+ChillyRoom<br>","¡Saludos!<br>
+<br>
+Hace poco se envió una solicitud para desvincular tu dispositivo. Visita la siguiente URL para completar el proceso:<br>
+{{.}}<br>
+<br>
+Si tú no hiciste esta solicitud, ignora este correo electrónico. En una hora expirará y no servirá más. Si tienes algún problema, contáctanos por correo electrónico (info@chillyroom.com).<br>
+<br>
+Gracias.<br>
+ChillyRoom<br>","Saudações!<br>
+<br>
+Uma solicitação para desvincular seu dispositivo foi enviada recentemente. Visite a URL abaixo para completar o processo:<br>
+{{.}}<br>
+<br>
+Caso não tenha solicitado isso, ignore este e-mail. Ele expirará e ficará sem utilidade em uma hora. Caso encontre algum problema, entre em contato conosco por e-mail (info@chillyroom.com).<br>
+<br>
+Obrigado,<br>
+ChillyRoom<br>","Bonjour !<br>
+<br>
+Une demande de dissociation de votre appareil a été récemment effectuée. Accédez à l'URL ci-dessous pour terminer le processus :<br>
+{{.}}<br>
+<br>
+Si vous n'êtes pas à l'origine de la demande, ignorez cet e-mail. Elle expirera et sera inutilisable dans 1 heure. Si vous rencontrez un problème, envoyez-nous un e-mail (info@chillyroom.com).<br>
+<br>
+Merci,<br>
+ChillyRoom<br>","Halo!<br>
+<br>
+Baru-baru ini permintaan diajukan untuk melepaskan ikatan perangkat Anda. Kunjungi URL di bawah untuk menyelesaikan proses:<br>
+{{.}}<br>
+<br>
+Jika Anda tidak meminta ini, abaikan email ini. Ini akan kedaluwarsa dan menjadi tidak berguna dalam 1 jam. Jika Anda mengalami masalah, silakan hubungi kami melalui email (info@chillyroom.com).<br>
+<br>
+Terima kasih,<br>
+ChillyRoom<br>","Hallo!<br>
+<br>
+Wir haben eine Anforderung erhalten, die Verknüpfung für dein Gerät aufzuheben. Mithilfe der folgenden URL kannst du den Prozess abschließen:<br>
+{{.}}<br>
+<br>
+Falls du dies nicht angefordert hast, kannst du diese E-Mail ignorieren. Die URL wird in 1 Stunde ablaufen und ist dann nutzlos. Sollten Probleme auftreten, sende uns bitte eine E-Mail: info@chillyroom.com.<br>
+<br>
+Vielen Dank!<br>
+ChillyRoom<br>"

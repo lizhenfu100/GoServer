@@ -32,7 +32,7 @@ func UpdatePasswd() {
 	time.AfterFunc(time.Duration(leftSec)*time.Second, UpdatePasswd)
 
 	for _, v := range g_emails {
-		email.SendMail("凉屋GM密码", v, g_passwd)
+		email.SendMail("凉屋GM密码", v, g_passwd, "")
 	}
 }
 

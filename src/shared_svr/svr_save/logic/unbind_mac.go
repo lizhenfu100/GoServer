@@ -41,6 +41,7 @@ func Http_unbind_mac(w http.ResponseWriter, r *http.Request) {
 func Rpc_save_ask_unbind_mac(req, ack *common.NetPack) {
 	mac := req.ReadString()
 	emailAddr := req.ReadString()
+	language := req.ReadString()
 
 	//1、创建url
 	httpAddr := fmt.Sprintf("http://%s:%d/unbind_mac",
@@ -54,5 +55,5 @@ func Rpc_save_ask_unbind_mac(req, ack *common.NetPack) {
 	q.Set("sign", sign.CalcSign(mac+flag))
 	//3、生成完整url
 	u.RawQuery = q.Encode()
-	email.SendMail("unbind equipment", emailAddr, u.String())
+	email.SendMail("Unbind Device", emailAddr, u.String(), language)
 }
