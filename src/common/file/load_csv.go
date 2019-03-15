@@ -177,7 +177,7 @@ func _parseData(record []string, nilFlag uint64, data reflect.Value) {
 }
 func _validCnt(records [][]string) (ret int) {
 	for _, v := range records {
-		if strings.HasPrefix(v[0], "#") { // "#"起始的不读
+		if !strings.HasPrefix(v[0], "#") { // "#"起始的不读
 			ret++
 		}
 	}
