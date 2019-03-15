@@ -1,3 +1,20 @@
+/***********************************************************************
+* @ Gateway
+* @ brief
+	1、Client先在svr_login完成账户校验，获得accountId、token
+	2、再向svr_login要gateway列表，对hash(accountId)决定连哪个gateway
+
+    3、代码生成器可获知，rpc是被哪个模块处理的
+
+	4、RelayPlayerMsg处理的玩家相关rpc（rpc参数是this *TPlayer）
+	5、登录之前，游戏服尚无玩家数据，所以“登录、创建”是单独抽离的
+
+* @ optimize
+    1、公用的tcp_rpc是单线程的，适合业务逻辑；gateway可改用多线程版，提高转发性能
+
+* @ author zhoumf
+* @ date 2018-3-13
+***********************************************************************/
 package logic
 
 import (

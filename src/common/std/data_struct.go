@@ -17,57 +17,37 @@ type Addr struct {
 	Port uint16
 }
 
-// -------------------------------------
+// ------------------------------------------------------------
 //! 数组封装
 type (
-	IntLst    []int
-	UInt32Lst []uint32
+	Ints    []int
+	UInt32s []uint32
 )
 
-func (self *IntLst) IsExist(v int) int {
-	for i := 0; i < len(*self); i++ {
-		if v == (*self)[i] {
+func (p *Ints) Add(v int)               { *p = append(*p, v) }
+func (p *Ints) Del(i int)               { *p = append((*p)[:i], (*p)[i+1:]...) }
+func (x Ints) Less(i, j int) bool       { return x[i] < x[j] }
+func (x Ints) Swap(i, j int)            { x[i], x[j] = x[j], x[i] }
+func (p *UInt32s) Add(v uint32)         { *p = append(*p, v) }
+func (p *UInt32s) Del(i int)            { *p = append((*p)[:i], (*p)[i+1:]...) }
+func (x UInt32s) Less(i, j uint32) bool { return x[i] < x[j] }
+func (x UInt32s) Swap(i, j uint32)      { x[i], x[j] = x[j], x[i] }
+func (x UInt32s) Index(v uint32) int {
+	for i := 0; i < len(x); i++ {
+		if v == x[i] {
 			return i
 		}
 	}
 	return -1
 }
-func (self *IntLst) Add(v int) {
-	(*self) = append(*self, v)
-}
-func (self *IntLst) Del(i int) {
-	(*self) = append((*self)[:i], (*self)[i+1:]...)
-}
-func (self *IntLst) Less(i, j int) bool {
-	return (*self)[i] < (*self)[j]
-}
-func (self *IntLst) Swap(i, j int) {
-	temp := (*self)[i]
-	(*self)[i] = (*self)[j]
-	(*self)[j] = temp
-}
-func (self *UInt32Lst) IsExist(v uint32) int {
-	for i := 0; i < len(*self); i++ {
-		if v == (*self)[i] {
+func (x Ints) Index(v int) int {
+	for i := 0; i < len(x); i++ {
+		if v == x[i] {
 			return i
 		}
 	}
 	return -1
-}
-func (self *UInt32Lst) Add(v uint32) {
-	(*self) = append(*self, v)
-}
-func (self *UInt32Lst) Del(i int) {
-	(*self) = append((*self)[:i], (*self)[i+1:]...)
-}
-func (self *UInt32Lst) Less(i, j uint32) bool {
-	return (*self)[i] < (*self)[j]
-}
-func (self *UInt32Lst) Swap(i, j uint32) {
-	temp := (*self)[i]
-	(*self)[i] = (*self)[j]
-	(*self)[j] = temp
 }
 
-// -------------------------------------
+// ------------------------------------------------------------
 //

@@ -214,7 +214,7 @@ func SetField(field reflect.Value, s string) {
 	case reflect.Struct, reflect.Map:
 		{
 			if e := json.Unmarshal([]byte(s), field.Addr().Interface()); e != nil {
-				fmt.Sprintf("Field Parse Error: %s: %s", s, e.Error())
+				fmt.Println("Field Parse Error: ", s, e.Error())
 			}
 		}
 	case reflect.Slice:
@@ -229,7 +229,7 @@ func SetField(field reflect.Value, s string) {
 			case reflect.Int, reflect.Uint32, reflect.Float32, reflect.Struct, reflect.Slice:
 				{
 					if e := json.Unmarshal([]byte(s), field.Addr().Interface()); e != nil {
-						fmt.Sprintf("Field Parse Error: %s: %s", s, e.Error())
+						fmt.Println("Field Parse Error: ", s, e.Error())
 					}
 				}
 			default:
