@@ -54,9 +54,9 @@ func main() {
 func InitConf() {
 	var metaCfg []meta.Meta
 	file.G_Csv_Map = map[string]interface{}{
-		"conf_net":    &metaCfg,
-		"conf_svr":    &conf.SvrCsv,
-		"email/email": &email.G_Email,
+		"csv/conf_net.csv":    &metaCfg,
+		"csv/conf_svr.csv":    &conf.SvrCsv,
+		"csv/email/email.csv": &email.G_Email,
 	}
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)

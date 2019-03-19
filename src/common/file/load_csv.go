@@ -60,7 +60,7 @@ import (
 var G_Csv_Map map[string]interface{}
 
 func LoadAllCsv() {
-	if names, err := WalkDir("csv/", ""); err == nil {
+	if names, err := WalkDir("csv/", ".csv"); err == nil {
 		for _, name := range names {
 			ReloadCsv(name)
 		}
@@ -69,10 +69,7 @@ func LoadAllCsv() {
 	}
 }
 func ReloadCsv(fullName string) {
-	ptr, ok := G_Csv_Map[strings.TrimPrefix(
-		strings.TrimSuffix(fullName, ".csv"),
-		"csv/")]
-	if ok {
+	if ptr, ok := G_Csv_Map[fullName]; ok {
 		LoadCsv(fullName, ptr)
 	} else {
 		fmt.Println(fullName, "not regist in G_Csv_Map")
