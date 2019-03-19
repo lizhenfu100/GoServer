@@ -27,23 +27,22 @@ import (
 )
 
 const (
-	kFileDirPatch  = "game/"
+	kFileDirPatch = "game/"
 )
 
 var (
-	g_file_md5    sync.Map //<fileName, md5Hash>
+	g_file_md5 sync.Map //<fileName, md5Hash>
 )
 
 func init() {
 	names, _ := file.WalkDir(kFileDirPatch, "")
 	for _, v := range names {
-		md5str := file.CalcMd5(v)
-		g_file_md5.Store(v, common.StringHash(md5str))
+		g_file_md5.Store(v, file.CalcMd5(v))
 	}
 }
 func Http_upload_patch_file(w http.ResponseWriter, r *http.Request) {
 	if name := _upload_file(w, r, kFileDirPatch); name != "" {
-		g_file_md5.Store(name, common.StringHash(file.CalcMd5(name)))
+		g_file_md5.Store(name, file.CalcMd5(name))
 	}
 }
 func _upload_file(w http.ResponseWriter, r *http.Request, baseDir string) string {

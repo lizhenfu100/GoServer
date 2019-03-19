@@ -1,6 +1,7 @@
 package logic
 
 import (
+	"common"
 	"conf"
 	"dbmgo"
 	"encoding/json"
@@ -15,16 +16,16 @@ func Http_permit_account(w http.ResponseWriter, r *http.Request) {
 	v := q.Get("val")
 
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write([]byte("passwd error"))
+		w.Write(common.ToBytes("passwd error"))
 		return
 	}
 	if p := account.GetAccountByName(v); p != nil {
 		p.IsForbidden = false
 		dbmgo.UpdateId(account.KDBTable, p.AccountID, bson.M{"$set": bson.M{
 			"isforbidden": false}})
-		w.Write([]byte("ok"))
+		w.Write(common.ToBytes("ok"))
 	} else {
-		w.Write([]byte("none account"))
+		w.Write(common.ToBytes("none account"))
 	}
 }
 
@@ -36,6 +37,6 @@ func Http_show_account_info(w http.ResponseWriter, r *http.Request) {
 		ack, _ := json.MarshalIndent(p, "", "     ")
 		w.Write(ack)
 	} else {
-		w.Write([]byte("none account"))
+		w.Write(common.ToBytes("none account"))
 	}
 }

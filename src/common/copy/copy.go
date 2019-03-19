@@ -1,4 +1,4 @@
-package common
+package copy
 
 import (
 	"common/file"

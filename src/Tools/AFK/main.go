@@ -84,10 +84,7 @@ func main() {
 	netConfig.RunNetSvr()
 }
 func InitConf() {
-	file.G_Csv_Map = map[string]interface{}{
-		"conf_svr": &conf.SvrCsv,
-	}
-	file.LoadOneCsv("csv/conf_svr.csv")
+	file.LoadCsv("csv/conf_svr.csv", &conf.SvrCsv)
 
 	register.RegHttpHandler(map[string]register.HttpHandle{
 		"/afk":    Http_afk,
@@ -119,7 +116,7 @@ func countAll(beginDate, endDate string) {
 				f.Write(data)
 				f.Close()
 				fmt.Println("成功，当前目录可查看文本...")
-				fmt.Println(string(data))
+				fmt.Println(common.ToStr(data))
 			}
 		}
 	})

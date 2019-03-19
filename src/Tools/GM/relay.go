@@ -2,7 +2,7 @@ package main
 
 import (
 	"common"
-	"common/sign"
+	"common/std/sign"
 	"conf"
 	"fmt"
 	"generate_out/err"
@@ -19,7 +19,7 @@ func Http_query_account_login_addr(w http.ResponseWriter, r *http.Request) {
 	accountName := q.Get("name")
 
 	if accountName == "" {
-		w.Write([]byte("AccountName nil"))
+		w.Write(common.ToBytes("AccountName nil"))
 	} else {
 		mhttp.CallRpc(g_templateData.CenterAddr, enum.Rpc_center_player_login_addr, func(buf *common.NetPack) {
 			buf.WriteString(conf.GameName)
@@ -31,7 +31,7 @@ func Http_query_account_login_addr(w http.ResponseWriter, r *http.Request) {
 				gameIp := recvBuf.ReadString()
 				gamePort := recvBuf.ReadUInt16()
 
-				w.Write([]byte(fmt.Sprintf("LoginAddr: %s:%d\nGameAddr: %s:%d",
+				w.Write(common.ToBytes(fmt.Sprintf("LoginAddr: %s:%d\nGameAddr: %s:%d",
 					loginIp, loginPort, gameIp, gamePort)))
 			}
 		})

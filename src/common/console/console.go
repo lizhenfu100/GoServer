@@ -3,7 +3,7 @@ package console
 import (
 	"common"
 	"common/file"
-	"common/wechat"
+	"common/tool/wechat"
 	"conf"
 	"fmt"
 	"gamelog"
@@ -41,6 +41,8 @@ func Init() {
 	http.G_HandleFunc[enum.Rpc_meta_list] = _Rpc_meta_list2
 	tcp.G_HandleFunc[enum.Rpc_update_csv] = _Rpc_update_csv1
 	http.G_HandleFunc[enum.Rpc_update_csv] = _Rpc_update_csv2
+	tcp.G_HandleFunc[enum.Rpc_reload_csv] = _Rpc_reload_csv1
+	http.G_HandleFunc[enum.Rpc_reload_csv] = _Rpc_reload_csv2
 	go sigTerm() //监控进程终止信号
 
 	wechat.Init( //启动微信通知
@@ -87,6 +89,7 @@ func _Rpc_update_csv2(req, ack *common.NetPack) {
 			fd.Close()
 			if e == nil {
 				ack.WriteString("ok")
+				file.ReloadCsv(dir + name)
 			} else {
 				ack.WriteString(e.Error())
 			}
@@ -94,6 +97,13 @@ func _Rpc_update_csv2(req, ack *common.NetPack) {
 			ack.WriteString(e.Error())
 		}
 	}
+}
+func _Rpc_reload_csv1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_reload_csv2(req, ack) }
+func _Rpc_reload_csv2(req, ack *common.NetPack) {
+	for cnt, i := req.ReadByte(), byte(0); i < cnt; i++ {
+		file.ReloadCsv(req.ReadString())
+	}
+	ack.WriteByte(1) //ok
 }
 
 func RegCmd(key string, f cmdFunc)                          { g_cmds[key] = f }

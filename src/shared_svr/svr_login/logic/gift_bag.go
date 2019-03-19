@@ -9,6 +9,7 @@ package logic
 
 import (
 	"common"
+	"common/copy"
 	"conf"
 	"dbmgo"
 	"encoding/json"
@@ -73,16 +74,16 @@ func InitGiftDB() {
 func Http_gift_bag_add(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	if r.Form.Get("passwd") != conf.GM_Passwd {
-		w.Write([]byte("passwd error"))
+		w.Write(common.ToBytes("passwd error"))
 		return
 	}
 	if p := getGift(r.Form.Get("key")); p != nil {
-		w.Write([]byte("gift repeat"))
+		w.Write(common.ToBytes("gift repeat"))
 		return
 	}
 
 	p := &TGiftBag{}
-	if common.CopyForm(p, r.Form); p.Key == "" {
+	if copy.CopyForm(p, r.Form); p.Key == "" {
 		p.Key = strconv.Itoa(int(dbmgo.GetNextIncId("GiftId")))
 	}
 	if dbmgo.InsertSync(kDBGift, p) {
@@ -90,20 +91,20 @@ func Http_gift_bag_add(w http.ResponseWriter, r *http.Request) {
 		ack, _ := json.MarshalIndent(p, "", "     ")
 		w.Write(ack)
 	} else {
-		w.Write([]byte("gift repeat"))
+		w.Write(common.ToBytes("gift repeat"))
 	}
 }
 func Http_gift_bag_set(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	if r.Form.Get("passwd") != conf.GM_Passwd {
-		w.Write([]byte("passwd error"))
+		w.Write(common.ToBytes("passwd error"))
 		return
 	}
 
 	if p := getGift(r.Form.Get("key")); p == nil {
-		w.Write([]byte("fail"))
+		w.Write(common.ToBytes("fail"))
 	} else {
-		common.CopyForm(p, r.Form)
+		copy.CopyForm(p, r.Form)
 		dbmgo.UpdateId(kDBGift, p.Key, p)
 		ack, _ := json.MarshalIndent(p, "", "     ")
 		w.Write(ack)
@@ -112,12 +113,12 @@ func Http_gift_bag_set(w http.ResponseWriter, r *http.Request) {
 func Http_gift_bag_del(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	if r.Form.Get("passwd") != conf.GM_Passwd {
-		w.Write([]byte("passwd error"))
+		w.Write(common.ToBytes("passwd error"))
 		return
 	}
 
 	if p := getGift(r.Form.Get("key")); p == nil {
-		w.Write([]byte("not find"))
+		w.Write(common.ToBytes("not find"))
 	} else {
 		g_gifts.Delete(p.Key)
 		dbmgo.Remove(kDBGift, bson.M{"_id": p.Key})

@@ -65,7 +65,7 @@ func (self *TCPServer) run() {
 				time.Sleep(tempDelay)
 				continue
 			}
-			gamelog.Error("accept closed: %s", err.Error())
+			gamelog.Error("accept closed: " + err.Error())
 			break
 		}
 	}

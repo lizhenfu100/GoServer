@@ -1,6 +1,7 @@
 package main
 
 import (
+	"common"
 	"common/console"
 	"common/file"
 	"conf"
@@ -45,7 +46,7 @@ func InitConf() {
 	file.G_Csv_Map = map[string]interface{}{
 		"conf_net":   &metaCfg,
 		"conf_svr":   &conf.SvrCsv,
-		"game/const": &conf2.CsvConst,
+		"game/const": &conf2.Const,
 	}
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
@@ -53,6 +54,6 @@ func InitConf() {
 	console.RegShutdown(logic.Shutdown)
 
 	//展示重要配置数据
-	buf, _ := json.MarshalIndent(&conf2.CsvConst, "", "     ")
-	fmt.Println("CsvConst: ", string(buf))
+	buf, _ := json.MarshalIndent(&conf2.Const, "", "     ")
+	fmt.Println("conf.Const: ", common.ToStr(buf))
 }

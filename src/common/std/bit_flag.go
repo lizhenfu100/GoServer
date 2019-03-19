@@ -1,4 +1,4 @@
-package common
+package std
 
 func GetBit8(val uint8, idx uint) bool {
 	return val&(1<<idx) > 0

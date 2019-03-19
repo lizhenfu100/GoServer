@@ -11,8 +11,8 @@
 package logic
 
 import (
-	"common"
-	"common/sign"
+	"common/copy"
+	"common/std/sign"
 	"encoding/json"
 	"fmt"
 	"gamelog"
@@ -27,7 +27,7 @@ func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 
 	//反射解析订单信息
 	var order msg.TOrderInfo
-	common.CopyForm(&order, r.Form)
+	copy.CopyForm(&order, r.Form)
 
 	//! 创建回复
 	ack := platform.NewPreBuyAck(order.Pf_id)
@@ -49,7 +49,7 @@ func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 	//生成订单
 	if !msg.CreateOrderInDB(&order) {
 		ack.SetRetcode(-3)
-		gamelog.Error("pre_buy_request: crea te order failed")
+		gamelog.Error("pre_buy_request: create order failed")
 		return
 	}
 
@@ -83,7 +83,7 @@ func Http_query_order(w http.ResponseWriter, r *http.Request) {
 		ack.Retcode = -3
 	} else if order.Status == 1 && order.Can_send == 1 {
 		stOk := msg.Query_order_ack{}
-		common.CopySameField(&stOk.Order, order)
+		copy.CopySameField(&stOk.Order, order)
 		pResult = &stOk
 	}
 }
@@ -133,7 +133,7 @@ func Http_query_order_unfinished(w http.ResponseWriter, r *http.Request) {
 	msg.OrderRange(func(k, v interface{}) bool {
 		p := v.(*msg.TOrderInfo)
 		if p.Third_account == third && p.Can_send == 1 {
-			common.CopySameField(&order, p)
+			copy.CopySameField(&order, p)
 			ack.Orders = append(ack.Orders, order)
 		}
 		return true

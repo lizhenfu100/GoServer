@@ -10,8 +10,8 @@
 package area
 
 import (
+	"common"
 	"encoding/json"
-	"fmt"
 	"http"
 )
 
@@ -55,9 +55,7 @@ func GetAreaEx(ip string) (ret TArea) {
 }
 func GetCountryId() string {
 	if buf := http.Get(kCountryApi); buf != nil {
-		s := string(buf)
-		fmt.Println(s)
-		return s
+		return common.ToStr(buf)
 	}
 	return ""
 }

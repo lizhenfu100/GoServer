@@ -68,9 +68,9 @@ func (self *ByteBuffer) WriteFloat(v float32) {
 	self.WriteUInt32(math.Float32bits(v))
 }
 func (self *ByteBuffer) WriteString(v string) {
-	bytes := []byte(v)
-	self.WriteUInt16(uint16(len(bytes)))
-	self.WriteBuf(bytes)
+	buf := ToBytes(v)
+	self.WriteUInt16(uint16(len(buf)))
+	self.WriteBuf(buf)
 }
 func (self *ByteBuffer) WriteBuf(v []byte) { self.buf = append(self.buf, v...) }
 func (self *ByteBuffer) WriteLenBuf(v []byte) {

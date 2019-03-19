@@ -14,8 +14,8 @@ package main
 
 import (
 	"common/console"
-	"common/email"
 	"common/file"
+	"common/tool/email"
 	"conf"
 	"dbmgo"
 	"flag"

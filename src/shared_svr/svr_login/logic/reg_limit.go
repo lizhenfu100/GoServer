@@ -52,9 +52,9 @@ func Http_permit_ip(w http.ResponseWriter, r *http.Request) {
 	ip := q.Get("ip")
 
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write([]byte("passwd error"))
+		w.Write(common.ToBytes("passwd error"))
 		return
 	}
 	g_regFreq.Delete(ip)
-	w.Write([]byte("ok"))
+	w.Write(common.ToBytes("ok"))
 }

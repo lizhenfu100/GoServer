@@ -47,6 +47,7 @@
 package file
 
 import (
+	"common"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -61,28 +62,28 @@ var G_Csv_Map map[string]interface{}
 func LoadAllCsv() {
 	if names, err := WalkDir("csv/", ""); err == nil {
 		for _, name := range names {
-			LoadOneCsv(name)
+			ReloadCsv(name)
 		}
 	} else {
-		fmt.Printf("LoadAllCsv error : %s\n", err.Error())
+		fmt.Println("LoadAllCsv error: ", err.Error())
 	}
 }
-func LoadOneCsv(fullName string) {
-	if ptr := getRegPtr(fullName); ptr == nil {
-		fmt.Printf("%s not regist in G_Csv_Map\n", fullName)
-	} else if records, err := ReadCsv(fullName); err != nil {
-		fmt.Printf("ReadCsv error : %s\n", err.Error())
+func ReloadCsv(fullName string) {
+	ptr, ok := G_Csv_Map[strings.TrimPrefix(
+		strings.TrimSuffix(fullName, ".csv"),
+		"csv/")]
+	if ok {
+		LoadCsv(fullName, ptr)
+	} else {
+		fmt.Println(fullName, "not regist in G_Csv_Map")
+	}
+}
+func LoadCsv(fullName string, ptr interface{}) {
+	if records, err := ReadCsv(fullName); err != nil {
+		fmt.Println("LoadCsv error: ", err.Error())
 	} else {
 		ParseRefCsv(records, ptr)
 	}
-}
-func getRegPtr(fullName string) interface{} {
-	name := strings.TrimSuffix(fullName, ".csv")
-	name = strings.TrimPrefix(name, "csv/")
-	if ptr, ok := G_Csv_Map[name]; ok {
-		return ptr
-	}
-	return nil
 }
 
 // -------------------------------------
@@ -96,7 +97,7 @@ func ParseRefCsv(records [][]string, ptr interface{}) {
 	case reflect.Struct:
 		ParseRefCsvByStruct(records, ptr)
 	default:
-		fmt.Printf("Csv Type Error: TypeName:%s\n", reflect.TypeOf(ptr).Elem().String())
+		fmt.Println("Csv Type Error: TypeName: ", reflect.TypeOf(ptr).Elem().String())
 	}
 }
 func ParseRefCsvByMap(records [][]string, pMap interface{}) {
@@ -162,7 +163,7 @@ func _parseHead(record []string) (nilFlag uint64) { // 不读的列：没命名/
 	}
 	for i := 0; i < length; i++ {
 		if record[i] == "" || strings.HasPrefix(record[i], "_") {
-			nilFlag |= (1 << byte(i))
+			nilFlag |= (1 << uint(i))
 		}
 	}
 	return nilFlag
@@ -213,7 +214,7 @@ func SetField(field reflect.Value, s string) {
 		}
 	case reflect.Struct, reflect.Map:
 		{
-			if e := json.Unmarshal([]byte(s), field.Addr().Interface()); e != nil {
+			if e := json.Unmarshal(common.ToBytes(s), field.Addr().Interface()); e != nil {
 				fmt.Println("Field Parse Error: ", s, e.Error())
 			}
 		}
@@ -228,7 +229,7 @@ func SetField(field reflect.Value, s string) {
 				}
 			case reflect.Int, reflect.Uint32, reflect.Float32, reflect.Struct, reflect.Slice:
 				{
-					if e := json.Unmarshal([]byte(s), field.Addr().Interface()); e != nil {
+					if e := json.Unmarshal(common.ToBytes(s), field.Addr().Interface()); e != nil {
 						fmt.Println("Field Parse Error: ", s, e.Error())
 					}
 				}

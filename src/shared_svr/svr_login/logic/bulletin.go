@@ -9,6 +9,7 @@ package logic
 
 import (
 	"common"
+	"common/copy"
 	"dbmgo"
 	"encoding/json"
 	"fmt"
@@ -51,7 +52,7 @@ func Http_bulletin(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	g_bulletin.Lock()
-	common.CopyForm(&g_bulletin, r.Form)
+	copy.CopyForm(&g_bulletin, r.Form)
 	ack, _ := json.MarshalIndent(&g_bulletin, "", "     ")
 	g_bulletin.UpdateDB()
 	g_bulletin.Unlock()
@@ -68,5 +69,5 @@ func (self *Bulletin) InitDB() {
 
 // ------------------------------------------------------------
 func Http_timestamp(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(fmt.Sprintf("%d", time.Now().Unix())))
+	w.Write(common.ToBytes(fmt.Sprintf("%d", time.Now().Unix())))
 }

@@ -3,6 +3,7 @@ package account
 import (
 	"common"
 	"common/format"
+	"common/std/hash"
 	"crypto/md5"
 	"dbmgo"
 	"fmt"
@@ -23,7 +24,7 @@ const KDBTable = "Account"
 type TAccount struct {
 	AccountID   uint32 `bson:"_id"`
 	Name        string //账户名
-	Password    string //密码 //FIXME:可以StringHash后存成uint32，省不少字节
+	Password    string //密码 //FIXME:可以StrHash后存成uint32，省不少字节
 	CreateTime  int64
 	LoginTime   int64
 	ForbidTime  int64
@@ -49,10 +50,10 @@ func (self *TAccount) init() {
 	}
 }
 func (self *TAccount) CheckPasswd(passwd string) bool {
-	return self.Password == fmt.Sprintf("%x", md5.Sum([]byte(passwd)))
+	return self.Password == fmt.Sprintf("%x", md5.Sum(common.ToBytes(passwd)))
 }
 func (self *TAccount) SetPasswd(passwd string) {
-	self.Password = fmt.Sprintf("%x", md5.Sum([]byte(passwd)))
+	self.Password = fmt.Sprintf("%x", md5.Sum(common.ToBytes(passwd)))
 }
 
 // ------------------------------------------------------------
@@ -142,7 +143,7 @@ func Rpc_center_change_password(req, ack *common.NetPack) {
 func Rpc_center_create_visitor(req, ack *common.NetPack) {
 	id := dbmgo.GetNextIncId("VisitorId")
 	name := fmt.Sprintf("ChillyRoomGuest_%d", id)
-	passwd := strconv.Itoa(int(common.StringHash(name)))
+	passwd := strconv.Itoa(int(hash.StrHash(name)))
 
 	if account := AddNewAccount(name, passwd); account == nil {
 		gamelog.Error("visitor_account fail: %s:%s", name, passwd)

@@ -12,6 +12,7 @@
 package wechat
 
 import (
+	"common"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -74,7 +75,7 @@ func updateToken(corpId, secret string) error {
 		var val token
 		json.Unmarshal(buf, &val)
 		if g_token = val.Access_token; g_token == "" {
-			return errors.New(string(buf))
+			return errors.New(common.ToStr(buf))
 		}
 	}
 	return nil
@@ -86,7 +87,7 @@ func sendMsg(b []byte) error {
 		var msg errMsg
 		json.Unmarshal(buf, &msg)
 		if msg.Errcode != 0 && msg.Errmsg != "ok" {
-			return errors.New(string(buf))
+			return errors.New(common.ToStr(buf))
 		}
 	}
 	return nil

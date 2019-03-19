@@ -23,21 +23,20 @@ package logic
 
 import (
 	"common"
-	"common/sign"
-	"conf"
+	"common/std/sign"
 	"dbmgo"
 	"fmt"
 	"gamelog"
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
+	"shared_svr/svr_save/conf"
 	"strings"
 	"time"
 )
 
 const (
-	kDBSave       = "Save"
-	kDBMac        = "SaveMac"
-	kChangePeriod = 3600 * 24 * 7
+	kDBSave = "Save"
+	kDBMac  = "SaveMac"
 )
 
 type TSaveData struct {
@@ -45,7 +44,7 @@ type TSaveData struct {
 	Data   []byte
 	UpTime int64
 	ChTime int64  //换设备的时刻
-	MacCnt byte   //该玩家绑定的设备数目
+	MacCnt byte   //绑定的设备数目
 	Extra  string //json
 }
 type MacInfo struct {
@@ -85,8 +84,12 @@ func checkMac(pf_id, uid, mac string) uint16 { //Notice：不可调换错误码�
 	}
 	if okSave, _ := dbmgo.Find(kDBSave, "_id", pSave.Key, pSave); !okSave {
 		return err.Record_cannot_find
-	} else if !okMac && pSave.MacCnt >= conf.SvrCsv.FreeBindMacMax { //新设备绑定受限
-		if now := time.Now().Unix(); now-pSave.ChTime < kChangePeriod {
+	}
+	if !okMac /*新设备*/ && pSave.MacCnt >= conf.Const.MacFreeBindMax {
+		if now := time.Now().Unix(); now-pSave.ChTime < int64(conf.Const.MacChangePeriod) {
+			return err.Record_bind_limit
+		}
+		if pSave.MacCnt >= conf.Const.MacBindMax {
 			return err.Record_bind_limit
 		}
 	}

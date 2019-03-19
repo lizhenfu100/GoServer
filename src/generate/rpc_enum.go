@@ -20,10 +20,10 @@
 package main
 
 import (
-	"common"
 	"common/file"
 	"common/std"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -43,7 +43,7 @@ func addRpc_Go(funcs *[]string, info *RpcInfo) {
 func addRpc_C(funcs *[]string) {
 	reg := regexp.MustCompile(`Rpc_\w+`)
 	file.ReadLine(K_RpcFuncFile_C, func(line string) {
-		if ok, _ := regexp.MatchString(`^Rpc_Declare\(Rpc_`, line); ok {
+		if ok, _ := regexp.MatchString(`Rpc_Declare\(Rpc_`, line); ok {
 			*funcs = append(*funcs, reg.FindAllString(line, -1)[1])
 		}
 	})
@@ -51,19 +51,19 @@ func addRpc_C(funcs *[]string) {
 func addRpc_CS(funcs *[]string) {
 	reg := regexp.MustCompile(`Rpc_\w+`)
 	file.ReadLine(K_RpcFuncFile_CS, func(line string) {
-		if ok, _ := regexp.MatchString(`^public void Rpc_`, line); ok {
+		if ok, _ := regexp.MatchString(`public void Rpc_`, line); ok {
 			*funcs = append(*funcs, reg.FindAllString(line, -1)[0])
 		}
 	})
 }
 func getOldRpc() (enums []std.KeyPair, enumCnt int) {
-	reg := regexp.MustCompile(`^Rpc_\w+`)
+	reg := regexp.MustCompile(`Rpc_\w+`)
 	file.ReadLine(K_EnumOutDir+K_EnumFileName+".go", func(line string) {
-		if ok, _ := regexp.MatchString(`^Rpc_\w+\s+uint16 =`, line); ok {
+		if ok, _ := regexp.MatchString(`Rpc_\w+\s+uint16 =`, line); ok {
 			if result := reg.FindAllString(line, -1); result != nil {
 				name := result[0]
 				list := strings.Split(line, " ")
-				rid := common.CheckAtoiName(list[len(list)-1])
+				rid, _ := strconv.Atoi(list[len(list)-1])
 				enums, enumCnt = append(enums, std.KeyPair{name, rid}), rid+1
 			}
 		}
@@ -100,10 +100,9 @@ func generateRpcEnum(funcs []string) bool {
 	}
 	enums = append(enums, std.KeyPair{"RpcEnumCnt", enumCnt})
 
-	if K_EnumOutDir != "" {
-		println(K_EnumOutDir, K_EnumFileName+".go")
-		file.CreateTemplate(enums, K_EnumOutDir, K_EnumFileName+".go", codeEnumTemplate_Go)
-	}
+	println(K_EnumOutDir, K_EnumFileName+".go")
+	file.CreateTemplate(enums, K_EnumOutDir, K_EnumFileName+".go", codeEnumTemplate_Go)
+
 	if K_EnumOutDir_C != "" {
 		println(K_EnumOutDir_C, K_EnumFileName+".h")
 		file.CreateTemplate(enums, K_EnumOutDir_C, K_EnumFileName+".h", codeEnumTemplate_C)

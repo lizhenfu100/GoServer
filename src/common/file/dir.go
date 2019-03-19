@@ -3,6 +3,7 @@ package file
 import (
 	"bufio"
 	"bytes"
+	"common/std/hash"
 	"crypto/md5"
 	"fmt"
 	"io"
@@ -78,13 +79,9 @@ func ReadLine(filename string, cb func(string)) error {
 	if err != nil {
 		return err
 	}
-	rd := bufio.NewReader(f)
-	for {
-		line, err := rd.ReadString('\n')
-		if err != nil || io.EOF == err {
-			break
-		}
-		cb(strings.TrimSpace(line))
+	rd := bufio.NewScanner(f)
+	for rd.Scan() {
+		cb(rd.Text())
 	}
 	f.Close()
 	return nil
@@ -127,13 +124,13 @@ func CreateTemplate(data interface{}, outDir, filename, tempText string) {
 
 // ------------------------------------------------------------
 // 计算文件md5
-func CalcMd5(name string) string {
+func CalcMd5(name string) uint32 {
 	f, err := os.Open(name)
 	if err != nil {
-		return ""
+		return 0
 	}
 	md5hash := md5.New()
 	io.Copy(md5hash, f)
 	f.Close()
-	return fmt.Sprintf("%x", md5hash.Sum(nil))
+	return hash.StrHash(fmt.Sprintf("%x", md5hash.Sum(nil)))
 }

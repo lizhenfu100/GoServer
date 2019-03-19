@@ -1,8 +1,10 @@
 package main
 
 import (
-	"common/email"
+	"common"
 	"common/timer"
+	"common/tool/email"
+	"fmt"
 	"gamelog"
 	"io/ioutil"
 	"math/rand"
@@ -18,13 +20,14 @@ var (
 		"515693380@qq.com",  //许嘉琪
 		"707723219@qq.com",  //杨添怿
 		"2370159093@qq.com", //单泽永
+		"734688714@qq.com",  //周梦飞
 	}
 )
 
 func UpdatePasswd() {
 	rand.Seed(time.Now().Unix())
 	g_passwd = strconv.Itoa(rand.Intn(100000000))
-	gamelog.Info("Passwd: %s", g_passwd)
+	gamelog.Info("Passwd: " + g_passwd)
 
 	//本周还剩多少时间
 	wday := int(time.Now().Weekday()+6) % 7 // weekday but Monday = 0.
@@ -32,7 +35,9 @@ func UpdatePasswd() {
 	time.AfterFunc(time.Duration(leftSec)*time.Second, UpdatePasswd)
 
 	for _, v := range g_emails {
-		email.SendMail("凉屋GM密码", v, g_passwd, "")
+		if e := email.SendMail("凉屋GM密码", v, g_passwd, ""); e != nil {
+			fmt.Println(e.Error())
+		}
 	}
 }
 
@@ -48,6 +53,6 @@ func Http_check_passwd(w http.ResponseWriter, r *http.Request) {
 			f.Close()
 		}
 	} else {
-		w.Write([]byte("Passwd error.\nPlease accept the password in your email."))
+		w.Write(common.ToBytes("Passwd error.\nPlease accept the password in your email."))
 	}
 }

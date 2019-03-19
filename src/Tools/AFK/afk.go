@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"common"
+	"common/copy"
 	"dbmgo"
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
@@ -10,6 +11,7 @@ import (
 	"net/http"
 	"netConfig/meta"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -81,12 +83,12 @@ func Http_afk(w http.ResponseWriter, r *http.Request) {
 
 		//反射解析
 		var req Afk_req
-		common.CopyForm(&req, r.Form)
+		copy.CopyForm(&req, r.Form)
 
 		//! 创建回复
 		ack := "失败"
 		defer func() {
-			w.Write([]byte(ack))
+			w.Write(common.ToBytes(ack))
 		}()
 
 		if r.Form.Get("passwd") != kPassword {
@@ -111,7 +113,7 @@ func Http_del(w http.ResponseWriter, r *http.Request) {
 		//! 创建回复
 		ack := "失败，无此信息"
 		defer func() {
-			w.Write([]byte(ack))
+			w.Write(common.ToBytes(ack))
 		}()
 
 		if r.Form.Get("passwd") != kPassword {
@@ -136,7 +138,7 @@ func Http_count_one(w http.ResponseWriter, r *http.Request) {
 		//! 创建回复
 		ack := "失败，无此信息"
 		defer func() {
-			w.Write([]byte(ack))
+			w.Write(common.ToBytes(ack))
 		}()
 
 		if r.Form.Get("passwd") != kPassword {
@@ -165,7 +167,7 @@ func Http_count_all(req, ack *common.NetPack) {
 		ack.WriteString("失败，日期错误，正确格式2018.1.15")
 	} else {
 		ack.WriteString("ok")
-		ack.WriteBuf([]byte(queryDuringTime("", begin, end)))
+		ack.WriteBuf(common.ToBytes(queryDuringTime("", begin, end)))
 	}
 }
 
@@ -175,9 +177,9 @@ func getTime(date, sep string) *time.Time {
 	if len(v) < 3 {
 		return nil
 	}
-	year := common.CheckAtoiName(v[0])
-	month := common.CheckAtoiName(v[1])
-	day := common.CheckAtoiName(v[2])
+	year, _ := strconv.Atoi(v[0])
+	month, _ := strconv.Atoi(v[1])
+	day, _ := strconv.Atoi(v[2])
 	if year == 0 || month == 0 || day == 0 {
 		return nil
 	}

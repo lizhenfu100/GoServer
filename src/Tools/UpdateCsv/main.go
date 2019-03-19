@@ -48,7 +48,8 @@ func main() {
 	for _, addr := range strings.Split(addrList, " ") {
 		if addr != "" {
 			//fmt.Println("---------------2", addr)
-			UpdateCsv(fmt.Sprintf("http://%s", addr), svrFile)
+			UpdateCsv("http://"+addr, svrFile)
+			ReloadCsv("http://"+addr, svrFile)
 		}
 	}
 	fmt.Println("\n...finish...")
@@ -59,14 +60,27 @@ func main() {
 func UpdateCsv(addr string, svrFile map[string][]byte) {
 	http.CallRpc(addr, enum.Rpc_update_csv, func(buf *common.NetPack) {
 		buf.WriteByte(byte(len(svrFile)))
-		fmt.Println("\nstart:", addr)
+		fmt.Println("\nstart update:", addr)
 		for k, v := range svrFile {
-			buf.WriteString(path.Dir(k))
-			buf.WriteString(path.Base(k))
+			dir, name := path.Split(k)
+			buf.WriteString(dir)
+			buf.WriteString(name)
 			buf.WriteLenBuf(v)
 			fmt.Println("	", k, len(v))
 		}
 	}, func(recvBuf *common.NetPack) {
 		fmt.Println("end:", recvBuf.ReadString())
+	})
+}
+func ReloadCsv(addr string, svrFile map[string][]byte) {
+	http.CallRpc(addr, enum.Rpc_reload_csv, func(buf *common.NetPack) {
+		buf.WriteByte(byte(len(svrFile)))
+		fmt.Println("\nstart reload:", addr)
+		for k, _ := range svrFile {
+			buf.WriteString(k)
+			fmt.Println("	", k)
+		}
+	}, func(recvBuf *common.NetPack) {
+		fmt.Println("end:", recvBuf.ReadByte())
 	})
 }

@@ -3,8 +3,8 @@ package main
 import (
 	"common/console"
 	"common/console/shutdown"
-	"common/email"
 	"common/file"
+	"common/tool/email"
 	"conf"
 	"dbmgo"
 	"flag"
@@ -12,6 +12,7 @@ import (
 	_ "generate_out/rpc/shared_svr/svr_save"
 	"netConfig"
 	"netConfig/meta"
+	conf2 "shared_svr/svr_save/conf"
 )
 
 const kModuleName = "save"
@@ -41,6 +42,7 @@ func InitConf() {
 		"conf_net":    &metaCfg,
 		"conf_svr":    &conf.SvrCsv,
 		"email/email": &email.G_Email,
+		"save/const":  &conf2.Const,
 	}
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)

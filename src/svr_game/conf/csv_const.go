@@ -1,6 +1,6 @@
 package conf
 
-var CsvConst struct {
+var Const struct {
 	// 赛季
 	Season_Begin_Month        []int       //开始月份
 	Season_Level_Max          uint8       //赛季档次，从0开始

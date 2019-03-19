@@ -1,3 +1,11 @@
+/***********************************************************************
+* @ HTTP
+* @ brief
+	1、非常不安全，恶意劫持路由节点，即可知道发往后台的数据，包括密码~
+
+* @ author zhoumf
+* @ date 2019-3-18
+***********************************************************************/
 package http
 
 import (
@@ -19,7 +27,7 @@ import (
 //idx1 := strings.Index(addr, "//") + 2
 //idx2 := strings.LastIndex(addr, ":")
 //ip := addr[idx1:idx2]
-//port := common.CheckAtoiName(addr[idx2+1:])
+//port := common.Atoi(addr[idx2+1:])
 func Addr(ip string, port uint16) string { return fmt.Sprintf("http://%s:%d", ip, port) }
 
 var _svr http.Server
@@ -46,7 +54,7 @@ func ReadRequest(r *http.Request) (req *common.NetPack) {
 		buf, err = ioutil.ReadAll(r.Body)
 	}
 	if r.Body.Close(); err != nil {
-		gamelog.Error("ReadBody: %s", err.Error())
+		gamelog.Error("ReadBody: " + err.Error())
 		return nil
 	}
 	return common.NewNetPack(buf)
@@ -58,7 +66,7 @@ func _reg_to_svr(w http.ResponseWriter, r *http.Request) {
 	buf, _ := ioutil.ReadAll(r.Body)
 	pMeta := new(meta.Meta)
 	if err := common.ToStruct(buf, pMeta); err != nil {
-		gamelog.Error("RegistToSvr common.ToStruct: %s", err.Error())
+		gamelog.Error("common.ToStruct: " + err.Error())
 		return
 	}
 
@@ -83,7 +91,7 @@ func loadCacheNetMeta() {
 	}
 	metas := make([]meta.Meta, len(records))
 	for i := 0; i < len(records); i++ {
-		json.Unmarshal([]byte(records[i][0]), &metas[i])
+		json.Unmarshal(common.ToBytes(records[i][0]), &metas[i])
 		meta.AddMeta(&metas[i])
 		fmt.Println("load meta cache: ", metas[i])
 	}
@@ -98,7 +106,7 @@ func appendNetMeta(pMeta *meta.Meta) {
 	if err == nil {
 		pMeta2 := new(meta.Meta)
 		for i := 0; i < len(records); i++ {
-			json.Unmarshal([]byte(records[i][0]), pMeta2)
+			json.Unmarshal(common.ToBytes(records[i][0]), pMeta2)
 			if pMeta.IsSame(pMeta2) {
 				return
 			}
@@ -106,12 +114,11 @@ func appendNetMeta(pMeta *meta.Meta) {
 	}
 
 	b, _ := json.Marshal(pMeta)
-	record := []string{string(b)}
 	_mutex.Lock()
 	dir, name := path.Split(g_svraddr_path)
-	err = file.AppendCsv(dir, name, record)
+	err = file.AppendCsv(dir, name, []string{common.ToStr(b)})
 	_mutex.Unlock()
 	if err != nil {
-		gamelog.Error("AppendSvrAddrCsv (%v): %s", record, err.Error())
+		gamelog.Error("AppendSvrAddrCsv: " + err.Error())
 	}
 }

@@ -16,6 +16,7 @@ package netConfig
 
 import (
 	"common"
+	"common/std/hash"
 	"gamelog"
 	"generate_out/rpc/enum"
 	"http"
@@ -33,7 +34,7 @@ func HashCenterID(key string) int {
 	} else if length == 1 {
 		return ids[0]
 	} else {
-		n := common.StringHash(key)
+		n := hash.StrHash(key)
 		return ids[n%uint32(length)]
 	}
 }

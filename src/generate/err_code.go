@@ -15,10 +15,10 @@
 package main
 
 import (
-	"common"
 	"common/file"
 	"common/std"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -29,10 +29,7 @@ type ErrEnum struct {
 
 func generateErrCode() {
 	var errCsv []ErrEnum
-	file.G_Csv_Map = map[string]interface{}{
-		"err_code": &errCsv,
-	}
-	file.LoadOneCsv("csv/err_code.csv")
+	file.LoadCsv("csv/err_code.csv", &errCsv)
 
 	enums, enumCnt := getOldErr() //旧枚举，追加新增入后重新生成
 	haveNewEnum := false
@@ -48,10 +45,9 @@ func generateErrCode() {
 		return
 	}
 
-	if K_ErrOutDir != "" {
-		println(K_ErrOutDir, K_ErrFileName+".go")
-		file.CreateTemplate(enums, K_ErrOutDir, K_ErrFileName+".go", codeErrTemplate_Go)
-	}
+	println(K_ErrOutDir, K_ErrFileName+".go")
+	file.CreateTemplate(enums, K_ErrOutDir, K_ErrFileName+".go", codeErrTemplate_Go)
+
 	if K_ErrOutDir_C != "" {
 		println(K_ErrOutDir_C, K_ErrFileName+".h")
 		file.CreateTemplate(enums, K_ErrOutDir_C, K_ErrFileName+".h", codeErrTemplate_C)
@@ -62,13 +58,13 @@ func generateErrCode() {
 	}
 }
 func getOldErr() (enums []std.KeyPair, enumCnt int) {
-	reg := regexp.MustCompile(`^\w+`)
+	reg := regexp.MustCompile(`\w+`)
 	file.ReadLine(K_ErrOutDir+K_ErrFileName+".go", func(line string) {
-		if ok, _ := regexp.MatchString(`^\w+ uint16 =`, line); ok {
+		if ok, _ := regexp.MatchString(`\w+ uint16 =`, line); ok {
 			if result := reg.FindAllString(line, -1); result != nil {
 				name := result[0]
 				list := strings.Split(line, " ")
-				rid := common.CheckAtoiName(list[len(list)-1])
+				rid, _ := strconv.Atoi(list[len(list)-1])
 				enums, enumCnt = append(enums, std.KeyPair{name, rid}), rid+1
 			}
 		}

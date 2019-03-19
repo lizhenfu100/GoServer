@@ -19,7 +19,7 @@ func Http_order_info(w http.ResponseWriter, r *http.Request) {
 		ack, _ := json.MarshalIndent(p, "", "     ")
 		w.Write(ack)
 	} else {
-		w.Write([]byte(orderId + ": order not exists"))
+		w.Write(common.ToBytes(orderId + ": order not exists"))
 	}
 }
 func Http_order_success(w http.ResponseWriter, r *http.Request) {
@@ -27,21 +27,21 @@ func Http_order_success(w http.ResponseWriter, r *http.Request) {
 	orderId := q.Get("orderid")
 
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write([]byte("passwd error"))
+		w.Write(common.ToBytes("passwd error"))
 		return
 	}
 	if order := msg.FindOrder(orderId); order != nil {
 		if order.Status == 1 {
-			w.Write([]byte(orderId + ": order already success"))
+			w.Write(common.ToBytes(orderId + ": order already success"))
 		} else {
 			order.Status = 1
 			order.Can_send = 1
 			dbmgo.UpdateId(msg.KDBTable, order.Order_id, bson.M{"$set": bson.M{
 				"status": 1, "can_send": 1}})
-			w.Write([]byte("ok"))
+			w.Write(common.ToBytes("ok"))
 		}
 	} else {
-		w.Write([]byte(orderId + ": order not exists"))
+		w.Write(common.ToBytes(orderId + ": order not exists"))
 	}
 }
 

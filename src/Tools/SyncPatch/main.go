@@ -30,7 +30,7 @@ func main() {
 	}
 	for _, addr := range strings.Split(addrList, " ") {
 		if addr != "" {
-			SyncServerPatch(fmt.Sprintf("http://%s", addr), localMap)
+			SyncServerPatch("http://"+addr, localMap)
 		}
 	}
 	if fmt.Println("\n...finish..."); !noSleep {
@@ -86,6 +86,6 @@ func readDir(dir string, localMap map[string]uint32) {
 	names, _ := file.WalkDir(dir, "")
 	for _, v := range names {
 		v = strings.TrimPrefix(v, "./")
-		localMap[v] = common.StringHash(file.CalcMd5(v))
+		localMap[v] = file.CalcMd5(v)
 	}
 }

@@ -26,14 +26,14 @@ func (self *stArgs) InsertDB() { dbmgo.Insert(dbmgo.KTableArgs, self) }
 func GetBeginTime() int64 { //本赛季开启时刻
 	now := time.Now()
 	month := int(now.Month())
-	length := len(conf.CsvConst.Season_Begin_Month)
+	length := len(conf.Const.Season_Begin_Month)
 	idx := sort.Search(length, func(i int) bool {
-		return conf.CsvConst.Season_Begin_Month[i] > month
+		return conf.Const.Season_Begin_Month[i] > month
 	})
 	if idx == 0 {
 		idx = length
 	}
-	month = conf.CsvConst.Season_Begin_Month[idx-1]
+	month = conf.Const.Season_Begin_Month[idx-1]
 	return time.Date(now.Year(), time.Month(month), 1, 0, 0, 0, 0, now.Location()).Unix()
 }
 func OnEnterNextDay() {

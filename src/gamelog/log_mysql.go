@@ -51,14 +51,14 @@ func NewMysqlLog(table string) *TMysqlLog {
 	log := new(TMysqlLog)
 	log.db, err = sql.Open("mysql", g_dsn)
 	if err != nil {
-		Error("NewMysqlLog: %s", err.Error())
+		Error("NewMysqlLog: " + err.Error())
 		return nil
 	}
 
 	//Notice：sql.Open("mysql", g_dsn) g_dsn为空不会报错，查看源码，只是生成一份数据记录，真正连接数据库是异步的
 	//所以这里检查是否真的连上了
 	if err = log.db.Ping(); err != nil {
-		Error("NewMysqlLog db.Ping(): %s", err.Error())
+		Error("NewMysqlLog db.Ping(): " + err.Error())
 		return nil
 	}
 
@@ -75,11 +75,11 @@ func (self *TMysqlLog) Write(data1, data2 [][]byte) {
 	//1、开启事务
 	tx, err := self.db.Begin()
 	if err != nil {
-		Error("MysqlLog::db.Begin : %s", err.Error())
+		Error("MysqlLog::db.Begin: " + err.Error())
 	}
 	stmt, err := tx.Prepare(self.query)
 	if err != nil {
-		Error("MysqlLog::tx.Prepare : %s", err.Error())
+		Error("MysqlLog::tx.Prepare: " + err.Error())
 	}
 
 	//2、编辑数据
@@ -100,7 +100,7 @@ func _transaction(stmt *sql.Stmt, pdata []byte) {
 	dec := gob.NewDecoder(buf)
 	var req MSG_SvrLogData
 	if dec.Decode(&req) != nil {
-		Error("MysqlLog::Transaction : Message Reader Error!!!!")
+		Error("MysqlLog::Transaction : Message Reader!")
 		return
 	}
 	_Exec(stmt, &req)
@@ -109,7 +109,7 @@ func _Exec(stmt *sql.Stmt, pMsg *MSG_SvrLogData) {
 	timeStr := time.Unix(pMsg.Time, 0).Format("2006-01-02 15:04:05")
 	_, err := stmt.Exec(pMsg.EventID, pMsg.SrcID, pMsg.TargetID, timeStr, pMsg.Param[0], pMsg.Param[1], pMsg.Param[2], pMsg.Param[3])
 	if err != nil {
-		Error("MysqlLog::Exec : %s", err.Error())
+		Error("MysqlLog::Exec: " + err.Error())
 		return
 	}
 }
@@ -118,7 +118,7 @@ func (self *TMysqlLog) InsertDB(pdata *MSG_SvrLogData) {
 	// 直接插入数据库
 	stmt, err := self.db.Prepare(self.query)
 	if err != nil {
-		Error("MysqlLog::db.Prepare : %s", err.Error())
+		Error("MysqlLog::db.Prepare: " + err.Error())
 		return
 	}
 	defer stmt.Close()

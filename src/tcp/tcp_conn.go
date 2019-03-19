@@ -177,7 +177,7 @@ func (self *TCPConn) _WriteFull(buf []byte) error { //brief.6：err可能是io.E
 		if n, err := self.writer.Write(buf[pos:]); err == nil {
 			pos += n
 		} else {
-			gamelog.Error("WriteRoutine Write error: %s", err.Error())
+			gamelog.Error("Write error: " + err.Error())
 			return err
 		}
 	}

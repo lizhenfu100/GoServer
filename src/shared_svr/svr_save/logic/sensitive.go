@@ -1,6 +1,7 @@
 package logic
 
 import (
+	"common"
 	"common/file"
 	"encoding/json"
 	"fmt"
@@ -16,11 +17,11 @@ type TSensitive struct {
 
 func (self *TSaveData) CheckSensitiveVal(newExtra string) {
 	pNew, pOld := &TSensitive{}, &TSensitive{}
-	json.Unmarshal([]byte(newExtra), pNew)
-	json.Unmarshal([]byte(self.Extra), pOld)
+	json.Unmarshal(common.ToBytes(newExtra), pNew)
+	json.Unmarshal(common.ToBytes(self.Extra), pOld)
 
 	if pNew.GameSession < pOld.GameSession {
-		gamelog.Info("Save abnormal: %s", self.Key)
+		gamelog.Info("Save abnormal: " + self.Key)
 		if fi, e := file.CreateFile(
 			fmt.Sprintf("player/%s/", self.Key),
 			time.Now().Format("20060102_150405")+".save",

@@ -2,8 +2,8 @@ package logic
 
 import (
 	"common"
-	"common/email"
-	"common/sign"
+	"common/std/sign"
+	"common/tool/email"
 	"encoding/binary"
 	"generate_out/err"
 	"generate_out/rpc/enum"

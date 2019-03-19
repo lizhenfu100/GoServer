@@ -8,7 +8,7 @@
 * @ author zhoumf
 * @ date 2019-3-15
 ***********************************************************************/
-package consistent
+package hash
 
 func JumpHash(key uint64, capBuckets int) int32 {
 	b, j := int64(-1), int64(0)

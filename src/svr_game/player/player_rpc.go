@@ -12,7 +12,7 @@ package player
 
 import (
 	"common"
-	"common/compress"
+	"common/std/compress"
 	"gamelog"
 	"generate_out/rpc/enum"
 	mhttp "http"

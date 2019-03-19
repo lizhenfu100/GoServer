@@ -1,6 +1,7 @@
 package rand
 
 import (
+	"common"
 	"math/rand"
 	"time"
 )
@@ -64,5 +65,5 @@ func RandString(length int) string {
 	for i := 0; i < length; i++ {
 		result[i] = g_strBase[r.Intn(len(g_strBase))]
 	}
-	return string(result)
+	return common.ToStr(result)
 }

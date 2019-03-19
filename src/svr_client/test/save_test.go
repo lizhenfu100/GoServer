@@ -3,7 +3,7 @@ package test
 import (
 	"common"
 	"common/file"
-	"common/sign"
+	"common/std/sign"
 	"fmt"
 	"generate_out/err"
 	"generate_out/rpc/enum"

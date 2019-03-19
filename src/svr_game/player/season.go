@@ -77,8 +77,8 @@ func InitSeasonDB() {
 }
 
 func (self *TSeasonModule) AddScore(diff int) {
-	if diff > conf.CsvConst.Score_Once_Max {
-		diff = conf.CsvConst.Score_Once_Max
+	if diff > conf.Const.Score_Once_Max {
+		diff = conf.Const.Score_Once_Max
 	}
 	//1、变更积分
 	score := 0
@@ -88,29 +88,29 @@ func (self *TSeasonModule) AddScore(diff int) {
 	self.Score = uint16(score)
 	//2、刷新赛季档次
 	if self.Score >= season.KRankNeedScore {
-		self.Level = conf.CsvConst.Season_Level_Max
+		self.Level = conf.Const.Season_Level_Max
 		self.SecondLv = 0
 		if p := self._RankItem(); p.OnValueChange() {
 			season.AddRankItem(p)
 		}
 	} else {
-		confLevelScore := conf.CsvConst.Season_Second_Level_Cnt * conf.CsvConst.Season_Second_Level_Score
+		confLevelScore := conf.Const.Season_Second_Level_Cnt * conf.Const.Season_Second_Level_Score
 		self.Level = uint8(self.Score / confLevelScore)
 		leftScore := self.Score % confLevelScore
-		self.SecondLv = 1 + uint8(leftScore/conf.CsvConst.Season_Second_Level_Score)
+		self.SecondLv = 1 + uint8(leftScore/conf.Const.Season_Second_Level_Score)
 	}
 }
 func (self *TSeasonModule) calcScore(isWin bool, rank float32) int {
 	if isWin == false {
-		score := math.RandBetween(conf.CsvConst.Score_OneGame[0], conf.CsvConst.Score_OneGame[1])
+		score := math.RandBetween(conf.Const.Score_OneGame[0], conf.Const.Score_OneGame[1])
 		if self.winStreak > 0 {
 			ratio := rand.Float32() + 1 //连胜系数
 			score = int(float32(score) * ratio)
 		}
 		return score
 	} else {
-		confRank := conf.CsvConst.Score_Take_Off[self.Level][0]
-		confScore := int(conf.CsvConst.Score_Take_Off[self.Level][1])
+		confRank := conf.Const.Score_Take_Off[self.Level][0]
+		confScore := int(conf.Const.Score_Take_Off[self.Level][1])
 		if rank > confRank {
 			return -math.RandBetween(1, confScore)
 		} else {

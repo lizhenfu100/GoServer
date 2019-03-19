@@ -3,7 +3,7 @@ package account
 import (
 	"common"
 	"common/format"
-	"common/sign"
+	"common/std/sign"
 	"dbmgo"
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
@@ -38,7 +38,7 @@ func Http_reset_password(w http.ResponseWriter, r *http.Request) {
 	//! 创建回复
 	ack := "Error: unknown"
 	defer func() {
-		w.Write([]byte(ack))
+		w.Write(common.ToBytes(ack))
 	}()
 
 	if sign.CalcSign(passwd+flag) != q.Get("sign") {

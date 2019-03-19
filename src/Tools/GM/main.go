@@ -13,6 +13,8 @@
 package main
 
 import (
+	"common/file"
+	"conf"
 	"flag"
 	"gamelog"
 	mhttp "http"
@@ -59,6 +61,8 @@ func main() {
 	netConfig.RunNetSvr()
 }
 func InitConf() {
+	file.LoadCsv("csv/conf_svr.csv", &conf.SvrCsv)
+
 	register.RegHttpHandler(map[string]register.HttpHandle{
 		"/query_account_login_addr": Http_query_account_login_addr,
 		"/reset_password":           Http_reset_password,
@@ -69,7 +73,7 @@ func InitConf() {
 }
 
 func Http_download_file(w http.ResponseWriter, r *http.Request) {
-	gamelog.Debug("download path: %s", r.URL.Path)
+	gamelog.Debug("download path: " + r.URL.Path)
 	if kNeedPasswd && r.URL.Path == "/" {
 		r.URL.Path = "/passwd.html"
 	}

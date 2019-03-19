@@ -3,7 +3,7 @@ package logic
 import (
 	"common"
 	"common/assert"
-	"common/sign"
+	"common/std/sign"
 	"conf"
 	"fmt"
 	"generate_out/err"

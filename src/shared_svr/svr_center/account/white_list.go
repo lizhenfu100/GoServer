@@ -1,6 +1,7 @@
 package account
 
 import (
+	"common"
 	"conf"
 	"dbmgo"
 	"net/http"
@@ -20,22 +21,22 @@ func Http_whitelist_add(w http.ResponseWriter, r *http.Request) {
 	v := q.Get("val")
 
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write([]byte("passwd error"))
+		w.Write(common.ToBytes("passwd error"))
 		return
 	}
 	G_WhiteList.Add(v)
-	w.Write([]byte("ok"))
+	w.Write(common.ToBytes("ok"))
 }
 func Http_whitelist_del(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	v := q.Get("val")
 
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write([]byte("passwd error"))
+		w.Write(common.ToBytes("passwd error"))
 		return
 	}
 	G_WhiteList.Del(v)
-	w.Write([]byte("ok"))
+	w.Write(common.ToBytes("ok"))
 }
 
 // ------------------------------------------------------------

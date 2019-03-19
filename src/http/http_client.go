@@ -58,7 +58,7 @@ func ReadResponse(r *http.Response) (ret []byte) {
 		ret, err = ioutil.ReadAll(r.Body)
 	}
 	if r.Body.Close(); err != nil {
-		gamelog.Error("ReadBody: %s", err.Error())
+		gamelog.Error("ReadBody: " + err.Error())
 		return nil
 	}
 	return
@@ -68,7 +68,7 @@ func ReadResponse(r *http.Response) (ret []byte) {
 //! 模块注册
 func RegistToSvr(destAddr string, meta *meta.Meta) {
 	go func() {
-		buf, _ := common.ToBytes(meta)
+		buf, _ := common.ToBuf(meta)
 		for {
 			if PostReq(destAddr+"/reg_to_svr", buf) == nil {
 				time.Sleep(3 * time.Second)

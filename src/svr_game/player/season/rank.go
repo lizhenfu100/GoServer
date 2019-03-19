@@ -48,9 +48,9 @@ func (self *RankItem) OnValueChange() bool          { return g_ranker.OnValueCha
 // ------------------------------------------------------------
 //
 func InitRankList() {
-	KRankNeedScore = uint16(conf.CsvConst.Season_Level_Max) *
-		conf.CsvConst.Season_Second_Level_Cnt *
-		conf.CsvConst.Season_Second_Level_Score
+	KRankNeedScore = uint16(conf.Const.Season_Level_Max) *
+		conf.Const.Season_Second_Level_Cnt *
+		conf.Const.Season_Second_Level_Score
 	//初始化排行榜
 	var list []RankItem
 	g_ranker.Init("SeasonRank", 100, &list)

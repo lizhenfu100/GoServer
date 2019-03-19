@@ -1,4 +1,4 @@
-package common
+package copy
 
 // reference: https://github.com/mohae/deepcopy
 import (

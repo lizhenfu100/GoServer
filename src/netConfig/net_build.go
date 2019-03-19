@@ -61,7 +61,7 @@ func RunNetSvr() {
 	} else if meta.G_Local.TcpPort > 0 {
 		tcp.NewTcpServer(meta.G_Local.TcpPort, meta.G_Local.Maxconn)
 	} else {
-		gamelog.Error("%s: have none HttpPort|TcpPort!!!", meta.G_Local.Module)
+		gamelog.Error(meta.G_Local.Module + ": have none HttpPort|TcpPort")
 	}
 }
 
@@ -73,12 +73,12 @@ func ConnectModule(dest *meta.Meta) {
 	} else if dest.TcpPort > 0 {
 		ConnectModuleTcp(dest, func(*tcp.TCPConn) { meta.AddMeta(dest) })
 	} else {
-		gamelog.Error("%s: have none HttpPort|TcpPort!!!", dest.Module)
+		gamelog.Error(dest.Module + ": have none HttpPort|TcpPort!!!")
 	}
 }
 func ConnectModuleTcp(dest *meta.Meta, cb func(*tcp.TCPConn)) {
 	if dest.TcpPort == 0 {
-		gamelog.Error("%s: have none TcpPort!!!", dest.Module)
+		gamelog.Error(dest.Module + ": have none TcpPort!!!")
 		return
 	}
 	var client *tcp.TCPClient

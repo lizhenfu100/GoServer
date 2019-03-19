@@ -55,14 +55,14 @@ func (self *TBattleModule) _InitTempData(player *TPlayer) {
 // ------------------------------------------------------------
 // -- API
 func (self *TBattleModule) AddExp(exp uint32) {
-	if exp > conf.CsvConst.Exp_Once_Max {
-		exp = conf.CsvConst.Exp_Once_Max
+	if exp > conf.Const.Exp_Once_Max {
+		exp = conf.Const.Exp_Once_Max
 	}
 	levelUpExp := uint32(0)
-	if int(self.Level) < len(conf.CsvConst.Exp_LvUp) {
-		levelUpExp = conf.CsvConst.Exp_LvUp[self.Level]
+	if int(self.Level) < len(conf.Const.Exp_LvUp) {
+		levelUpExp = conf.Const.Exp_LvUp[self.Level]
 	} else {
-		levelUpExp = conf.CsvConst.Exp_LvUp_Max
+		levelUpExp = conf.Const.Exp_LvUp_Max
 	}
 	if self.Exp += exp; self.Exp >= levelUpExp {
 		self.Exp -= levelUpExp
@@ -128,10 +128,10 @@ func Rpc_game_on_battle_end(req, ack *common.NetPack, this *TPlayer) {
 	//TODO:zhoumf: 特定动作加经验，比如连杀
 	exp := uint32(0)
 	if isWin {
-		exp = conf.CsvConst.Exp_Win
+		exp = conf.Const.Exp_Win
 		this.season.winStreak++
 	} else {
-		exp = conf.CsvConst.Exp_Fail
+		exp = conf.Const.Exp_Fail
 		this.season.winStreak = 0
 	}
 	score := this.season.calcScore(isWin, rank)

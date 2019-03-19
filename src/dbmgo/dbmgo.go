@@ -24,7 +24,7 @@
 package dbmgo
 
 import (
-	"common/wechat"
+	"common/tool/wechat"
 	"fmt"
 	"gamelog"
 	"gopkg.in/mgo.v2"

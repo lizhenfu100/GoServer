@@ -1,0 +1,4 @@
+#常量表,,备注
+MacBindMax,10,
+MacFreeBindMax,3,可随意绑定的设备数，无时间间隔限制
+MacChangePeriod,604800,切换设备的等待时间，一周

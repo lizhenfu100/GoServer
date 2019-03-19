@@ -2,8 +2,8 @@ package logic
 
 import (
 	"common"
-	"common/email"
-	"common/sign"
+	"common/std/sign"
+	"common/tool/email"
 	"dbmgo"
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
@@ -25,7 +25,7 @@ func Http_unbind_mac(w http.ResponseWriter, r *http.Request) {
 	//! 创建回复
 	ack := "Error: unknown"
 	defer func() {
-		w.Write([]byte(ack))
+		w.Write(common.ToBytes(ack))
 	}()
 
 	if sign.CalcSign(mac+flag) != q.Get("sign") {

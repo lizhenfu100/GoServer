@@ -35,7 +35,7 @@ package http
 
 import (
 	"common"
-	"common/compress"
+	"common/std/compress"
 	"conf"
 	"gamelog"
 	"generate_out/rpc/enum"
