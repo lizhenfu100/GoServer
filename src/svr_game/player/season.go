@@ -20,7 +20,7 @@ package player
 
 import (
 	"common"
-	"common/math"
+	"common/std/random"
 	"dbmgo"
 	"math/rand"
 	"svr_game/conf"
@@ -102,7 +102,7 @@ func (self *TSeasonModule) AddScore(diff int) {
 }
 func (self *TSeasonModule) calcScore(isWin bool, rank float32) int {
 	if isWin == false {
-		score := math.RandBetween(conf.Const.Score_OneGame[0], conf.Const.Score_OneGame[1])
+		score := random.Between(conf.Const.Score_OneGame[0], conf.Const.Score_OneGame[1])
 		if self.winStreak > 0 {
 			ratio := rand.Float32() + 1 //连胜系数
 			score = int(float32(score) * ratio)
@@ -112,7 +112,7 @@ func (self *TSeasonModule) calcScore(isWin bool, rank float32) int {
 		confRank := conf.Const.Score_Take_Off[self.Level][0]
 		confScore := int(conf.Const.Score_Take_Off[self.Level][1])
 		if rank > confRank {
-			return -math.RandBetween(1, confScore)
+			return -random.Between(1, confScore)
 		} else {
 			return 0
 		}

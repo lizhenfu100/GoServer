@@ -53,6 +53,6 @@ func Http_check_passwd(w http.ResponseWriter, r *http.Request) {
 			f.Close()
 		}
 	} else {
-		w.Write(common.ToBytes("Passwd error.\nPlease accept the password in your email."))
+		w.Write(common.S2B("Passwd error.\nPlease accept the password in your email."))
 	}
 }

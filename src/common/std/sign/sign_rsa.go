@@ -20,7 +20,7 @@ func CalcSign(s string) string {
 	key := fmt.Sprintf("%x", md5.Sum([]byte(k_pt_key)))
 	sign := fmt.Sprintf("%s&%s", s, strings.ToLower(key))
 	//fmt.Println("-----------CalcSign: ", key)
-	return fmt.Sprintf("%x", md5.Sum(common.ToBytes(sign)))
+	return fmt.Sprintf("%x", md5.Sum(common.S2B(sign)))
 }
 
 // ------------------------------------------------------------

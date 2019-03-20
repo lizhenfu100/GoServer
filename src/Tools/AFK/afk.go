@@ -88,7 +88,7 @@ func Http_afk(w http.ResponseWriter, r *http.Request) {
 		//! 创建回复
 		ack := "失败"
 		defer func() {
-			w.Write(common.ToBytes(ack))
+			w.Write(common.S2B(ack))
 		}()
 
 		if r.Form.Get("passwd") != kPassword {
@@ -113,7 +113,7 @@ func Http_del(w http.ResponseWriter, r *http.Request) {
 		//! 创建回复
 		ack := "失败，无此信息"
 		defer func() {
-			w.Write(common.ToBytes(ack))
+			w.Write(common.S2B(ack))
 		}()
 
 		if r.Form.Get("passwd") != kPassword {
@@ -138,7 +138,7 @@ func Http_count_one(w http.ResponseWriter, r *http.Request) {
 		//! 创建回复
 		ack := "失败，无此信息"
 		defer func() {
-			w.Write(common.ToBytes(ack))
+			w.Write(common.S2B(ack))
 		}()
 
 		if r.Form.Get("passwd") != kPassword {
@@ -167,7 +167,7 @@ func Http_count_all(req, ack *common.NetPack) {
 		ack.WriteString("失败，日期错误，正确格式2018.1.15")
 	} else {
 		ack.WriteString("ok")
-		ack.WriteBuf(common.ToBytes(queryDuringTime("", begin, end)))
+		ack.WriteBuf(common.S2B(queryDuringTime("", begin, end)))
 	}
 }
 

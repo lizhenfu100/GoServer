@@ -6,6 +6,7 @@ import (
 	"conf"
 	"dbmgo"
 	"encoding/json"
+	"gamelog"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"shared_svr/svr_sdk/msg"
@@ -19,30 +20,32 @@ func Http_order_info(w http.ResponseWriter, r *http.Request) {
 		ack, _ := json.MarshalIndent(p, "", "     ")
 		w.Write(ack)
 	} else {
-		w.Write(common.ToBytes(orderId + ": order not exists"))
+		w.Write(common.S2B(orderId + ": order not exists"))
 	}
+	gamelog.Info("Http_order_info: %v", r.Form)
 }
 func Http_order_success(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	orderId := q.Get("orderid")
 
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.ToBytes("passwd error"))
+		w.Write(common.S2B("passwd error"))
 		return
 	}
 	if order := msg.FindOrder(orderId); order != nil {
 		if order.Status == 1 {
-			w.Write(common.ToBytes(orderId + ": order already success"))
+			w.Write(common.S2B(orderId + ": order already success"))
 		} else {
 			order.Status = 1
 			order.Can_send = 1
 			dbmgo.UpdateId(msg.KDBTable, order.Order_id, bson.M{"$set": bson.M{
 				"status": 1, "can_send": 1}})
-			w.Write(common.ToBytes("ok"))
+			w.Write(common.S2B("ok"))
 		}
 	} else {
-		w.Write(common.ToBytes(orderId + ": order not exists"))
+		w.Write(common.S2B(orderId + ": order not exists"))
 	}
+	gamelog.Info("Http_order_success: %v", r.Form)
 }
 
 // ------------------------------------------------------------

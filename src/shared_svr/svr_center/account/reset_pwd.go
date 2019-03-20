@@ -38,7 +38,7 @@ func Http_reset_password(w http.ResponseWriter, r *http.Request) {
 	//! 创建回复
 	ack := "Error: unknown"
 	defer func() {
-		w.Write(common.ToBytes(ack))
+		w.Write(common.S2B(ack))
 	}()
 
 	if sign.CalcSign(passwd+flag) != q.Get("sign") {

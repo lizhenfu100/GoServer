@@ -14,16 +14,16 @@ func ClearBuf(p *[]byte)   { *p = (*p)[:0] } //len(0), cap(old), 旧数据不会
 
 // ------------------------------------------------------------
 //【仅限只读数据】
-func ToBytes(s string) []byte {
+func S2B(s string) []byte {
 	sh := (*[2]uintptr)(unsafe.Pointer(&s)) //reflect.StringHeader
 	bh := [3]uintptr{sh[0], sh[1], sh[1]}   //reflect.SliceHeader
 	return *(*[]byte)(unsafe.Pointer(&bh))
 }
-func ToStr(b []byte) string { return *(*string)(unsafe.Pointer(&b)) }
+func B2S(b []byte) string { return *(*string)(unsafe.Pointer(&b)) }
 
 // ------------------------------------------------------------
 // go语言间通信用
-func ToBuf(pStruct interface{}) ([]byte, error) { //only public field
+func T2B(pStruct interface{}) ([]byte, error) { //only public field
 	buf := bytes.NewBuffer(nil)
 	enc := gob.NewEncoder(buf)
 	if err := enc.Encode(pStruct); err != nil {
@@ -31,7 +31,7 @@ func ToBuf(pStruct interface{}) ([]byte, error) { //only public field
 	}
 	return buf.Bytes(), nil
 }
-func ToStruct(b []byte, pStruct interface{}) error {
+func B2T(b []byte, pStruct interface{}) error {
 	buf := bytes.NewBuffer(b)
 	dec := gob.NewDecoder(buf)
 	return dec.Decode(pStruct)

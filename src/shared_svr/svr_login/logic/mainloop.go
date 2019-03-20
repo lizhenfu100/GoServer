@@ -2,12 +2,13 @@ package logic
 
 import (
 	"common"
+	"shared_svr/svr_login/gm"
 	"tcp"
 )
 
 func MainLoop() {
-	InitGiftDB()
-	g_bulletin.InitDB()
+	gm.InitGiftDB()
+	gm.InitBulletin()
 	AccountRegLimit()
 
 	tcp.G_RpcQueue.Loop()

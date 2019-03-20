@@ -19,7 +19,7 @@ func Http_query_account_login_addr(w http.ResponseWriter, r *http.Request) {
 	accountName := q.Get("name")
 
 	if accountName == "" {
-		w.Write(common.ToBytes("AccountName nil"))
+		w.Write(common.S2B("AccountName nil"))
 	} else {
 		mhttp.CallRpc(g_templateData.CenterAddr, enum.Rpc_center_player_login_addr, func(buf *common.NetPack) {
 			buf.WriteString(conf.GameName)
@@ -31,7 +31,7 @@ func Http_query_account_login_addr(w http.ResponseWriter, r *http.Request) {
 				gameIp := recvBuf.ReadString()
 				gamePort := recvBuf.ReadUInt16()
 
-				w.Write(common.ToBytes(fmt.Sprintf("LoginAddr: %s:%d\nGameAddr: %s:%d",
+				w.Write(common.S2B(fmt.Sprintf("LoginAddr: %s:%d\nGameAddr: %s:%d",
 					loginIp, loginPort, gameIp, gamePort)))
 			}
 		})

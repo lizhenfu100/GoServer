@@ -25,7 +25,7 @@ func Http_unbind_mac(w http.ResponseWriter, r *http.Request) {
 	//! 创建回复
 	ack := "Error: unknown"
 	defer func() {
-		w.Write(common.ToBytes(ack))
+		w.Write(common.S2B(ack))
 	}()
 
 	if sign.CalcSign(mac+flag) != q.Get("sign") {

@@ -15,16 +15,14 @@ const (
 	kModuleName = "file"
 )
 
-/* 用于官网接收推广文件
-执行程序路径：~/web/public/SyncPatch_svr
-推广资源路径：~/web/public/game/promotion/
+/*
+	官网执行程序路径：~/web/public/SyncPatch_svr
+	官网推广资源路径：~/web/public/game/promotion/
 */
 func main() {
-	//初始化日志系统
 	gamelog.InitLogger(kModuleName)
 	InitConf()
 
-	//设置本节点meta信息
 	meta.G_Local = &meta.Meta{
 		Module:   kModuleName,
 		HttpPort: 7071,

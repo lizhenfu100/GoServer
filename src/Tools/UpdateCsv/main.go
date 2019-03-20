@@ -2,6 +2,8 @@ package main
 
 import (
 	"common"
+	"common/format"
+	"common/std"
 	"flag"
 	"fmt"
 	"gamelog"
@@ -22,6 +24,9 @@ func main() {
 		"本地文件列表,空格隔开,可重定向成后台路径")
 	flag.Parse()
 	gamelog.InitLogger("UpdateCsv")
+
+	addrList = format.MergeNearSpace(addrList)
+	fileList = format.MergeNearSpace(fileList)
 
 	//待上传的文件列表
 	svrFile := make(map[string][]byte, 16)
@@ -45,12 +50,12 @@ func main() {
 			}
 		}
 	}
-	for _, addr := range strings.Split(addrList, " ") {
-		if addr != "" {
-			//fmt.Println("---------------2", addr)
-			UpdateCsv("http://"+addr, svrFile)
-			ReloadCsv("http://"+addr, svrFile)
-		}
+	addrs := strings.Split(addrList, " ")
+	for _, addr := range _UpdateList(addrs) {
+		UpdateCsv("http://"+addr, svrFile)
+	}
+	for _, addr := range addrs {
+		ReloadCsv("http://"+addr, svrFile)
 	}
 	fmt.Println("\n...finish...")
 	time.Sleep(time.Hour)
@@ -83,4 +88,20 @@ func ReloadCsv(addr string, svrFile map[string][]byte) {
 	}, func(recvBuf *common.NetPack) {
 		fmt.Println("end:", recvBuf.ReadByte())
 	})
+}
+
+// ------------------------------------------------------------
+// 每个均得Reload，同ip的选一个Update即可
+func _UpdateList(addrs []string) (ret []string) {
+	var ips std.Strings
+	for _, addr := range addrs {
+		if idx := strings.Index(addr, ":"); idx >= 0 {
+			ip := addr[:idx]
+			if ips.Index(ip) < 0 {
+				ips.Add(ip)
+				ret = append(ret, addr)
+			}
+		}
+	}
+	return
 }

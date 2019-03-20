@@ -5,7 +5,7 @@
 * @ author zhoumf
 * @ date 2018-12-12
 ***********************************************************************/
-package logic
+package gm
 
 import (
 	"common"
@@ -13,6 +13,7 @@ import (
 	"conf"
 	"dbmgo"
 	"encoding/json"
+	"gamelog"
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
@@ -74,11 +75,11 @@ func InitGiftDB() {
 func Http_gift_bag_add(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	if r.Form.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.ToBytes("passwd error"))
+		w.Write(common.S2B("passwd error"))
 		return
 	}
 	if p := getGift(r.Form.Get("key")); p != nil {
-		w.Write(common.ToBytes("gift repeat"))
+		w.Write(common.S2B("gift repeat"))
 		return
 	}
 
@@ -90,20 +91,22 @@ func Http_gift_bag_add(w http.ResponseWriter, r *http.Request) {
 		g_gifts.Store(p.Key, p)
 		ack, _ := json.MarshalIndent(p, "", "     ")
 		w.Write(ack)
+		gamelog.Info("Http_gift_bag_add: %v", r.Form)
 	} else {
-		w.Write(common.ToBytes("gift repeat"))
+		w.Write(common.S2B("gift repeat"))
 	}
 }
 func Http_gift_bag_set(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	if r.Form.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.ToBytes("passwd error"))
+		w.Write(common.S2B("passwd error"))
 		return
 	}
 
 	if p := getGift(r.Form.Get("key")); p == nil {
-		w.Write(common.ToBytes("fail"))
+		w.Write(common.S2B("fail"))
 	} else {
+		gamelog.Info("Http_gift_bag_set: %v\n%v", r.Form, p)
 		copy.CopyForm(p, r.Form)
 		dbmgo.UpdateId(kDBGift, p.Key, p)
 		ack, _ := json.MarshalIndent(p, "", "     ")
@@ -113,17 +116,18 @@ func Http_gift_bag_set(w http.ResponseWriter, r *http.Request) {
 func Http_gift_bag_del(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	if r.Form.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.ToBytes("passwd error"))
+		w.Write(common.S2B("passwd error"))
 		return
 	}
 
 	if p := getGift(r.Form.Get("key")); p == nil {
-		w.Write(common.ToBytes("not find"))
+		w.Write(common.S2B("not find"))
 	} else {
 		g_gifts.Delete(p.Key)
 		dbmgo.Remove(kDBGift, bson.M{"_id": p.Key})
 		ack, _ := json.MarshalIndent(p, "", "     ")
 		w.Write(ack)
+		gamelog.Info("Http_gift_bag_del: %v", p)
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"common"
 	"conf"
 	"dbmgo"
+	"gamelog"
 	"net/http"
 	"sync"
 )
@@ -21,22 +22,24 @@ func Http_whitelist_add(w http.ResponseWriter, r *http.Request) {
 	v := q.Get("val")
 
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.ToBytes("passwd error"))
+		w.Write(common.S2B("passwd error"))
 		return
 	}
 	G_WhiteList.Add(v)
-	w.Write(common.ToBytes("ok"))
+	w.Write(common.S2B("ok"))
+	gamelog.Info("Http_whitelist_add: %v", r.Form)
 }
 func Http_whitelist_del(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	v := q.Get("val")
 
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.ToBytes("passwd error"))
+		w.Write(common.S2B("passwd error"))
 		return
 	}
 	G_WhiteList.Del(v)
-	w.Write(common.ToBytes("ok"))
+	w.Write(common.S2B("ok"))
+	gamelog.Info("Http_whitelist_del: %v", r.Form)
 }
 
 // ------------------------------------------------------------

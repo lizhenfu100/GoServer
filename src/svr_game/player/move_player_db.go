@@ -56,7 +56,7 @@ func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
 		//game中的玩家数据迁移
 		buf.WriteUInt32(this.AccountID)
 		buf.WriteString(this.Name)
-		playerBuf, _ := common.ToBuf(this)
+		playerBuf, _ := common.T2B(this)
 		buf.WriteLenBuf(playerBuf)
 	}, func(recvBuf *common.NetPack) {
 		errCode = recvBuf.ReadUInt16()
@@ -74,7 +74,7 @@ func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
 func Rpc_game_move_player_db2(req, ack *common.NetPack, this *TPlayer) {
 	playerBuf := req.LeftBuf()
 
-	if e := common.ToStruct(playerBuf, this); e == nil {
+	if e := common.B2T(playerBuf, this); e == nil {
 		this.WriteAllToDB()
 	} else {
 		gamelog.Error(e.Error())

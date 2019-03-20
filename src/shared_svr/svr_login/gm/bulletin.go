@@ -5,7 +5,7 @@
 * @ author zhoumf
 * @ date 2019-2-14
 ***********************************************************************/
-package logic
+package gm
 
 import (
 	"common"
@@ -13,6 +13,7 @@ import (
 	"dbmgo"
 	"encoding/json"
 	"fmt"
+	"gamelog"
 	"net/http"
 	"reflect"
 	"sync"
@@ -57,17 +58,18 @@ func Http_bulletin(w http.ResponseWriter, r *http.Request) {
 	g_bulletin.UpdateDB()
 	g_bulletin.Unlock()
 	w.Write(ack)
+	gamelog.Info("Http_bulletin: %v", r.Form)
 }
 
 // ------------------------------------------------------------
-func (self *Bulletin) UpdateDB() { dbmgo.UpdateId(dbmgo.KTableArgs, self.DBKey, self) }
-func (self *Bulletin) InitDB() {
-	if ok, _ := dbmgo.Find(dbmgo.KTableArgs, "_id", self.DBKey, self); !ok {
-		dbmgo.Insert(dbmgo.KTableArgs, self)
+func InitBulletin() {
+	if ok, _ := dbmgo.Find(dbmgo.KTableArgs, "_id", g_bulletin.DBKey, g_bulletin); !ok {
+		dbmgo.Insert(dbmgo.KTableArgs, g_bulletin)
 	}
 }
+func (self *Bulletin) UpdateDB() { dbmgo.UpdateId(dbmgo.KTableArgs, self.DBKey, self) }
 
 // ------------------------------------------------------------
 func Http_timestamp(w http.ResponseWriter, r *http.Request) {
-	w.Write(common.ToBytes(fmt.Sprintf("%d", time.Now().Unix())))
+	w.Write(common.S2B(fmt.Sprintf("%d", time.Now().Unix())))
 }

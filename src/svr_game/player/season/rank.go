@@ -16,7 +16,7 @@
 package season
 
 import (
-	"common/math/rank"
+	"common/std/rank"
 	"svr_game/conf"
 )
 

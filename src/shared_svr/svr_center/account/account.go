@@ -50,10 +50,10 @@ func (self *TAccount) init() {
 	}
 }
 func (self *TAccount) CheckPasswd(passwd string) bool {
-	return self.Password == fmt.Sprintf("%x", md5.Sum(common.ToBytes(passwd)))
+	return self.Password == fmt.Sprintf("%x", md5.Sum(common.S2B(passwd)))
 }
 func (self *TAccount) SetPasswd(passwd string) {
-	self.Password = fmt.Sprintf("%x", md5.Sum(common.ToBytes(passwd)))
+	self.Password = fmt.Sprintf("%x", md5.Sum(common.S2B(passwd)))
 }
 
 // ------------------------------------------------------------

@@ -1,4 +1,4 @@
-package rand
+package random
 
 import (
 	"common"
@@ -14,7 +14,7 @@ type Weight interface {
 }
 
 // 按权重随机选出cnt个，不重复
-func RandSelect(list []Weight, count int) (ids []int) {
+func Select(list []Weight, count int) (ids []int) {
 	total, length := 0, len(list)
 	for i := 0; i < length; i++ {
 		list[i].SetFlag(false)
@@ -43,10 +43,10 @@ func RandSelect(list []Weight, count int) (ids []int) {
 }
 
 // [left, right]
-func RandBetween(left, right int) int { return left + rand.Intn(right+1-left) }
+func Between(left, right int) int { return left + rand.Intn(right+1-left) }
 
 // 数组乱序
-func RandShuffle(slice []int) {
+func Shuffle(slice []int) {
 	length := len(slice)
 	for i := 0; i < length; i++ {
 		ri := rand.Intn(length-i) + i
@@ -59,11 +59,11 @@ func RandShuffle(slice []int) {
 //生成随机字符串s
 var g_strBase = []byte("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-func RandString(length int) string {
+func String(length int) string {
 	result := make([]byte, length)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < length; i++ {
 		result[i] = g_strBase[r.Intn(len(g_strBase))]
 	}
-	return common.ToStr(result)
+	return common.B2S(result)
 }

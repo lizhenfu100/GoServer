@@ -16,6 +16,7 @@ import (
 	"common"
 	"conf"
 	"dbmgo"
+	"gamelog"
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
 	"sync"
@@ -100,6 +101,7 @@ func Rpc_game_gm_add_award(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	if dbmgo.InsertSync(kDBPlayerAward, p) {
 		g_awards.Store(p.ID, p)
 		ack.WriteUInt16(err.Success)
+		gamelog.Info("gm_add_award: %s %s", touid, Json)
 	} else {
 		ack.WriteUInt16(err.Data_repeat)
 	}
@@ -125,6 +127,7 @@ func Rpc_game_gm_set_award(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	if p := getAward(id); p == nil {
 		ack.WriteUInt16(err.Not_found)
 	} else {
+		gamelog.Info("gm_set_award: %d %s %s\n%v", id, touid, Json, p)
 		p.ToUid = touid
 		p.Json = Json
 		dbmgo.UpdateId(kDBPlayerAward, p.ID, p)
@@ -145,6 +148,7 @@ func Rpc_game_gm_del_award(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		g_awards.Delete(p.ID)
 		dbmgo.Remove(kDBPlayerAward, bson.M{"_id": p.ID})
 		ack.WriteUInt16(err.Success)
+		gamelog.Info("gm_del_award: %v", p)
 	}
 }
 

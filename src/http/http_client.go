@@ -68,7 +68,7 @@ func ReadResponse(r *http.Response) (ret []byte) {
 //! 模块注册
 func RegistToSvr(destAddr string, meta *meta.Meta) {
 	go func() {
-		buf, _ := common.ToBuf(meta)
+		buf, _ := common.T2B(meta)
 		for {
 			if PostReq(destAddr+"/reg_to_svr", buf) == nil {
 				time.Sleep(3 * time.Second)

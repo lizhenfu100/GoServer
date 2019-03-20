@@ -2,6 +2,7 @@ package format
 
 import (
 	"common/std"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -30,4 +31,10 @@ func StrToInts(str string) []int {
 		ret[i], _ = strconv.Atoi(v)
 	}
 	return ret
+}
+
+// 连续空白字符，合并成一个空格
+func MergeNearSpace(str string) string {
+	reg := regexp.MustCompile(`\s+`)
+	return reg.ReplaceAllString(str, " ")
 }

@@ -17,8 +17,8 @@ type TSensitive struct {
 
 func (self *TSaveData) CheckSensitiveVal(newExtra string) {
 	pNew, pOld := &TSensitive{}, &TSensitive{}
-	json.Unmarshal(common.ToBytes(newExtra), pNew)
-	json.Unmarshal(common.ToBytes(self.Extra), pOld)
+	json.Unmarshal(common.S2B(newExtra), pNew)
+	json.Unmarshal(common.S2B(self.Extra), pOld)
 
 	if pNew.GameSession < pOld.GameSession {
 		gamelog.Info("Save abnormal: " + self.Key)

@@ -3,6 +3,7 @@ package main
 import (
 	"common"
 	"common/file"
+	"common/format"
 	"flag"
 	"fmt"
 	"gamelog"
@@ -12,28 +13,32 @@ import (
 	"time"
 )
 
+const (
+	kCdnAddr = "111.230.177.63:7071" //官网
+	kCdnUrl  = "http://www.chillyroom.com/game/"
+)
+
 func main() {
-	var noSleep bool
+	var sleep bool
 	var addrList, dirList string
 	flag.StringVar(&addrList, "addr", "", "远端地址列表,空格隔开")
 	flag.StringVar(&dirList, "dir", "", "本地目录列表,空格隔开")
-	flag.BoolVar(&noSleep, "nosleep", false, "")
+	flag.BoolVar(&sleep, "sleep", true, "")
 	flag.Parse()
 	gamelog.InitLogger("SyncPatch")
+
+	addrList = format.MergeNearSpace(addrList)
+	dirList = format.MergeNearSpace(dirList)
 
 	//本地文件列表
 	localMap := make(map[string]uint32, 32)
 	for _, dir := range strings.Split(dirList, " ") {
-		if dir != "" {
-			readDir(dir, localMap)
-		}
+		readDir(dir, localMap)
 	}
 	for _, addr := range strings.Split(addrList, " ") {
-		if addr != "" {
-			SyncServerPatch("http://"+addr, localMap)
-		}
+		SyncServerPatch("http://"+addr, localMap)
 	}
-	if fmt.Println("\n...finish..."); !noSleep {
+	if fmt.Println("\n...finish..."); sleep {
 		time.Sleep(time.Hour)
 	}
 }
@@ -54,8 +59,8 @@ func SyncServerPatch(addr string, localMap map[string]uint32) {
 			}
 		}
 
-		//本次无需同步的文件列表，用于显示
-		notSyncList := make([]string, 0, 32)
+		notSyncList := make([]string, 0, 32) //无需同步的，用于显示
+		syncList := make([]string, 0, 32)    //同步过的，用于刷新cdn
 
 		//比对本地、服务器，有新增或变更才上传
 		fmt.Println("\nSync File: ")
@@ -63,6 +68,7 @@ func SyncServerPatch(addr string, localMap map[string]uint32) {
 			if v2, ok := svrMap[k]; ok {
 				if v1 != v2 { //变动文件
 					if http.UploadFile(addr+"/upload_patch_file", k) == nil {
+						syncList = append(syncList, kCdnUrl+k)
 						fmt.Println("    ", k)
 					}
 				} else {
@@ -70,12 +76,17 @@ func SyncServerPatch(addr string, localMap map[string]uint32) {
 				}
 			} else { //新增文件
 				if http.UploadFile(addr+"/upload_patch_file", k) == nil {
+					syncList = append(syncList, kCdnUrl+k)
 					fmt.Println("    ", k)
 				}
 			}
 		}
-
-		//打印本次无需同步的文件
+		//刷新官网文件的cdn
+		if addr == kCdnAddr && len(syncList) > 0 {
+			fmt.Println("\nRefresh CDN: ")
+			fmt.Println("    ", cdn.RefreshUrl(syncList))
+		}
+		//打印无需同步的文件
 		fmt.Println("\nNot Sync File: ")
 		for _, v := range notSyncList {
 			fmt.Println("    ", v)

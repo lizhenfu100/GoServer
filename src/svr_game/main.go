@@ -55,5 +55,5 @@ func InitConf() {
 
 	//展示重要配置数据
 	buf, _ := json.MarshalIndent(&conf2.Const, "", "     ")
-	fmt.Println("conf.Const: ", common.ToStr(buf))
+	fmt.Println("conf.Const: ", common.B2S(buf))
 }

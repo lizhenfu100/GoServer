@@ -116,7 +116,7 @@ func countAll(beginDate, endDate string) {
 				f.Write(data)
 				f.Close()
 				fmt.Println("成功，当前目录可查看文本...")
-				fmt.Println(common.ToStr(data))
+				fmt.Println(common.B2S(data))
 			}
 		}
 	})

@@ -25,7 +25,7 @@ func generateRpcRoute(modules, funcs []string) {
 	defer f.Close()
 
 	//1、先写入函数的switch部分
-	f.Write(common.ToBytes("func GetRpcModule(rpcEnum uint16) string {\nswitch rpcEnum {"))
+	f.Write(common.S2B("func GetRpcModule(rpcEnum uint16) string {\nswitch rpcEnum {"))
 
 	//2、case部分由模板生成
 	if tpl, err := template.New(filename).Parse(funcRouteTemplate); err == nil {
@@ -39,9 +39,9 @@ func generateRpcRoute(modules, funcs []string) {
 				buf := bf.Bytes()
 				buf[len(buf)-2] = ':'
 				buf[len(buf)-1] = ' '
-				f.Write(common.ToBytes("\ncase "))
+				f.Write(common.S2B("\ncase "))
 				f.Write(buf)
-				f.Write(common.ToBytes(fmt.Sprintf(`return "%s"`, module)))
+				f.Write(common.S2B(fmt.Sprintf(`return "%s"`, module)))
 				bf.Reset()
 			}
 		}
@@ -51,7 +51,7 @@ func generateRpcRoute(modules, funcs []string) {
 	}
 
 	//3、函数收尾
-	f.Write(common.ToBytes("}\nreturn \"\"}"))
+	f.Write(common.S2B("}\nreturn \"\"}"))
 }
 func getModuleRpcs(module string, funcs []string) (ret []string) {
 	for _, name := range funcs {

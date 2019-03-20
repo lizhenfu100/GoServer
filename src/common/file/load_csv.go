@@ -211,7 +211,7 @@ func SetField(field reflect.Value, s string) {
 		}
 	case reflect.Struct, reflect.Map:
 		{
-			if e := json.Unmarshal(common.ToBytes(s), field.Addr().Interface()); e != nil {
+			if e := json.Unmarshal(common.S2B(s), field.Addr().Interface()); e != nil {
 				fmt.Println("Field Parse Error: ", s, e.Error())
 			}
 		}
@@ -226,7 +226,7 @@ func SetField(field reflect.Value, s string) {
 				}
 			case reflect.Int, reflect.Uint32, reflect.Float32, reflect.Struct, reflect.Slice:
 				{
-					if e := json.Unmarshal(common.ToBytes(s), field.Addr().Interface()); e != nil {
+					if e := json.Unmarshal(common.S2B(s), field.Addr().Interface()); e != nil {
 						fmt.Println("Field Parse Error: ", s, e.Error())
 					}
 				}

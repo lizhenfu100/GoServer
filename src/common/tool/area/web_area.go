@@ -55,7 +55,7 @@ func GetAreaEx(ip string) (ret TArea) {
 }
 func GetCountryId() string {
 	if buf := http.Get(kCountryApi); buf != nil {
-		return common.ToStr(buf)
+		return common.B2S(buf)
 	}
 	return ""
 }
