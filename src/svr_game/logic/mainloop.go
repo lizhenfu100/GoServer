@@ -6,7 +6,7 @@ import (
 	"conf"
 	"svr_game/gm"
 	"svr_game/player"
-	"tcp"
+	"nets/tcp"
 	"time"
 )
 

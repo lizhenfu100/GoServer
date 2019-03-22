@@ -3,6 +3,7 @@ package tcp
 import (
 	"common"
 	"common/std"
+	"common/timer"
 	"conf"
 	"encoding/binary"
 	"fmt"
@@ -106,7 +107,7 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 	atomic.AddInt32(&self.connCnt, 1)
 	gamelog.Debug("Connect From: %s, AddConnId: %d", conn.RemoteAddr().String(), connId)
 
-	tcpConn.onDisConnect = func(tcpConn *TCPConn) { //Notice:回调函数须线程安全
+	tcpConn.onDisConnect = func() { //Notice:回调函数须线程安全
 		self.connmap.Delete(connId)
 		atomic.AddInt32(&self.connCnt, -1)
 		gamelog.Debug("DelConnId: %d %v", connId, tcpConn.UserPtr)
@@ -123,13 +124,12 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 			G_RpcQueue.Insert(tcpConn, packet)
 		}
 	}
-	//延时删除，以待断线重连，仅针对玩家链接
-	tcpConn.delayDel = time.AfterFunc(Delay_Delete_Conn, func() { //Notice:回调函数须线程安全
-		if tcpConn.IsClose() {
-			tcpConn.onDisConnect(tcpConn)
-		}
-	})
-	tcpConn.delayDel.Stop()
+	//tcpConn.delayDel = time.AfterFunc(Delay_Delete_Conn, func() {
+	//	if tcpConn.IsClose() {
+	//		tcpConn.onDisConnect()
+	//	}
+	//})
+	//tcpConn.delayDel.Stop()
 
 	//通知client，连接被接收，下发connId、密钥等
 	acceptMsg := common.NewNetPackCap(32)
@@ -160,14 +160,16 @@ func (self *TCPServer) _RunConn(conn *TCPConn, connId uint32) {
 	go conn.readRoutine()
 	conn.writeRoutine() //block
 
-	//【迁移至：延时删除】
-	//self.connmap.Delete(connId)
-	//atomic.AddInt32(&self.connCnt, -1)
-	//gamelog.Debug("Disconnect: DelConnId: %d", connId)
+	//针对玩家链接，延时删除，以待断线重连
 	if _, ok := conn.UserPtr.(*meta.Meta); ok {
-		conn.onDisConnect(conn)
+		conn.onDisConnect()
 	} else {
-		conn.delayDel.Reset(Delay_Delete_Conn)
+		//conn.delayDel.Reset(Delay_Delete_Conn)
+		conn.delayDel = timer.G_TimerMgr.AddTimerSec(func() {
+			if conn.IsClose() {
+				conn.onDisConnect()
+			}
+		}, Delay_Delete_Conn, 0, 0)
 	}
 
 	self.wgConns.Done()

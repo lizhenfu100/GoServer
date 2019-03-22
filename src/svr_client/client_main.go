@@ -24,16 +24,10 @@ func main() {
 			time.Sleep(time.Minute)
 		}
 	}()
-	InitConf()
-	meta.G_Local = meta.GetMeta(kModuleName, 0)
 
 	test()
 
-	//设置mongodb的服务器地址
-	//pMeta := meta.GetMeta("db_client", 0)
-	//dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName,
-	//	conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
-	//netConfig.RunNetSvr()
+	MainLoop()
 }
 func InitConf() {
 	var metaCfg []meta.Meta
@@ -48,4 +42,5 @@ func InitConf() {
 
 // ------------------------------------------------------------
 func test() {
+	testQPS()
 }

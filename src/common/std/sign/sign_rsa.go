@@ -49,18 +49,17 @@ func (this *RSA) Verify(src []byte, sign []byte, hash crypto.Hash) error {
 }
 
 // ------------------------------------------------------------
-func NewRSA(privateKey, publicKey []byte) (ret *RSA, err error) {
-	ret = &RSA{}
+func (this *RSA) Init(privateKey, publicKey []byte) (err error) {
 	if err == nil && privateKey != nil { //生成私钥
 		if block, _ := pem.Decode(privateKey); block != nil {
-			ret.PrivateKey, err = genPrivate(block.Bytes, block.Type)
+			this.PrivateKey, err = genPrivate(block.Bytes, block.Type)
 		} else {
 			err = errors.New("private key error")
 		}
 	}
 	if err == nil && publicKey != nil { //生成公钥
 		if block, _ := pem.Decode(publicKey); block != nil {
-			ret.PublicKey, err = genPublic(block.Bytes)
+			this.PublicKey, err = genPublic(block.Bytes)
 		} else {
 			err = errors.New("public key error")
 		}

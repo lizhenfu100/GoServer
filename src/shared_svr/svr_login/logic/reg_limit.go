@@ -6,8 +6,8 @@ import (
 	"conf"
 	"generate_out/err"
 	"generate_out/rpc/enum"
-	mhttp "http"
 	"net/http"
+	mhttp "nets/http"
 	"sync"
 	"time"
 )
@@ -33,9 +33,9 @@ func AccountRegLimit() { //限制同ip账号注册频率
 							g_regFreq.Store(ip, freq)
 						}
 						if !freq.(*timer.OpFreq).Check(time.Now().Unix()) {
-							time.AfterFunc(72*time.Hour, func() {
+							timer.G_TimerMgr.AddTimerSec(func() {
 								g_regFreq.Delete(ip)
-							})
+							}, 24*3600, 0, 0)
 							ack.WriteUInt16(err.Operate_too_often) //Notice：回复内容须与原rpc一致
 							return true                            //拦截，原rpc函数不会调用了
 						}
@@ -56,5 +56,5 @@ func Http_permit_ip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	g_regFreq.Delete(ip)
-	w.Write(common.S2B("ok"))
+	w.Write(common.S2B("permit_ip: ok"))
 }

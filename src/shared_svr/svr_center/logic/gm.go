@@ -24,7 +24,7 @@ func Http_permit_account(w http.ResponseWriter, r *http.Request) {
 		p.IsForbidden = false
 		dbmgo.UpdateId(account.KDBTable, p.AccountID, bson.M{"$set": bson.M{
 			"isforbidden": false}})
-		w.Write(common.S2B("ok"))
+		w.Write(common.S2B("permit_account: ok"))
 	} else {
 		w.Write(common.S2B("none account"))
 	}

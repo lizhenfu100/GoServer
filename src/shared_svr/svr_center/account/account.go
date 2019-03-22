@@ -4,6 +4,7 @@ import (
 	"common"
 	"common/format"
 	"common/std/hash"
+	"common/timer"
 	"crypto/md5"
 	"dbmgo"
 	"fmt"
@@ -11,8 +12,8 @@ import (
 	"generate_out/err"
 	"generate_out/rpc/enum"
 	"gopkg.in/mgo.v2/bson"
-	"http"
 	"netConfig/meta"
+	"nets/http"
 	"shared_svr/svr_center/gameInfo"
 	"strconv"
 	"sync/atomic"
@@ -89,11 +90,11 @@ func (self *TAccount) Login(passwd string) (errcode uint16) {
 		timeNow := time.Now().Unix()
 		atomic.StoreInt64(&self.LoginTime, timeNow)
 		dbmgo.UpdateId(KDBTable, self.AccountID, bson.M{"$set": bson.M{"logintime": timeNow}})
-		time.AfterFunc(15*time.Minute, func() {
+		timer.G_TimerMgr.AddTimerSec(func() {
 			if time.Now().Unix()-atomic.LoadInt64(&self.LoginTime) >= 15*60 {
 				DelCache(self)
 			}
-		})
+		}, 15*60, 0, 0)
 	}
 	return
 }

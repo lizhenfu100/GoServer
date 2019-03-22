@@ -4,11 +4,12 @@ import (
 	"common"
 	"common/file"
 	"common/format"
+	"common/tool/cdn"
 	"flag"
 	"fmt"
 	"gamelog"
 	"generate_out/rpc/enum"
-	"http"
+	"nets/http"
 	"strings"
 	"time"
 )

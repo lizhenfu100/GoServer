@@ -29,10 +29,10 @@ import (
 	"common/std"
 	"fmt"
 	"gamelog"
-	"http"
 	"netConfig/meta"
+	"nets/http"
+	"nets/tcp"
 	"sync"
-	"tcp"
 )
 
 var g_client_conns sync.Map //<{module,svrId}, *tcp.TCPClient> //本模块主动连其它模块的tcp

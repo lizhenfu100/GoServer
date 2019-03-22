@@ -21,8 +21,8 @@ import (
 	"common"
 	"generate_out/err"
 	"generate_out/rpc/enum"
+	"nets/tcp"
 	"sync"
-	"tcp"
 )
 
 func Rpc_gateway_login(req, ack *common.NetPack, client *tcp.TCPConn) {

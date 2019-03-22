@@ -63,6 +63,7 @@ package tcp
 import (
 	"bufio"
 	"common"
+	"common/timer"
 	"conf"
 	"encoding/binary"
 	"errors"
@@ -73,14 +74,13 @@ import (
 	"runtime/debug"
 	"svr_client/test/qps"
 	"sync/atomic"
-	"time"
 )
 
 const (
 	Msg_Size_Max      = 1024
 	Msg_Queue_Cap     = 10240
 	Write_Chan_Cap    = 32
-	Delay_Delete_Conn = time.Second * 60
+	Delay_Delete_Conn = 60
 )
 
 var (
@@ -89,8 +89,12 @@ var (
 		enum.Rpc_unregist:   _Rpc_unregist,
 		enum.Rpc_svr_accept: _Rpc_svr_accept,
 	}
-	G_RpcQueue = NewRpcQueue(Msg_Queue_Cap)
+	G_RpcQueue RpcQueue
 )
+
+func init() {
+	G_RpcQueue.Init(Msg_Queue_Cap)
+}
 
 type TCPConn struct { //TODO:zhoumf: pprof性能测试
 	conn          net.Conn
@@ -98,9 +102,9 @@ type TCPConn struct { //TODO:zhoumf: pprof性能测试
 	writer        *bufio.Writer
 	writeChan     chan []byte
 	_isClose      int32 //isClose标记仅在resetConn、Close中设置，其它地方只读
-	_isWriteClose bool
-	delayDel      *time.Timer //延时清理连接，提高重连效率，仅针对玩家链接
-	onDisConnect  func(*TCPConn)
+	_isWriteClose int32
+	delayDel      *timer.TimeNode //针对玩家链接，延时删除，以待断线重连
+	onDisConnect  func()
 	UserPtr       interface{}
 }
 
@@ -125,16 +129,10 @@ func (self *TCPConn) Close() {
 	}
 	self.conn.(*net.TCPConn).SetLinger(0) //丢弃数据
 	self.conn.Close()
-	if !self._isWriteClose {
+	if atomic.LoadInt32(&self._isWriteClose) == 0 {
 		self.WriteBuf(nil) //触发writeRoutine结束
 	}
 	atomic.StoreInt32(&self._isClose, 1)
-
-	//【迁移至：延时删除】
-	//通知逻辑线程，连接断开
-	//packet := common.NewNetPackCap(16)
-	//packet.SetOpCode(enum.Rpc_net_error)
-	//G_RpcQueue.Insert(self, packet)
 }
 func (self *TCPConn) IsClose() bool { return atomic.LoadInt32(&self._isClose) > 0 }
 
@@ -184,7 +182,7 @@ func (self *TCPConn) _WriteFull(buf []byte) error { //brief.6：err可能是io.E
 	return nil
 }
 func (self *TCPConn) writeRoutine() {
-	self._isWriteClose = false
+	atomic.StoreInt32(&self._isWriteClose, 0)
 LOOP:
 	for {
 		select {
@@ -211,7 +209,7 @@ LOOP:
 			}
 		}
 	}
-	self._isWriteClose = true
+	atomic.StoreInt32(&self._isWriteClose, 1)
 	self.Close()
 }
 func (self *TCPConn) readRoutine() {

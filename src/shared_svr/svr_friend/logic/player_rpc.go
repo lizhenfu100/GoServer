@@ -4,7 +4,7 @@ import (
 	"common"
 	"gamelog"
 	"generate_out/rpc/enum"
-	"tcp"
+	"nets/tcp"
 )
 
 type PlayerRpc func(req, ack *common.NetPack, this *TFriendModule)

@@ -15,9 +15,9 @@ package register
 
 import (
 	"common"
-	mhttp "http"
 	"net/http"
-	"tcp"
+	mhttp "nets/http"
+	"nets/tcp"
 )
 
 type (

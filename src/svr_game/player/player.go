@@ -33,19 +33,20 @@ package player
 
 import (
 	"common/service"
+	"common/timer"
 	"dbmgo"
 	"gamelog"
 	"netConfig/meta"
+	"nets/tcp"
 	"svr_game/version"
 	"sync/atomic"
-	"tcp"
 	"time"
 )
 
 const (
-	Idle_Max_Minute   = 3 //须客户端心跳包
-	ReLogin_Wait_Time = time.Minute * 5
-	kDBPlayer         = "Player"
+	Idle_Max_Minute  = 3 //须客户端心跳包
+	ReLogin_Wait_Sec = 300
+	kDBPlayer        = "Player"
 )
 
 type TPlayerBase struct {
@@ -168,15 +169,14 @@ func (self *TPlayer) Logout() {
 	G_ServiceMgr.UnRegister(Service_Write_DB, self)
 	G_ServiceMgr.UnRegister(Service_Check_AFK, self)
 
-	//Notice: AfterFunc是在另一线程执行，所以传入函数必须线程安全
-	time.AfterFunc(ReLogin_Wait_Time, func() {
-		// 延时删除，提升重连效率
+	//Notice: timer在主线程执行，传入函数必须线程安全
+	timer.G_TimerMgr.AddTimerSec(func() { //延时删除，提升重连效率
 		if !self.IsOnline() && FindAccountId(self.AccountID) != nil {
 			gamelog.Debug("Aid(%d) Delete", self.AccountID)
 			self.WriteAllToDB()
 			DelCache(self)
 		}
-	})
+	}, ReLogin_Wait_Sec, 0, 0)
 }
 func (self *TPlayer) IsOnline() bool { return atomic.LoadInt32(&self._isOnlnie) > 0 }
 
@@ -190,13 +190,10 @@ const ( //须与ServiceMgr初始化顺序一致
 var G_ServiceMgr service.ServiceMgr
 
 func init() {
-	G_ServiceMgr = service.ServiceMgr{
-		Chan: make(chan service.Obj, 2048),
-		List: []service.IService{
-			service.NewServicePatch(_Service_Write_DB, 15*60*1000),
-			service.NewServiceVec(_Service_Check_AFK, 60*1000),
-		},
-	}
+	G_ServiceMgr.Init(2048, []service.IService{
+		service.NewServicePatch(_Service_Write_DB, 15*60*1000),
+		service.NewServiceVec(_Service_Check_AFK, 60*1000),
+	})
 }
 func _Service_Write_DB(ptr interface{}) {
 	if player, ok := ptr.(*TPlayer); ok {

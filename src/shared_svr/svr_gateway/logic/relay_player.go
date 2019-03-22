@@ -6,7 +6,7 @@ import (
 	"generate_out/rpc/enum"
 	"netConfig"
 	"netConfig/meta"
-	"tcp"
+	"nets/tcp"
 )
 
 func Rpc_gateway_relay_player_msg(req, ack *common.NetPack, conn *tcp.TCPConn) {

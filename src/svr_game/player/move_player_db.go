@@ -6,7 +6,7 @@ import (
 	"gamelog"
 	"generate_out/err"
 	"generate_out/rpc/enum"
-	"http"
+	"nets/http"
 	"netConfig"
 	"netConfig/meta"
 )

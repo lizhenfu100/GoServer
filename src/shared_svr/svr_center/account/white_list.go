@@ -26,7 +26,7 @@ func Http_whitelist_add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	G_WhiteList.Add(v)
-	w.Write(common.S2B("ok"))
+	w.Write(common.S2B("whitelist_add: ok"))
 	gamelog.Info("Http_whitelist_add: %v", r.Form)
 }
 func Http_whitelist_del(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +38,7 @@ func Http_whitelist_del(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	G_WhiteList.Del(v)
-	w.Write(common.S2B("ok"))
+	w.Write(common.S2B("whitelist_del: ok"))
 	gamelog.Info("Http_whitelist_del: %v", r.Form)
 }
 

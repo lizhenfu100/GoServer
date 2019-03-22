@@ -1,9 +1,9 @@
 package qps
 
 import (
+	"common/timer"
 	"gamelog"
 	"sync/atomic"
-	"time"
 )
 
 var (
@@ -11,9 +11,9 @@ var (
 )
 
 func WatchLoop() {
-	for range time.Tick(time.Second) {
+	timer.G_TimerMgr.AddTimerSec(func() {
 		gamelog.Info("QPS: %d", atomic.SwapUint32(&g_recvNum, 0))
-	}
+	}, 1, 1, -1)
 }
 
 func AddQps() { atomic.AddUint32(&g_recvNum, 1) }

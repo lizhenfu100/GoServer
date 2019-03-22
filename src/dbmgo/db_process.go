@@ -5,11 +5,12 @@ import (
 	"gamelog"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"sync"
 )
 
 var (
 	_actions    = make(chan *action, 4096)
-	_finished   = make(chan bool) //告知DBProcess结束
+	_finished   sync.WaitGroup //告知DBProcess结束
 	_last_table string
 )
 
@@ -31,6 +32,7 @@ type action struct {
 }
 
 func _loop() {
+	_finished.Add(1)
 	var err error
 	var pColl *mgo.Collection
 	for v := range _actions {
@@ -58,9 +60,9 @@ func _loop() {
 			wechat.SendMsg("DBProcess: " + err.Error())
 		}
 	}
-	_finished <- true
+	_finished.Done()
 }
-func WaitStop() { close(_actions); <-_finished }
+func WaitStop() { close(_actions); _finished.Wait() }
 
 func Update(table string, search, update bson.M) {
 	_actions <- &action{

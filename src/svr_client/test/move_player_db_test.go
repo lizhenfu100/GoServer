@@ -4,7 +4,7 @@ import (
 	"common"
 	"fmt"
 	"generate_out/rpc/enum"
-	"http"
+	"net/http"
 	"testing"
 )
 // go test -v ./src/svr_client/test/login_test.go

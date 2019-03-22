@@ -4,7 +4,7 @@ import (
 	"common"
 	"fmt"
 	"generate_out/rpc/enum"
-	"http"
+	"net/http"
 	"netConfig"
 	_ "svr_client/test/init"
 	"testing"

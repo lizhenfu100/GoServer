@@ -17,9 +17,9 @@ package shutdown
 import (
 	"dbmgo"
 	"gamelog"
-	"http"
+	"nets/http"
+	"nets/tcp"
 	"os"
-	"tcp"
 )
 
 func Default(args []string) {

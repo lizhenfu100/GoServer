@@ -3,7 +3,7 @@ package logic
 import (
 	"common"
 	"netConfig/meta"
-	"tcp"
+	"nets/tcp"
 )
 
 func MainLoop() {

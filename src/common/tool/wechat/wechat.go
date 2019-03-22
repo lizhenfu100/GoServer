@@ -16,7 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"http"
+	"nets/http"
 )
 
 var (
@@ -70,7 +70,7 @@ type errMsg struct {
 
 func updateToken(corpId, secret string) error {
 	if buf := http.Get(kUrlGetToken + corpId + "&corpsecret=" + secret); buf == nil {
-		return errors.New("http get failed")
+		return http.ErrGet
 	} else {
 		var val token
 		json.Unmarshal(buf, &val)
@@ -82,7 +82,7 @@ func updateToken(corpId, secret string) error {
 }
 func sendMsg(b []byte) error {
 	if buf := http.Post(kUrlSend+g_token, "application/json", b); buf == nil {
-		return errors.New("http post failed")
+		return http.ErrPost
 	} else {
 		var msg errMsg
 		json.Unmarshal(buf, &msg)

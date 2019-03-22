@@ -20,7 +20,7 @@ import (
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
 	"sync"
-	"tcp"
+	"nets/tcp"
 	"time"
 )
 

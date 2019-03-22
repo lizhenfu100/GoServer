@@ -1,36 +1,41 @@
 package service
 
-type Obj struct {
-	ptr   interface{}
-	enum  int
-	isReg bool //注册或注销对象
-}
+import "common/safe"
+
 type IService interface {
 	UnRegister(pObj interface{})
 	Register(pObj interface{})
 	RunSevice(timelapse int, timenow int64)
 }
+type obj struct {
+	ptr   interface{}
+	enum  int
+	isReg bool //注册或注销对象
+}
 type ServiceMgr struct {
-	Chan chan Obj
-	List []IService
+	list  []IService
+	queue safe.SafeQueue
 }
 
+func (self *ServiceMgr) Init(cap uint32, list []IService) {
+	self.queue.Init(cap)
+	self.list = list
+}
 func (self *ServiceMgr) RunAllService(timelapse int, timenow int64) {
 	for {
-		select {
-		case data := <-self.Chan:
-			if data.isReg {
-				self.List[data.enum].Register(data.ptr)
+		if v, ok, _ := self.queue.Get(); ok {
+			if v := v.(obj); v.isReg {
+				self.list[v.enum].Register(v.ptr)
 			} else {
-				self.List[data.enum].UnRegister(data.ptr)
+				self.list[v.enum].UnRegister(v.ptr)
 			}
-		default:
-			for _, v := range self.List {
-				v.RunSevice(timelapse, timenow)
-			}
-			return
+		} else {
+			break
 		}
 	}
+	for _, v := range self.list {
+		v.RunSevice(timelapse, timenow)
+	}
 }
-func (self *ServiceMgr) UnRegister(enum int, p interface{}) { self.Chan <- Obj{p, enum, false} }
-func (self *ServiceMgr) Register(enum int, p interface{})   { self.Chan <- Obj{p, enum, true} }
+func (self *ServiceMgr) UnRegister(enum int, p interface{}) { self.queue.Put(obj{p, enum, false}) }
+func (self *ServiceMgr) Register(enum int, p interface{})   { self.queue.Put(obj{p, enum, true}) }

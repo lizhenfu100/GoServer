@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"common"
 	"common/file"
+	"errors"
 	"gamelog"
 	"io"
 	"io/ioutil"
@@ -18,6 +19,10 @@ import (
 //func init() {
 //	http.DefaultClient.Timeout = 3 * time.Second
 //}
+var (
+	ErrGet  = errors.New("http get failed")
+	ErrPost = errors.New("http post failed")
+)
 
 // ------------------------------------------------------------
 //! 底层接口，业务层一般用不到
@@ -105,21 +110,15 @@ func UploadFile(url, fullname string) error {
 	}
 }
 func DownloadFile(url, localDir, localName string) error {
-	if resp, err := http.Get(url); err == nil {
-		result, err := ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
-		if err == nil {
-			if fd, err := file.CreateFile(localDir, localName, os.O_WRONLY|os.O_TRUNC); err == nil {
-				fd.Write(result)
-				fd.Close()
-				return nil
-			} else {
-				return err
-			}
+	if buf := Get(url); buf != nil {
+		if fd, err := file.CreateFile(localDir, localName, os.O_WRONLY|os.O_TRUNC); err == nil {
+			fd.Write(buf)
+			fd.Close()
+			return nil
 		} else {
 			return err
 		}
 	} else {
-		return err
+		return ErrGet
 	}
 }

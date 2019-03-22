@@ -7,7 +7,7 @@ import (
 	"netConfig"
 	"netConfig/meta"
 	"sort"
-	"tcp"
+	"nets/tcp"
 )
 
 const (

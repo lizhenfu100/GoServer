@@ -15,11 +15,11 @@ import (
 	"common/std/compress"
 	"gamelog"
 	"generate_out/rpc/enum"
-	mhttp "http"
+	mhttp "nets/http"
 	"net/http"
 	"netConfig"
 	"sync/atomic"
-	"tcp"
+	"nets/tcp"
 )
 
 type PlayerRpc func(req, ack *common.NetPack, this *TPlayer)

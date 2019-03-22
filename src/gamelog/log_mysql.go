@@ -41,36 +41,33 @@ const (
 )
 
 var (
-	g_dsn = fmt.Sprintf(
-		"%s:%s@tcp(%s)/%s?timeout=30s&strict=true",
+	g_dsn = fmt.Sprintf("%s:%s@tcp(%s)/%s?timeout=30s&strict=true",
 		g_user, g_password, g_addr, g_dbname) //连哪个数据库
 )
 
-func NewMysqlLog(table string) *TMysqlLog {
+func (self *TMysqlLog) Init(table string) bool {
 	var err error = nil
-	log := new(TMysqlLog)
-	log.db, err = sql.Open("mysql", g_dsn)
+	self.db, err = sql.Open("mysql", g_dsn)
 	if err != nil {
-		Error("NewMysqlLog: " + err.Error())
-		return nil
+		Error("MysqlLog Init: " + err.Error())
+		return false
 	}
 
 	//Notice：sql.Open("mysql", g_dsn) g_dsn为空不会报错，查看源码，只是生成一份数据记录，真正连接数据库是异步的
 	//所以这里检查是否真的连上了
-	if err = log.db.Ping(); err != nil {
-		Error("NewMysqlLog db.Ping(): " + err.Error())
-		return nil
+	if err = self.db.Ping(); err != nil {
+		Error("MysqlLog db.Ping(): " + err.Error())
+		return false
 	}
 
-	log.query = fmt.Sprintf(
+	self.query = fmt.Sprintf(
 		"INSERT %s SET EventID=?,SrcID=?,TargetID=?,Time=?,Param1=?,Param2=?,Param3=?,Param4=?",
 		table) //打开其中哪张表
 
-	return log
+	return true
 }
-func (self *TMysqlLog) Close() {
-	self.db.Close()
-}
+func (self *TMysqlLog) Close() { self.db.Close() }
+
 func (self *TMysqlLog) Write(data1, data2 [][]byte) {
 	//1、开启事务
 	tx, err := self.db.Begin()

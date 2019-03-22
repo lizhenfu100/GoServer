@@ -8,6 +8,7 @@ import (
 
 // 若goroutine会执行很长时间，且不是通过io阻塞或channel来同步，就需要主动调用Gosched()让出CPU
 
+// https://zhuanlan.zhihu.com/p/24432607
 // https://zhuanlan.zhihu.com/p/23863915
 // https://github.com/yireyun/go-queue
 type SafeQueue struct { //lock free queue
@@ -23,8 +24,7 @@ type esCache struct {
 	value interface{}
 }
 
-func NewQueue(capaciity uint32) *SafeQueue {
-	q := new(SafeQueue)
+func (q *SafeQueue) Init(capaciity uint32) {
 	q.capaciity = minQuantity(capaciity)
 	q.capMod = q.capaciity - 1
 	q.putPos = 0
@@ -38,7 +38,6 @@ func NewQueue(capaciity uint32) *SafeQueue {
 	cache := &q.cache[0]
 	cache.getNo = q.capaciity
 	cache.putNo = q.capaciity
-	return q
 }
 
 func (q *SafeQueue) String() string {
@@ -48,23 +47,19 @@ func (q *SafeQueue) String() string {
 		q.capaciity, q.capMod, putPos, getPos)
 }
 
-func (q *SafeQueue) Capaciity() uint32 {
-	return q.capaciity
-}
-
-func (q *SafeQueue) Quantity() uint32 {
-	var putPos, getPos, quantity uint32
+func (q *SafeQueue) Size() uint32 {
+	var putPos, getPos, size uint32
 	getPos = atomic.LoadUint32(&q.getPos)
 	putPos = atomic.LoadUint32(&q.putPos)
 	if putPos >= getPos {
-		quantity = putPos - getPos
+		size = putPos - getPos
 	} else {
-		quantity = q.capMod + (putPos - getPos)
+		size = q.capMod + (putPos - getPos)
 	}
-	return quantity
+	return size
 }
+func (q *SafeQueue) Cap() uint32 { return q.capaciity }
 
-// put queue functions
 func (q *SafeQueue) Put(val interface{}) (ok bool, quantity uint32) {
 	var putPos, putPosNew, getPos, posCnt uint32
 	var cache *esCache
@@ -104,8 +99,6 @@ func (q *SafeQueue) Put(val interface{}) (ok bool, quantity uint32) {
 		}
 	}
 }
-
-// get queue functions
 func (q *SafeQueue) Get() (val interface{}, ok bool, quantity uint32) {
 	var putPos, getPos, getPosNew, posCnt uint32
 	var cache *esCache

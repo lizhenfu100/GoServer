@@ -1,12 +1,4 @@
-/***********************************************************************
-* @ HTTP
-* @ brief
-	1、非常不安全，恶意劫持路由节点，即可知道发往后台的数据，包括密码~
-
-* @ author zhoumf
-* @ date 2019-3-18
-***********************************************************************/
-package http
+package fasthttp
 
 import (
 	"common"
@@ -15,9 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gamelog"
-	"io"
-	"io/ioutil"
-	"net/http"
+	http "github.com/valyala/fasthttp"
 	"netConfig/meta"
 	"path"
 	"svr_client/test/qps"
@@ -30,7 +20,10 @@ import (
 //port := common.Atoi(addr[idx2+1:])
 func Addr(ip string, port uint16) string { return fmt.Sprintf("http://%s:%d", ip, port) }
 
-var _svr http.Server
+var (
+	_svr http.Server
+	_map = map[string]http.RequestHandler{}
+)
 
 func NewHttpServer(port uint16, module string, svrId int) error {
 	if conf.TestFlag_CalcQPS {
@@ -38,38 +31,28 @@ func NewHttpServer(port uint16, module string, svrId int) error {
 	}
 	g_svraddr_path = fmt.Sprintf("%s/%s/%d/reg_addr.csv", file.GetExeDir(), module, svrId)
 	loadCacheNetMeta()
-	http.HandleFunc("/reg_to_svr", _reg_to_svr)
-	_svr.Addr = fmt.Sprintf(":%d", port)
-	return _svr.ListenAndServe()
+	_svr.Handler = func(ctx *http.RequestCtx) {
+		if v, ok := _map[common.B2S(ctx.Path())]; ok {
+			v(ctx)
+		} else {
+			ctx.NotFound()
+		}
+	}
+	HandleFunc("/reg_to_svr", _reg_to_svr)
+	return _svr.ListenAndServe(fmt.Sprintf(":%d", port))
 }
-func CloseServer() { _svr.Close() }
+func CloseServer() { _svr.Shutdown() }
 
-func ReadRequest(r *http.Request) (req *common.NetPack) {
-	var err error
-	var buf []byte
-	if r.ContentLength > 0 { //http读大数据，r.ContentLength是-1
-		buf = make([]byte, r.ContentLength)
-		_, err = io.ReadFull(r.Body, buf)
-	} else {
-		buf, err = ioutil.ReadAll(r.Body)
-	}
-	if r.Body.Close(); err != nil {
-		gamelog.Error("ReadBody: " + err.Error())
-		return nil
-	}
-	return common.NewNetPack(buf)
-}
+func HandleFunc(path string, f http.RequestHandler) { _map[path] = f }
 
 // ------------------------------------------------------------
 //! 模块注册
-func _reg_to_svr(w http.ResponseWriter, r *http.Request) {
-	buf, _ := ioutil.ReadAll(r.Body)
+func _reg_to_svr(ctx *http.RequestCtx) {
 	pMeta := new(meta.Meta)
-	if err := common.B2T(buf, pMeta); err != nil {
+	if err := common.B2T(ctx.Request.Body(), pMeta); err != nil {
 		gamelog.Error("common.B2T: " + err.Error())
 		return
 	}
-
 	meta.AddMeta(pMeta)
 	appendNetMeta(pMeta)
 	fmt.Println("RegistToSvr: ", pMeta)
@@ -114,8 +97,8 @@ func appendNetMeta(pMeta *meta.Meta) {
 	}
 
 	b, _ := json.Marshal(pMeta)
-	_mutex.Lock()
 	dir, name := path.Split(g_svraddr_path)
+	_mutex.Lock()
 	err = file.AppendCsv(dir, name, []string{common.B2S(b)})
 	_mutex.Unlock()
 	if err != nil {

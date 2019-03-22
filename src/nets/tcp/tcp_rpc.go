@@ -29,7 +29,7 @@ type objMsg struct {
 	msg  *common.NetPack
 }
 type RpcQueue struct {
-	//queue      *safe.SafeQueue //{objMsg}
+	//queue      safe.SafeQueue //{objMsg}
 	queue      chan objMsg
 	sendBuffer *common.NetPack
 	backBuffer *common.NetPack
@@ -40,14 +40,12 @@ type RpcQueue struct {
 	_handlePlayerRpc func(req, ack *common.NetPack, conn *TCPConn) bool
 }
 
-func NewRpcQueue(cap uint32) *RpcQueue {
-	self := new(RpcQueue)
-	//self.queue = safe.NewQueue(cap)
+func (self *RpcQueue) Init(cap uint32) {
+	//self.queue.Init(cap)
 	self.queue = make(chan objMsg, cap)
 	self.sendBuffer = common.NewNetPackCap(128)
 	self.backBuffer = common.NewNetPackCap(128)
 	//self.response = make(map[uint64]func(*common.NetPack))
-	return self
 }
 
 func (self *RpcQueue) Insert(conn *TCPConn, msg *common.NetPack) {
@@ -121,7 +119,7 @@ func RegHandlePlayerRpc(cb func(req, ack *common.NetPack, conn *TCPConn) bool) {
 
 //Notice：非线程安全的，仅供主逻辑线程调用，内部操作的同个sendBuffer，多线程下须每次new新的
 func (self *RpcQueue) CallRpc(conn *TCPConn, msgId uint16, sendFun, recvFun func(*common.NetPack)) {
-	assert.True(G_HandleFunc[msgId] == nil && self.sendBuffer.GetOpCode() == 0)
+	assert.True((msgId < 100 || G_HandleFunc[msgId] == nil) && self.sendBuffer.GetOpCode() == 0)
 	//CallRpc中途不能再CallRpc
 	//gamelog.Error("[%d] Server and Client have the same Rpc or Repeat CallRpc", msgID)
 
@@ -138,7 +136,7 @@ func (self *TCPConn) CallRpc(msgId uint16, sendFun, recvFun func(*common.NetPack
 	G_RpcQueue.CallRpc(self, msgId, sendFun, recvFun)
 }
 func (self *TCPConn) CallRpcSafe(msgId uint16, sendFun, recvFun func(*common.NetPack)) {
-	assert.True(G_HandleFunc[msgId] == nil)
+	assert.True(msgId < 100 || G_HandleFunc[msgId] == nil)
 	req := common.NewNetPackCap(64)
 	req.SetOpCode(msgId)
 	req.SetReqIdx(atomic.AddUint32(&G_RpcQueue._reqIdx, 1))

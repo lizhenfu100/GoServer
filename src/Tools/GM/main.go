@@ -17,11 +17,11 @@ import (
 	"conf"
 	"flag"
 	"gamelog"
-	mhttp "http"
 	"net/http"
 	"netConfig"
 	"netConfig/meta"
 	"netConfig/register"
+	mhttp "nets/http"
 )
 
 const (

@@ -15,7 +15,7 @@ import (
 	"generate_out/rpc/enum"
 	"netConfig"
 	"netConfig/meta"
-	"tcp"
+	"nets/tcp"
 )
 
 var (

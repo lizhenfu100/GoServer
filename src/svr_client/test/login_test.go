@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"generate_out/err"
 	"generate_out/rpc/enum"
-	"http"
 	"netConfig"
 	"netConfig/meta"
+	"nets/http"
+	"nets/tcp"
 	_ "svr_client/test/init"
-	"tcp"
 	"testing"
 )
 
@@ -42,7 +42,7 @@ var (
 		"http://47.106.35.74:7030",   //6 华南
 	}
 	g_loginAddr = g_loginList[0]
-	g_version = ""
+	g_version   = ""
 )
 
 // go test -v ./src/svr_client/test/login_test.go
@@ -72,7 +72,7 @@ func Test_get_gamesvr_list(t *testing.T) {
 		}
 	})
 }
-func tTest_player_gameinfo_addr(t *testing.T) {
+func Test_player_gameinfo_addr(t *testing.T) {
 	http.CallRpc(g_centerAddr, enum.Rpc_center_player_login_addr, func(buf *common.NetPack) {
 		buf.WriteString(g_gameName)
 		buf.WriteString(g_loginData.account)
@@ -91,7 +91,7 @@ func tTest_player_gameinfo_addr(t *testing.T) {
 
 // ------------------------------------------------------------
 // -- 注册
-func tTest_account_reg(t *testing.T) {
+func Test_account_reg(t *testing.T) {
 	http.CallRpc(g_loginAddr, enum.Rpc_login_relay_to_center, func(buf *common.NetPack) {
 		buf.WriteUInt16(enum.Rpc_center_account_reg)
 		buf.WriteString(g_loginData.account)
@@ -104,7 +104,7 @@ func tTest_account_reg(t *testing.T) {
 
 // ------------------------------------------------------------
 // -- 登录，三种方式
-func tTest_account_login(t *testing.T) {
+func Test_account_login(t *testing.T) {
 	http.CallRpc(g_loginAddr, enum.Rpc_login_account_login, func(buf *common.NetPack) {
 		buf.WriteString(g_version)
 		buf.WriteString(g_gameName)

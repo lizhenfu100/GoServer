@@ -7,10 +7,9 @@ import (
 	"fmt"
 	"generate_out/err"
 	"generate_out/rpc/enum"
-	"http"
 	"io/ioutil"
+	"nets/http"
 	"os"
-	//"strconv"
 	"strconv"
 	"strings"
 	_ "svr_client/test/init"
@@ -77,12 +76,13 @@ func tTest_save_upload_binary(t *testing.T) {
 	panic("open file err")
 }
 func _save_upload_binary(uid string, data []byte) {
-	http.CallRpc(g_saveAddr, enum.Rpc_save_upload_binary, func(buf *common.NetPack) {
+	http.CallRpc(g_saveAddr, enum.Rpc_save_upload_binary2, func(buf *common.NetPack) {
 		buf.WriteString(uid)
 		buf.WriteString(g_pf_id)
 		buf.WriteString(g_mac)
 		buf.WriteString(sign.CalcSign(fmt.Sprintf("uid=%s&pf_id=%s", uid, g_pf_id)))
-		buf.WriteBuf(data)
+		buf.WriteString("") //extra
+		buf.WriteLenBuf(data)
 	}, func(backBuf *common.NetPack) {
 		errCode := backBuf.ReadUInt16()
 		fmt.Println("------------: ", uid, errCode, len(data))

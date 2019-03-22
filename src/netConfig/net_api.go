@@ -19,10 +19,10 @@ import (
 	"common/std/hash"
 	"gamelog"
 	"generate_out/rpc/enum"
-	"http"
 	"math/rand"
 	"netConfig/meta"
-	"tcp"
+	"nets/http"
+	"nets/tcp"
 )
 
 // ------------------------------------------------------------

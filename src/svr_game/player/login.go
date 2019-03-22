@@ -21,7 +21,7 @@ import (
 	"generate_out/err"
 	"sync"
 	"sync/atomic"
-	"tcp"
+	"nets/tcp"
 )
 
 // -------------------------------------

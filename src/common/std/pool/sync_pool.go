@@ -37,32 +37,30 @@ type SyncPool struct {
 	maxSize     int
 }
 
-// NewSyncPool create a sync.Pool base slab allocation memory pool.
+// create a sync.Pool base slab allocation memory pool.
 // minSize is the smallest chunk size.
 // maxSize is the lagest chunk size.
 // factor is used to control growth of chunk size.
-// pool := NewSyncPool(128, 1024, 2)
-func NewSyncPool(minSize, maxSize, factor int) *SyncPool {
+// pool.Init(128, 1024, 2)
+func (self *SyncPool) Init(minSize, maxSize, factor int) {
 	n := 0
 	for chunkSize := minSize; chunkSize <= maxSize; chunkSize *= factor {
 		n++
 	}
-	pool := &SyncPool{
-		make([]sync.Pool, n),
-		make([]int, n),
-		minSize, maxSize,
-	}
+	self.classes = make([]sync.Pool, n)
+	self.classesSize = make([]int, n)
+	self.minSize = minSize
+	self.maxSize = maxSize
 	n = 0
 	for chunkSize := minSize; chunkSize <= maxSize; chunkSize *= factor {
-		pool.classesSize[n] = chunkSize
-		pool.classes[n].New = func(size int) func() interface{} { //为唯一公开字段New赋值
+		self.classesSize[n] = chunkSize
+		self.classes[n].New = func(size int) func() interface{} { //为唯一公开字段New赋值
 			return func() interface{} {
 				return make([]byte, size)
 			}
 		}(chunkSize)
 		n++
 	}
-	return pool
 }
 
 // Alloc try alloc a []byte from internal slab class if no free chunk in slab class Alloc will make one.

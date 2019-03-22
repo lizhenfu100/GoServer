@@ -21,7 +21,7 @@ func updateEnterNextHour() {
 	timer.G_TimerMgr.AddTimerSec(onEnterNextHour, delay, 3600, -1)
 }
 func updatePerMinute() {
-	timer.G_TimerMgr.AddTimerSec(perMinute, 0, 60, -1)
+	timer.G_TimerMgr.AddTimerSec(perMinute, 60, 60, -1)
 }
 
 // ------------------------------------------------------------

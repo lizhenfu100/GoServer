@@ -1,9 +1,9 @@
 package timer
 
 type OpFreq struct { //行为频率，如：5次/小时
-	kLimitCnt    int
-	kLimitSecond int
-	list         []int64
+	kLimitCnt int
+	kTotalSec int
+	timing    []int64
 }
 
 func NewOpFreq(maxCnt, periodSec int) *OpFreq {
@@ -14,10 +14,10 @@ func NewOpFreq(maxCnt, periodSec int) *OpFreq {
 	}
 }
 func (self *OpFreq) Check(t int64) bool {
-	self.list = append(self.list, t)
-	if len(self.list) > self.kLimitCnt {
-		if self.list[self.kLimitCnt]-self.list[0] > int64(self.kLimitSecond) {
-			self.list = append(self.list[:0], self.list[1:]...)
+	self.timing = append(self.timing, t)
+	if len(self.timing) > self.kLimitCnt {
+		if self.timing[self.kLimitCnt]-self.timing[0] > int64(self.kTotalSec) {
+			self.timing = append(self.timing[:0], self.timing[1:]...)
 		} else {
 			return false
 		}

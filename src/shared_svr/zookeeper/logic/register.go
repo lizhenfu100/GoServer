@@ -4,7 +4,7 @@ import (
 	"common"
 	"generate_out/rpc/enum"
 	"netConfig/meta"
-	"tcp"
+	"nets/tcp"
 )
 
 func Rpc_zoo_register(req, ack *common.NetPack, conn *tcp.TCPConn) {

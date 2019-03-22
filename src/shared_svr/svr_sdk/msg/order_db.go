@@ -11,6 +11,7 @@
 package msg
 
 import (
+	"common/timer"
 	"dbmgo"
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
@@ -100,11 +101,7 @@ func InitDB() {
 	}
 	println("load active order form db: ", len(list))
 
-	go func() {
-		for range time.Tick(time.Hour * 24) {
-			DeleteTimeOutOrder()
-		}
-	}()
+	timer.G_TimerMgr.AddTimerSec(DeleteTimeOutOrder, 24*3600, 24*3600, -1)
 }
 func DeleteTimeOutOrder() { //删除内存中滞留一天的订单(完成的、无效的)
 	timenow := time.Now().Unix()

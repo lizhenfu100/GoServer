@@ -4,7 +4,7 @@ import (
 	"common"
 	"netConfig"
 	"netConfig/meta"
-	"tcp"
+	"nets/tcp"
 )
 
 func Rpc_gateway_relay_module(req, ack *common.NetPack, conn *tcp.TCPConn) {
