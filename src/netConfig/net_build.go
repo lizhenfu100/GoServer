@@ -35,7 +35,7 @@ import (
 	"sync"
 )
 
-var g_client_conns sync.Map //<{module,svrId}, *tcp.TCPClient> //本模块主动连其它模块的tcp
+var g_clients sync.Map //<{module,svrId}, *tcp.TCPClient> //本模块主动连其它模块的tcp
 
 func RunNetSvr() {
 	//1、找到当前的配置信息
@@ -68,7 +68,7 @@ func RunNetSvr() {
 //Notice：参数pMeta会被闭包引用(且会存入容器)，须避免外界变更其内容，最好都是new的
 func ConnectModule(dest *meta.Meta) {
 	if dest.HttpPort > 0 {
-		http.RegistToSvr(http.Addr(dest.IP, dest.HttpPort), meta.G_Local)
+		http.RegistToSvr(http.Addr(dest.IP, dest.HttpPort))
 		meta.AddMeta(dest)
 	} else if dest.TcpPort > 0 {
 		ConnectModuleTcp(dest, func(*tcp.TCPConn) { meta.AddMeta(dest) })
@@ -82,20 +82,18 @@ func ConnectModuleTcp(dest *meta.Meta, cb func(*tcp.TCPConn)) {
 		return
 	}
 	var client *tcp.TCPClient
-	if v, ok := g_client_conns.Load(std.KeyPair{dest.Module, dest.SvrID}); ok {
+	if v, ok := g_clients.Load(std.KeyPair{dest.Module, dest.SvrID}); ok {
 		client = v.(*tcp.TCPClient)
 	} else {
 		client = new(tcp.TCPClient)
-		g_client_conns.Store(std.KeyPair{dest.Module, dest.SvrID}, client)
-		//Notice：client.ConnectToSvr是异步过程，这里的client.TcpConn还是空指针，不能保存*TCPConn
+		g_clients.Store(std.KeyPair{dest.Module, dest.SvrID}, client)
 	}
-	client.OnConnect = cb
-	client.ConnectToSvr(tcp.Addr(dest.IP, dest.TcpPort), meta.G_Local)
+	client.ConnectToSvr(tcp.Addr(dest.IP, dest.TcpPort), cb)
 }
 
 // TCPConn是对真正net.Conn的包装，发生断线重连时，会执行tcp.TCPConn.ResetConn()，所以外部缓存的tcp.TCPConn仍有效，无需更新
 func GetTcpConn(module string, svrId int) *tcp.TCPConn {
-	if v, ok := g_client_conns.Load(std.KeyPair{module, svrId}); ok {
+	if v, ok := g_clients.Load(std.KeyPair{module, svrId}); ok {
 		return v.(*tcp.TCPClient).Conn
 	}
 	// cross(s) - game(c)

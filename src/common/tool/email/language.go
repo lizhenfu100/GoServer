@@ -1,9 +1,12 @@
 package email
 
-// Notice：用支持UTF-8的编辑器操作，否则容易乱码
+import (
+	"reflect"
+)
+
 var G_Email = make(map[string]*csvEmail)
 
-type csvEmail struct {
+type csvEmail struct { // Notice：用支持UTF-8的编辑器写csv，否则容易乱码
 	Title   string
 	En      string
 	Zh      string
@@ -16,4 +19,14 @@ type csvEmail struct {
 	Fr      string //法语
 	Id      string //印尼语
 	De      string //德语
+}
+
+func translate(title, language string) string {
+	if csv, ok := G_Email[title]; ok {
+		ref := reflect.ValueOf(csv).Elem()
+		if v := ref.FieldByName(language); v.IsValid() {
+			return v.String()
+		}
+	}
+	return ""
 }

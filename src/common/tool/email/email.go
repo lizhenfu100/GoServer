@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"conf"
 	"gopkg.in/gomail"
-	"reflect"
 	"text/template"
 )
 
@@ -41,7 +40,7 @@ func SendMail(subject, target, body, language string) error {
 	_msg.Reset()
 	msg := _msg
 
-	body = PackBody(subject, body, language) //嵌入模板，并本地化
+	subject, body = PackBody(subject, body, language) //嵌入模板，并本地化
 
 	msg.SetAddressHeader("From", g_dialer.Username, "ChillyRoom")
 	msg.SetHeader("To", target)
@@ -56,16 +55,17 @@ func SendMail(subject, target, body, language string) error {
 	return g_dialer.DialAndSend(msg)
 }
 
-func PackBody(subject, body, language string) string {
-	if csv, ok := G_Email[subject]; ok {
-		ref := reflect.ValueOf(csv).Elem()
-		if v := ref.FieldByName(language); v.IsValid() {
-			if t, e := template.New(subject).Parse(v.String()); e == nil {
-				var bf bytes.Buffer
-				t.Execute(&bf, &body)
-				return bf.String()
-			}
+func PackBody(subject, body, language string) (netSubject, newBody string) {
+	netSubject, newBody = subject, body
+	if content := translate(subject, language); content != "" {
+		if t, e := template.New(subject).Parse(content); e == nil {
+			var bf bytes.Buffer
+			t.Execute(&bf, &body)
+			newBody = bf.String()
 		}
 	}
-	return body
+	if content := translate(subject+" Ex", language); content != "" {
+		netSubject = content
+	}
+	return
 }

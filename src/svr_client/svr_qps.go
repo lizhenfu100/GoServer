@@ -49,13 +49,12 @@ func tcp0() {
 	InitConf()
 	meta.G_Local = meta.GetMeta(kModuleName, 0)
 	var client tcp.TCPClient
-	client.ConnectToSvr("192.168.1.111:7777", meta.G_Local)
-	client.OnConnect = func(conn *tcp.TCPConn) {
+	client.ConnectToSvr("192.168.1.111:7777", func(conn *tcp.TCPConn) {
 		for {
 			conn.CallRpcSafe(enum.Rpc_gm_cmd, func(buf *common.NetPack) {
 			}, nil)
 		}
-	}
+	})
 }
 func tcp1() {
 	go tcp.NewTcpServer(7777, 5000)

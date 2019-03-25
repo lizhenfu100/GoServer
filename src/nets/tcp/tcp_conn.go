@@ -104,7 +104,7 @@ type TCPConn struct { //TODO:zhoumf: pprof性能测试
 	_isClose      int32 //isClose标记仅在resetConn、Close中设置，其它地方只读
 	_isWriteClose int32
 	delayDel      *timer.TimeNode //针对玩家链接，延时删除，以待断线重连
-	onDisConnect  func()
+	onDisConnect  func(*TCPConn)
 	UserPtr       interface{}
 }
 

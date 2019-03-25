@@ -74,14 +74,14 @@ func (self *TCPServer) run() {
 	self.closer.Signal()
 }
 func (self *TCPServer) _HandleAcceptConn(conn net.Conn) {
-	buf := make([]byte, 2+4)                              //Notice：收第一个包，客户端上报connId
+	buf := make([]byte, 4)                                //收第一个包，客户端上报connId
 	conn.SetReadDeadline(time.Now().Add(5 * time.Second)) //首次读，5秒超时防连接占用攻击；client无需超时限制
 	if _, err := io.ReadFull(conn, buf); err != nil {
 		conn.Close()
 		gamelog.Error("(%p)RecvFirstPack: %s", conn, err.Error())
 		return
 	}
-	connId := binary.LittleEndian.Uint32(buf[2:])
+	connId := binary.LittleEndian.Uint32(buf)
 	gamelog.Debug("_HandleAcceptConn: %d", connId)
 	//FIXME：IP黑/白名单
 	conn.SetReadDeadline(time.Time{}) //后续无超时限制
@@ -107,29 +107,23 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 	atomic.AddInt32(&self.connCnt, 1)
 	gamelog.Debug("Connect From: %s, AddConnId: %d", conn.RemoteAddr().String(), connId)
 
-	tcpConn.onDisConnect = func() { //Notice:回调函数须线程安全
+	tcpConn.onDisConnect = func(conn *TCPConn) { //Notice:回调函数须线程安全
 		self.connmap.Delete(connId)
 		atomic.AddInt32(&self.connCnt, -1)
-		gamelog.Debug("DelConnId: %d %v", connId, tcpConn.UserPtr)
+		gamelog.Debug("DelConnId: %d %v", connId, conn.UserPtr)
 
 		//通知逻辑线程，连接断开
 		packet := common.NewNetPackCap(16)
 		packet.SetOpCode(enum.Rpc_net_error)
-		G_RpcQueue.Insert(tcpConn, packet)
+		G_RpcQueue.Insert(conn, packet)
 
 		//连接的后台节点断开，注销之
-		if _, ok := tcpConn.UserPtr.(*meta.Meta); ok {
+		if _, ok := conn.UserPtr.(*meta.Meta); ok {
 			packet := common.NewNetPackCap(16)
 			packet.SetOpCode(enum.Rpc_unregist)
-			G_RpcQueue.Insert(tcpConn, packet)
+			G_RpcQueue.Insert(conn, packet)
 		}
 	}
-	//tcpConn.delayDel = time.AfterFunc(Delay_Delete_Conn, func() {
-	//	if tcpConn.IsClose() {
-	//		tcpConn.onDisConnect()
-	//	}
-	//})
-	//tcpConn.delayDel.Stop()
 
 	//通知client，连接被接收，下发connId、密钥等
 	acceptMsg := common.NewNetPackCap(32)
@@ -162,12 +156,20 @@ func (self *TCPServer) _RunConn(conn *TCPConn, connId uint32) {
 
 	//针对玩家链接，延时删除，以待断线重连
 	if _, ok := conn.UserPtr.(*meta.Meta); ok {
-		conn.onDisConnect()
+		conn.onDisConnect(conn)
 	} else {
-		//conn.delayDel.Reset(Delay_Delete_Conn)
+		//if conn.delayDel == nil {
+		//	conn.delayDel = time.AfterFunc(Delay_Delete_Conn, func() {
+		//		if tcpConn.IsClose() {
+		//			tcpConn.onDisConnect()
+		//		}
+		//	})
+		//} else {
+		//	conn.delayDel.Reset(Delay_Delete_Conn)
+		//}
 		conn.delayDel = timer.G_TimerMgr.AddTimerSec(func() {
 			if conn.IsClose() {
-				conn.onDisConnect()
+				conn.onDisConnect(conn)
 			}
 		}, Delay_Delete_Conn, 0, 0)
 	}

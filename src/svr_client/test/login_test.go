@@ -6,7 +6,6 @@ import (
 	"generate_out/err"
 	"generate_out/rpc/enum"
 	"netConfig"
-	"netConfig/meta"
 	"nets/http"
 	"nets/tcp"
 	_ "svr_client/test/init"
@@ -161,7 +160,7 @@ func (self *loginData) LoginGamesvr_http() { //方式一：直接登录Http游�
 }
 func (self *loginData) LoginGamesvr_tcp() { //方式二：直接登录Tcp游戏服
 	gamesvr := new(tcp.TCPClient)
-	gamesvr.OnConnect = func(conn *tcp.TCPConn) {
+	gamesvr.ConnectToSvr(tcp.Addr(self.ip, self.port), func(conn *tcp.TCPConn) {
 		conn.CallRpc(enum.Rpc_game_login, func(buf *common.NetPack) {
 			buf.WriteUInt32(self.accountId)
 			buf.WriteUInt32(self.token)
@@ -189,12 +188,11 @@ func (self *loginData) LoginGamesvr_tcp() { //方式二：直接登录Tcp游戏�
 				})
 			}
 		})
-	}
-	gamesvr.ConnectToSvr(tcp.Addr(self.ip, self.port), meta.G_Local)
+	})
 }
 func (self *loginData) LoginGateway() { //方式三：Gateway网关转接消息
 	gateway := new(tcp.TCPClient)
-	gateway.OnConnect = func(conn *tcp.TCPConn) {
+	gateway.ConnectToSvr(tcp.Addr(self.ip, self.port), func(conn *tcp.TCPConn) {
 		conn.CallRpc(enum.Rpc_gateway_login, func(buf *common.NetPack) {
 			buf.WriteUInt32(self.accountId)
 			buf.WriteUInt32(self.token)
@@ -227,8 +225,7 @@ func (self *loginData) LoginGateway() { //方式三：Gateway网关转接消息
 				})
 			}
 		})
-	}
-	gateway.ConnectToSvr(tcp.Addr(self.ip, self.port), meta.G_Local)
+	})
 }
 
 // ------------------------------------------------------------

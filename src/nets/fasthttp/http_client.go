@@ -13,8 +13,8 @@ import (
 //	http.DefaultClient.Timeout = 3 * time.Second
 //}
 var (
-	ErrGet  = errors.New("http get failed")
-	ErrPost = errors.New("http post failed")
+	ErrGet  = errors.New("fasthttp get failed")
+	ErrPost = errors.New("fasthttp post failed")
 )
 
 // ------------------------------------------------------------

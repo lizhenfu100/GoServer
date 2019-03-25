@@ -16,33 +16,39 @@ type TCPClient struct {
 	addr      string
 	connId    uint32
 	Conn      *TCPConn
-	OnConnect func(*TCPConn)
+	onConnect func(*TCPConn)
 	_isLoop   int32
 }
 
 func Addr(ip string, port uint16) string { return fmt.Sprintf("%s:%d", ip, port) }
 
-func (self *TCPClient) ConnectToSvr(addr string, myMeta *meta.Meta) {
+func (self *TCPClient) ConnectToSvr(addr string, cb func(*TCPConn)) {
 	if atomic.LoadInt32(&self._isLoop) == 0 {
 		self.addr = addr
-		go self.connectRoutine(myMeta) //会断线后自动重连
+		self.onConnect = cb
+		go self.connectRoutine() //会断线后自动重连
 	}
 }
-func (self *TCPClient) connectRoutine(myMeta *meta.Meta) {
-	regMsg := common.NewNetPackCap(128)
-	regMsg.SetOpCode(enum.Rpc_regist)
-	myMeta.DataToBuf(regMsg)
+func (self *TCPClient) connectRoutine() {
+	firstMsg := make([]byte, 4) //connId
+	if meta.G_Local != nil {    //后台节点间的连接，发起注册
+		regMsg := common.NewNetPackCap(128)
+		regMsg.SetOpCode(enum.Rpc_regist)
+		meta.G_Local.DataToBuf(regMsg)
+		//将regMsg追加到firstMsg之后，须满足tcp包格式
+		kfirstMsgLen := len(firstMsg)
+		firstMsg = make([]byte, kfirstMsgLen+2+regMsg.Size())
+		binary.LittleEndian.PutUint16(firstMsg[kfirstMsgLen:], uint16(regMsg.Size()))
+		copy(firstMsg[kfirstMsgLen+2:], regMsg.Data())
+	}
 
 	atomic.StoreInt32(&self._isLoop, 1)
 	for {
 		if self.connect() {
-			//Notice: 这里不能用CallRpc，非线程安全的
-			firstMsg := make([]byte, 2+4) //tcp层的包，头两个字节是长度
-			binary.LittleEndian.PutUint32(firstMsg[2:], self.connId)
-			self.Conn.WriteBuf(firstMsg)
-			self.Conn.WriteMsg(regMsg)
-			//if self.OnConnect != nil { //Notice：放这里，回调就是多线程执行的了，健壮性低
-			//	self.OnConnect(self.Conn)
+			binary.LittleEndian.PutUint32(firstMsg, self.connId)
+			self.Conn.WriteBuf(firstMsg) //Notice: 不能用CallRpc，非线程安全的
+			//if self.onConnect != nil { //Notice：放这里，回调就是多线程执行的了，健壮性低
+			//	self.onConnect(self.Conn)
 			//}
 			go self.Conn.readRoutine()
 			self.Conn.writeRoutine() //goroutine会阻塞在这里
@@ -78,7 +84,7 @@ func (self *TCPClient) Close() {
 func _Rpc_svr_accept(req, ack *common.NetPack, conn *TCPConn) {
 	self := conn.UserPtr.(*TCPClient)
 	self.connId = req.ReadUInt32()
-	if self.OnConnect != nil {
-		self.OnConnect(self.Conn)
+	if self.onConnect != nil {
+		self.onConnect(self.Conn)
 	}
 }
