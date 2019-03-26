@@ -40,7 +40,7 @@ func SendMail(subject, target, body, language string) error {
 	_msg.Reset()
 	msg := _msg
 
-	subject, body = PackBody(subject, body, language) //嵌入模板，并本地化
+	subject, body = packBody(subject, body, language) //嵌入模板，并本地化
 
 	msg.SetAddressHeader("From", g_dialer.Username, "ChillyRoom")
 	msg.SetHeader("To", target)
@@ -55,7 +55,7 @@ func SendMail(subject, target, body, language string) error {
 	return g_dialer.DialAndSend(msg)
 }
 
-func PackBody(subject, body, language string) (netSubject, newBody string) {
+func packBody(subject, body, language string) (netSubject, newBody string) {
 	netSubject, newBody = subject, body
 	if content := translate(subject, language); content != "" {
 		if t, e := template.New(subject).Parse(content); e == nil {

@@ -2,6 +2,16 @@
 * @ 礼包码
 * @ brief
 
+* @ 接口文档
+	· Rpc_login_get_gift
+	· 上行参数
+		· string key        礼包码key
+		· uint32 pid        玩家playerId，可hash(uuid)代替
+		· string pf_id      平台名，有些礼包仅固定平台领取
+	· 下行参数
+		· uint16 errCode
+		· string json       客户端自行解析
+
 * @ author zhoumf
 * @ date 2018-12-12
 ***********************************************************************/
@@ -10,6 +20,7 @@ package gm
 import (
 	"common"
 	"common/copy"
+	"common/std"
 	"conf"
 	"dbmgo"
 	"encoding/json"
@@ -34,9 +45,9 @@ type TGiftBag struct {
 	End    int64
 	Desc   string
 	Json   string
-	Pf_id  string   //平台名，相应平台玩家才能领，空则所有人可领
-	MaxNum int      //限制领取总次数，默认无限
-	Pids   []uint32 //领过的人，平台的玩家uid可哈希为uint32
+	Pf_id  string      //平台名，相应平台玩家才能领，空则所有人可领
+	MaxNum int         //限制领取总次数，默认无限
+	Pids   std.UInt32s //领过的人，平台的玩家uid可哈希为uint32
 }
 
 // ------------------------------------------------------------
@@ -53,7 +64,7 @@ func Rpc_login_get_gift(req, ack *common.NetPack) {
 		ack.WriteUInt16(err.Pf_id_not_match) //非此平台玩家
 	} else if timenow := time.Now().Unix(); timenow < p.Begin || timenow > p.End {
 		ack.WriteUInt16(err.Not_in_the_time_zone) //时间不对，无法领取
-	} else if p.havePid(pid) {
+	} else if p.Pids.Index(pid) > 0 {
 		ack.WriteUInt16(err.Already_get_it) //已领过
 	} else {
 		p.Pids = append(p.Pids, pid)
@@ -137,12 +148,4 @@ func getGift(key string) *TGiftBag {
 		return v.(*TGiftBag)
 	}
 	return nil
-}
-func (self *TGiftBag) havePid(pid uint32) bool {
-	for _, v := range self.Pids {
-		if pid == v {
-			return true
-		}
-	}
-	return false
 }

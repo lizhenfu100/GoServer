@@ -20,11 +20,11 @@ const (
 )
 
 func main() {
-	var sleep bool
+	var sleep int
 	var addrList, dirList string
 	flag.StringVar(&addrList, "addr", "", "远端地址列表,空格隔开")
 	flag.StringVar(&dirList, "dir", "", "本地目录列表,空格隔开")
-	flag.BoolVar(&sleep, "sleep", true, "")
+	flag.IntVar(&sleep, "sleep", 1, "")
 	flag.Parse()
 	gamelog.InitLogger("SyncPatch")
 
@@ -39,7 +39,7 @@ func main() {
 	for _, addr := range strings.Split(addrList, " ") {
 		SyncServerPatch("http://"+addr, localMap)
 	}
-	if fmt.Println("\n...finish..."); sleep {
+	if fmt.Println("\n...finish..."); sleep > 0 {
 		time.Sleep(time.Hour)
 	}
 }
@@ -61,7 +61,7 @@ func SyncServerPatch(addr string, localMap map[string]uint32) {
 		}
 
 		notSyncList := make([]string, 0, 32) //无需同步的，用于显示
-		syncList := make([]string, 0, 32)    //同步过的，用于刷新cdn
+		syncUrls := make([]string, 0, 32)    //同步过的，用于刷新cdn
 
 		//比对本地、服务器，有新增或变更才上传
 		fmt.Println("\nSync File: ")
@@ -69,7 +69,7 @@ func SyncServerPatch(addr string, localMap map[string]uint32) {
 			if v2, ok := svrMap[k]; ok {
 				if v1 != v2 { //变动文件
 					if http.UploadFile(addr+"/upload_patch_file", k) == nil {
-						syncList = append(syncList, kCdnUrl+k)
+						syncUrls = append(syncUrls, kCdnUrl+k)
 						fmt.Println("    ", k)
 					}
 				} else {
@@ -77,15 +77,15 @@ func SyncServerPatch(addr string, localMap map[string]uint32) {
 				}
 			} else { //新增文件
 				if http.UploadFile(addr+"/upload_patch_file", k) == nil {
-					syncList = append(syncList, kCdnUrl+k)
+					syncUrls = append(syncUrls, kCdnUrl+k)
 					fmt.Println("    ", k)
 				}
 			}
 		}
 		//刷新官网文件的cdn
-		if addr == kCdnAddr && len(syncList) > 0 {
+		if addr == kCdnAddr && len(syncUrls) > 0 {
 			fmt.Println("\nRefresh CDN: ")
-			fmt.Println("    ", cdn.RefreshUrl(syncList))
+			fmt.Println("    ", cdn.RefreshUrl(syncUrls))
 		}
 		//打印无需同步的文件
 		fmt.Println("\nNot Sync File: ")

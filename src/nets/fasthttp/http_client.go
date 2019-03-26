@@ -9,9 +9,6 @@ import (
 	"time"
 )
 
-//func init() {
-//	http.DefaultClient.Timeout = 3 * time.Second
-//}
 var (
 	ErrGet  = errors.New("fasthttp get failed")
 	ErrPost = errors.New("fasthttp post failed")
@@ -44,9 +41,9 @@ func PostForm(url string, args *http.Args) []byte {
 
 // ------------------------------------------------------------
 //! 模块注册
-func RegistToSvr(destAddr string, meta *meta.Meta) {
+func RegistToSvr(destAddr string) {
 	go func() {
-		buf, _ := common.T2B(meta)
+		buf, _ := common.T2B(meta.G_Local)
 		for {
 			if PostReq(destAddr+"/reg_to_svr", buf) == nil {
 				time.Sleep(3 * time.Second)

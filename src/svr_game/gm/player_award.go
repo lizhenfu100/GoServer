@@ -7,6 +7,19 @@
 	、就是封邮件，只是前端可能没专门界面显示罢了
 	、无邮件系统的游戏，进游戏时询问后台，是否有该玩家的邮件
 
+* @ 接口文档
+	· Rpc_game_show_player_award 获取补偿内容，用以显示
+	· 上行参数
+		· string uid		玩家uid，可以是账号id、账号名、uuid等
+	· 下行参数
+		· array {uint32 id, string json} 	数组{补偿id，json内容}
+
+	· Rpc_game_get_player_award_ok 客户端通知领取补偿成功
+	· 上行参数
+		· uint32 id			补偿id
+	· 下行参数
+		· uint16 errCode
+
 * @ author zhoumf
 * @ date 2019-1-28
 ***********************************************************************/
@@ -19,8 +32,8 @@ import (
 	"gamelog"
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
-	"sync"
 	"nets/tcp"
+	"sync"
 	"time"
 )
 

@@ -2,6 +2,7 @@ package logic
 
 import (
 	"common"
+	"common/format"
 	"common/std/sign"
 	"common/tool/email"
 	"encoding/binary"
@@ -30,23 +31,26 @@ func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) {
 		w.Write(ack)
 	}()
 
+	if !format.CheckPasswd(passwd) {
+		errCode = err.Passwd_format_err
+	}
 	centerAddr := netConfig.GetHttpAddr("center", netConfig.HashCenterID(name))
 	if centerAddr == "" {
 		errCode = err.None_center_server
 		return
 	}
-	mhttp.CallRpc(centerAddr, enum.Rpc_center_ask_reset_password, func(buf *common.NetPack) {
+	mhttp.CallRpc(centerAddr, enum.Rpc_center_get_bind_info, func(buf *common.NetPack) {
 		buf.WriteString(name)
-		buf.WriteString(passwd)
+		buf.WriteString("email")
 	}, func(recvBuf *common.NetPack) {
-		if errCode = recvBuf.ReadUInt16(); errCode == err.Success {
-			accountId := recvBuf.ReadUInt32()
-			emailAddr := recvBuf.ReadString()
+		if emailAddr := recvBuf.ReadString(); emailAddr == "" {
+			errCode = err.Account_without_bind_info
+		} else {
 			//1、创建url
 			u, _ := url.Parse(centerAddr + "/reset_password")
 			q := u.Query()
 			//2、写入参数
-			q.Set("id", strconv.FormatInt(int64(accountId), 10))
+			q.Set("name", name)
 			q.Set("pwd", passwd)
 			flag := strconv.FormatInt(time.Now().Unix(), 10)
 			q.Set("flag", flag)

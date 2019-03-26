@@ -50,6 +50,8 @@ func init() {
 }
 
 func main() {
+	var _regist bool
+	flag.BoolVar(&_regist, "regist", false, "")
 	flag.Parse() //内部获取了所有参数：os.Args[1:]
 
 	defer func() {
@@ -59,7 +61,7 @@ func main() {
 		}
 	}()
 
-	//1、收集并注册RpcFunc -- 公共服务器、具体某游戏的业务服务器
+	//1、收集RpcInfo -- 公共服务器、具体某游戏的业务服务器
 	svrList := []string{
 		"shared_svr/svr_center",
 		"shared_svr/svr_chat",
@@ -76,10 +78,9 @@ func main() {
 	rpcInfos := make([]*RpcInfo, len(svrList))
 	for i, v := range svrList {
 		rpcInfos[i] = gatherRpcInfo(v)
-		generateRpcRegist(v, rpcInfos[i])
 	}
 
-	//2、收集并注册RpcFunc -- 战斗服、客户端
+	//2、收集Rpc函数名 -- 战斗服、客户端
 	funcs := make([]string, 0, 1024)
 	for _, ptr := range rpcInfos {
 		addRpc_Go(&funcs, ptr)
@@ -88,13 +89,21 @@ func main() {
 	addRpc_CS(&funcs) //client
 
 	//3、RpcFunc收集完毕，生成RpcEunm
-	if generateRpcEnum(funcs) {
+	isChange := generateRpcEnum(funcs)
+	if isChange {
 		modules := []string{"client"}
 		for _, ptr := range rpcInfos {
 			modules = append(modules, ptr.Module)
 		}
 		//4、生成golang服务器的路由信息
 		generateRpcRoute(modules, funcs)
+	}
+
+	//5、生成注册代码
+	if isChange || _regist {
+		for i, v := range svrList {
+			generateRpcRegist(v, rpcInfos[i])
+		}
 	}
 
 	//生成错误码

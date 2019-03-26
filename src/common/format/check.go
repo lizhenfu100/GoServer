@@ -22,7 +22,7 @@ func CheckName(s string) bool {
 	return ret
 }
 
-func CheckValue(key, s string) (ret bool) {
+func CheckBindValue(key, s string) (ret bool) {
 	switch key {
 	case "phone": //11位定长数字
 		ret, _ = regexp.MatchString(`^[0-9]{6,14}$`, s)

@@ -43,17 +43,21 @@ func Rpc_save_ask_unbind_mac(req, ack *common.NetPack) {
 	emailAddr := req.ReadString()
 	language := req.ReadString()
 
-	//1、创建url
-	httpAddr := fmt.Sprintf("http://%s:%d/unbind_mac",
-		meta.G_Local.OutIP, meta.G_Local.Port())
-	u, _ := url.Parse(httpAddr)
-	q := u.Query()
-	//2、写入参数
-	q.Set("mac", mac)
-	flag := strconv.FormatInt(time.Now().Unix(), 10)
-	q.Set("flag", flag)
-	q.Set("sign", sign.CalcSign(mac+flag))
-	//3、生成完整url
-	u.RawQuery = q.Encode()
-	email.SendMail("Unbind Device", emailAddr, u.String(), language)
+	if emailAddr == "None" { //无账号的渠道玩家，直接解绑
+		dbmgo.RemoveOneSync(kDBMac, bson.M{"_id": mac})
+	} else {
+		//1、创建url
+		httpAddr := fmt.Sprintf("http://%s:%d/unbind_mac",
+			meta.G_Local.OutIP, meta.G_Local.Port())
+		u, _ := url.Parse(httpAddr)
+		q := u.Query()
+		//2、写入参数
+		q.Set("mac", mac)
+		flag := strconv.FormatInt(time.Now().Unix(), 10)
+		q.Set("flag", flag)
+		q.Set("sign", sign.CalcSign(mac+flag))
+		//3、生成完整url
+		u.RawQuery = q.Encode()
+		email.SendMail("Unbind Device", emailAddr, u.String(), language)
+	}
 }
