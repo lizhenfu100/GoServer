@@ -16,9 +16,11 @@ type Addr struct {
 	IP   string
 	Port uint16
 }
+type Empty struct{} //unsafe.Sizeof(Empty) //0
+type Set struct{ M map[uint32]Empty }
 
 // ------------------------------------------------------------
-//! 数组封装
+// 数组封装
 type (
 	Ints    []int
 	UInt32s []uint32
