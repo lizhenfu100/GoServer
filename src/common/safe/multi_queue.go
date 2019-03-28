@@ -1,10 +1,9 @@
 /***********************************************************************
-* @ 多重队列，优化数据竞争
+* @ 多重队列，交换缓冲区，优化数据竞争
 * @ brief
 	1、适用于生产者-消费者模型，生产者一般都是多个，消费者默认单个
 		· 消费者也可多个，比如工作线程池……但须额外处理竞态
 		· 多消费者，须扩增multi数目
-		·
 
 	2、准备多个队列，选取一个作为写者，供生产者写入数据；此时仅生产者之间的竞态
 	3、消费者取数据时，加锁，将原来的写者取出，并且新从multi中选个队列，作新的写者
@@ -53,7 +52,7 @@ func (self *MultiQueue) PendingPos() (ret uint32) {
 	self.Unlock()
 	return
 }
-func (self *MultiQueue) Add(val interface{}) (bool, bool) {
+func (self *MultiQueue) Put(val interface{}) (bool, bool) {
 	self.Lock()
 	if self.wpos >= self.kSize {
 		self.Unlock()
@@ -106,7 +105,7 @@ func (self *MultiQueueEx) Close() {
 	self.stop = true
 	self.Unlock()
 }
-func (self *MultiQueueEx) Add(val interface{}) (bool, bool) {
+func (self *MultiQueueEx) Put(val interface{}) (bool, bool) {
 	self.Lock()
 	if self.pause || self.wpos >= self.kSize {
 		self.Unlock()

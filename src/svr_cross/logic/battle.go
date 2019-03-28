@@ -6,13 +6,13 @@ import (
 	"generate_out/rpc/enum"
 	"netConfig"
 	"netConfig/meta"
-	"sort"
 	"nets/tcp"
+	"sort"
 )
 
 const (
-	K_Player_Limit = 5000 //战斗服玩家容量
-	K_Player_Base  = 2000 //人数填够之后，各服均分
+	K_Player_Max  = 5000 //战斗服玩家容量
+	K_Player_Base = 2000 //人数填够之后，各服均分
 )
 
 var (
@@ -27,8 +27,8 @@ func Rpc_cross_relay_battle_data(req, ack *common.NetPack, conn *tcp.TCPConn) {
 
 	svrId := _SelectBattleSvrId(version)
 	if svrId == -1 {
-		//FIXME:无空闲战斗服时，自动执行脚本，开新战斗服(怎么开?)
-		gamelog.Error("!!! svr_battle is full !!!")
+		//TODO:zhoumf: 通报client战斗服已满
+		gamelog.Info("svr_battle is full !!!")
 		return
 	}
 	gamelog.Debug("select battle: %d", svrId)
@@ -64,7 +64,7 @@ func _SelectBattleSvrId(version string) int {
 			g_cur_select_idx = 0
 		}
 		svrId := ids[g_cur_select_idx]
-		if g_battle_player_cnt[svrId] < K_Player_Limit {
+		if g_battle_player_cnt[svrId] < K_Player_Max {
 			return svrId
 		}
 	}

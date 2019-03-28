@@ -2,11 +2,11 @@ package main
 
 import (
 	"common"
+	"common/console"
 	"generate_out/rpc/enum"
 	fasthttp2 "github.com/valyala/fasthttp"
 	http2 "net/http"
 	"net/url"
-	"netConfig/meta"
 	"nets/fasthttp"
 	"nets/http"
 	"nets/tcp"
@@ -14,7 +14,7 @@ import (
 )
 
 func testQPS() {
-	test2()
+	tcp1()
 }
 
 // ------------------------------------------------------------
@@ -46,8 +46,6 @@ func test2() {
 // ------------------------------------------------------------
 // qps: tcp
 func tcp0() {
-	InitConf()
-	meta.G_Local = meta.GetMeta(kModuleName, 0)
 	var client tcp.TCPClient
 	client.ConnectToSvr("192.168.1.111:7777", func(conn *tcp.TCPConn) {
 		for {
@@ -57,5 +55,6 @@ func tcp0() {
 	})
 }
 func tcp1() {
+	console.Init()
 	go tcp.NewTcpServer(7777, 5000)
 }

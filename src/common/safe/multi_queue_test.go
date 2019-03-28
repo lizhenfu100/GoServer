@@ -7,9 +7,9 @@ import "testing"
 func Test_LazyFree0(t *testing.T) {
 	q := MultiQueueEx{}
 	q.Init(5, 0)
-	q.Add(make([]byte, 16))
-	q.Add(make([]byte, 16))
-	q.Add(make([]byte, 16))
+	q.Put(make([]byte, 16))
+	q.Put(make([]byte, 16))
+	q.Put(make([]byte, 16))
 	q.Get(false)
 	q.Get(false)
 	for i := 0; i < 3; i++ {
@@ -21,9 +21,9 @@ func Test_LazyFree0(t *testing.T) {
 func Test_LazyFree1(t *testing.T) {
 	q := MultiQueueEx{}
 	q.Init(5, 1)
-	q.Add(make([]byte, 16))
-	q.Add(make([]byte, 16))
-	q.Add(make([]byte, 16))
+	q.Put(make([]byte, 16))
+	q.Put(make([]byte, 16))
+	q.Put(make([]byte, 16))
 	q.Get(false)
 	q.Get(false)
 	for i := 0; i < 3; i++ {
@@ -35,9 +35,9 @@ func Test_LazyFree1(t *testing.T) {
 func Test_LazyFree6(t *testing.T) {
 	q := MultiQueueEx{}
 	q.Init(5, 6)
-	q.Add(make([]byte, 16))
-	q.Add(make([]byte, 16))
-	q.Add(make([]byte, 16))
+	q.Put(make([]byte, 16))
+	q.Put(make([]byte, 16))
+	q.Put(make([]byte, 16))
 	q.Get(false)
 	q.Get(false)
 	for i := 0; i < 3; i++ {
@@ -67,7 +67,7 @@ func Test_MultiQueue(t *testing.T) {
 		t.Errorf("entry queue is paused by default")
 	}
 	for i := 0; i < 5; i++ {
-		ok, stopped := q.Add(233)
+		ok, stopped := q.Put(233)
 		if !ok || stopped {
 			t.Errorf("failed to add new entry")
 		}
@@ -82,7 +82,7 @@ func Test_MultiQueue(t *testing.T) {
 	if !q.pause {
 		t.Errorf("not paused")
 	}
-	ok, stopped := q.Add(234)
+	ok, stopped := q.Put(234)
 	if ok {
 		t.Errorf("entry added to paused queue")
 	}
@@ -98,7 +98,7 @@ func Test_MultiQueue_Close(t *testing.T) {
 			t.Errorf("entry queue is stopped by default")
 		}
 		for i := 0; i < 5; i++ {
-			ok, stopped := q.Add(233)
+			ok, stopped := q.Put(233)
 			if !ok || stopped {
 				t.Errorf("failed to add new entry")
 			}
@@ -106,7 +106,7 @@ func Test_MultiQueue_Close(t *testing.T) {
 				t.Errorf("stopped too early")
 			}
 		}
-		ok, _ := q.Add(234)
+		ok, _ := q.Put(234)
 		if ok {
 			t.Errorf("not expect to add more")
 		}
@@ -121,7 +121,7 @@ func Test_MultiQueue_Close(t *testing.T) {
 		if q.wpos != 0 {
 			t.Errorf("wpos %d, want 0", q.wpos)
 		}
-		ok, stopped := q.Add(235)
+		ok, stopped := q.Put(235)
 		if ok {
 			t.Errorf("not expect to add more")
 		}
@@ -134,7 +134,7 @@ func Test_MultiQueue_Add(t *testing.T) {
 	q := MultiQueueEx{}
 	q.Init(5, 0)
 	for i := uint32(0); i < 5; i++ {
-		if ok, stop := q.Add(uint64(i + 1)); !ok || stop {
+		if ok, stop := q.Put(uint64(i + 1)); !ok || stop {
 			t.Errorf("failed to add new entry")
 		}
 		if q.wpos != i+1 {
@@ -149,7 +149,7 @@ func Test_MultiQueue_Get(t *testing.T) {
 	q := MultiQueueEx{}
 	q.Init(5, 0)
 	for i := 0; i < 3; i++ {
-		if ok, stop := q.Add(uint64(i + 1)); !ok || stop {
+		if ok, stop := q.Put(uint64(i + 1)); !ok || stop {
 			t.Errorf("failed to add new entry")
 		}
 	}
@@ -167,7 +167,7 @@ func Test_MultiQueue_Get(t *testing.T) {
 		q := MultiQueueEx{}
 		q.Init(5, 0)
 		for i := 0; i < 1000; i++ {
-			ok, stopped := q.Add(uint64(i + 1))
+			ok, stopped := q.Put(uint64(i + 1))
 			if !ok || stopped {
 				t.Errorf("failed to add new entry")
 			}
