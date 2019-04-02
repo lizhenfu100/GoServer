@@ -33,13 +33,12 @@ import (
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
 	"nets/tcp"
-	"sync"
 	"time"
 )
 
-const (
-	kDBPlayerAward = "PlayerAward"
-)
+const kDBPlayerAward = "PlayerAward"
+
+var g_awards = map[uint32]*PlayerAward{}
 
 type PlayerAward struct {
 	ID      uint32 `bson:"_id"`
@@ -54,13 +53,11 @@ func Rpc_game_show_player_award(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	uid := req.ReadString()
 
 	var list []*PlayerAward
-	g_awards.Range(func(k, v interface{}) bool {
-		p := v.(*PlayerAward)
+	for _, p := range g_awards {
 		if uid == p.ToUid && p.IsValid == true {
 			list = append(list, p)
 		}
-		return true
-	})
+	}
 
 	ack.WriteByte(byte(len(list)))
 	for _, v := range list {
@@ -70,7 +67,7 @@ func Rpc_game_show_player_award(req, ack *common.NetPack, conn *tcp.TCPConn) {
 }
 func Rpc_game_get_player_award_ok(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	id := req.ReadUInt32()
-	if p := getAward(id); p == nil {
+	if p := g_awards[id]; p == nil {
 		ack.WriteUInt16(err.Not_found)
 	} else if p.IsValid == false {
 		ack.WriteUInt16(err.Already_get_it)
@@ -82,8 +79,6 @@ func Rpc_game_get_player_award_ok(req, ack *common.NetPack, conn *tcp.TCPConn) {
 }
 
 // ------------------------------------------------------------
-var g_awards sync.Map //<id, *PlayerAward>
-
 func InitAwardDB() {
 	//删除超过30天的
 	dbmgo.RemoveAllSync(kDBPlayerAward, bson.M{"time": bson.M{"$lt": time.Now().Unix() - 30*24*3600}})
@@ -91,7 +86,7 @@ func InitAwardDB() {
 	var list []PlayerAward
 	dbmgo.FindAll(kDBPlayerAward, bson.M{"isvalid": true}, &list)
 	for i := 0; i < len(list); i++ {
-		g_awards.Store(list[i].ID, &list[i])
+		g_awards[list[i].ID] = &list[i]
 	}
 	println("load active PlayerAward form db: ", len(list))
 }
@@ -112,7 +107,7 @@ func Rpc_game_gm_add_award(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		true,
 	}
 	if dbmgo.InsertSync(kDBPlayerAward, p) {
-		g_awards.Store(p.ID, p)
+		g_awards[p.ID] = p
 		ack.WriteUInt16(err.Success)
 		gamelog.Info("gm_add_award: %s %s", touid, Json)
 	} else {
@@ -120,12 +115,11 @@ func Rpc_game_gm_add_award(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	}
 
 	//删除内存滞留的无效数据
-	g_awards.Range(func(k, v interface{}) bool {
-		if v.(*PlayerAward).IsValid == false {
-			g_awards.Delete(k)
+	for k, v := range g_awards {
+		if v.IsValid == false {
+			delete(g_awards, k)
 		}
-		return true
-	})
+	}
 }
 func Rpc_game_gm_set_award(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	passwd := req.ReadString()
@@ -137,7 +131,7 @@ func Rpc_game_gm_set_award(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		ack.WriteUInt16(err.Passwd_err)
 		return
 	}
-	if p := getAward(id); p == nil {
+	if p := g_awards[id]; p == nil {
 		ack.WriteUInt16(err.Not_found)
 	} else {
 		gamelog.Info("gm_set_award: %d %s %s\n%v", id, touid, Json, p)
@@ -155,10 +149,10 @@ func Rpc_game_gm_del_award(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		ack.WriteUInt16(err.Passwd_err)
 		return
 	}
-	if p := getAward(id); p == nil {
+	if p := g_awards[id]; p == nil {
 		ack.WriteUInt16(err.Not_found)
 	} else {
-		g_awards.Delete(p.ID)
+		delete(g_awards, p.ID)
 		dbmgo.Remove(kDBPlayerAward, bson.M{"_id": p.ID})
 		ack.WriteUInt16(err.Success)
 		gamelog.Info("gm_del_award: %v", p)
@@ -166,9 +160,3 @@ func Rpc_game_gm_del_award(req, ack *common.NetPack, conn *tcp.TCPConn) {
 }
 
 // ------------------------------------------------------------
-func getAward(id uint32) *PlayerAward {
-	if v, ok := g_awards.Load(id); ok {
-		return v.(*PlayerAward)
-	}
-	return nil
-}

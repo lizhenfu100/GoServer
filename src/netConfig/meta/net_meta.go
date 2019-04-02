@@ -29,7 +29,6 @@ import (
 	"common"
 	"common/std"
 	"gamelog"
-	"strings"
 	"sync"
 )
 
@@ -118,6 +117,18 @@ func GetMeta(module string, svrID int) *Meta {
 	gamelog.Debug("{%s %d}: have none meta", module, svrID)
 	return nil
 }
+func GetMetaEx(module string, svrID int) (ret *Meta) {
+	G_Metas.Range(func(k, v interface{}) bool {
+		if ptr := v.(*Meta); ptr.Module == module && !ptr.IsClosed {
+			if svrID < 0 || ptr.SvrID == svrID {
+				ret = ptr
+				return false
+			}
+		}
+		return true
+	})
+	return
+}
 
 //{
 //	for i := len(G_Metas) - 1; i >= 0; i-- {
@@ -137,8 +148,8 @@ func DelMeta(module string, svrID int) {
 
 func GetModuleIDs(module, version string) (ret []int) { //Notice:排序是不稳定的
 	G_Metas.Range(func(k, v interface{}) bool {
-		ptr := v.(*Meta)
-		if ptr.Module == module && !ptr.IsClosed && ptr.IsMatchVersion(version) {
+		if ptr := v.(*Meta); ptr.Module == module && !ptr.IsClosed &&
+			common.IsMatchVersion(ptr.Version, version) {
 			ret = append(ret, ptr.SvrID)
 		}
 		return true
@@ -157,15 +168,4 @@ func (self *Meta) IsMyServer(dst *Meta) bool {
 	return false
 }
 func (self *Meta) IsMyClient(dst *Meta) bool { return dst.IsMyServer(self) }
-
-func (self *Meta) IsSame(dst *Meta) bool { return self.Module == dst.Module && self.SvrID == dst.SvrID }
-
-func (self *Meta) IsMatchVersion(version string) bool {
-	if version == "" || self.Version == "" {
-		return true
-	}
-	// 版本号格式：1.12.233，前两组一致的版本间可匹配，第三组用于小调整、bug修复
-	// 空版本号能与任意版本匹配
-	idx := strings.LastIndex(self.Version, ".")
-	return self.Version[:idx] == version[:idx]
-}
+func (self *Meta) IsSame(dst *Meta) bool     { return self.Module == dst.Module && self.SvrID == dst.SvrID }

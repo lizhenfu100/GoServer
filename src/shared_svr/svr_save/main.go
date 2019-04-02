@@ -13,6 +13,7 @@ import (
 	"netConfig"
 	"netConfig/meta"
 	conf2 "shared_svr/svr_save/conf"
+	"shared_svr/svr_save/logic"
 )
 
 const kModuleName = "save"
@@ -34,7 +35,8 @@ func main() {
 	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName,
 		conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
 
-	netConfig.RunNetSvr()
+	go netConfig.RunNetSvr()
+	logic.MainLoop()
 }
 func InitConf() {
 	var metaCfg []meta.Meta

@@ -5,8 +5,8 @@ import (
 	"common/file"
 	"encoding/json"
 	"fmt"
-	"gamelog"
 	"os"
+	"shared_svr/svr_save/gm"
 	"time"
 )
 
@@ -20,8 +20,7 @@ func (self *TSaveData) CheckSensitiveVal(newExtra string) {
 	json.Unmarshal(common.S2B(newExtra), pNew)
 	json.Unmarshal(common.S2B(self.Extra), pOld)
 
-	if pNew.GameSession < pOld.GameSession {
-		gamelog.Info("Save abnormal: " + self.Key)
+	if pNew.GameSession < pOld.GameSession || gm.G_Backup.IsValid(self.Key) {
 		if fi, e := file.CreateFile(
 			fmt.Sprintf("player/%s/", self.Key),
 			time.Now().Format("20060102_150405")+".save",

@@ -29,7 +29,7 @@ type objMsg struct {
 	msg  *common.NetPack
 }
 type RpcQueue struct {
-	//queue      safe.SafeQueue //{objMsg}
+	//queue      safe.MultiQueue //{objMsg}
 	queue      chan objMsg
 	sendBuffer *common.NetPack
 	backBuffer *common.NetPack
@@ -59,7 +59,7 @@ func (self *RpcQueue) Insert(conn *TCPConn, msg *common.NetPack) {
 }
 
 func (self *RpcQueue) Update() { //主循环，每帧调一次
-	//if v, ok, _ := self.queue.Get(); ok {
+	//for _, v := range self.queue.Get() {
 	//	self._Handle(v.(objMsg).conn, v.(objMsg).msg)
 	//	v.(objMsg).msg.Free()
 	//}

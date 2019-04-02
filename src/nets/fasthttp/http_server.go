@@ -1,3 +1,19 @@
+/***********************************************************************
+* @ fasthttp
+* @ brief
+    、fasthttp替代原生http，测试qps提升量
+        · 外网机器
+            · http       qps:2500 cpu:21%
+            · fasthttp   qps:2100 cpu:7%
+        · 本地机器
+            · http       qps:3400
+            · fasthttp   qps:4300
+
+	、qps反而少了400……可能是内部协程池调度缘故，查看fasthttp参数配置
+
+* @ author zhoumf
+* @ date 2019-3-28
+***********************************************************************/
 package fasthttp
 
 import (
@@ -39,6 +55,7 @@ func NewHttpServer(port uint16, module string, svrId int) error {
 		}
 	}
 	HandleFunc("/reg_to_svr", _reg_to_svr)
+	HandleFunc("/client_rpc", _HandleRpc)
 	return _svr.ListenAndServe(fmt.Sprintf(":%d", port))
 }
 func CloseServer() { _svr.Shutdown() }

@@ -21,7 +21,7 @@ func Http_query_account_login_addr(w http.ResponseWriter, r *http.Request) {
 	if accountName == "" {
 		w.Write(common.S2B("AccountName nil"))
 	} else {
-		mhttp.CallRpc(g_templateData.CenterAddr, enum.Rpc_center_player_login_addr, func(buf *common.NetPack) {
+		mhttp.CallRpc(g_addrs.CenterAddr, enum.Rpc_center_player_login_addr, func(buf *common.NetPack) {
 			buf.WriteString(conf.GameName)
 			buf.WriteString(accountName)
 		}, func(recvBuf *common.NetPack) {
@@ -38,22 +38,24 @@ func Http_query_account_login_addr(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func Http_reset_password(w http.ResponseWriter, r *http.Request) {
-	q1 := r.URL.Query()
-	name := q1.Get("name")
-	passwd := q1.Get("pwd")
-
+	q := r.URL.Query()
 	//1、创建url
-	u, _ := url.Parse(g_templateData.CenterAddr + "/reset_password")
-	q := u.Query()
+	u, _ := url.Parse(g_addrs.CenterAddr + "/reset_password")
 	//2、写入参数
-	q.Set("name", name)
-	q.Set("pwd", passwd)
 	flag := strconv.FormatInt(time.Now().Unix(), 10)
 	q.Set("flag", flag)
-	q.Set("sign", sign.CalcSign(passwd+flag))
+	q.Set("sign", sign.CalcSign(q.Get("pwd")+flag))
 	//3、生成完整url
 	u.RawQuery = q.Encode()
 	if buf := mhttp.Get(u.String()); buf != nil {
 		w.Write(buf)
+	}
+}
+func Http_relay_to_save(w http.ResponseWriter, r *http.Request) {
+	for _, v := range g_addrs.SaveAddrs {
+		u, _ := url.Parse(v + r.RequestURI) //除去域名或ip的url
+		if buf := mhttp.Get(u.String()); buf != nil {
+			w.Write(buf)
+		}
 	}
 }

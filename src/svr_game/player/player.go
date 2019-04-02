@@ -44,9 +44,10 @@ import (
 )
 
 const (
-	Idle_Max_Minute  = 3 //须客户端心跳包
-	ReLogin_Wait_Sec = 300
-	kDBPlayer        = "Player"
+	kIdleMinuteMax  = 3 //须客户端心跳包
+	kReLoginWaitSec = 300
+	kLIvelyTime     = 1 * 24 * 3600
+	kDBPlayer       = "Player"
 )
 
 type TPlayerBase struct {
@@ -176,7 +177,7 @@ func (self *TPlayer) Logout() {
 			self.WriteAllToDB()
 			DelCache(self)
 		}
-	}, ReLogin_Wait_Sec, 0, 0)
+	}, kReLoginWaitSec, 0, 0)
 }
 func (self *TPlayer) IsOnline() bool { return atomic.LoadInt32(&self._isOnlnie) > 0 }
 
@@ -202,7 +203,7 @@ func _Service_Write_DB(ptr interface{}) {
 }
 func _Service_Check_AFK(ptr interface{}) {
 	if player, ok := ptr.(*TPlayer); ok && player.IsOnline() {
-		if atomic.AddUint32(&player._idleMin, 1) > Idle_Max_Minute {
+		if atomic.AddUint32(&player._idleMin, 1) > kIdleMinuteMax {
 			gamelog.Debug("Aid(%d) AFK", player.AccountID)
 			player.Logout()
 		}

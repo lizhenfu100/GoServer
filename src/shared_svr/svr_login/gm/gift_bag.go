@@ -33,9 +33,7 @@ import (
 	"time"
 )
 
-const (
-	kDBGift = "gift"
-)
+const kDBGift = "gift"
 
 var g_gifts sync.Map //<key, *TGiftBag>
 
@@ -113,7 +111,6 @@ func Http_gift_bag_set(w http.ResponseWriter, r *http.Request) {
 		w.Write(common.S2B("passwd error"))
 		return
 	}
-
 	if p := getGift(r.Form.Get("key")); p == nil {
 		w.Write(common.S2B("fail"))
 	} else {
@@ -130,7 +127,6 @@ func Http_gift_bag_del(w http.ResponseWriter, r *http.Request) {
 		w.Write(common.S2B("passwd error"))
 		return
 	}
-
 	if p := getGift(r.Form.Get("key")); p == nil {
 		w.Write(common.S2B("not find"))
 	} else {

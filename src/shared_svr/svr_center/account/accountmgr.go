@@ -15,9 +15,8 @@ var (
 func InitDB() {
 	G_WhiteList.InitDB()
 
-	return              //人太多，启动过慢，不批量载入了
 	var list []TAccount //只载入近期登录过的
-	dbmgo.FindAll(KDBTable, bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - 7*24*3600}}, &list)
+	dbmgo.FindAll(KDBTable, bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - kLivelyTime}}, &list)
 	for i := 0; i < len(list); i++ {
 		list[i].init()
 		AddCache(&list[i])

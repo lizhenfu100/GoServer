@@ -28,7 +28,6 @@ func CallRpc(addr string, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	}
 	req.Free()
 }
-func RegHandleRpc() { HandleFunc("/client_rpc", _HandleRpc) }
 func _HandleRpc(ctx *http.RequestCtx) {
 	req := common.NewNetPack(ctx.Request.Body())
 	ack := common.NewNetPackCap(128)

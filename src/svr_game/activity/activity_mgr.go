@@ -45,7 +45,7 @@ func (self *TGlobalActivity) Init() {
 	self.UpdateActivityTime() //! 活动开启/结束时间
 
 	delay := float32(timer.TodayLeftSec())
-	timer.G_TimerMgr.AddTimerSec(self.EnterNextDay, delay, timer.OneDaySecCnt, -1)
+	timer.G_TimerMgr.AddTimerSec(self.EnterNextDay, delay, timer.OneDaySec, -1)
 }
 func (self *TGlobalActivity) CheckActivityAdd() {
 	for _, csv := range G_ActivityCsv {

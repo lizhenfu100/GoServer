@@ -32,7 +32,7 @@ func main() {
 	svrFile := make(map[string][]byte, 16)
 	for _, str := range strings.Split(fileList, " ") {
 		list := strings.Split(str, ">")
-		fileLocal, fileSvr := "", "'" //本地文件路径重定向为后台路径
+		fileLocal, fileSvr := "", "" //本地文件路径重定向为后台路径
 		if len(list) == 1 {
 			fileLocal = list[0]
 			fileSvr = fileLocal

@@ -103,7 +103,7 @@ func _upload_file(w http.ResponseWriter, r *http.Request, baseDir string) string
 func Rpc_file_update_list(req, ack *common.NetPack) {
 	version := req.ReadString()
 	destFolder := req.ReadString()
-	if meta.G_Local.IsMatchVersion(version) {
+	if common.IsMatchVersion(meta.G_Local.Version, version) {
 		//下发patch目录下的文件列表
 		posInBuf, count := ack.BodySize(), uint32(0)
 		ack.WriteUInt32(count)

@@ -15,7 +15,6 @@ import (
 func Http_order_info(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	orderId := q.Get("orderid")
-
 	if p := msg.FindOrder(orderId); p != nil {
 		ack, _ := json.MarshalIndent(p, "", "     ")
 		w.Write(ack)
@@ -26,12 +25,11 @@ func Http_order_info(w http.ResponseWriter, r *http.Request) {
 }
 func Http_order_success(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	orderId := q.Get("orderid")
-
 	if q.Get("passwd") != conf.GM_Passwd {
 		w.Write(common.S2B("passwd error"))
 		return
 	}
+	orderId := q.Get("orderid")
 	if order := msg.FindOrder(orderId); order != nil {
 		if order.Status == 1 {
 			w.Write(common.S2B(orderId + ": order already success"))

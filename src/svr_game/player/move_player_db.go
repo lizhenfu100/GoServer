@@ -6,9 +6,8 @@ import (
 	"gamelog"
 	"generate_out/err"
 	"generate_out/rpc/enum"
-	"nets/http"
-	"netConfig"
 	"netConfig/meta"
+	"nets/http"
 )
 
 func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
@@ -21,8 +20,8 @@ func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
 
 	//本节点的login
 	loginAddr := ""
-	if ids := meta.GetModuleIDs("login", meta.G_Local.Version); len(ids) > 0 {
-		loginAddr = netConfig.GetHttpAddr("login", ids[0])
+	if p := meta.GetMetaEx("login", -1); p != nil {
+		loginAddr = http.Addr(p.IP, p.HttpPort)
 	}
 
 	//1、向center查询新大区地址

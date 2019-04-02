@@ -11,9 +11,7 @@ import (
 	"netConfig/register"
 )
 
-const (
-	kModuleName = "file"
-)
+const kModuleName = "file"
 
 /*
 	官网执行程序路径：~/web/public/SyncPatch_svr
@@ -41,6 +39,7 @@ func InitConf() {
 
 	register.RegHttpRpc(map[uint16]register.HttpRpc{
 		enum.Rpc_file_update_list: Rpc_file_update_list,
+		116: Rpc_file_update_list, //旧版本
 	})
 	register.RegHttpHandler(map[string]register.HttpHandle{
 		"/upload_patch_file": Http_upload_patch_file,

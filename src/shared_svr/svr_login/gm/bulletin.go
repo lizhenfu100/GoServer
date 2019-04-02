@@ -27,10 +27,10 @@ import (
 	"time"
 )
 
-var g_bulletin = Bulletin{DBKey: "bulletin"}
+var g_bulletin = &Bulletin{DBKey: "bulletin"}
 
 type Bulletin struct {
-	sync.Mutex
+	sync.RWMutex
 	DBKey   string `bson:"_id"`
 	En      string //告示内容，按国家划分
 	Zh      string
@@ -48,21 +48,20 @@ type Bulletin struct {
 func Rpc_login_bulletin(req, ack *common.NetPack) {
 	area := req.ReadString()
 
-	g_bulletin.Lock()
-	ref, ret := reflect.ValueOf(&g_bulletin).Elem(), ""
+	g_bulletin.RLock()
+	ref, ret := reflect.ValueOf(g_bulletin).Elem(), ""
 	if v := ref.FieldByName(area); v.IsValid() {
 		ret = v.String()
 	}
-	g_bulletin.Unlock()
+	g_bulletin.RUnlock()
 	ack.WriteString(ret)
 }
 func Http_bulletin(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-
 	g_bulletin.Lock()
-	copy.CopyForm(&g_bulletin, r.Form)
-	ack, _ := json.MarshalIndent(&g_bulletin, "", "     ")
+	copy.CopyForm(g_bulletin, r.Form)
 	g_bulletin.UpdateDB()
+	ack, _ := json.MarshalIndent(g_bulletin, "", "     ")
 	g_bulletin.Unlock()
 	w.Write(ack)
 	gamelog.Info("Http_bulletin: %v", r.Form)

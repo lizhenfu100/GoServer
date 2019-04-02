@@ -62,7 +62,6 @@ func CallRpc(addr string, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	}
 	req.Free()
 }
-func RegHandleRpc() { http.HandleFunc("/client_rpc", _HandleRpc) }
 func _HandleRpc(w http.ResponseWriter, r *http.Request) {
 	req := ReadRequest(r) //! 接收信息
 	if req == nil {

@@ -18,18 +18,38 @@ import (
 
 var (
 	g_roorDIr  = "../../../bin/"
-	g_saveList = []string{
-		"http://192.168.1.111:7090",
-		"http://52.14.1.205:7090",    //1 北美
-		"http://13.229.215.168:7090", //2 亚洲
-		"http://54.94.211.178:7090",  //3 南美
-		"http://18.185.80.202:7090",  //4 欧洲
-		"http://39.96.196.250:7090",  //5 华北
-		"http://47.106.35.74:7090",   //6 华南
+	g_saveList = [][]string{
+		{"http://192.168.1.111:7090"},
+		{"", //1 北美
+			"http://52.14.1.205:7090",
+			"http://18.221.148.84:7090",
+			"http://18.223.109.103:7090",
+			"http://18.216.113.27:7090",
+		},
+		{"", //2 亚洲
+			"http://13.229.215.168:7090",
+			"http://54.169.60.150:7090",
+			"http://13.229.102.23:7090",
+		},
+		{"", //3 欧洲
+			"http://18.185.80.202:7090",
+		},
+		{"", //4 南美
+			"http://54.94.211.178:7090",
+		},
+		{"", //5 华北
+			"http://39.96.196.250:7090",
+			"http://39.96.196.69:7090",
+		},
+		{"", //6 华南
+			"http://47.106.35.74:7090",
+			"http://47.107.41.54:7090",
+			"http://47.106.113.86:7090",
+		},
 	}
-	g_saveAddr = g_saveList[0]
+	g_saveAddr = g_saveList[6][1]
 	g_uid      = "11"
-	g_pf_id    = "TapTap"
+	g_pf_id    = "IOS"
 	g_mac      = "test"
 )
 
@@ -50,19 +70,19 @@ func _save_download_binary(idx int) {
 	}, func(backBuf *common.NetPack) {
 		errCode := backBuf.ReadUInt16()
 		if errCode == err.Success {
-			fmt.Println("------------: ", idx, len(backBuf.LeftBuf()))
+			fmt.Println("------------ ok: ", idx, len(backBuf.LeftBuf()))
 			if fi, e := file.CreateFile("D:/diner_svr", "data", os.O_TRUNC|os.O_WRONLY); e == nil {
 				fi.Write(backBuf.LeftBuf())
 				fi.Close()
 			}
 		} else {
-			fmt.Println("------------: ", idx, errCode)
+			fmt.Println("------------ err: ", errCode)
 		}
 	})
 }
 
 func tTest_save_upload_binary(t *testing.T) {
-	if f, e := os.OpenFile("zipped", os.O_RDONLY, 0666); e == nil {
+	if f, e := os.Open("zipped"); e == nil {
 		if buf, e := ioutil.ReadAll(f); e == nil {
 			//for i := 12096; i < 12196; i++ {
 			//	uid := strconv.Itoa(i)

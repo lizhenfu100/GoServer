@@ -43,9 +43,7 @@ func UpdatePasswd() {
 
 func Http_check_passwd(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	passwd := q.Get("passwd")
-
-	if passwd == g_passwd {
+	if q.Get("passwd") == g_passwd {
 		if f, e := os.Open(kFileDirRoot + "index.html"); e == nil {
 			if buf, e := ioutil.ReadAll(f); e == nil {
 				w.Write(buf)

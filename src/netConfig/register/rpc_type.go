@@ -39,7 +39,6 @@ func RegHttpRpc(httpLst map[uint16]HttpRpc) {
 	for k, v := range httpLst {
 		mhttp.G_HandleFunc[k] = v
 	}
-	mhttp.RegHandleRpc()
 }
 func RegHttpHandler(httpLst map[string]HttpHandle) {
 	for k, v := range httpLst {

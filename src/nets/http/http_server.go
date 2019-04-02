@@ -3,6 +3,14 @@
 * @ brief
 	1、非常不安全，恶意劫持路由节点，即可知道发往后台的数据，包括密码~
 
+* @ http.Request
+	r.RequestURI	除去域名或ip的url
+		/backup_conf?passwd=&weekdays=&onlintlimit=&auto=&force=
+	r.URL.RawQuery 	加密后的参数，不含?
+		passwd=&weekdays=&onlintlimit=&auto=&force=
+	r.URL.Path
+		/backup_conf
+
 * @ author zhoumf
 * @ date 2019-3-18
 ***********************************************************************/
@@ -39,6 +47,7 @@ func NewHttpServer(port uint16, module string, svrId int) error {
 	g_svraddr_path = fmt.Sprintf("%s/%s/%d/reg_addr.csv", file.GetExeDir(), module, svrId)
 	loadCacheNetMeta()
 	http.HandleFunc("/reg_to_svr", _reg_to_svr)
+	http.HandleFunc("/client_rpc", _HandleRpc)
 	_svr.Addr = fmt.Sprintf(":%d", port)
 	return _svr.ListenAndServe()
 }

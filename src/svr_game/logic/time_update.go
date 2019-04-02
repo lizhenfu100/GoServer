@@ -13,7 +13,7 @@ func InitTimeUpdate() {
 }
 func updateEnterNextDay() {
 	delay := float32(timer.TodayLeftSec())
-	timer.G_TimerMgr.AddTimerSec(onEnterNextDay, delay, timer.OneDaySecCnt, -1)
+	timer.G_TimerMgr.AddTimerSec(onEnterNextDay, delay, timer.OneDaySec, -1)
 }
 func updateEnterNextHour() {
 	now := time.Now()

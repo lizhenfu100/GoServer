@@ -16,9 +16,9 @@ var (
 func InitDB() {
 	InitSvrMailDB()
 	InitSeasonDB()
-	return                  //人太多，启动过慢，不批量载入了
+
 	var list1 []TPlayerBase //只载入近期登录过的
-	dbmgo.FindAll(kDBPlayer, bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - 7*24*3600}}, &list1)
+	dbmgo.FindAll(kDBPlayer, bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - kLIvelyTime}}, &list1)
 	list := make([]TPlayer, len(list1))
 	for i := 0; i < len(list); i++ {
 		ptr := &list[i]

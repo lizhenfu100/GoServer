@@ -20,7 +20,10 @@ import (
 	"time"
 )
 
-const KDBTable = "Account"
+const (
+	KDBTable    = "Account"
+	kLivelyTime = 1 * 24 * 3600
+)
 
 type TAccount struct {
 	AccountID   uint32 `bson:"_id"`

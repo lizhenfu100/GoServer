@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	OneDaySecCnt = 24 * 3600
+	OneDaySec = 24 * 3600
 )
 
 func IsToday(sec int64) bool { return time.Unix(sec, 0).YearDay() == time.Now().YearDay() }
@@ -20,23 +20,23 @@ func TodayBeginSec() int64 {
 	return todayTime.Unix()
 }
 func TodayEndSec() int64 {
-	return TodayBeginSec() + OneDaySecCnt
+	return TodayBeginSec() + OneDaySec
 }
 func TodayRunSec() int {
 	now := time.Now()
 	return now.Hour()*3600 + now.Minute()*60 + now.Second()
 }
-func TodayLeftSec() int { return OneDaySecCnt - TodayRunSec() }
+func TodayLeftSec() int { return OneDaySec - TodayRunSec() }
 
 // 时间戳--日期
-const g_time_layout = "2006/01/02 15:04:05"
+const kTimeLayout = "2006/01/02 15:04:05"
 
 func Str2Time(date string) int64 {
-	if v, err := time.ParseInLocation(g_time_layout, date, time.Local); err == nil {
+	if v, err := time.ParseInLocation(kTimeLayout, date, time.Local); err == nil {
 		return v.Unix()
 	} else {
 		gamelog.Error(err.Error())
 		return 0
 	}
 }
-func Time2Str(sec int64) string { return time.Unix(sec, 0).Format(g_time_layout) }
+func Time2Str(sec int64) string { return time.Unix(sec, 0).Format(kTimeLayout) }

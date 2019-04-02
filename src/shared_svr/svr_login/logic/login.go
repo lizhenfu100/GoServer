@@ -27,6 +27,7 @@ package logic
 import (
 	"common"
 	"conf"
+	"gamelog"
 	"generate_out/err"
 	"generate_out/rpc/enum"
 	"netConfig"
@@ -89,6 +90,7 @@ func accountLogin2(centerSvrId int, req, ack *common.NetPack) (_ok bool, _aid ui
 	return
 }
 func accountLogin3(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, version, gameName string, centerSvrId int) uint16 {
+	gamelog.Debug("GameInfo:%v, version:%s gameName:%s", pInfo, version, gameName)
 	if !conf.HandPick_GameSvr {
 		//选取gameSvrId：若账户未绑定游戏服，自动选取空闲节点，并绑定到账号上
 		if *gameSvrId = pInfo.GameSvrId; *gameSvrId <= 0 {

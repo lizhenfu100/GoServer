@@ -219,7 +219,7 @@ func SetField(field reflect.Value, s string) {
 		{
 			switch field.Type().Elem().Kind() {
 			case reflect.String:
-				{
+				{ //JsonString 须额外标注字符串双引号，比如：["a", "b"]，自定义格式方便点
 					sFix := strings.Trim(strings.Replace(s, " ", "", -1), "[]")
 					vec := strings.Split(sFix, ",")
 					field.Set(reflect.ValueOf(vec))

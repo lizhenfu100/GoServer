@@ -49,12 +49,10 @@ func AccountRegLimit() { //限制同ip账号注册频率
 
 func Http_permit_ip(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	ip := q.Get("ip")
-
 	if q.Get("passwd") != conf.GM_Passwd {
 		w.Write(common.S2B("passwd error"))
 		return
 	}
-	g_regFreq.Delete(ip)
+	g_regFreq.Delete(q.Get("ip"))
 	w.Write(common.S2B("permit_ip: ok"))
 }

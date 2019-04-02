@@ -35,8 +35,8 @@ var (
 		"http://192.168.1.111:7030",
 		"http://52.14.1.205:7030",    //1 北美
 		"http://13.229.215.168:7030", //2 亚洲
-		"http://54.94.211.178:7030",  //3 南美
-		"http://18.185.80.202:7030",  //4 欧洲
+		"http://18.185.80.202:7030",  //3 欧洲
+		"http://54.94.211.178:7030",  //4 南美
 		"http://39.96.196.250:7030",  //5 华北
 		"http://47.106.35.74:7030",   //6 华南
 	}
@@ -59,8 +59,7 @@ func Test_get_gamesvr_list(t *testing.T) {
 	http.CallRpc(g_loginAddr, enum.Rpc_login_get_game_list, func(buf *common.NetPack) {
 		buf.WriteString(g_version)
 	}, func(backBuf *common.NetPack) {
-		cnt := backBuf.ReadByte()
-		for i := byte(0); i < cnt; i++ {
+		for cnt, i := backBuf.ReadByte(), byte(0); i < cnt; i++ {
 			id := backBuf.ReadInt()
 			svrName := backBuf.ReadString()
 			outIp := backBuf.ReadString()

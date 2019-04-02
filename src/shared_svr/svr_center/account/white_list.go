@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-var G_WhiteList = WhiteList{DBKey: "whitelist"}
+var G_WhiteList = &WhiteList{DBKey: "whitelist"}
 
 type WhiteList struct {
 	sync.Mutex
@@ -19,25 +19,21 @@ type WhiteList struct {
 
 func Http_whitelist_add(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	v := q.Get("val")
-
 	if q.Get("passwd") != conf.GM_Passwd {
 		w.Write(common.S2B("passwd error"))
 		return
 	}
-	G_WhiteList.Add(v)
+	G_WhiteList.Add(q.Get("val"))
 	w.Write(common.S2B("whitelist_add: ok"))
 	gamelog.Info("Http_whitelist_add: %v", r.Form)
 }
 func Http_whitelist_del(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	v := q.Get("val")
-
 	if q.Get("passwd") != conf.GM_Passwd {
 		w.Write(common.S2B("passwd error"))
 		return
 	}
-	G_WhiteList.Del(v)
+	G_WhiteList.Del(q.Get("val"))
 	w.Write(common.S2B("whitelist_del: ok"))
 	gamelog.Info("Http_whitelist_del: %v", r.Form)
 }

@@ -68,8 +68,8 @@ func (self *TRanker) _WriteDB(obj IRankItem) {
 }
 
 func (self *TRanker) SearchIndex(obj IRankItem) uint {
-	//Search()方法回使用“二分查找”算法来搜索某指定切片[0:n]，并返回能够使f(i)=true的最小i
-	//找不到返回n，而不是-1
+	//Search()方法回使用“二分查找”算法来搜索某指定切片[0:n]，并返回能够使f(i)=true的最小i；找不到返回n，而不是-1
+	//TODO:optimize:不用对整体二分，每次都是渐变的，配置范围，向前或向后(升序、降序、变大变小)找即可
 	idx := sort.Search(len(self._arr), func(i int) bool {
 		return i > 0 && (self._arr[i] == nil || self._arr[i].Less(obj))
 	})
