@@ -7,7 +7,6 @@ import (
 	"netConfig"
 	"netConfig/meta"
 	"nets/tcp"
-	"sort"
 )
 
 const (
@@ -50,7 +49,6 @@ func _SelectBattleSvrId(version string) int {
 	//moba类的，应该有个专门的匹配服，供自由玩家【快速】组房间
 	//io向的，允许中途加入，应尽量分配到人多的战斗服
 	ids := meta.GetModuleIDs("battle", version)
-	sort.Ints(ids)
 	//1、优先在各个服务器分配一定人数
 	for _, id := range ids {
 		if g_battle_player_cnt[id] < K_Player_Base {
@@ -75,7 +73,11 @@ func _SelectBattleSvrId(version string) int {
 // - 转至svr_game
 func Rpc_cross_relay_to_game(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	svrId := req.ReadInt()
-	netConfig.CallRpcGame(svrId, enum.Rpc_recv_player_msg, func(buf *common.NetPack) {
-		buf.WriteBuf(req.LeftBuf()) //头两字段须是：rid、aid
-	}, nil)
+	if conn := netConfig.GetGameConn(svrId); conn != nil {
+		conn.CallRpc(enum.Rpc_recv_player_msg, func(buf *common.NetPack) {
+			buf.WriteBuf(req.LeftBuf()) //头两字段须是：rid、aid
+		}, nil)
+	} else {
+		gamelog.Error("game nil: svrId(%d)", svrId)
+	}
 }

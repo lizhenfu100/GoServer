@@ -36,8 +36,6 @@ import (
 var (
 	G_Metas sync.Map //<{module,svrId}, pMeta>
 	G_Local *Meta
-
-	K_IsGameTcp bool //game节点是tcp还是http
 )
 
 type Meta struct {
@@ -112,9 +110,6 @@ func InitConf(list []Meta) {
 func AddMeta(ptr *Meta) {
 	gamelog.Debug("AddMeta: %v", ptr)
 	G_Metas.Store(std.KeyPair{ptr.Module, ptr.SvrID}, ptr)
-	if ptr.Module == "game" {
-		K_IsGameTcp = ptr.TcpPort > 0
-	}
 }
 func GetMeta(module string, svrID int) *Meta {
 	if v, ok := G_Metas.Load(std.KeyPair{module, svrID}); ok && !v.(*Meta).IsClosed {

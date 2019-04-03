@@ -22,6 +22,7 @@ package netConfig
 import (
 	"common"
 	"common/std/hash"
+	"conf"
 	"gamelog"
 	"generate_out/rpc/enum"
 	"math/rand"
@@ -121,7 +122,7 @@ func GetBattleConn(svrId int) *tcp.TCPConn {
 var g_cache_game = make(map[int]*tcp.TCPConn)
 
 func CallRpcGame(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	if meta.K_IsGameTcp {
+	if conf.IsTcpGame {
 		if conn := GetGameConn(svrId); conn != nil {
 			conn.CallRpcSafe(rid, sendFun, recvFun)
 			return

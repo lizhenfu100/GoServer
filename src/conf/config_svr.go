@@ -6,6 +6,7 @@ const (
 	FPS_OtherSvr     = 1000 / 10 //其它服帧率
 	HandPick_GameSvr = false     //玩家手选区服
 	HaveCllientSave  = false     //是否启用云存档
+	IsTcpGame        = true      //game节点是tcp还是http
 
 	// 特殊标记
 	Flag_Client_ReLogin = 0xFFFFFFFF
