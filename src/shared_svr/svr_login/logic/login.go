@@ -32,9 +32,7 @@ import (
 	"generate_out/rpc/enum"
 	"netConfig"
 	"netConfig/meta"
-	"nets/http"
 	"shared_svr/svr_center/gameInfo"
-	"sort"
 	"sync"
 	"sync/atomic"
 )
@@ -89,15 +87,15 @@ func accountLogin2(centerSvrId int, req, ack *common.NetPack) (_ok bool, _aid ui
 	}
 	return
 }
-func accountLogin3(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, version, gameName string, centerSvrId int) uint16 {
+func accountLogin3(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, version, gameName string, centerSvrId int) (errCode uint16) {
 	gamelog.Debug("GameInfo:%v, version:%s gameName:%s", pInfo, version, gameName)
 	if !conf.HandPick_GameSvr {
 		//选取gameSvrId：若账户未绑定游戏服，自动选取空闲节点，并绑定到账号上
 		if *gameSvrId = pInfo.GameSvrId; *gameSvrId <= 0 {
 			if *gameSvrId = GetFreeGameSvr(version); *gameSvrId <= 0 {
-				return err.None_free_game_server
+				errCode = err.None_free_game_server
 			} else {
-				errCode := err.Unknow_error
+				errCode = err.None_center_server
 				netConfig.CallRpcCenter(centerSvrId, enum.Rpc_center_set_game_info, func(buf *common.NetPack) {
 					buf.WriteUInt32(accountId)
 					buf.WriteString(gameName)
@@ -107,15 +105,16 @@ func accountLogin3(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, 
 				}, func(backBuf *common.NetPack) {
 					errCode = backBuf.ReadUInt16()
 				})
-				return errCode
 			}
+			return
 		}
 	}
 	if *gameSvrId = ShuntGameSvr(version, *gameSvrId, accountId); *gameSvrId <= 0 {
-		return err.None_free_game_server
+		errCode = err.None_free_game_server
 	} else {
-		return err.Success
+		errCode = err.Success
 	}
+	return
 }
 func accountLogin4(accountId uint32, gameSvrId int, ack *common.NetPack) {
 	//登录成功，回复client待连接的节点(gateway或game)
@@ -127,7 +126,7 @@ func accountLogin4(accountId uint32, gameSvrId int, ack *common.NetPack) {
 
 	var pMetaToClient *meta.Meta //回复client要连接的目标节点
 	//【Notice: tcp.CallRpc接口不是线程安全的，http后台不适用】
-	if conn := netConfig.GetTcpConn("gateway", gatewayId); conn != nil {
+	if conn := netConfig.GetGatewayConn(gatewayId); conn != nil {
 		conn.CallRpcSafe(enum.Rpc_gateway_login_token, func(buf *common.NetPack) {
 			buf.WriteUInt32(token)
 			buf.WriteUInt32(accountId)
@@ -136,35 +135,19 @@ func accountLogin4(accountId uint32, gameSvrId int, ack *common.NetPack) {
 			cnt := backBuf.ReadInt32()
 			g_game_player_cnt.Store(gameSvrId, cnt)
 		})
-
 		pMetaToClient = meta.GetMeta("gateway", gatewayId)
 		errCode = err.None_gateway
-
-	} else if conn := netConfig.GetTcpConn("game", gameSvrId); conn != nil {
-		conn.CallRpcSafe(enum.Rpc_game_login_token, func(buf *common.NetPack) {
+	} else {
+		netConfig.CallRpcGame(gameSvrId, enum.Rpc_game_login_token, func(buf *common.NetPack) {
 			buf.WriteUInt32(token)
 			buf.WriteUInt32(accountId)
 		}, func(backBuf *common.NetPack) {
 			cnt := backBuf.ReadInt32()
 			g_game_player_cnt.Store(gameSvrId, cnt)
 		})
-
-		pMetaToClient = meta.GetMeta("game", gameSvrId)
-		errCode = err.None_game_server
-
-	} else if addr := netConfig.GetHttpAddr("game", gameSvrId); addr != "" {
-		http.CallRpc(addr, enum.Rpc_game_login_token, func(buf *common.NetPack) {
-			buf.WriteUInt32(token)
-			buf.WriteUInt32(accountId)
-		}, func(backBuf *common.NetPack) {
-			cnt := backBuf.ReadInt32()
-			g_game_player_cnt.Store(gameSvrId, cnt)
-		})
-
 		pMetaToClient = meta.GetMeta("game", gameSvrId)
 		errCode = err.None_game_server
 	}
-
 	if pMetaToClient != nil { //回复client要连接的目标节点
 		ack.WriteUInt16(err.Success)
 		ack.WriteUInt32(accountId)
@@ -195,7 +178,6 @@ func Rpc_login_get_game_list(req, ack *common.NetPack) {
 	version := req.ReadString()
 
 	ids := meta.GetModuleIDs("game", version)
-	sort.Ints(ids)
 	ack.WriteByte(byte(len(ids)))
 	for _, id := range ids {
 		p := meta.GetMeta("game", id)

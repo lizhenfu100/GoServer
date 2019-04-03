@@ -96,7 +96,7 @@ func init() {
 	G_RpcQueue.Init(Msg_Queue_Cap)
 }
 
-type TCPConn struct { //TODO:zhoumf: pprof性能测试
+type TCPConn struct { //TODO:pprof性能测试
 	conn          net.Conn
 	reader        *bufio.Reader //包装conn减少conn.Read的io次数，见【common/net.go】
 	writer        *bufio.Writer

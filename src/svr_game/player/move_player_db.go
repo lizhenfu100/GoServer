@@ -1,3 +1,16 @@
+/***********************************************************************
+* @ 玩家数据迁移
+* @ login(http)转发
+	· long(http)，与它的交互是同步的
+	· 若game也是http节点，转发代码就都是同步的，写起来很方便
+	· game(tcp)、long(http)无法实现连续rpc链式调用……不够友好
+
+* @ proxy(tcp)转发
+	· TODO：针对game(tcp)，新增一个proxy(tcp)，统一转发game数据
+
+* @ author zhoumf
+* @ date 2019-4-3
+***********************************************************************/
 package player
 
 import (
@@ -8,6 +21,7 @@ import (
 	"generate_out/rpc/enum"
 	"netConfig/meta"
 	"nets/http"
+	"nets/tcp"
 )
 
 func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
@@ -70,12 +84,23 @@ func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
 	//7、迁移完成前，玩家不应向新区写数据，有脏写风险（“玩家上传存档”先于“后台节点传来的”，那玩家的新存档会被旧的覆盖掉~）
 }
 
-func Rpc_game_move_player_db2(req, ack *common.NetPack, this *TPlayer) {
+func Rpc_game_move_player_db2(req, ack *common.NetPack, conn *tcp.TCPConn) {
+	accountId := req.ReadUInt32()
+	playerName := req.ReadString()
 	playerBuf := req.LeftBuf()
 
+	this := FindWithDB(accountId)
+	if this == nil { //载入失败，须新建角色
+		if this = NewPlayerInDB(accountId, playerName); this == nil {
+			ack.WriteUInt16(err.Create_Player_failed)
+			return
+		}
+	}
 	if e := common.B2T(playerBuf, this); e == nil {
 		this.WriteAllToDB()
+		ack.WriteUInt16(err.Success)
 	} else {
+		ack.WriteUInt16(err.Convert_err)
 		gamelog.Error(e.Error())
 	}
 }

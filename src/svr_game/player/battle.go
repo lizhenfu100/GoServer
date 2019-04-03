@@ -125,7 +125,7 @@ func Rpc_game_on_battle_end(req, ack *common.NetPack, this *TPlayer) {
 	isWin := req.ReadBool()
 	rank := req.ReadFloat()
 
-	//TODO:zhoumf: 特定动作加经验，比如连杀
+	//TODO: 特定动作加经验，比如连杀
 	exp := uint32(0)
 	if isWin {
 		exp = conf.Const.Exp_Win

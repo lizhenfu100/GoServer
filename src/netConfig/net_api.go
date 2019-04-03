@@ -9,6 +9,11 @@
 	2、无zookeeper的架构，只能重启扩容
 		、节点间的meta信息，须保持一致性
 
+* @ FIXME：一些hash取模定位的节点，依赖了节点总数；节点陆续连接，中途玩家就上来通信，会分配至错误节点
+	gateway，带状态的，一旦分配错误，影响很大
+	friend，若联了不同的db_friend，会找不到数据
+	center，联的同个db，影响不大，只是缓存不友好
+
 * @ author zhoumf
 * @ date 2019-1-18
 ***********************************************************************/
@@ -56,9 +61,10 @@ func CallRpcCenter(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)
 
 // ------------------------------------------------------------
 //! gateway -- 账号hash取模
+var g_cache_gate = make(map[int]*tcp.TCPConn)
 var g_cache_gate_ids []int
 
-func HashGatewayID(accountId uint32) int { //FIXME：考虑用一致性hash，取模方式导致gateway无法动态扩展
+func HashGatewayID(accountId uint32) int { //Optimize：考虑用一致性hash，取模方式导致gateway无法动态扩展
 	length := uint32(len(g_cache_gate_ids))
 	if length == 0 {
 		g_cache_gate_ids = meta.GetModuleIDs("gateway", meta.G_Local.Version)
@@ -71,7 +77,7 @@ func HashGatewayID(accountId uint32) int { //FIXME：考虑用一致性hash，�
 }
 func CallRpcGateway(accountId uint32, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	svrId := HashGatewayID(accountId)
-	if conn := GetTcpConn("gateway", svrId); conn != nil {
+	if conn := GetGatewayConn(svrId); conn != nil {
 		conn.CallRpc(enum.Rpc_gateway_relay_player_msg, func(buf *common.NetPack) {
 			buf.WriteUInt16(rid)
 			buf.WriteUInt32(accountId)
@@ -81,10 +87,18 @@ func CallRpcGateway(accountId uint32, rid uint16, sendFun, recvFun func(*common.
 		gamelog.Error("gateway nil: svrId(%d) rpcId(%d)", svrId, rid)
 	}
 }
+func GetGatewayConn(svrId int) *tcp.TCPConn {
+	conn, _ := g_cache_gate[svrId]
+	if conn == nil || conn.IsClose() {
+		conn = GetTcpConn("gateway", svrId)
+		g_cache_gate[svrId] = conn
+	}
+	return conn
+}
 
 // ------------------------------------------------------------
 //! battle
-var g_cache_battle_conn = make(map[int]*tcp.TCPConn)
+var g_cache_battle = make(map[int]*tcp.TCPConn)
 
 func CallRpcBattle(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	if conn := GetBattleConn(svrId); conn != nil {
@@ -94,30 +108,37 @@ func CallRpcBattle(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)
 	}
 }
 func GetBattleConn(svrId int) *tcp.TCPConn {
-	conn, _ := g_cache_battle_conn[svrId]
+	conn, _ := g_cache_battle[svrId]
 	if conn == nil || conn.IsClose() {
 		conn = GetTcpConn("battle", svrId)
-		g_cache_battle_conn[svrId] = conn
+		g_cache_battle[svrId] = conn
 	}
 	return conn
 }
 
 // ------------------------------------------------------------
-//! game
-var g_cache_game_conn = make(map[int]*tcp.TCPConn)
+//! game  兼容tcp|http,线程安全的
+var g_cache_game = make(map[int]*tcp.TCPConn)
 
 func CallRpcGame(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	if conn := GetGameConn(svrId); conn != nil {
-		conn.CallRpc(rid, sendFun, recvFun)
+	if meta.K_IsGameTcp {
+		if conn := GetGameConn(svrId); conn != nil {
+			conn.CallRpcSafe(rid, sendFun, recvFun)
+			return
+		}
 	} else {
-		gamelog.Error("game nil: svrId(%d) rpcId(%d)", svrId, rid)
+		if addr := GetHttpAddr("game", svrId); addr != "" {
+			http.CallRpc(addr, rid, sendFun, recvFun)
+			return
+		}
 	}
+	gamelog.Error("game nil: svrId(%d) rpcId(%d)", svrId, rid)
 }
 func GetGameConn(svrId int) *tcp.TCPConn {
-	conn, _ := g_cache_game_conn[svrId]
+	conn, _ := g_cache_game[svrId]
 	if conn == nil || conn.IsClose() {
 		conn = GetTcpConn("game", svrId)
-		g_cache_game_conn[svrId] = conn
+		g_cache_game[svrId] = conn
 	}
 	return conn
 }
@@ -145,16 +166,26 @@ func CallRpcFriend(accountId uint32, rid uint16, sendFun, recvFun func(*common.N
 
 // ------------------------------------------------------------
 //! cross -- 随机节点
+var g_cache_cross = make(map[int]*tcp.TCPConn)
+
 func CallRpcCross(rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	ids := meta.GetModuleIDs("cross", meta.G_Local.Version)
 	if length := len(ids); length > 0 {
 		id := ids[rand.Intn(length)]
-		if conn := GetTcpConn("cross", id); conn != nil {
+		if conn := GetCrossConn(id); conn != nil {
 			conn.CallRpc(rid, sendFun, recvFun)
+			return
 		}
-	} else {
-		gamelog.Error("cross nil: rpcId(%d)", rid)
 	}
+	gamelog.Error("cross nil: rpcId(%d)", rid)
+}
+func GetCrossConn(svrId int) *tcp.TCPConn {
+	conn, _ := g_cache_cross[svrId]
+	if conn == nil || conn.IsClose() {
+		conn = GetTcpConn("cross", svrId)
+		g_cache_cross[svrId] = conn
+	}
+	return conn
 }
 
 // ------------------------------------------------------------

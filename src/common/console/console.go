@@ -15,7 +15,6 @@ import (
 	"os"
 	"runtime"
 	"runtime/debug"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -67,7 +66,6 @@ func _Rpc_meta_list2(req, ack *common.NetPack) {
 	version := req.ReadString()
 
 	ids := meta.GetModuleIDs(module, version)
-	sort.Ints(ids)
 	ack.WriteByte(byte(len(ids)))
 	for _, id := range ids {
 		p := meta.GetMeta(module, id)

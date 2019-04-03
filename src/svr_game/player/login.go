@@ -19,9 +19,10 @@ import (
 	"common/format"
 	"gamelog"
 	"generate_out/err"
+	"netConfig/meta"
+	"nets/tcp"
 	"sync"
 	"sync/atomic"
-	"nets/tcp"
 )
 
 // -------------------------------------
@@ -29,11 +30,17 @@ import (
 // Notice：登录、创建角色，可做成普通rpc，用以建立玩家缓存
 func Rpc_game_login(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	accountId := req.ReadUInt32()
-	token := req.ReadUInt32()
 
-	if false == CheckLoginToken(accountId, token) {
-		ack.WriteUInt16(err.Token_verify_err)
-		return
+	//直连login，须校验登录token；否则是gateway校验的
+	for _, v := range meta.G_Local.ConnectLst {
+		if v == "login" {
+			token := req.ReadUInt32()
+			if false == CheckLoginToken(accountId, token) {
+				ack.WriteUInt16(err.Token_verify_err)
+				return
+			}
+			break
+		}
 	}
 	//账户下可有多个角色的游戏，此处应下发角色列表，供client选取后再进游戏
 

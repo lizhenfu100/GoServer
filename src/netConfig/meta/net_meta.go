@@ -29,12 +29,15 @@ import (
 	"common"
 	"common/std"
 	"gamelog"
+	"sort"
 	"sync"
 )
 
 var (
 	G_Metas sync.Map //<{module,svrId}, pMeta>
 	G_Local *Meta
+
+	K_IsGameTcp bool //game节点是tcp还是http
 )
 
 type Meta struct {
@@ -109,6 +112,9 @@ func InitConf(list []Meta) {
 func AddMeta(ptr *Meta) {
 	gamelog.Debug("AddMeta: %v", ptr)
 	G_Metas.Store(std.KeyPair{ptr.Module, ptr.SvrID}, ptr)
+	if ptr.Module == "game" {
+		K_IsGameTcp = ptr.TcpPort > 0
+	}
 }
 func GetMeta(module string, svrID int) *Meta {
 	if v, ok := G_Metas.Load(std.KeyPair{module, svrID}); ok && !v.(*Meta).IsClosed {
@@ -146,7 +152,7 @@ func DelMeta(module string, svrID int) {
 	G_Metas.Delete(std.KeyPair{module, svrID})
 }
 
-func GetModuleIDs(module, version string) (ret []int) { //Notice:排序是不稳定的
+func GetModuleIDs(module, version string) (ret []int) {
 	G_Metas.Range(func(k, v interface{}) bool {
 		if ptr := v.(*Meta); ptr.Module == module && !ptr.IsClosed &&
 			common.IsMatchVersion(ptr.Version, version) {
@@ -154,6 +160,7 @@ func GetModuleIDs(module, version string) (ret []int) { //Notice:排序是不稳
 		}
 		return true
 	})
+	sort.Ints(ret)
 	return
 }
 
