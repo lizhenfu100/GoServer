@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var g_regFreq sync.Map //make(map[string]*timer.OpFreq, 5000)
+var g_regFreq sync.Map //<string, *timer.OpFreq>
 
 func AccountRegLimit() { //限制同ip账号注册频率
 	if !conf.IsDebug {

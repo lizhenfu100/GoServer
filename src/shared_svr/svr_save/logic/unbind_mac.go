@@ -6,11 +6,13 @@ import (
 	"common/tool/email"
 	"dbmgo"
 	"fmt"
+	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"net/url"
 	"netConfig/meta"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -38,7 +40,7 @@ func Http_unbind_mac(w http.ResponseWriter, r *http.Request) {
 		ack = "Unbind ok"
 	}
 }
-func Rpc_save_ask_unbind_mac(req, ack *common.NetPack) {
+func Rpc_save_unbind_mac_by_email(req, ack *common.NetPack) {
 	mac := req.ReadString()
 	emailAddr := req.ReadString()
 	language := req.ReadString()
@@ -60,4 +62,23 @@ func Rpc_save_ask_unbind_mac(req, ack *common.NetPack) {
 		u.RawQuery = q.Encode()
 		email.SendMail("Unbind Device", emailAddr, u.String(), language)
 	}
+}
+
+var g_unbindTime sync.Map //<TSaveData.Key, int64>
+
+func Rpc_save_unbind_mac(req, ack *common.NetPack) {
+	mac, ptr := req.ReadString(), &MacInfo{}
+
+	if ok, _ := dbmgo.Find(kDBMac, "_id", mac, ptr); ok {
+		timeNow := time.Now().Unix()
+		if timeOld, ok := g_unbindTime.Load(ptr.Key); ok {
+			if timeNow-timeOld.(int64) < 3*24*3600 { //解绑，三天一次
+				ack.WriteUInt16(err.Operate_too_often)
+				return
+			}
+		}
+		g_unbindTime.Store(ptr.Key, timeNow)
+		dbmgo.RemoveOneSync(kDBMac, bson.M{"_id": mac})
+	}
+	ack.WriteUInt16(err.Success)
 }

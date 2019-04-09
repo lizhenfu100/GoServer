@@ -47,7 +47,7 @@ func Rpc_center_get_bind_info(req, ack *common.NetPack) {
 	name := req.ReadString()
 	key := req.ReadString()
 
-	if account := GetAccountByName(name); account == nil {
+	if account := GetAccountByName(name); account != nil {
 		if v, ok := account.BindInfo[key]; ok {
 			ack.WriteString(v)
 			return
@@ -123,8 +123,8 @@ func (self *TAccount) forceBind(k, v string) {
 func Http_bind_info_force(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	name := q.Get("name")
-	k := q.Get("name")
-	v := q.Get("name")
+	k := q.Get("k")
+	v := q.Get("v")
 	flag := q.Get("flag")
 	timeFlag, _ := strconv.ParseInt(flag, 10, 64)
 

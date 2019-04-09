@@ -30,7 +30,7 @@ var (
 )
 
 func SendMail(subject, target, body, language string) error {
-	if g_dialer == nil {
+	if g_dialer == nil || g_dialer.Password != conf.SvrCsv.EmailPasswd {
 		g_dialer = gomail.NewDialer(
 			conf.SvrCsv.EmailHost,
 			conf.SvrCsv.EmailPort,
