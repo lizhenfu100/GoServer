@@ -29,6 +29,7 @@ import (
 	"netConfig/meta"
 	"nets/http"
 	"nets/tcp"
+	"sync"
 )
 
 // ------------------------------------------------------------
@@ -62,17 +63,12 @@ func CallRpcCenter(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)
 
 // ------------------------------------------------------------
 //! gateway -- 账号hash取模
-var g_cache_gate = make(map[int]*tcp.TCPConn)
-var g_cache_gate_ids []int
+var g_cache_gate sync.Map //<int, *tcp.TCPConn>
 
 func HashGatewayID(accountId uint32) int { //Optimize：考虑用一致性hash，取模方式导致gateway无法动态扩展
-	length := uint32(len(g_cache_gate_ids))
-	if length == 0 {
-		g_cache_gate_ids = meta.GetModuleIDs("gateway", meta.G_Local.Version)
-		length = uint32(len(g_cache_gate_ids))
-	}
-	if length > 0 {
-		return g_cache_gate_ids[accountId%length]
+	ids := meta.GetModuleIDs("gateway", meta.G_Local.Version)
+	if length := uint32(len(ids)); length > 0 {
+		return ids[accountId%length]
 	}
 	return -1
 }
@@ -88,38 +84,24 @@ func CallRpcGateway(accountId uint32, rid uint16, sendFun, recvFun func(*common.
 		gamelog.Error("gateway nil: svrId(%d) rpcId(%d)", svrId, rid)
 	}
 }
-func GetGatewayConn(svrId int) *tcp.TCPConn {
-	conn, _ := g_cache_gate[svrId]
-	if conn == nil || conn.IsClose() {
-		conn = GetTcpConn("gateway", svrId)
-		g_cache_gate[svrId] = conn
+func GetGatewayConn(svrId int) (ret *tcp.TCPConn) {
+	v, ok := g_cache_gate.Load(svrId)
+	isRefresh := false
+	if !ok || v == nil { //【inferface{nil} != nil】 ==> 【v = inferface{*tcp.TCPConn,nil}】
+		isRefresh = true
+	} else if ret = v.(*tcp.TCPConn); ret == nil || ret.IsClose() {
+		isRefresh = true
 	}
-	return conn
+	if isRefresh {
+		ret = GetTcpConn("gateway", svrId)
+		g_cache_gate.Store(svrId, ret)
+	}
+	return
 }
 
 // ------------------------------------------------------------
-//! battle
-var g_cache_battle = make(map[int]*tcp.TCPConn)
-
-func CallRpcBattle(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	if conn := GetBattleConn(svrId); conn != nil {
-		conn.CallRpc(rid, sendFun, recvFun)
-	} else {
-		gamelog.Error("battle nil: svrId(%d) rpcId(%d)", svrId, rid)
-	}
-}
-func GetBattleConn(svrId int) *tcp.TCPConn {
-	conn, _ := g_cache_battle[svrId]
-	if conn == nil || conn.IsClose() {
-		conn = GetTcpConn("battle", svrId)
-		g_cache_battle[svrId] = conn
-	}
-	return conn
-}
-
-// ------------------------------------------------------------
-//! game  兼容tcp|http,线程安全的
-var g_cache_game = make(map[int]*tcp.TCPConn)
+//! game  兼容tcp|http，线程安全的
+var g_cache_game sync.Map //<int, *tcp.TCPConn>
 
 func CallRpcGame(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	if conf.IsTcpGame {
@@ -135,13 +117,19 @@ func CallRpcGame(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)) 
 	}
 	gamelog.Error("game nil: svrId(%d) rpcId(%d)", svrId, rid)
 }
-func GetGameConn(svrId int) *tcp.TCPConn {
-	conn, _ := g_cache_game[svrId]
-	if conn == nil || conn.IsClose() {
-		conn = GetTcpConn("game", svrId)
-		g_cache_game[svrId] = conn
+func GetGameConn(svrId int) (ret *tcp.TCPConn) {
+	v, ok := g_cache_game.Load(svrId)
+	isRefresh := false
+	if !ok || v == nil {
+		isRefresh = true
+	} else if ret = v.(*tcp.TCPConn); ret == nil || ret.IsClose() {
+		isRefresh = true
 	}
-	return conn
+	if isRefresh {
+		ret = GetTcpConn("game", svrId)
+		g_cache_game.Store(svrId, ret)
+	}
+	return
 }
 
 // ------------------------------------------------------------
@@ -190,10 +178,29 @@ func GetCrossConn(svrId int) *tcp.TCPConn {
 }
 
 // ------------------------------------------------------------
-//! sdk -- 单点
-const kSdkSvrId = 0
+//! battle
+var g_cache_battle = make(map[int]*tcp.TCPConn)
 
+func CallRpcBattle(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)) {
+	if conn := GetBattleConn(svrId); conn != nil {
+		conn.CallRpc(rid, sendFun, recvFun)
+	} else {
+		gamelog.Error("battle nil: svrId(%d) rpcId(%d)", svrId, rid)
+	}
+}
+func GetBattleConn(svrId int) *tcp.TCPConn {
+	conn, _ := g_cache_battle[svrId]
+	if conn == nil || conn.IsClose() {
+		conn = GetTcpConn("battle", svrId)
+		g_cache_battle[svrId] = conn
+	}
+	return conn
+}
+
+// ------------------------------------------------------------
+//! sdk -- 单点
 func CallRpcSdk(rid uint16, sendFun, recvFun func(*common.NetPack)) {
+	const kSdkSvrId = 0
 	if addr := GetHttpAddr("sdk", kSdkSvrId); addr != "" {
 		http.CallRpc(addr, rid, sendFun, recvFun)
 	} else {

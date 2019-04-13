@@ -47,7 +47,8 @@ type Backup struct {
 	WeekDays    std.Ints //[1, 2]  周几开启
 	OnlintLimit int32    //在线量超过，关闭备份
 	IsAutoOpen  bool     //是否自动开启，按WeekDays时间
-	IsOpen      int32    //原子读写
+
+	isOpen int32 //原子读写
 }
 
 // ------------------------------------------------------------
@@ -87,7 +88,7 @@ func Http_backup_force(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	n, _ := strconv.Atoi(q.Get("force"))
-	atomic.StoreInt32(&G_Backup.IsOpen, int32(n))
+	atomic.StoreInt32(&G_Backup.isOpen, int32(n))
 	G_Backup.RLock()
 	ack, _ := json.MarshalIndent(G_Backup, "", "     ")
 	G_Backup.RUnlock()
@@ -101,14 +102,14 @@ func (self *Backup) InitDB() {
 		dbmgo.Insert(dbmgo.KTableArgs, self)
 	}
 	if self.WeekDays.Index(int(time.Now().Weekday())) < 0 {
-		atomic.StoreInt32(&G_Backup.IsOpen, 0)
+		atomic.StoreInt32(&G_Backup.isOpen, 0)
 	} else if self.IsAutoOpen {
-		atomic.StoreInt32(&G_Backup.IsOpen, 1)
+		atomic.StoreInt32(&G_Backup.isOpen, 1)
 	}
 }
 func (self *Backup) UpdateDB() { dbmgo.UpdateId(dbmgo.KTableArgs, self.DBKey, self) }
 func (self *Backup) IsValid(key string) bool {
-	if atomic.LoadInt32(&G_Backup.IsOpen) > 0 {
+	if atomic.LoadInt32(&G_Backup.isOpen) > 0 {
 		if _, ok := g_keyMap.Load(key); !ok {
 			g_keyMap.Store(key, std.Empty{})
 			return true
@@ -125,9 +126,9 @@ func (self *Backup) OnEnterNextDay() {
 	isAutoOpen := G_Backup.IsAutoOpen
 	G_Backup.RUnlock()
 	if idx < 0 {
-		atomic.StoreInt32(&G_Backup.IsOpen, 0)
+		atomic.StoreInt32(&G_Backup.isOpen, 0)
 	} else if isAutoOpen {
-		atomic.StoreInt32(&G_Backup.IsOpen, 1)
+		atomic.StoreInt32(&G_Backup.isOpen, 1)
 		g_keyMap = sync.Map{}
 	}
 }
@@ -150,7 +151,7 @@ func (self *Backup) OnEnterNextHour() {
 			backBuf.ReadUInt16()
 			onlineCnt := backBuf.ReadInt32()
 			if onlineCnt > kOnlintLimit {
-				atomic.StoreInt32(&G_Backup.IsOpen, 0)
+				atomic.StoreInt32(&G_Backup.isOpen, 0)
 			}
 		}
 	})

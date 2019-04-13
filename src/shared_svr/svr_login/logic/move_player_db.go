@@ -27,7 +27,6 @@ import (
 )
 
 func Rpc_login_move_player_db(req, ack *common.NetPack) {
-	gameName := req.ReadString()
 	version := req.ReadString()
 	//读取玩家数据
 	accountId := req.ReadUInt32()
@@ -65,7 +64,7 @@ func Rpc_login_move_player_db(req, ack *common.NetPack) {
 		netConfig.CallRpcCenter(1, enum.Rpc_center_set_game_info,
 			func(buf *common.NetPack) {
 				buf.WriteUInt32(accountId)
-				buf.WriteString(gameName)
+				buf.WriteString(conf.GameName)
 				info := gameInfo.TGameInfo{
 					GameSvrId:  gameSvrId % 10000,
 					LoginSvrId: meta.G_Local.SvrID % 10000,

@@ -20,9 +20,11 @@ import (
 	"common"
 	"common/file"
 	"conf"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"gamelog"
+	"generate_out/err"
 	http "github.com/valyala/fasthttp"
 	"netConfig/meta"
 	"path"
@@ -65,10 +67,26 @@ func HandleFunc(path string, f http.RequestHandler) { _map[path] = f }
 // ------------------------------------------------------------
 //! 模块注册
 func _reg_to_svr(ctx *http.RequestCtx) {
+	errCode := err.Success //! 创建回复
+	defer func() {
+		ack := make([]byte, 2)
+		binary.LittleEndian.PutUint16(ack, errCode)
+		ctx.Write(ack)
+	}()
+
 	pMeta := new(meta.Meta)
-	if err := common.B2T(ctx.Request.Body(), pMeta); err != nil {
-		gamelog.Error("common.B2T: " + err.Error())
+	if e := common.B2T(ctx.Request.Body(), pMeta); e != nil {
+		errCode = err.Convert_err
+		fmt.Println(e.Error())
 		return
+	}
+	if p := meta.GetMeta(pMeta.Module, pMeta.SvrID); p != nil {
+		if p.IP != pMeta.IP || p.OutIP != pMeta.OutIP {
+			//防止配置错误，出现外网节点顶替
+			errCode = err.Data_repeat
+			fmt.Println("Error: RegistToSvr repeat: ", pMeta)
+			return
+		}
 	}
 	meta.AddMeta(pMeta)
 	appendNetMeta(pMeta)

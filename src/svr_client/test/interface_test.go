@@ -5,6 +5,17 @@ import (
 	"testing"
 )
 
+// go test -v ./src/svr_client/test/interface_test.go
+
+func Test_interface_nil(t *testing.T) {
+	ret := GetNilT1()
+	var p interface{} = ret
+	fmt.Println(p == nil) //false
+
+	var p2 interface{} = GetNilT1()
+	fmt.Println(p2 == nil) //false
+}
+
 // interface只关心接口“输入什么、输出什么”，不关心接口具体属于谁，运行时能调到即可
 // 基于组合：因没有继承体系，一个对象无法访问“父对象”的数据，只能通过包含(组件)将所需结构加入自己内部
 /* 继承体系，相比于Go的组合，有什么要吐槽的？
@@ -40,6 +51,7 @@ func (self *T2) Fun2(a int) bool {
 	fmt.Printf("bbbbb22222")
 	return true
 }
+func GetNilT1() *T1 { return nil }
 
 func Test_Interface(t *testing.T) {
 	t1 := T1{}

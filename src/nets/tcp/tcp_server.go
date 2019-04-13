@@ -202,24 +202,23 @@ func (self *TCPServer) SetListener(l net.Listener) {
 // 模块注册
 var g_reg_conn_map sync.Map //<{module,svrId}, *TCPConn>
 
-func _Rpc_regist(req, ack *common.NetPack, conn *TCPConn) {
+func _Rpc_regist(req, _ *common.NetPack, conn *TCPConn) {
 	pMeta := new(meta.Meta)
 	pMeta.BufToData(req)
+	if p := meta.GetMeta(pMeta.Module, pMeta.SvrID); p != nil {
+		if p.IP != pMeta.IP || p.OutIP != pMeta.OutIP {
+			//防止配置错误，出现外网节点顶替
+			conn.Close()
+			fmt.Println("Error: RegistToSvr repeat: ", pMeta)
+			return
+		}
+	}
 	conn.UserPtr = pMeta
-
-	isRegist := false
-	if ptr := FindRegModule(pMeta.Module, pMeta.SvrID); ptr == nil || ptr.IsClose() {
-		isRegist = true //该模块连接无效，可添加
-	} else if ptr := meta.GetMeta(pMeta.Module, pMeta.SvrID); ptr == nil || ptr.Version != pMeta.Version {
-		isRegist = true //该模块有新版本，可覆盖
-	}
-	if isRegist {
-		g_reg_conn_map.Store(std.KeyPair{pMeta.Module, pMeta.SvrID}, conn)
-		meta.AddMeta(pMeta)
-		fmt.Println("RegistToSvr: ", pMeta)
-	}
+	meta.AddMeta(pMeta)
+	g_reg_conn_map.Store(std.KeyPair{pMeta.Module, pMeta.SvrID}, conn)
+	fmt.Println("RegistToSvr: ", pMeta)
 }
-func _Rpc_unregist(req, ack *common.NetPack, conn *TCPConn) {
+func _Rpc_unregist(req, _ *common.NetPack, conn *TCPConn) {
 	if pMeta, ok := conn.UserPtr.(*meta.Meta); ok {
 		if pConn := FindRegModule(pMeta.Module, pMeta.SvrID); pConn == nil || pConn.IsClose() {
 			fmt.Println("UnRegist Svr: ", pMeta)
