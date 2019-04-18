@@ -4,7 +4,6 @@ import (
 	"common"
 	"common/timer"
 	"common/tool/email"
-	"fmt"
 	"gamelog"
 	"io/ioutil"
 	"math/rand"
@@ -35,9 +34,7 @@ func UpdatePasswd() {
 	time.AfterFunc(time.Duration(leftSec)*time.Second, UpdatePasswd)
 
 	for _, v := range g_emails {
-		if e := email.SendMail("凉屋GM密码", v, g_passwd, ""); e != nil {
-			fmt.Println(e.Error())
-		}
+		email.SendMail("凉屋GM密码", v, g_passwd, "")
 	}
 }
 

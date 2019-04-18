@@ -35,6 +35,7 @@ import (
 	"netConfig/meta"
 	"netConfig/register"
 	"nets/http"
+	http2 "nets/http/http"
 	"os"
 	"strings"
 	"time"
@@ -68,6 +69,7 @@ func main() {
 
 	//初始化日志系统
 	gamelog.InitLogger("afk")
+	http.InitClient(http2.Client)
 	InitConf()
 	defer time.Sleep(time.Minute)
 

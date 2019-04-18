@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"gamelog"
 	"netConfig/meta"
+	"nets/http"
+	http2 "nets/http/http"
 )
 
 func init() {
@@ -19,4 +21,5 @@ func init() {
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
 	meta.G_Local = meta.GetMeta("client", 0)
+	http.InitClient(http2.Client)
 }

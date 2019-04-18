@@ -108,6 +108,7 @@ func upload(pf_id, uid, mac string, data []byte, extra, version string) uint16 {
 		pSave.Data = data
 		pSave.UpTime = now
 		pSave.Extra = extra
+		pSave.Version = version
 		if dbmgo.DataBase().C(kDBMac).Insert(&MacInfo{mac, key}) == nil {
 			pSave.MacCnt++
 			pSave.ChTime = now

@@ -17,10 +17,10 @@ package logic
 import (
 	"dbmgo"
 	"gamelog"
-	"nets/http"
+	"nets/http/http"
+	"nets/tcp"
 	"os"
 	"svr_game/player"
-	"nets/tcp"
 )
 
 func Shutdown(args []string) {

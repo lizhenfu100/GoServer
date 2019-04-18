@@ -1,6 +1,6 @@
 // +build !debug
 
-package conf
+package assert
 
 const (
 	IsDebug = false

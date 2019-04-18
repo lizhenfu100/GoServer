@@ -2,6 +2,7 @@ package console
 
 import (
 	"common"
+	"common/assert"
 	"common/file"
 	"common/tool/wechat"
 	"conf"
@@ -11,6 +12,7 @@ import (
 	"math/rand"
 	"netConfig/meta"
 	"nets/http"
+	http2 "nets/http/http"
 	"nets/tcp"
 	"os"
 	"runtime"
@@ -32,6 +34,7 @@ var g_cmds = map[string]cmdFunc{ //Notice：注意下列函数的线程安全性
 
 func Init() {
 	rand.Seed(time.Now().Unix())
+	http.InitClient(http2.Client)
 	tcp.G_HandleFunc[enum.Rpc_log] = _Rpc_log1
 	http.G_HandleFunc[enum.Rpc_log] = _Rpc_log2
 	tcp.G_HandleFunc[enum.Rpc_gm_cmd] = _Rpc_gm_cmd1
@@ -117,7 +120,9 @@ func _Rpc_gm_cmd2(req, ack *common.NetPack) {
 	}()
 	if cmd, ok := g_cmds[args[0]]; ok {
 		cmd(args)
-		return
+		ack.WriteString("ok")
+	} else {
+		ack.WriteString("fail")
 	}
 }
 
@@ -139,7 +144,7 @@ func cmd_cpu(args []string) {
 	fmt.Println(runtime.NumCPU(), " cpus and ", runtime.GOMAXPROCS(0), " in use")
 }
 func cmd_setcpu(args []string) {
-	if conf.IsDebug {
+	if assert.IsDebug {
 		n, _ := strconv.Atoi(args[1])
 		runtime.GOMAXPROCS(n)
 		fmt.Println(runtime.NumCPU(), " cpus and ", runtime.GOMAXPROCS(0), " in use")

@@ -26,13 +26,11 @@ const (
 )
 
 type TAccount struct {
-	AccountID   uint32 `bson:"_id"`
-	Name        string //账户名
-	Password    string //密码 //FIXME:可以StrHash后存成uint32，省不少字节
-	CreateTime  int64
-	LoginTime   int64
-	ForbidTime  int64
-	IsForbidden bool //是否禁用
+	AccountID  uint32 `bson:"_id"`
+	Name       string //账户名
+	Password   string //密码 //FIXME:可以StrHash后存成uint32，省不少字节
+	CreateTime int64
+	LoginTime  int64
 
 	BindInfo map[string]string //email、phone、qq、wechat
 
@@ -86,8 +84,6 @@ func (self *TAccount) Login(passwd string) (errcode uint16) {
 		errcode = err.Account_none
 	} else if !self.CheckPasswd(passwd) {
 		errcode = err.Passwd_err
-	} else if self.IsForbidden {
-		errcode = err.Account_forbidden
 	} else {
 		errcode = err.Success
 		timeNow := time.Now().Unix()
@@ -156,17 +152,6 @@ func Rpc_center_create_visitor(req, ack *common.NetPack) {
 	}
 	ack.WriteString(name)
 	ack.WriteString(passwd)
-}
-func Rpc_center_account_forbid(req, ack *common.NetPack) {
-	id := req.ReadUInt32()
-
-	if p := GetAccountById(id); p != nil && !G_WhiteList.Have(p.Name) {
-		p.IsForbidden = true
-		p.ForbidTime = time.Now().Unix()
-		dbmgo.UpdateId(KDBTable, p.AccountID, bson.M{"$set": bson.M{
-			"forbidtime":  p.ForbidTime,
-			"isforbidden": true}})
-	}
 }
 
 // ------------------------------------------------------------

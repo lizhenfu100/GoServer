@@ -17,7 +17,7 @@ package shutdown
 import (
 	"dbmgo"
 	"gamelog"
-	"nets/http"
+	"nets/http/http"
 	"nets/tcp"
 	"os"
 )

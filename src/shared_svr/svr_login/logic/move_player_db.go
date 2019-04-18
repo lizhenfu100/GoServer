@@ -27,6 +27,7 @@ import (
 )
 
 func Rpc_login_move_player_db(req, ack *common.NetPack) {
+	gameName := req.ReadString()
 	version := req.ReadString()
 	//读取玩家数据
 	accountId := req.ReadUInt32()
@@ -38,8 +39,9 @@ func Rpc_login_move_player_db(req, ack *common.NetPack) {
 		mac = req.ReadString()
 		saveData = req.ReadLenBuf()
 	}
-
-	if !format.CheckName(name) {
+	if gameName != conf.GameName {
+		ack.WriteUInt16(err.LoginSvr_not_match)
+	} else if !format.CheckName(name) {
 		ack.WriteUInt16(err.Name_format_err)
 	} else if gameSvrId := GetFreeGameSvr(version); gameSvrId <= 0 {
 		ack.WriteUInt16(err.None_free_game_server)

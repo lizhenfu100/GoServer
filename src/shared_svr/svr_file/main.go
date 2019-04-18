@@ -6,7 +6,6 @@ import (
 	"conf"
 	"flag"
 	"gamelog"
-	"generate_out/rpc/enum"
 	_ "generate_out/rpc/shared_svr/svr_file"
 	"netConfig"
 	"netConfig/meta"
@@ -41,7 +40,6 @@ func InitConf() {
 	console.Init()
 
 	register.RegHttpRpc(map[uint16]register.HttpRpc{
-		enum.Rpc_file_update_list: logic.Rpc_file_update_list,
 		116: logic.Rpc_file_update_list, //旧版本
 	})
 }

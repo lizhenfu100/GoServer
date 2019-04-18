@@ -7,8 +7,8 @@ import (
 	fasthttp2 "github.com/valyala/fasthttp"
 	http2 "net/http"
 	"net/url"
-	"nets/fasthttp"
-	"nets/http"
+	"nets/http/fasthttp"
+	"nets/http/http"
 	"nets/tcp"
 	"svr_client/test/qps"
 )

@@ -1,19 +1,3 @@
-/***********************************************************************
-* @ HTTP
-* @ brief
-	1、非常不安全，恶意劫持路由节点，即可知道发往后台的数据，包括密码~
-
-* @ http.Request
-	r.RequestURI	除去域名或ip的url
-		/backup_conf?passwd=&weekdays=&onlintlimit=&auto=&force=
-	r.URL.RawQuery 	加密后的参数，不含?
-		passwd=&weekdays=&onlintlimit=&auto=&force=
-	r.URL.Path
-		/backup_conf
-
-* @ author zhoumf
-* @ date 2019-3-18
-***********************************************************************/
 package http
 
 import (
@@ -26,13 +10,15 @@ import (
 	"gamelog"
 	"generate_out/err"
 	"io"
-	"io/ioutil"
-	"net/http"
 	"netConfig/meta"
 	"path"
 	"svr_client/test/qps"
 	"sync"
 )
+
+//TODO:zhoumf: 原生HttpHandle的参数与fasthttp如何统一？
+//TODO:zhoumf: w http.ResponseWriter 可替换为 w io.Writer
+//TODO:zhoumf: r *http.Request 关键是如何统一接口，能取到get/post参数
 
 //idx1 := strings.Index(addr, "//") + 2
 //idx2 := strings.LastIndex(addr, ":")
@@ -40,40 +26,18 @@ import (
 //port := common.Atoi(addr[idx2+1:])
 func Addr(ip string, port uint16) string { return fmt.Sprintf("http://%s:%d", ip, port) }
 
-var _svr http.Server
-
-func NewHttpServer(port uint16, module string, svrId int) error {
+func InitClient(c iClient) { Client = c }
+func InitSvr(module string, svrId int) {
 	if conf.TestFlag_CalcQPS {
 		go qps.WatchLoop()
 	}
 	g_svraddr_path = fmt.Sprintf("%s/%s/%d/reg_addr.csv", file.GetExeDir(), module, svrId)
 	loadCacheNetMeta()
-	http.HandleFunc("/reg_to_svr", _reg_to_svr)
-	http.HandleFunc("/client_rpc", _HandleRpc)
-	_svr.Addr = fmt.Sprintf(":%d", port)
-	return _svr.ListenAndServe()
-}
-func CloseServer() { _svr.Close() }
-
-func ReadRequest(r *http.Request) (req *common.NetPack) {
-	var err error
-	var buf []byte
-	if r.ContentLength > 0 { //http读大数据，r.ContentLength是-1
-		buf = make([]byte, r.ContentLength)
-		_, err = io.ReadFull(r.Body, buf)
-	} else {
-		buf, err = ioutil.ReadAll(r.Body)
-	}
-	if r.Body.Close(); err != nil {
-		gamelog.Error("ReadBody: " + err.Error())
-		return nil
-	}
-	return common.NewNetPack(buf)
 }
 
 // ------------------------------------------------------------
 //! 模块注册
-func _reg_to_svr(w http.ResponseWriter, r *http.Request) {
+func Reg_to_svr(w io.Writer, req []byte) {
 	errCode := err.Success //! 创建回复
 	defer func() {
 		ack := make([]byte, 2)
@@ -81,9 +45,8 @@ func _reg_to_svr(w http.ResponseWriter, r *http.Request) {
 		w.Write(ack)
 	}()
 
-	buf, _ := ioutil.ReadAll(r.Body)
 	pMeta := new(meta.Meta)
-	if e := common.B2T(buf, pMeta); e != nil {
+	if e := common.B2T(req, pMeta); e != nil {
 		errCode = err.Convert_err
 		fmt.Println(e.Error())
 		return
@@ -111,15 +74,13 @@ var (
 )
 
 func loadCacheNetMeta() {
-	records, err := file.ReadCsv(g_svraddr_path)
-	if err != nil {
-		return
-	}
-	metas := make([]meta.Meta, len(records))
-	for i := 0; i < len(records); i++ {
-		json.Unmarshal(common.S2B(records[i][0]), &metas[i])
-		meta.AddMeta(&metas[i])
-		fmt.Println("load meta cache: ", metas[i])
+	if records, e := file.ReadCsv(g_svraddr_path); e == nil {
+		metas := make([]meta.Meta, len(records))
+		for i := 0; i < len(records); i++ {
+			json.Unmarshal(common.S2B(records[i][0]), &metas[i])
+			meta.AddMeta(&metas[i])
+			fmt.Println("load meta cache: ", metas[i])
+		}
 	}
 }
 func appendNetMeta(pMeta *meta.Meta) {
@@ -127,9 +88,9 @@ func appendNetMeta(pMeta *meta.Meta) {
 		return //有zookeeper实现重启恢复，不必本地缓存
 	}
 	_mutex.Lock()
-	records, err := file.ReadCsv(g_svraddr_path)
+	records, e := file.ReadCsv(g_svraddr_path)
 	_mutex.Unlock()
-	if err == nil {
+	if e == nil {
 		pMeta2 := new(meta.Meta)
 		for i := 0; i < len(records); i++ {
 			json.Unmarshal(common.S2B(records[i][0]), pMeta2)
@@ -141,9 +102,9 @@ func appendNetMeta(pMeta *meta.Meta) {
 	b, _ := json.Marshal(pMeta)
 	dir, name := path.Split(g_svraddr_path)
 	_mutex.Lock()
-	err = file.AppendCsv(dir, name, []string{common.B2S(b)})
+	e = file.AppendCsv(dir, name, []string{common.B2S(b)})
 	_mutex.Unlock()
-	if err != nil {
-		gamelog.Error("AppendSvrAddrCsv: " + err.Error())
+	if e != nil {
+		gamelog.Error("AppendSvrAddrCsv: " + e.Error())
 	}
 }

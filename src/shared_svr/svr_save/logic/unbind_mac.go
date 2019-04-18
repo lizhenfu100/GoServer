@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"netConfig/meta"
+	"shared_svr/svr_save/conf"
 	"strconv"
 	"sync"
 	"time"
@@ -64,21 +65,37 @@ func Rpc_save_unbind_mac_by_email(req, ack *common.NetPack) {
 	}
 }
 
-var g_unbindTime sync.Map //<TSaveData.Key, int64>
+// ------------------------------------------------------------
+// 直接解绑，限一周一次
+var g_unbindTime1 sync.Map //<MacInfo.Key, int64>
+var g_unbindTime2 sync.Map //<MacInfo.Mac, int64>
 
 func Rpc_save_unbind_mac(req, ack *common.NetPack) {
 	mac, ptr := req.ReadString(), &MacInfo{}
 
 	if ok, _ := dbmgo.Find(kDBMac, "_id", mac, ptr); ok {
 		timeNow := time.Now().Unix()
-		if timeOld, ok := g_unbindTime.Load(ptr.Key); ok {
-			if timeNow-timeOld.(int64) < 3*24*3600 { //解绑，三天一次
-				ack.WriteUInt16(err.Operate_too_often)
-				return
-			}
+		if !canUnbindMac(ptr.Key, mac, timeNow) {
+			ack.WriteUInt16(err.Operate_too_often)
+			return
+		} else {
+			g_unbindTime1.Store(ptr.Key, timeNow)
+			g_unbindTime2.Store(ptr.Mac, timeNow)
+			dbmgo.RemoveOneSync(kDBMac, bson.M{"_id": mac})
 		}
-		g_unbindTime.Store(ptr.Key, timeNow)
-		dbmgo.RemoveOneSync(kDBMac, bson.M{"_id": mac})
 	}
 	ack.WriteUInt16(err.Success)
+}
+func canUnbindMac(key, mac string, timeNow int64) bool {
+	if timeOld, ok := g_unbindTime1.Load(key); ok {
+		if timeNow-timeOld.(int64) < int64(conf.Const.MacUnbindPeriod) {
+			return false
+		}
+	}
+	if timeOld, ok := g_unbindTime2.Load(mac); ok {
+		if timeNow-timeOld.(int64) < int64(conf.Const.MacUnbindPeriod) {
+			return false
+		}
+	}
+	return true
 }

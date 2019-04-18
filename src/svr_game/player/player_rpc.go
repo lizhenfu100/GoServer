@@ -15,11 +15,11 @@ import (
 	"common/std/compress"
 	"gamelog"
 	"generate_out/rpc/enum"
-	mhttp "nets/http"
 	"net/http"
 	"netConfig"
-	"sync/atomic"
+	http2 "nets/http/http"
 	"nets/tcp"
+	"sync/atomic"
 )
 
 type PlayerRpc func(req, ack *common.NetPack, this *TPlayer)
@@ -33,7 +33,7 @@ func RegPlayerRpc(list map[uint16]PlayerRpc) {
 		G_PlayerHandleFunc[k] = v
 	}
 	tcp.RegHandlePlayerRpc(_PlayerRpcTcp)    //tcp 直连
-	mhttp.RegHandlePlayerRpc(_PlayerRpcHttp) //http 直连
+	http2.RegHandlePlayerRpc(_PlayerRpcHttp) //http 直连
 }
 func DoPlayerRpc(this *TPlayer, rpcId uint16, req, ack *common.NetPack) bool {
 	if msgFunc := G_PlayerHandleFunc[rpcId]; msgFunc != nil {
@@ -54,10 +54,11 @@ func _PlayerRpcTcp(req, ack *common.NetPack, conn *tcp.TCPConn) bool {
 	return G_PlayerHandleFunc[rpcId] != nil
 }
 func _PlayerRpcHttp(w http.ResponseWriter, r *http.Request) {
-	req := mhttp.ReadRequest(r) //! 接收信息
-	if req == nil {
+	buf := http2.ReadRequest(r) //! 接收信息
+	if buf == nil {
 		return
 	}
+	req := common.NewNetPack(buf)
 	msgId := req.GetOpCode()
 	if msgId >= enum.RpcEnumCnt {
 		gamelog.Error("PlayerMsg(%d) Not Regist", msgId)

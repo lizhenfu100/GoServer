@@ -34,10 +34,11 @@ var SvrCsv struct {
 	//kHost, kPort   = "smtp.qq.com", 465
 	//kUser, kPasswd = "3workman@gmail.com", "zmf890104"
 	//kHost, kPort   = "smtp.gmail.com", 465
-	EmailUser   string
-	EmailPasswd string
-	EmailHost   string
-	EmailPort   int
+	EmailUser     []string
+	EmailPasswd   []string
+	EmailHost     string
+	EmailPort     int
+	EmailLanguage string //默认语言，参见language.go
 
 	WechatCorpId  string //企业id
 	WechatSecret  string //应用的Secret

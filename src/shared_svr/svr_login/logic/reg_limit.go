@@ -2,12 +2,11 @@ package logic
 
 import (
 	"common"
+	"common/assert"
 	"common/timer"
-	"conf"
 	"generate_out/err"
 	"generate_out/rpc/enum"
-	"net/http"
-	mhttp "nets/http"
+	"nets/http"
 	"sync"
 	"time"
 )
@@ -15,8 +14,8 @@ import (
 var g_regFreq sync.Map //<string, *timer.OpFreq>
 
 func AccountRegLimit() { //限制同ip账号注册频率
-	if !conf.IsDebug {
-		mhttp.G_Intercept = func(req, ack *common.NetPack, ip string) bool {
+	if !assert.IsDebug {
+		http.G_Intercept = func(req, ack *common.NetPack, ip string) bool {
 			msgId := req.GetOpCode()
 			switch msgId {
 			case enum.Rpc_login_relay_to_center:
@@ -45,14 +44,4 @@ func AccountRegLimit() { //限制同ip账号注册频率
 			return false
 		}
 	}
-}
-
-func Http_permit_ip(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
-	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.S2B("passwd error"))
-		return
-	}
-	g_regFreq.Delete(q.Get("ip"))
-	w.Write(common.S2B("permit_ip: ok"))
 }

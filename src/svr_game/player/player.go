@@ -51,13 +51,15 @@ const (
 )
 
 type TPlayerBase struct {
-	PlayerID   uint32 `bson:"_id"`
-	AccountID  uint32 //用于网络通信：一个账号下可能有多个角色，但仅可能一个在线
-	LoginTime  int64
-	LogoutTime int64
-	Name       string
-	Head       string
-	Version    string //用于数据升级；客户端连接与自己版本匹配的节点
+	PlayerID    uint32 `bson:"_id"`
+	AccountID   uint32 //用于网络通信：一个账号下可能有多个角色，但仅可能一个在线
+	LoginTime   int64
+	LogoutTime  int64
+	ForbidTime  int64
+	IsForbidden bool //是否禁用
+	Name        string
+	Head        string
+	Version     string //用于数据升级；客户端连接与自己版本匹配的节点
 }
 type iModule interface {
 	InitAndInsert(*TPlayer)

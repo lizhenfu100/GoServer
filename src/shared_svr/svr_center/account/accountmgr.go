@@ -13,8 +13,6 @@ var (
 )
 
 func InitDB() {
-	G_WhiteList.InitDB()
-
 	var list []TAccount //只载入近期登录过的
 	dbmgo.FindAll(KDBTable, bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - kLivelyTime}}, &list)
 	for i := 0; i < len(list); i++ {

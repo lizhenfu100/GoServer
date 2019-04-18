@@ -30,8 +30,8 @@ import (
 	"gamelog"
 	"generate_out/rpc/enum"
 	"net/http"
+	"netConfig"
 	"netConfig/meta"
-	mhttp "nets/http"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -137,11 +137,8 @@ func (self *Backup) OnEnterNextHour() {
 	kOnlintLimit := G_Backup.OnlintLimit
 	G_Backup.RUnlock()
 
-	loginAddr := "" //查看svr_game在线量，有超过限制值时，关闭备份
-	if p := meta.GetMetaEx("login", -1); p != nil {
-		loginAddr = mhttp.Addr(p.IP, p.HttpPort)
-	}
-	mhttp.CallRpc(loginAddr, enum.Rpc_login_get_game_list, func(buf *common.NetPack) {
+	// 查看svr_game在线量，有超过限制值时，关闭备份
+	netConfig.CallRpcLogin(enum.Rpc_login_get_game_list, func(buf *common.NetPack) {
 		buf.WriteString(meta.G_Local.Version)
 	}, func(backBuf *common.NetPack) {
 		for cnt, i := backBuf.ReadByte(), byte(0); i < cnt; i++ {

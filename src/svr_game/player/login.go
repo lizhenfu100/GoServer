@@ -47,6 +47,8 @@ func Rpc_game_login(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	//FIXME: 读数据库同步的，比较耗时，直接读的方式不适合外网；可转入线程池再通知回主线程
 	if this := FindWithDB(accountId); this == nil {
 		ack.WriteUInt16(err.Account_have_none_player) //notify client to create new player
+	} else if this.IsForbidden {
+		ack.WriteUInt16(err.Account_forbidden)
 	} else {
 		this.Login(conn)
 		gamelog.Debug("Player Login: %s, accountId(%d)", this.Name, this.PlayerID)

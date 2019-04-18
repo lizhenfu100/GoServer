@@ -12,7 +12,7 @@ package area
 import (
 	"common"
 	"encoding/json"
-	"net/http"
+	"nets/http"
 )
 
 const (
@@ -38,7 +38,7 @@ type retTaobao struct {
 }
 
 func GetArea() (ret TArea) {
-	if buf := http.Get(kTaobaoLoacl); buf != nil {
+	if buf := http.Client.Get(kTaobaoLoacl); buf != nil {
 		var ack retTaobao
 		json.Unmarshal(buf, &ack)
 		ret = ack.Data
@@ -46,7 +46,7 @@ func GetArea() (ret TArea) {
 	return
 }
 func GetAreaEx(ip string) (ret TArea) {
-	if buf := http.Get(kTaobaoApi + ip); buf != nil {
+	if buf := http.Client.Get(kTaobaoApi + ip); buf != nil {
 		var ack retTaobao
 		json.Unmarshal(buf, &ack)
 		ret = ack.Data
@@ -54,7 +54,7 @@ func GetAreaEx(ip string) (ret TArea) {
 	return
 }
 func GetCountryId() string {
-	if buf := http.Get(kCountryApi); buf != nil {
+	if buf := http.Client.Get(kCountryApi); buf != nil {
 		return common.B2S(buf)
 	}
 	return ""

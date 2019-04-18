@@ -63,8 +63,6 @@ func BindInfoToAccount(name, passwd, k, v string, force bool) (errcode uint16) {
 		errcode = err.Account_none
 	} else if !account.CheckPasswd(passwd) {
 		errcode = err.Passwd_err
-	} else if account.IsForbidden {
-		errcode = err.Account_forbidden
 	} else if !format.CheckBindValue(k, v) {
 		errcode = err.BindInfo_format_err
 	} else if GetAccountByBindInfo(k, v) != nil {
@@ -115,7 +113,7 @@ func (self *TAccount) forceBind(k, v string) {
 		q.Set("sign", sign.CalcSign(self.Name+k+v+flag))
 		//3、生成完整url
 		u.RawQuery = q.Encode()
-		email.SendMail("Verify Email", v, u.String(), "")
+		email.SendMail2("Verify Email", v, u.String(), "")
 	default:
 		self.bind(k, v)
 	}

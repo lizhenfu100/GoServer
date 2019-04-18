@@ -69,7 +69,7 @@ type errMsg struct {
 }
 
 func updateToken(corpId, secret string) error {
-	if buf := http.Get(kUrlGetToken + corpId + "&corpsecret=" + secret); buf == nil {
+	if buf := http.Client.Get(kUrlGetToken + corpId + "&corpsecret=" + secret); buf == nil {
 		return http.ErrGet
 	} else {
 		var val token
@@ -81,7 +81,7 @@ func updateToken(corpId, secret string) error {
 	return nil
 }
 func sendMsg(b []byte) error {
-	if buf := http.Post(kUrlSend+g_token, "application/json", b); buf == nil {
+	if buf := http.Client.Post(kUrlSend+g_token, "application/json", b); buf == nil {
 		return http.ErrPost
 	} else {
 		var msg errMsg

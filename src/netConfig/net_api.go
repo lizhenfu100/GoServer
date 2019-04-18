@@ -62,6 +62,24 @@ func CallRpcCenter(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)
 }
 
 // ------------------------------------------------------------
+//! login -- 随机节点
+func CallRpcLogin(rid uint16, sendFun, recvFun func(*common.NetPack)) {
+	if addr := GetLoginAddr(); addr != "" {
+		http.CallRpc(addr, rid, sendFun, recvFun)
+	} else {
+		gamelog.Error("login nil: rpcId(%d)", rid)
+	}
+}
+func GetLoginAddr() string {
+	ids := meta.GetModuleIDs("login", meta.G_Local.Version)
+	if length := len(ids); length > 0 {
+		id := ids[rand.Intn(length)]
+		return GetHttpAddr("login", id)
+	}
+	return ""
+}
+
+// ------------------------------------------------------------
 //! gateway -- 账号hash取模
 var g_cache_gate sync.Map //<int, *tcp.TCPConn>
 

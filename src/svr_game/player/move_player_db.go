@@ -15,9 +15,11 @@ package player
 
 import (
 	"common"
+	"conf"
 	"gamelog"
 	"generate_out/err"
 	"generate_out/rpc/enum"
+	"netConfig"
 	"netConfig/meta"
 	"nets/http"
 	"nets/tcp"
@@ -32,10 +34,7 @@ func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
 	}()
 
 	//本节点的login
-	loginAddr := ""
-	if p := meta.GetMetaEx("login", -1); p != nil {
-		loginAddr = http.Addr(p.IP, p.HttpPort)
-	}
+	loginAddr := netConfig.GetLoginAddr()
 
 	//1、向center查询新大区地址
 	newLoginAddr := ""
@@ -63,6 +62,7 @@ func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
 
 	//3、角色数据，转发至新大区
 	http.CallRpc(newLoginAddr, enum.Rpc_login_move_player_db, func(buf *common.NetPack) {
+		buf.WriteString(conf.GameName)
 		buf.WriteString(meta.G_Local.Version)
 		//game中的玩家数据迁移
 		buf.WriteUInt32(this.AccountID)

@@ -1,8 +1,8 @@
 package gamelog
 
 import (
+	"common/assert"
 	"common/file"
-	"conf"
 	"os"
 	"time"
 )
@@ -10,7 +10,7 @@ import (
 // -------------------------------------
 //
 func InitLogger(name string) {
-	if conf.IsDebug {
+	if assert.IsDebug {
 		InitFileLog(os.Stdout)
 		return
 	}

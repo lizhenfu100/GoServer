@@ -50,16 +50,19 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 	account := req.ReadString()
 	req.ReadPos = oldPos
 
-	centerSvrId := netConfig.HashCenterID(account)
-
-	//2、同步转至center验证账号信息，取得accountId、gameInfo
-	if ok, accountId, gameInfo2 := accountLogin2(centerSvrId, req, ack); ok {
-		//3、确定gameSvrId，处理gameInfo
-		if errCode := accountLogin3(&gameSvrId, &gameInfo2, accountId, version, gameName, centerSvrId); errCode == err.Success {
-			//4、登录成功，设置各类信息，回复client待连接的节点(gateway或game)
-			accountLogin4(accountId, gameSvrId, ack)
-		} else {
-			ack.WriteUInt16(errCode)
+	if gameName != conf.GameName {
+		ack.WriteUInt16(err.LoginSvr_not_match)
+	} else {
+		//2、同步转至center验证账号信息，取得accountId、gameInfo
+		centerSvrId := netConfig.HashCenterID(account)
+		if ok, accountId, gameInfo2 := accountLogin2(centerSvrId, req, ack); ok {
+			//3、确定gameSvrId，处理gameInfo
+			if errCode := accountLogin3(&gameSvrId, &gameInfo2, accountId, version, gameName, centerSvrId); errCode == err.Success {
+				//4、登录成功，设置各类信息，回复client待连接的节点(gateway或game)
+				accountLogin4(accountId, gameSvrId, ack)
+			} else {
+				ack.WriteUInt16(errCode)
+			}
 		}
 	}
 }

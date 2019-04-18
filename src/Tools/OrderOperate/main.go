@@ -9,6 +9,7 @@ import (
 	"gamelog"
 	"generate_out/rpc/enum"
 	"nets/http"
+	http2 "nets/http/http"
 	"shared_svr/svr_sdk/msg"
 	"strings"
 	"time"
@@ -26,6 +27,7 @@ func main() {
 	flag.Parse() //内部获取了所有参数：os.Args[1:]
 
 	gamelog.InitLogger("Order")
+	http.InitClient(http2.Client)
 
 	addr := http.Addr(_ip, uint16(_port))
 

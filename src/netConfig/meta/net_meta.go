@@ -118,18 +118,6 @@ func GetMeta(module string, svrID int) *Meta {
 	gamelog.Debug("{%s %d}: have none meta", module, svrID)
 	return nil
 }
-func GetMetaEx(module string, svrID int) (ret *Meta) {
-	G_Metas.Range(func(k, v interface{}) bool {
-		if ptr := v.(*Meta); ptr.Module == module && !ptr.IsClosed {
-			if svrID < 0 || ptr.SvrID == svrID {
-				ret = ptr
-				return false
-			}
-		}
-		return true
-	})
-	return
-}
 
 //{
 //	for i := len(G_Metas) - 1; i >= 0; i-- {

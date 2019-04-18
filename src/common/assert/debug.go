@@ -1,6 +1,6 @@
 // +build debug
 
-package conf //go run -tags debug
+package assert //go run -tags debug
 
 const (
 	IsDebug = true

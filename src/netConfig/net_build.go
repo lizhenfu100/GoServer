@@ -31,6 +31,7 @@ import (
 	"gamelog"
 	"netConfig/meta"
 	"nets/http"
+	http2 "nets/http/http"
 	"nets/tcp"
 	"sync"
 )
@@ -57,7 +58,7 @@ func RunNetSvr() {
 	//3、开启本模块网络服务(Busy Loop)
 	fmt.Printf("-------%s(%d) server start-------\n", meta.G_Local.Module, meta.G_Local.SvrID)
 	if meta.G_Local.HttpPort > 0 {
-		http.NewHttpServer(meta.G_Local.HttpPort, meta.G_Local.Module, meta.G_Local.SvrID)
+		http2.NewHttpServer(meta.G_Local.HttpPort, meta.G_Local.Module, meta.G_Local.SvrID)
 	} else if meta.G_Local.TcpPort > 0 {
 		tcp.NewTcpServer(meta.G_Local.TcpPort, meta.G_Local.Maxconn)
 	} else {
