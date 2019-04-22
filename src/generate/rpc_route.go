@@ -39,7 +39,7 @@ func generateRpcRoute(modules, funcs []string) {
 				buf := bf.Bytes()
 				buf[len(buf)-2] = ':'
 				buf[len(buf)-1] = ' '
-				f.Write(common.S2B("\ncase "))
+				f.Write(common.S2B("\ncase"))
 				f.Write(buf)
 				f.Write(common.S2B(fmt.Sprintf(`return "%s"`, module)))
 				bf.Reset()

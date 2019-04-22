@@ -14,7 +14,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"netConfig/meta"
 	"nets/http"
-	"shared_svr/svr_center/gameInfo"
+	"shared_svr/svr_center/account/gameInfo"
 	"strconv"
 	"sync/atomic"
 	"time"

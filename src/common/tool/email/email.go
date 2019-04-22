@@ -40,7 +40,7 @@ import (
 var g_list []*gomail.Dialer
 
 func SendMail(subject, target, body, language string) {
-	netConfig.CallRpcLogin(enum.Rpc_relay_email, func(buf *common.NetPack) {
+	netConfig.CallRpcLogin(enum.Rpc_login_relay_email, func(buf *common.NetPack) {
 		buf.WriteString(subject)
 		buf.WriteString(target)
 		buf.WriteString(body)

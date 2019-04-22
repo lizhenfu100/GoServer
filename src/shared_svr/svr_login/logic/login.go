@@ -32,7 +32,7 @@ import (
 	"generate_out/rpc/enum"
 	"netConfig"
 	"netConfig/meta"
-	"shared_svr/svr_center/gameInfo"
+	"shared_svr/svr_center/account/gameInfo"
 	"sync"
 	"sync/atomic"
 )

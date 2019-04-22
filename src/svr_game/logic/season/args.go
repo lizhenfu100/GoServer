@@ -23,6 +23,15 @@ func (self *stArgs) InsertDB() { dbmgo.Insert(dbmgo.KTableArgs, self) }
 
 // ------------------------------------------------------------
 // -- API
+func InitDB() {
+	InitRankList()
+	//赛季时间
+	if !G_Args.ReadDB() {
+		G_Args.TimeBgein = GetBeginTime()
+		G_Args.InsertDB()
+	}
+}
+
 func GetBeginTime() int64 { //本赛季开启时刻
 	now := time.Now()
 	month := int(now.Month())

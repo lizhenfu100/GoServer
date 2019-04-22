@@ -4,7 +4,7 @@ import (
 	"common"
 	"dbmgo"
 
-	"svr_game/version/0.2.1"
+	"svr_game/player/versionversion/0.2.1"
 )
 
 const kDBBattle = "battle"

@@ -49,7 +49,7 @@ func BeforeRecvHttpMsg(accountId uint32) *TPlayer {
 	return nil
 }
 func AfterRecvHttpMsg(self *TPlayer, buf *common.NetPack) {
-	if !conf.Open_Http_To_Client {
+	if !conf.Is_Http_To_Client {
 		return
 	}
 	accountId := self.AccountID

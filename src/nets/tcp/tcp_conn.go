@@ -245,7 +245,7 @@ func (self *TCPConn) readRoutine() {
 		if conf.TestFlag_CalcQPS {
 			qps.AddQps()
 		}
-		//FIXME: 消息加密、验证有效性，不通过即踢掉
+		//FIXME: 消息加密、验证有效性，不通过即踢掉，放到逻辑线程做，io线程只管io
 		if packet.GetOpCode() >= enum.RpcEnumCnt {
 			gamelog.Error("Msg(%d) Not Regist", packet.GetOpCode())
 		} else {

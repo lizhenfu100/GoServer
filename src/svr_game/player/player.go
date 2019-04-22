@@ -38,7 +38,7 @@ import (
 	"gamelog"
 	"netConfig/meta"
 	"nets/tcp"
-	"svr_game/version"
+	"svr_game/player/version"
 	"sync/atomic"
 	"time"
 )

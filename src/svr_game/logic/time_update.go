@@ -2,7 +2,7 @@ package logic
 
 import (
 	"common/timer"
-	"svr_game/player/season"
+	"svr_game/logic/season"
 	"time"
 )
 

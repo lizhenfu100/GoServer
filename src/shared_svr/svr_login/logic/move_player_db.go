@@ -22,7 +22,7 @@ import (
 	"netConfig"
 	"netConfig/meta"
 	"nets/http"
-	"shared_svr/svr_center/gameInfo"
+	"shared_svr/svr_center/account/gameInfo"
 	"strconv"
 )
 
@@ -34,7 +34,7 @@ func Rpc_login_move_player_db(req, ack *common.NetPack) {
 	name := req.ReadString()
 	playerBuf := req.ReadLenBuf()
 	pf_id, mac, saveData := "", "", []byte(nil)
-	if conf.HaveCllientSave { //读取存档数据
+	if conf.HaveClientSave { //读取存档数据
 		pf_id = req.ReadString()
 		mac = req.ReadString()
 		saveData = req.ReadLenBuf()
@@ -56,7 +56,7 @@ func Rpc_login_move_player_db(req, ack *common.NetPack) {
 			return
 		}
 		//5、向game问询save地址，存档写入新区
-		if conf.HaveCllientSave {
+		if conf.HaveClientSave {
 			if e := _MoveSave(gameSvrId, accountId, version, pf_id, mac, saveData); e != err.Success {
 				errCode = e
 				return

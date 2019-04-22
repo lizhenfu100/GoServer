@@ -100,9 +100,8 @@ func (self *TAccount) forceBind(k, v string) {
 	switch k {
 	case "email":
 		//1、创建url
-		httpAddr := fmt.Sprintf("http://%s:%d/bind_info_force",
-			meta.G_Local.OutIP, meta.G_Local.Port())
-		u, _ := url.Parse(httpAddr)
+		u, _ := url.Parse(fmt.Sprintf("http://%s:%d/bind_info_force",
+			meta.G_Local.OutIP, meta.G_Local.Port()))
 		q := u.Query()
 		//2、写入参数
 		q.Set("name", self.Name)

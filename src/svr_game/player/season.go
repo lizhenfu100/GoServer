@@ -24,7 +24,7 @@ import (
 	"dbmgo"
 	"math/rand"
 	"svr_game/conf"
-	"svr_game/player/season"
+	"svr_game/logic/season"
 )
 
 const kDBSeason = "season"
@@ -67,15 +67,6 @@ func (self *TSeasonModule) _InitTempData(player *TPlayer) {
 
 // ------------------------------------------------------------
 // -- API
-func InitSeasonDB() {
-	season.InitRankList()
-	//赛季时间
-	if !season.G_Args.ReadDB() {
-		season.G_Args.TimeBgein = season.GetBeginTime()
-		season.G_Args.InsertDB()
-	}
-}
-
 func (self *TSeasonModule) AddScore(diff int) {
 	if diff > conf.Const.Score_Once_Max {
 		diff = conf.Const.Score_Once_Max

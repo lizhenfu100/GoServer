@@ -5,7 +5,7 @@ import (
 	"common/tool/email"
 )
 
-func Rpc_relay_email(req, ack *common.NetPack) {
+func Rpc_login_relay_email(req, ack *common.NetPack) {
 	subject := req.ReadString()
 	target := req.ReadString()
 	body := req.ReadString()

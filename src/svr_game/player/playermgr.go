@@ -3,6 +3,7 @@ package player
 import (
 	"dbmgo"
 	"gopkg.in/mgo.v2/bson"
+	"svr_game/logic/season"
 	"sync"
 	"time"
 )
@@ -15,7 +16,7 @@ var (
 
 func InitDB() {
 	InitSvrMailDB()
-	InitSeasonDB()
+	season.InitDB()
 
 	var list1 []TPlayerBase //只载入近期登录过的
 	dbmgo.FindAll(kDBPlayer, bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - kLIvelyTime}}, &list1)
