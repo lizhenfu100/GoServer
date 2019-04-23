@@ -105,10 +105,12 @@ func Rpc_center_account_reg(req, ack *common.NetPack) {
 		ack.WriteUInt16(err.Account_format_err)
 	} else if !format.CheckPasswd(passwd) {
 		ack.WriteUInt16(err.Passwd_format_err)
-	} else if account := AddNewAccount(name, passwd); account != nil {
-		ack.WriteUInt16(err.Success)
-	} else {
+		//} else if GetAccountByBindInfo("email", name) != nil {
+		//	ack.WriteUInt16(err.Account_repeat)
+	} else if AddNewAccount(name, passwd) == nil {
 		ack.WriteUInt16(err.Account_repeat)
+	} else {
+		ack.WriteUInt16(err.Success)
 	}
 }
 func Rpc_center_account_check(req, ack *common.NetPack) {

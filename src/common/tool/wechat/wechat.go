@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gamelog"
 	"nets/http"
 )
 
@@ -33,14 +34,16 @@ func Init(corpId, secret, touser string, agentId int) {
 		fmt.Println("Wechat token err: ", e.Error())
 	}
 }
-func SendMsg(text string) error {
+func SendMsg(text string) {
 	buf, _ := json.Marshal(&msgWechat{
 		Agentid: g_agentId,
 		Touser:  g_touser,
 		Msgtype: "text",
 		Text:    map[string]string{"content": text},
 	})
-	return sendMsg(buf)
+	if e := sendMsg(buf); e != nil {
+		gamelog.Error("Send Wechat: %s", e.Error())
+	}
 }
 
 // ------------------------------------------------------------

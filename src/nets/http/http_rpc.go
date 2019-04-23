@@ -28,13 +28,16 @@ func CallRpc(addr string, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 }
 func HandleRpc(request []byte, w io.Writer, clientIp string) { //G_Intercept==nil,外界不必取ip,传空即可
 	req := common.NewNetPack(request)
+	if req == nil {
+		gamelog.Error("invalid req: %v", request)
+		return
+	}
 	ack := common.NewNetPackCap(128)
 	defer func() {
 		compress.CompressTo(ack.Data(), w)
 		ack.Free()
 		req.Free()
 	}()
-
 	msgId := req.GetOpCode()
 	if msgId >= enum.RpcEnumCnt {
 		gamelog.Error("Msg(%d) Not Regist", msgId)

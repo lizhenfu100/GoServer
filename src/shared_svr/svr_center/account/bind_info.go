@@ -33,8 +33,7 @@ func Rpc_center_get_account_by_bind_info(req, ack *common.NetPack) { //拿到账
 	key := req.ReadString()
 	passwd := req.ReadString()
 
-	account := GetAccountByBindInfo(key, val)
-	if account != nil {
+	if account := GetAccountByBindInfo(key, val); account == nil {
 		ack.WriteUInt16(err.Account_none)
 	} else if !account.CheckPasswd(passwd) {
 		ack.WriteUInt16(err.Passwd_err)
@@ -81,8 +80,6 @@ func BindInfoToAccount(name, passwd, k, v string, force bool) (errcode uint16) {
 	return
 }
 func GetAccountByBindInfo(k, v string) *TAccount {
-	//FIXME: 数据多了，这样没加索引的找太慢了
-	//客户端通过绑定信息查到账号后，将账号名保存至本地，之后用账户名登录
 	dbkey := fmt.Sprintf("bindinfo.%s", k)
 	account := new(TAccount)
 	if ok, _ := dbmgo.Find(KDBTable, dbkey, v, account); ok {

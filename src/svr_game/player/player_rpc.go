@@ -59,6 +59,10 @@ func _PlayerRpcHttp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req := common.NewNetPack(buf)
+	if req == nil {
+		gamelog.Error("invalid req: %v", buf)
+		return
+	}
 	msgId := req.GetOpCode()
 	if msgId >= enum.RpcEnumCnt {
 		gamelog.Error("PlayerMsg(%d) Not Regist", msgId)

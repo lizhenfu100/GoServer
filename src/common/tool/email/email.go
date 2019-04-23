@@ -47,7 +47,7 @@ func SendMail(subject, target, body, language string) {
 		buf.WriteString(language)
 	}, nil)
 }
-func SendMail2(subject, target, body, language string) error { //仅center/login调，其它节点转至login发送
+func SendMail2(subject, target, body, language string) { //仅center/login调，其它节点转至login发送
 	if g_list == nil {
 		g_list = make([]*gomail.Dialer, len(conf.SvrCsv.EmailUser))
 	}
@@ -72,11 +72,9 @@ func SendMail2(subject, target, body, language string) error { //仅center/login
 	msg.SetBody("text/html", body)
 	//msg.Attach("我是附件")
 
-	err := dialer.DialAndSend(msg)
-	if err != nil {
-		gamelog.Error("SendMail: %s", err.Error())
+	if e := dialer.DialAndSend(msg); e != nil {
+		gamelog.Error("SendMail: %s", e.Error())
 	}
-	return err
 }
 
 func packBody(subject, body *string, language string) {

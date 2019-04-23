@@ -25,7 +25,6 @@ package http
 import (
 	"fmt"
 	"gamelog"
-	"io"
 	"io/ioutil"
 	"net/http"
 	mhttp "nets/http"
@@ -45,31 +44,18 @@ func NewHttpServer(port uint16, module string, svrId int) error {
 func CloseServer() { _svr.Close() }
 
 func ReadRequest(r *http.Request) []byte {
-	var err error
-	var buf []byte
-	if r.ContentLength > 0 { //http读大数据，r.ContentLength是-1
-		buf = make([]byte, r.ContentLength)
-		_, err = io.ReadFull(r.Body, buf)
-	} else {
-		buf, err = ioutil.ReadAll(r.Body)
-	}
-	if r.Body.Close(); err != nil {
-		gamelog.Error("ReadBody: " + err.Error())
-		return nil
-	}
-	return buf
-}
-func ReadResponse(r *http.Response) (ret []byte) {
-	var e error
-	if r.ContentLength > 0 { //http读大数据，r.ContentLength是-1
-		ret = make([]byte, r.ContentLength)
-		_, e = io.ReadFull(r.Body, ret)
-	} else {
-		ret, e = ioutil.ReadAll(r.Body)
-	}
+	buf, e := ioutil.ReadAll(r.Body)
 	if r.Body.Close(); e != nil {
 		gamelog.Error("ReadBody: " + e.Error())
 		return nil
 	}
-	return
+	return buf
+}
+func ReadResponse(r *http.Response) []byte {
+	buf, e := ioutil.ReadAll(r.Body)
+	if r.Body.Close(); e != nil {
+		gamelog.Error("ReadBody: " + e.Error())
+		return nil
+	}
+	return buf
 }

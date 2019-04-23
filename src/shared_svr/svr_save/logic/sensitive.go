@@ -21,12 +21,12 @@ func (self *TSaveData) CheckSensitiveVal(newExtra string) {
 	json.Unmarshal(common.S2B(self.Extra), pOld)
 
 	if pNew.GameSession < pOld.GameSession || gm.G_Backup.IsValid(self.Key) {
-		if fi, e := file.CreateFile(
-			fmt.Sprintf("player/%s/", self.Key),
-			time.Now().Format("20060102_150405")+".save",
-			os.O_TRUNC|os.O_WRONLY); e == nil {
+		dir := fmt.Sprintf("player/%s/", self.Key)
+		name := time.Now().Format("20060102_150405") + ".save"
+		if fi, e := file.CreateFile(dir, name, os.O_TRUNC|os.O_WRONLY); e == nil {
 			fi.Write(self.Data)
 			fi.Close()
 		}
+		file.DelExpired(dir, "", 30) //删除30天前的记录
 	}
 }
