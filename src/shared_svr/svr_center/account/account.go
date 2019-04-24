@@ -62,20 +62,23 @@ func (self *TAccount) SetPasswd(passwd string) {
 // 注册、登录
 func Rpc_center_account_login(req, ack *common.NetPack) {
 	gameName := req.ReadString()
-	name := req.ReadString()
+	name := req.ReadString() //账号、邮箱均可登录
 	passwd := req.ReadString()
 
-	if account := GetAccountByName(name); account == nil {
-		ack.WriteUInt16(err.Account_none)
-	} else {
-		errcode := account.Login(passwd)
-		ack.WriteUInt16(errcode)
-		if errcode == err.Success {
-			ack.WriteUInt32(account.AccountID)
-			//附带的游戏数据，可能有的游戏空的
-			if v, ok := account.GameInfo[gameName]; ok {
-				v.DataToBuf(ack)
-			}
+	//1、优先当账号名处理
+	account := GetAccountByName(name)
+	errcode := account.Login(passwd)
+	//2、再当邮箱处理
+	if errcode != err.Success {
+		account = GetAccountByBindInfo("email", name)
+		errcode = account.Login(passwd)
+	}
+	//end、回复登录结果
+	if ack.WriteUInt16(errcode); errcode == err.Success {
+		ack.WriteUInt32(account.AccountID)
+		//附带的游戏数据，可能有的游戏空的
+		if v, ok := account.GameInfo[gameName]; ok {
+			v.DataToBuf(ack)
 		}
 	}
 }
@@ -105,8 +108,8 @@ func Rpc_center_account_reg(req, ack *common.NetPack) {
 		ack.WriteUInt16(err.Account_format_err)
 	} else if !format.CheckPasswd(passwd) {
 		ack.WriteUInt16(err.Passwd_format_err)
-		//} else if GetAccountByBindInfo("email", name) != nil {
-		//	ack.WriteUInt16(err.Account_repeat)
+	} else if GetAccountByBindInfo("email", name) != nil {
+		ack.WriteUInt16(err.Account_repeat)
 	} else if AddNewAccount(name, passwd) == nil {
 		ack.WriteUInt16(err.Account_repeat)
 	} else {

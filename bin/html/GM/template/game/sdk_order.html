@@ -11,17 +11,17 @@
         <h1>查询 & 修改</h1>
         <div class="form-wrapper">
             <form action="" method="get" onsubmit="SetSelectAddr2(this)">
-                <label for="addr">大区:</label>
-                <select name="addr">
+                <label>大区:</label>
+                <select>
                     <option value="{{index .SdkAddrs 1}}">北美</option>
                     <option value="{{index .SdkAddrs 2}}">亚洲</option>
                     <option value="{{index .SdkAddrs 3}}">欧洲</option>
                     <option value="{{index .SdkAddrs 4}}">南美</option>
-                    <option value="{{index .SdkAddrs 5}}">中国华南</option>
-                    <option value="{{index .SdkAddrs 6}}">中国华北</option>
+                    <option value="{{index .SdkAddrs 5}}">中国华北</option>
+                    <option value="{{index .SdkAddrs 6}}">中国华南</option>
                 </select>
-                <label for="urlkey">操作类型:</label>
-                <select name="urlkey">
+                <label>操作类型:</label>
+                <select>
                     <option value="/order_info">查询</option>
                     <option value="/order_success">修改到账</option>
                 </select>

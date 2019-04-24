@@ -24,7 +24,7 @@ func Rpc_save_unbind_mac_by_email(req, ack *common.NetPack) {
 	language := req.ReadString()
 
 	if emailAddr == "None" { //无账号的渠道玩家，直接解绑
-		dbmgo.RemoveOneSync(kDBMac, bson.M{"_id": mac})
+		dbmgo.RemoveOneSync(KDBMac, bson.M{"_id": mac})
 	} else {
 		//1、创建url
 		httpAddr := fmt.Sprintf("http://%s:%d/unbind_mac",
@@ -58,7 +58,7 @@ func Http_unbind_mac(w http.ResponseWriter, r *http.Request) {
 		ack = "Error: sign failed"
 	} else if time.Now().Unix()-timeFlag > 3600 {
 		ack = "Error: url expire"
-	} else if !dbmgo.RemoveOneSync(kDBMac, bson.M{"_id": mac}) {
+	} else if !dbmgo.RemoveOneSync(KDBMac, bson.M{"_id": mac}) {
 		ack = "Error: DB Remove failed"
 	} else {
 		ack = "Unbind ok"
@@ -73,7 +73,7 @@ var g_unbindTime2 sync.Map //<MacInfo.Mac, int64>
 func Rpc_save_unbind_mac(req, ack *common.NetPack) {
 	mac, ptr := req.ReadString(), &MacInfo{}
 
-	if ok, _ := dbmgo.Find(kDBMac, "_id", mac, ptr); ok {
+	if ok, _ := dbmgo.Find(KDBMac, "_id", mac, ptr); ok {
 		timeNow := time.Now().Unix()
 		if !canUnbindMac(ptr.Key, mac, timeNow) {
 			ack.WriteUInt16(err.Operate_too_often)
@@ -81,7 +81,7 @@ func Rpc_save_unbind_mac(req, ack *common.NetPack) {
 		} else {
 			g_unbindTime1.Store(ptr.Key, timeNow)
 			g_unbindTime2.Store(ptr.Mac, timeNow)
-			dbmgo.RemoveOneSync(kDBMac, bson.M{"_id": mac})
+			dbmgo.RemoveOneSync(KDBMac, bson.M{"_id": mac})
 		}
 	}
 	ack.WriteUInt16(err.Success)

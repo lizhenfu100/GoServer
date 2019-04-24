@@ -13,7 +13,7 @@ import (
 
 func Http_reset_password(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	name := q.Get("name")
+	email := q.Get("email")
 	passwd := q.Get("pwd")
 	flag := q.Get("flag")
 	timeFlag, _ := strconv.ParseInt(flag, 10, 64)
@@ -30,7 +30,7 @@ func Http_reset_password(w http.ResponseWriter, r *http.Request) {
 		ack = "Error: url expire"
 	} else if !format.CheckPasswd(passwd) {
 		ack = "Error: Passwd_format_err"
-	} else if account := GetAccountByName(name); account == nil {
+	} else if account := GetAccountByBindInfo("email", email); account == nil {
 		ack = "Error: Account_none"
 	} else {
 		account.SetPasswd(passwd)

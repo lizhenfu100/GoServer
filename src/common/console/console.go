@@ -41,8 +41,8 @@ func Init() {
 	http.G_HandleFunc[enum.Rpc_gm_cmd] = _Rpc_gm_cmd2
 	tcp.G_HandleFunc[enum.Rpc_meta_list] = _Rpc_meta_list1
 	http.G_HandleFunc[enum.Rpc_meta_list] = _Rpc_meta_list2
-	tcp.G_HandleFunc[enum.Rpc_update_csv] = _Rpc_update_csv1
-	http.G_HandleFunc[enum.Rpc_update_csv] = _Rpc_update_csv2
+	tcp.G_HandleFunc[enum.Rpc_update_file] = _Rpc_update_file1
+	http.G_HandleFunc[enum.Rpc_update_file] = _Rpc_update_file2
 	tcp.G_HandleFunc[enum.Rpc_reload_csv] = _Rpc_reload_csv1
 	http.G_HandleFunc[enum.Rpc_reload_csv] = _Rpc_reload_csv2
 	go sigTerm() //监控进程终止信号
@@ -79,8 +79,8 @@ func _Rpc_meta_list2(req, ack *common.NetPack) {
 	}
 }
 
-func _Rpc_update_csv1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_update_csv2(req, ack) }
-func _Rpc_update_csv2(req, ack *common.NetPack) {
+func _Rpc_update_file1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_update_file2(req, ack) }
+func _Rpc_update_file2(req, ack *common.NetPack) {
 	for cnt, i := req.ReadByte(), byte(0); i < cnt; i++ {
 		dir := req.ReadString()
 		name := req.ReadString()
@@ -90,7 +90,6 @@ func _Rpc_update_csv2(req, ack *common.NetPack) {
 			fd.Close()
 			if e == nil {
 				ack.WriteString("ok")
-				file.ReloadCsv(dir + name)
 			} else {
 				ack.WriteString(e.Error())
 			}

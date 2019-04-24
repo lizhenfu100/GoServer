@@ -19,7 +19,7 @@ func InitDB() {
 	season.InitDB()
 
 	var list1 []TPlayerBase //只载入近期登录过的
-	dbmgo.FindAll(kDBPlayer, bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - kLIvelyTime}}, &list1)
+	dbmgo.FindAll(kDBPlayer, bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - kLivelyTime}}, &list1)
 	list := make([]TPlayer, len(list1))
 	for i := 0; i < len(list); i++ {
 		ptr := &list[i]

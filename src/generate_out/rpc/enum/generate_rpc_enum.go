@@ -12,7 +12,7 @@ const ( //the top 100 are reserved for system
 	Rpc_gm_cmd uint16 = 8
 	Rpc_log uint16 = 9
 	Rpc_meta_list uint16 = 10
-	Rpc_update_csv uint16 = 11
+	Rpc_update_file uint16 = 11
 	Rpc_reload_csv uint16 = 12
 	Rpc_zoo_register uint16 = 100
 	Rpc_center_account_login uint16 = 101

@@ -37,15 +37,15 @@ import (
 )
 
 const (
-	kDBSave = "Save"
-	kDBMac  = "SaveMac"
+	KDBSave = "Save"
+	KDBMac  = "SaveMac"
 )
 
 type TSaveData struct {
 	Key     string `bson:"_id"` // Pf_id + Uid
 	Data    []byte
-	UpTime  int64
-	ChTime  int64  //换设备的时刻
+	UpTime  int64  //上传时刻
+	ChTime  int64  //更换时刻
 	MacCnt  byte   //绑定的设备数目
 	Extra   string //json
 	Version string
@@ -55,13 +55,17 @@ type MacInfo struct {
 	Key string //Pf_id + Uid
 }
 
+func GetSaveKey(pf_id, uid string) string { return pf_id + "_" + uid }
+
 func Rpc_save_get_meta_info(req, ack *common.NetPack) {
 	uid := req.ReadString()
 	pf_id := req.ReadString()
 
-	key, ptr := pf_id+"_"+uid, &TSaveData{}
-	if ok, e := dbmgo.Find(kDBSave, "_id", key, ptr); ok {
+	ptr := &TSaveData{Key: GetSaveKey(pf_id, uid)}
+	if ok, e := dbmgo.Find(KDBSave, "_id", ptr.Key, ptr); ok {
 		ack.WriteInt64(ptr.UpTime)
+		ack.WriteInt64(ptr.ChTime)
+		ack.WriteUInt8(ptr.MacCnt)
 	} else if e != nil {
 		ack.WriteInt64(-1)
 	} else {
@@ -77,15 +81,15 @@ func Rpc_save_check_mac(req, ack *common.NetPack) {
 	ack.WriteUInt16(errCode)
 }
 func checkMac(pf_id, uid, mac string) uint16 { //Notice：不可调换错误码判断顺序
-	pSave, pMac := &TSaveData{Key: pf_id + "_" + uid}, &MacInfo{}
-	okMac, _ := dbmgo.Find(kDBMac, "_id", mac, pMac)
+	pSave, pMac := &TSaveData{Key: GetSaveKey(pf_id, uid)}, &MacInfo{}
+	okMac, _ := dbmgo.Find(KDBMac, "_id", mac, pMac)
 	if okMac {
 		if pMac.Key != pSave.Key {
 			gamelog.Info("Record_mac_already_bind: mac(%s) new(%s) old(%s)", mac, pSave.Key, pMac.Key)
 			return err.Record_mac_already_bind
 		}
 	}
-	if okSave, _ := dbmgo.Find(kDBSave, "_id", pSave.Key, pSave); !okSave {
+	if okSave, _ := dbmgo.Find(KDBSave, "_id", pSave.Key, pSave); !okSave {
 		return err.Record_cannot_find
 	}
 	if !okMac /*新设备*/ && pSave.MacCnt >= conf.Const.MacFreeBindMax {
@@ -100,11 +104,11 @@ func checkMac(pf_id, uid, mac string) uint16 { //Notice：不可调换错误码�
 }
 
 func upload(pf_id, uid, mac string, data []byte, extra, version string) uint16 {
-	key, now := pf_id+"_"+uid, time.Now().Unix()
+	key, now := GetSaveKey(pf_id, uid), time.Now().Unix()
 	switch e := checkMac(pf_id, uid, mac); e {
 	case err.Success:
 		pSave := &TSaveData{Key: key}
-		dbmgo.Find(kDBSave, "_id", key, pSave)
+		dbmgo.Find(KDBSave, "_id", key, pSave)
 		if version < pSave.Version { //旧client覆盖新档，报错
 			return err.Version_not_match
 		}
@@ -113,17 +117,17 @@ func upload(pf_id, uid, mac string, data []byte, extra, version string) uint16 {
 		pSave.UpTime = now
 		pSave.Extra = extra
 		pSave.Version = version
-		if dbmgo.DataBase().C(kDBMac).Insert(&MacInfo{mac, key}) == nil {
+		if dbmgo.DataBase().C(KDBMac).Insert(&MacInfo{mac, key}) == nil {
 			pSave.MacCnt++
 			pSave.ChTime = now
 		}
-		dbmgo.UpdateId(kDBSave, pSave.Key, pSave)
+		dbmgo.UpdateId(KDBSave, pSave.Key, pSave)
 		//fmt.Println("---------------upload: ", len(pSave.Data), pSave)
 		return err.Success
 	case err.Record_cannot_find:
-		dbmgo.Insert(kDBSave, &TSaveData{key, data, now, now, 1,
+		dbmgo.Insert(KDBSave, &TSaveData{key, data, now, now, 1,
 			extra, version})
-		dbmgo.Insert(kDBMac, &MacInfo{mac, key})
+		dbmgo.Insert(KDBMac, &MacInfo{mac, key})
 		//fmt.Println("---------------upload new: ", len(pSave.Data), pSave)
 		return err.Success
 	default:
@@ -132,15 +136,15 @@ func upload(pf_id, uid, mac string, data []byte, extra, version string) uint16 {
 }
 func download(pf_id, uid, mac, version string) (*TSaveData, uint16) {
 	if errCode := checkMac(pf_id, uid, mac); errCode == err.Success {
-		pSave := &TSaveData{Key: pf_id + "_" + uid}
-		dbmgo.Find(kDBSave, "_id", pSave.Key, pSave)
-		if !common.IsMatchVersion(pSave.Version, version) {
+		pSave := &TSaveData{Key: GetSaveKey(pf_id, uid)}
+		dbmgo.Find(KDBSave, "_id", pSave.Key, pSave)
+		if version < pSave.Version { //旧client下载新档，报错
 			return nil, err.Version_not_match
 		}
-		if dbmgo.DataBase().C(kDBMac).Insert(&MacInfo{mac, pSave.Key}) == nil {
+		if dbmgo.DataBase().C(KDBMac).Insert(&MacInfo{mac, pSave.Key}) == nil {
 			pSave.MacCnt++
 			pSave.ChTime = time.Now().Unix()
-			dbmgo.UpdateId(kDBSave, pSave.Key, bson.M{"$set": bson.M{
+			dbmgo.UpdateId(KDBSave, pSave.Key, bson.M{"$set": bson.M{
 				"maccnt": pSave.MacCnt,
 				"chtime": pSave.ChTime}})
 		}

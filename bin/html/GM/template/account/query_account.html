@@ -11,10 +11,15 @@
         <h1>查看账号信息</h1>
         <div class="form-wrapper">
             <form action="" method="get" onsubmit="SetSelectAddr(this)">
-                <label for="addr">操作类型:</label>
-                <select name="addr">
+                <label>操作类型:</label>
+                <select>
                     <option value="{{.CenterAddr}}/show_account_info">基本信息</option>
                     <option value="{{.LocalAddr}}/query_account_login_addr">所在大区</option>
+                </select>
+                <label>游戏名称:</label>
+                <select name="game">
+                    <option value="HappyDiner">HappyDiner</option>
+                    <option value="SoulKnight">SoulKnight</option>
                 </select>
                 <label for="name">账户名:</label>
                 <input type="text" name="name"><br>

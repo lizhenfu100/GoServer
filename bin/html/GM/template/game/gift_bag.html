@@ -8,20 +8,20 @@
 
 <body bgcolor="white">
     <div class="all-wrapper">
-        <h1>礼包码 - 投放</h1>
+        <h1>礼包码</h1>
         <div class="form-wrapper">
             <form action="" method="post" onsubmit="SetSelectAddr2(this)">
-                <label for="addr">大区:</label>
-                <select name="addr">
+                <label>大区:</label>
+                <select>
                     <option value="{{index .LoginAddrs 1}}">北美</option>
                     <option value="{{index .LoginAddrs 2}}">亚洲</option>
                     <option value="{{index .LoginAddrs 3}}">欧洲</option>
                     <option value="{{index .LoginAddrs 4}}">南美</option>
-                    <option value="{{index .LoginAddrs 5}}">中国华南</option>
-                    <option value="{{index .LoginAddrs 6}}">中国华北</option>
+                    <option value="{{index .LoginAddrs 5}}">中国华北</option>
+                    <option value="{{index .LoginAddrs 6}}">中国华南</option>
                 </select>
-                <label for="urlkey">操作类型:</label>
-                <select name="urlkey">
+                <label>操作类型:</label>
+                <select>
                     <option value="/gift_bag_add">投放</option>
                     <option value="/gift_bag_set">修改</option>
                     <option value="/gift_bag_del">删除</option>

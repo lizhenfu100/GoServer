@@ -65,7 +65,7 @@ func main() {
 
 // ------------------------------------------------------------
 func UpdateCsv(addr string, svrFile map[string][]byte) {
-	http.CallRpc(addr, enum.Rpc_update_csv, func(buf *common.NetPack) {
+	http.CallRpc(addr, enum.Rpc_update_file, func(buf *common.NetPack) {
 		buf.WriteByte(byte(len(svrFile)))
 		fmt.Println("\nstart update:", addr)
 		for k, v := range svrFile {

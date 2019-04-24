@@ -46,7 +46,7 @@ import (
 const (
 	kIdleMinuteMax  = 3 //须客户端心跳包
 	kReLoginWaitSec = 300
-	kLIvelyTime     = 1 * 24 * 3600
+	kLivelyTime     = 1 * 24 * 3600
 	kDBPlayer       = "Player"
 )
 

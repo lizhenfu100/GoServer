@@ -41,12 +41,13 @@ var g_login_token uint32
 
 func Rpc_login_account_login(req, ack *common.NetPack) {
 	version := req.ReadString()
-	//1、临时读取buffer数据，排除版本号，将数据转发center
-	oldPos := req.ReadPos
-	gameName, gameSvrId := req.ReadString(), 0
+	gameSvrId := 0
 	if conf.HandPick_GameSvr {
 		gameSvrId = req.ReadInt() //若手选区服则由客户端上报
 	}
+	//1、临时读取buffer数据，将数据转发center
+	oldPos := req.ReadPos
+	gameName := req.ReadString()
 	account := req.ReadString()
 	req.ReadPos = oldPos
 
@@ -55,18 +56,18 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 	} else {
 		//2、同步转至center验证账号信息，取得accountId、gameInfo
 		centerSvrId := netConfig.HashCenterID(account)
-		if ok, accountId, gameInfo2 := accountLogin2(centerSvrId, req, ack); ok {
+		if ok, accountId, gameInfo2 := accountLogin1(centerSvrId, req, ack); ok {
 			//3、确定gameSvrId，处理gameInfo
-			if errCode := accountLogin3(&gameSvrId, &gameInfo2, accountId, version, gameName, centerSvrId); errCode == err.Success {
+			if errCode := accountLogin2(&gameSvrId, &gameInfo2, accountId, version, gameName, centerSvrId); errCode == err.Success {
 				//4、登录成功，设置各类信息，回复client待连接的节点(gateway或game)
-				accountLogin4(accountId, gameSvrId, ack)
+				accountLogin3(accountId, gameSvrId, ack)
 			} else {
 				ack.WriteUInt16(errCode)
 			}
 		}
 	}
 }
-func accountLogin2(centerSvrId int, req, ack *common.NetPack) (_ok bool, _aid uint32, _info gameInfo.TGameInfo) {
+func accountLogin1(centerSvrId int, req, ack *common.NetPack) (_ok bool, _aid uint32, _info gameInfo.TGameInfo) {
 	//同步至center验证账号信息，取得accountId、gameInfo
 	netConfig.SyncRelayToCenter(centerSvrId, enum.Rpc_center_account_login, req, ack)
 
@@ -90,7 +91,7 @@ func accountLogin2(centerSvrId int, req, ack *common.NetPack) (_ok bool, _aid ui
 	}
 	return
 }
-func accountLogin3(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, version, gameName string, centerSvrId int) (errCode uint16) {
+func accountLogin2(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, version, gameName string, centerSvrId int) (errCode uint16) {
 	gamelog.Debug("GameInfo:%v, version:%s gameName:%s", pInfo, version, gameName)
 	if !conf.HandPick_GameSvr {
 		//选取gameSvrId：若账户未绑定游戏服，自动选取空闲节点，并绑定到账号上
@@ -119,7 +120,7 @@ func accountLogin3(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, 
 	}
 	return
 }
-func accountLogin4(accountId uint32, gameSvrId int, ack *common.NetPack) {
+func accountLogin3(accountId uint32, gameSvrId int, ack *common.NetPack) {
 	//登录成功，回复client待连接的节点(gateway或game)
 	gatewayId := netConfig.HashGatewayID(accountId) //此玩家要连接的gateway
 	errCode := err.Unknow_error

@@ -1,0 +1,46 @@
+<html>
+
+<head>
+    <title>白名单</title>
+    <link rel="stylesheet" href="main.css">
+    <script src="app.js"></script>
+</head>
+
+<body bgcolor="white">
+    <div class="all-wrapper">
+        <h1>白名单 & 解封</h1>
+        <div class="form-wrapper">
+            <script>
+                function setActionAddr(form) {
+                    var select = form.getElementsByTagName("select")[0];
+                    var uri = select.options[select.selectedIndex].value;
+                    // window.alert(document.getElementById("gameaddr").value)
+                    form.action="http://"+document.getElementById("addr").value+uri;
+                    // window.alert(form.action)
+                }
+            </script>
+            <form action="" method="get" onsubmit="setActionAddr(this)">
+                <label>操作类型:</label>
+                <select>
+                    <option value="/permit_account">解封账号</option>
+                    <option value="/whitelist_add">添加白名单</option>
+                    <option value="/whitelist_del">删除白名单</option>
+                </select>
+                <label for="passwd" title="我们自己约定的操作权限密码，一般不会变">
+                    权限密码:
+                </label>
+                <input type="password" name="passwd"><br>
+                <label title="玩家所在GameServer地址，可由“查看账号信息”得到">
+                    游戏服:
+                </label>
+                <input type="text" id="addr" placeholder="如 127.0.0.1:7040"><br>
+                <label for="val">角色Pid:</label>
+                <input type="text" name="val"><br>
+                <br>
+                <input type="submit" value="确认">
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

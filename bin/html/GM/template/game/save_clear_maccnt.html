@@ -1,0 +1,46 @@
+<html>
+
+<head>
+    <title>清空绑定次数</title>
+    <link rel="stylesheet" href="main.css">
+    <script src="app.js"></script>
+</head>
+
+<body bgcolor="white">
+    <div class="all-wrapper">
+        <h1>清空绑定次数</h1>
+        <div class="form-wrapper">
+            <script>
+                function setActionAddr(form) {
+                    var select = form.getElementsByTagName("select")[0];
+                    var uri = select.options[select.selectedIndex].value;
+                    // window.alert(document.getElementById("gameaddr").value)
+                    form.action="http://"+document.getElementById("addr").value+uri;
+                    // window.alert(form.action)
+                }
+            </script>
+            <form action="" method="get" onsubmit="setActionAddr(this)">
+                <label>操作类型:</label>
+                <select>
+                    <option value="/clear_maccnt">清空绑定</option>
+                </select>
+                <label for="passwd" title="我们自己约定的操作权限密码，一般不会变">
+                    权限密码:
+                </label>
+                <input type="password" name="passwd"><br>
+                <label title="玩家所在svr_save地址">
+                    存档服:
+                </label>
+                <input type="text" id="addr" placeholder="如 127.0.0.1:7040"><br>
+                <label for="pf_id">平台id:</label>
+                <input type="text" name="pf_id"><br>
+                <label for="uid">uid:</label>
+                <input type="text" name="uid"><br>
+                <br>
+                <input type="submit" value="确认">
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

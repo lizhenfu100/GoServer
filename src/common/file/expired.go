@@ -15,7 +15,7 @@ func DelExpired(dir, prefix string, nday /*多少天算过期*/ int) {
 			expired := time.Now().Add(time.Duration(-nday) * time.Hour * 24)
 			for _, fi := range list {
 				if expired.After(fi.ModTime()) && strings.HasPrefix(fi.Name(), prefix) {
-					os.Remove(fi.Name())
+					os.Remove(dir + fi.Name())
 				}
 			}
 		}
