@@ -75,8 +75,9 @@ func Rpc_save_unbind_mac(req, ack *common.NetPack) {
 
 	if ok, _ := dbmgo.Find(KDBMac, "_id", mac, ptr); ok {
 		timeNow := time.Now().Unix()
-		if !canUnbindMac(ptr.Key, mac, timeNow) {
+		if ok, timeOld := canUnbindMac(ptr.Key, mac, timeNow); !ok {
 			ack.WriteUInt16(err.Operate_too_often)
+			ack.WriteInt64(timeOld)
 			return
 		} else {
 			g_unbindTime1.Store(ptr.Key, timeNow)
@@ -86,16 +87,18 @@ func Rpc_save_unbind_mac(req, ack *common.NetPack) {
 	}
 	ack.WriteUInt16(err.Success)
 }
-func canUnbindMac(key, mac string, timeNow int64) bool {
-	if timeOld, ok := g_unbindTime1.Load(key); ok {
-		if timeNow-timeOld.(int64) < int64(conf.Const.MacUnbindPeriod) {
-			return false
+func canUnbindMac(key, mac string, timeNow int64) (bool, int64) {
+	if v, ok := g_unbindTime1.Load(key); ok {
+		timeOld := v.(int64)
+		if timeNow-timeOld < int64(conf.Const.MacUnbindPeriod) {
+			return false, timeOld
 		}
 	}
-	if timeOld, ok := g_unbindTime2.Load(mac); ok {
-		if timeNow-timeOld.(int64) < int64(conf.Const.MacUnbindPeriod) {
-			return false
+	if v, ok := g_unbindTime2.Load(mac); ok {
+		timeOld := v.(int64)
+		if timeNow-timeOld < int64(conf.Const.MacUnbindPeriod) {
+			return false, timeOld
 		}
 	}
-	return true
+	return true, 0
 }

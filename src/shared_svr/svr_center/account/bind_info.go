@@ -21,11 +21,30 @@ import (
 func Rpc_center_bind_info(req, ack *common.NetPack) {
 	name := req.ReadString()
 	passwd := req.ReadString()
-	key := req.ReadString()
-	val := req.ReadString()
+	k := req.ReadString()
+	v := req.ReadString()
 	force := req.ReadBool()
 
-	errcode := BindInfoToAccount(name, passwd, key, val, force)
+	errcode := err.Unknow_error
+	if account := GetAccountByName(name); account == nil {
+		errcode = err.Account_none
+	} else if !account.CheckPasswd(passwd) {
+		errcode = err.Passwd_err
+	} else if !format.CheckBindValue(k, v) {
+		errcode = err.BindInfo_format_err
+	} else if GetAccountByBindInfo(k, v) != nil {
+		errcode = err.BindInfo_had_been_bound //this_value_already_bind_to_account
+	} else {
+		if force { //强制绑定，须验证
+			errcode = err.Success
+			account.forceBind(k, v)
+		} else if _, ok := account.BindInfo[k]; ok {
+			errcode = err.Account_had_been_bound
+		} else {
+			errcode = err.Success
+			account.bind(k, v)
+		}
+	}
 	ack.WriteUInt16(errcode)
 }
 func Rpc_center_get_account_by_bind_info(req, ack *common.NetPack) { //拿到账号名，client本地保存
@@ -57,37 +76,6 @@ func Rpc_center_get_bind_info(req, ack *common.NetPack) {
 
 // -------------------------------------
 // 辅助函数
-func BindInfoToAccount(name, passwd, k, v string, force bool) (errcode uint16) {
-	if account := GetAccountByName(name); account == nil {
-		errcode = err.Account_none
-	} else if !account.CheckPasswd(passwd) {
-		errcode = err.Passwd_err
-	} else if !format.CheckBindValue(k, v) {
-		errcode = err.BindInfo_format_err
-	} else if GetAccountByBindInfo(k, v) != nil {
-		errcode = err.BindInfo_had_been_bound //this_value_already_bind_to_account
-	} else {
-		if force { //强制绑定，须验证
-			errcode = err.Success
-			account.forceBind(k, v)
-		} else if _, ok := account.BindInfo[k]; ok {
-			errcode = err.Account_had_been_bound
-		} else {
-			errcode = err.Success
-			account.bind(k, v)
-		}
-	}
-	return
-}
-func GetAccountByBindInfo(k, v string) *TAccount {
-	dbkey := fmt.Sprintf("bindinfo.%s", k)
-	account := new(TAccount)
-	if ok, _ := dbmgo.Find(KDBTable, dbkey, v, account); ok {
-		return account
-	}
-	return nil
-}
-
 func (self *TAccount) bind(k, v string) {
 	self.BindInfo[k] = v
 	dbkey := fmt.Sprintf("bindinfo.%s", k)

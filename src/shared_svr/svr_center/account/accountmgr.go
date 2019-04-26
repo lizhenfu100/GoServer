@@ -2,14 +2,16 @@ package account
 
 import (
 	"dbmgo"
+	"fmt"
 	"gopkg.in/mgo.v2/bson"
 	"sync"
 	"time"
 )
 
 var (
-	g_name_cache sync.Map //map[string]*TAccount
-	g_aid_cache  sync.Map //map[uint32]*TAccount
+	g_aid_cache   sync.Map //map[uint32]*TAccount
+	g_name_cache  sync.Map //map[string]*TAccount
+	g_email_cache sync.Map //map[string]*TAccount
 )
 
 func InitDB() {
@@ -49,6 +51,19 @@ func GetAccountByName(name string) *TAccount {
 	}
 	return nil
 }
+func GetAccountByBindInfo(k, v string) *TAccount {
+	dbkey := fmt.Sprintf("bindinfo.%s", k)
+	if p, ok := g_email_cache.Load(dbkey); ok {
+		return p.(*TAccount)
+	} else {
+		account := _NewAccount()
+		if ok, _ := dbmgo.Find(KDBTable, dbkey, v, account); ok {
+			AddCache(account)
+			return account
+		}
+	}
+	return nil
+}
 func GetAccountById(accountId uint32) *TAccount {
 	if v, ok := g_aid_cache.Load(accountId); ok {
 		return v.(*TAccount)
@@ -67,8 +82,12 @@ func GetAccountById(accountId uint32) *TAccount {
 func AddCache(account *TAccount) {
 	g_name_cache.Store(account.Name, account)
 	g_aid_cache.Store(account.AccountID, account)
+	if v, ok := account.BindInfo["email"]; ok {
+		g_email_cache.Store(fmt.Sprintf("bindinfo.%s", v), account)
+	}
 }
 func DelCache(account *TAccount) {
 	g_name_cache.Delete(account.Name)
 	g_aid_cache.Delete(account.AccountID)
+	g_email_cache.Delete(fmt.Sprintf("bindinfo.%s", account.BindInfo["email"]))
 }

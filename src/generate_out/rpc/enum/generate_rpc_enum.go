@@ -159,7 +159,10 @@ const ( //the top 100 are reserved for system
 	Rpc_client_sync_add_weapon_unit uint16 = 243
 	Rpc_client_sync_del_weapon_unit uint16 = 244
 	Rpc_login_relay_email uint16 = 245
-	RpcEnumCnt uint16 = 246
+	Rpc_game_permit_player uint16 = 246
+	Rpc_game_whitelist_add uint16 = 247
+	Rpc_game_whitelist_del uint16 = 248
+	RpcEnumCnt uint16 = 249
 	
 )
 func GetRpcModule(rpcEnum uint16) string {
@@ -262,6 +265,9 @@ case
 	Rpc_game_gm_add_award,
 	Rpc_game_gm_set_award,
 	Rpc_game_gm_del_award,
+	Rpc_game_permit_player,
+	Rpc_game_whitelist_add,
+	Rpc_game_whitelist_del,
 	Rpc_game_login,
 	Rpc_game_create_player,
 	Rpc_game_login_token,

@@ -17,6 +17,7 @@ var (
 func InitDB() {
 	InitSvrMailDB()
 	season.InitDB()
+	g_whitelist.InitDB()
 
 	var list1 []TPlayerBase //只载入近期登录过的
 	dbmgo.FindAll(kDBPlayer, bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - kLivelyTime}}, &list1)

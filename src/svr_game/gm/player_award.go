@@ -129,9 +129,7 @@ func Rpc_game_gm_set_award(req, ack *common.NetPack, conn *tcp.TCPConn) {
 
 	if passwd != conf.GM_Passwd {
 		ack.WriteUInt16(err.Passwd_err)
-		return
-	}
-	if p := g_awards[id]; p == nil {
+	} else if p := g_awards[id]; p == nil {
 		ack.WriteUInt16(err.Not_found)
 	} else {
 		gamelog.Info("gm_set_award: %d %s %s\n%v", id, touid, Json, p)
@@ -147,9 +145,7 @@ func Rpc_game_gm_del_award(req, ack *common.NetPack, conn *tcp.TCPConn) {
 
 	if passwd != conf.GM_Passwd {
 		ack.WriteUInt16(err.Passwd_err)
-		return
-	}
-	if p := g_awards[id]; p == nil {
+	} else if p := g_awards[id]; p == nil {
 		ack.WriteUInt16(err.Not_found)
 	} else {
 		delete(g_awards, p.ID)

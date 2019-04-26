@@ -109,9 +109,7 @@ func Http_gift_bag_set(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	if r.Form.Get("passwd") != conf.GM_Passwd {
 		w.Write(common.S2B("passwd error"))
-		return
-	}
-	if p := getGift(r.Form.Get("key")); p == nil {
+	} else if p := getGift(r.Form.Get("key")); p == nil {
 		w.Write(common.S2B("fail"))
 	} else {
 		gamelog.Info("Http_gift_bag_set: %v\n%v", r.Form, p)
@@ -125,9 +123,7 @@ func Http_gift_bag_del(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	if r.Form.Get("passwd") != conf.GM_Passwd {
 		w.Write(common.S2B("passwd error"))
-		return
-	}
-	if p := getGift(r.Form.Get("key")); p == nil {
+	} else if p := getGift(r.Form.Get("key")); p == nil {
 		w.Write(common.S2B("not find"))
 	} else {
 		g_gifts.Delete(p.Key)
