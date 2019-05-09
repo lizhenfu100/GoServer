@@ -47,6 +47,7 @@ func main() {
 				buf := make([]byte, fi.Size())
 				if _, e = io.ReadFull(f, buf); e == nil {
 					//fmt.Println("---------------1", fileSvr)
+					f.Close()
 					svrFile[fileSvr] = buf
 				}
 			}

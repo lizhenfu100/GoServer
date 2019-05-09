@@ -16,6 +16,10 @@
 	https://github.com/lni/dragonboat/blob/master/queue.go
 	https://github.com/3workman/CXServer/blob/master/src/common/Log/AsyncLog.h
 
+* @ 优化
+	· 内部队列可换成无锁版本
+	· 交换时可不加锁，shared_ptr.unique，实现写时才拷贝
+
 * @ author zhoumf
 * @ date 2019-3-27
 ***********************************************************************/

@@ -18,12 +18,12 @@ var (
 	g_common = _TCommon{
 		CenterAddr: "http://52.14.1.205:7000",
 		SdkAddrs: []string{"",
-			"http://120.78.152.152:7003", //1 北美
-			"http://120.78.152.152:7003", //2 亚洲
-			"http://120.78.152.152:7003", //3 欧洲
-			"http://120.78.152.152:7003", //4 南美
-			"http://120.78.152.152:7003", //5 中国华北
-			"http://120.78.152.152:7003", //6 中国华南
+			"http://120.78.152.152:7002", //1 北美
+			"http://120.78.152.152:7002", //2 亚洲
+			"http://120.78.152.152:7002", //3 欧洲
+			"http://120.78.152.152:7002", //4 南美
+			"http://120.78.152.152:7002", //5 中国华北
+			"http://120.78.152.152:7002", //6 中国华南
 		},
 	}
 	g_list = []TemplateData{
@@ -114,6 +114,7 @@ func (self *TemplateData) GetAddrs() {
 func (self *TemplateData) LoadAddrs() bool {
 	if f, e := os.Open("log/" + self.GameName + ".addr"); e == nil {
 		if buf, e := ioutil.ReadAll(f); e == nil {
+			f.Close()
 			common.B2T(buf, self)
 			buf, _ = json.MarshalIndent(self, "", "     ")
 			fmt.Println(common.B2S(buf))

@@ -24,13 +24,13 @@ import (
 )
 
 //客户端请求生成订单【各渠道可能回复数据不同】
-func NewPreBuyAck(pf_id string) msg.Pre_buy_ack {
-	switch pf_id {
-	case "origin": //官网包，走爱贝支付
+func NewPreBuyAck(pay_id int) msg.Pre_buy_ack {
+	switch pay_id {
+	case 1: //官网包，走爱贝支付
 		return &iapppay.Pre_buy_ack{}
-	case "kuaishou":
+	case 10: //快手
 		return &kuaishou.Pre_buy_ack{}
-	case "xiao7":
+	case 11: //小七
 		return &x7sy.Pre_buy_ack{}
 	default:
 		return &msg.Pre_buy{}

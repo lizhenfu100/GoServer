@@ -5,6 +5,7 @@ import (
 	"common/file"
 	"encoding/json"
 	"fmt"
+	"gamelog"
 	"os"
 	"shared_svr/svr_save/gm"
 	"time"
@@ -28,5 +29,8 @@ func (self *TSaveData) CheckSensitiveVal(newExtra string) {
 			fi.Close()
 		}
 		file.DelExpired(dir, "", 30) //删除30天前的记录
+	}
+	if pNew.GameSession < pOld.GameSession {
+		gamelog.Error("GameSession rollback: %s", self.Key)
 	}
 }

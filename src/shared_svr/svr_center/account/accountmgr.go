@@ -52,11 +52,11 @@ func GetAccountByName(name string) *TAccount {
 	return nil
 }
 func GetAccountByBindInfo(k, v string) *TAccount {
-	dbkey := fmt.Sprintf("bindinfo.%s", k)
-	if p, ok := g_email_cache.Load(dbkey); ok {
+	if p, ok := g_email_cache.Load(v); ok {
 		return p.(*TAccount)
 	} else {
 		account := _NewAccount()
+		dbkey := fmt.Sprintf("bindinfo.%s", k)
 		if ok, _ := dbmgo.Find(KDBTable, dbkey, v, account); ok {
 			AddCache(account)
 			return account
@@ -83,11 +83,11 @@ func AddCache(account *TAccount) {
 	g_name_cache.Store(account.Name, account)
 	g_aid_cache.Store(account.AccountID, account)
 	if v, ok := account.BindInfo["email"]; ok {
-		g_email_cache.Store(fmt.Sprintf("bindinfo.%s", v), account)
+		g_email_cache.Store(v, account)
 	}
 }
 func DelCache(account *TAccount) {
 	g_name_cache.Delete(account.Name)
 	g_aid_cache.Delete(account.AccountID)
-	g_email_cache.Delete(fmt.Sprintf("bindinfo.%s", account.BindInfo["email"]))
+	g_email_cache.Delete(account.BindInfo["email"])
 }

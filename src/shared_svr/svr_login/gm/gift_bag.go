@@ -20,22 +20,26 @@ package gm
 import (
 	"common"
 	"common/copy"
+	"common/file"
 	"common/std"
+	"common/std/hash"
+	"common/std/random"
 	"conf"
 	"dbmgo"
+	"encoding/csv"
 	"encoding/json"
+	"fmt"
 	"gamelog"
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
+	"math"
 	"net/http"
+	"os"
 	"strconv"
-	"sync"
 	"time"
 )
 
 const kDBGift = "gift"
-
-var g_gifts sync.Map //<key, *TGiftBag>
 
 type TGiftBag struct {
 	Key    string `bson:"_id"` //可自定义
@@ -44,42 +48,98 @@ type TGiftBag struct {
 	Desc   string
 	Json   string
 	Pf_id  string      //平台名，相应平台玩家才能领，空则所有人可领
+	Pids   std.Strings //领过的人，pid、平台uuid
 	MaxNum int         //限制领取总次数，默认无限
-	Pids   std.UInt32s //领过的人，平台的玩家uid可哈希为uint32
+	Time   int64
 }
 
 // ------------------------------------------------------------
 func Rpc_login_get_gift(req, ack *common.NetPack) {
 	key := req.ReadString()
-	pid := req.ReadUInt32()
+	uuid := req.ReadString()
 	pf_id := req.ReadString()
 
+	key = GetDBKey(key)
+	timenow := time.Now().Unix()
 	if p := getGift(key); p == nil {
 		ack.WriteUInt16(err.Not_found)
 	} else if p.MaxNum > 0 && len(p.Pids) >= p.MaxNum {
 		ack.WriteUInt16(err.Not_found) //被领完了
 	} else if p.Pf_id != "" && p.Pf_id != pf_id {
 		ack.WriteUInt16(err.Pf_id_not_match) //非此平台玩家
-	} else if timenow := time.Now().Unix(); timenow < p.Begin || timenow > p.End {
+	} else if (p.Begin > 0 && timenow < p.Begin) || (p.End > 0 && timenow > p.End) {
 		ack.WriteUInt16(err.Not_in_the_time_zone) //时间不对，无法领取
-	} else if p.Pids.Index(pid) > 0 {
+	} else if p.Pids.Index(uuid) >= 0 {
 		ack.WriteUInt16(err.Already_get_it) //已领过
 	} else {
-		p.Pids = append(p.Pids, pid)
-		dbmgo.UpdateId(kDBGift, key, bson.M{"$push": bson.M{"pids": pid}})
+		p.Pids = append(p.Pids, uuid)
+		dbmgo.UpdateId(kDBGift, key, bson.M{"$push": bson.M{"pids": uuid}})
 		ack.WriteUInt16(err.Success)
 		ack.WriteString(p.Json)
 	}
 }
 
 // ------------------------------------------------------------
-func InitGiftDB() {
-	var list []TGiftBag
-	timenow := time.Now().Unix()
-	dbmgo.FindAll(kDBGift, bson.M{"timeend": bson.M{"$gt": timenow}}, &list)
-	for i := 0; i < len(list); i++ {
-		g_gifts.Store(list[i].Key, &list[i])
+// -- 特殊key，用于减少内容相同礼包的数量
+const (
+	kPrefixLen = 4 //4位前缀：随机字符串
+	kSuffixLen = 4 //4位后缀：数字校验码
+	kDBkeyLen  = 2
+)
+
+func GetDBKey(userkey string) (dbkey string) {
+	if length := len(userkey); length == kPrefixLen+kSuffixLen+kDBkeyLen {
+		suffix := userkey[length-kSuffixLen:] //后4位纯数字，是校验码
+		if v, e := strconv.Atoi(suffix); e == nil {
+			str, kMod := userkey[:length-kSuffixLen], uint32(math.Pow10(kSuffixLen))
+			if hash.StrHash(str)%kMod == uint32(v) {
+				return userkey[kPrefixLen : kPrefixLen+kDBkeyLen] //真正的dbkey
+			}
+		}
 	}
+	return userkey
+}
+func MakeUserKey(dbkey string) string {
+	if len(dbkey) != kDBkeyLen {
+		str, kMod := random.String(kPrefixLen)+dbkey, uint32(math.Pow10(kSuffixLen))
+		sign := strconv.Itoa(int(hash.StrHash(str) % kMod))
+		return str + sign
+	} else {
+		return dbkey
+	}
+}
+func MakeUserKeyCsv(dbkey string, cnt int, csvDir, csvName string) {
+	list := make(map[string]bool, cnt)
+	for {
+		list[MakeUserKey(dbkey)] = true
+		if len(list) == cnt {
+			break
+		}
+		fmt.Println("-------------------", len(list))
+	}
+
+	f, _ := file.CreateFile(csvDir, csvName, os.O_TRUNC|os.O_WRONLY)
+	w := csv.NewWriter(f)
+
+	i := 0
+	for k := range list {
+		if e := w.Write([]string{k}); e != nil {
+			f.Close()
+			return
+		}
+		if i++; i%1000 == 0 {
+			w.Flush()
+		}
+	}
+	w.Flush()
+	f.Close()
+	fmt.Println("------------------- csv end")
+}
+
+// ------------------------------------------------------------
+func InitGiftDB() {
+	//删除超过四个月的
+	dbmgo.RemoveAllSync(kDBGift, bson.M{"time": bson.M{"$lt": time.Now().Unix() - 120*24*3600}})
 }
 func Http_gift_bag_add(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
@@ -92,12 +152,11 @@ func Http_gift_bag_add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p := &TGiftBag{}
+	p := &TGiftBag{Time: time.Now().Unix()}
 	if copy.CopyForm(p, r.Form); p.Key == "" {
 		p.Key = strconv.Itoa(int(dbmgo.GetNextIncId("GiftId")))
 	}
 	if dbmgo.InsertSync(kDBGift, p) {
-		g_gifts.Store(p.Key, p)
 		ack, _ := json.MarshalIndent(p, "", "     ")
 		w.Write(ack)
 		gamelog.Info("Http_gift_bag_add: %v", r.Form)
@@ -126,7 +185,6 @@ func Http_gift_bag_del(w http.ResponseWriter, r *http.Request) {
 	} else if p := getGift(r.Form.Get("key")); p == nil {
 		w.Write(common.S2B("not find"))
 	} else {
-		g_gifts.Delete(p.Key)
 		dbmgo.Remove(kDBGift, bson.M{"_id": p.Key})
 		ack, _ := json.MarshalIndent(p, "", "     ")
 		w.Write(ack)
@@ -136,8 +194,9 @@ func Http_gift_bag_del(w http.ResponseWriter, r *http.Request) {
 
 // ------------------------------------------------------------
 func getGift(key string) *TGiftBag {
-	if v, ok := g_gifts.Load(key); ok {
-		return v.(*TGiftBag)
+	p := &TGiftBag{}
+	if ok, _ := dbmgo.Find(kDBGift, "_id", key, p); ok {
+		return p
 	}
 	return nil
 }

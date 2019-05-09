@@ -51,6 +51,8 @@ func Decompress(b []byte) []byte {
 			if err == nil {
 				return ret
 			}
+		} else {
+			gamelog.Error("Decompress: " + err.Error())
 		}
 	}
 	return b

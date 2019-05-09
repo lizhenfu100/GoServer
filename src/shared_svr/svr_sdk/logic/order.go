@@ -30,7 +30,7 @@ func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 	copy.CopyForm(&order, r.Form)
 
 	//! 创建回复
-	ack := platform.NewPreBuyAck(order.Pf_id)
+	ack := platform.NewPreBuyAck(order.Pay_id)
 	ack.SetRetcode(-1)
 	defer func() {
 		b, _ := json.Marshal(&ack)
