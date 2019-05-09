@@ -83,15 +83,16 @@ func Rpc_login_get_gift(req, ack *common.NetPack) {
 // -- 特殊key，用于减少内容相同礼包的数量
 const (
 	kPrefixLen = 4 //4位前缀：随机字符串
-	kSuffixLen = 4 //4位后缀：数字校验码
+	kSuffixLen = 4 //4位后缀：数字校验码（可能少于4位，0开头）
 	kDBkeyLen  = 2
 )
 
 func GetDBKey(userkey string) (dbkey string) {
-	if length := len(userkey); length == kPrefixLen+kSuffixLen+kDBkeyLen {
-		suffix := userkey[length-kSuffixLen:] //后4位纯数字，是校验码
+	if length := len(userkey); length > kPrefixLen+kDBkeyLen {
+		str := userkey[:kPrefixLen+kDBkeyLen]
+		suffix := userkey[kPrefixLen+kDBkeyLen:] //后缀，是校验码
 		if v, e := strconv.Atoi(suffix); e == nil {
-			str, kMod := userkey[:length-kSuffixLen], uint32(math.Pow10(kSuffixLen))
+			kMod := uint32(math.Pow10(kSuffixLen))
 			if hash.StrHash(str)%kMod == uint32(v) {
 				return userkey[kPrefixLen : kPrefixLen+kDBkeyLen] //真正的dbkey
 			}
@@ -100,7 +101,7 @@ func GetDBKey(userkey string) (dbkey string) {
 	return userkey
 }
 func MakeUserKey(dbkey string) string {
-	if len(dbkey) != kDBkeyLen {
+	if len(dbkey) == kDBkeyLen {
 		str, kMod := random.String(kPrefixLen)+dbkey, uint32(math.Pow10(kSuffixLen))
 		sign := strconv.Itoa(int(hash.StrHash(str) % kMod))
 		return str + sign
@@ -109,20 +110,35 @@ func MakeUserKey(dbkey string) string {
 	}
 }
 func MakeUserKeyCsv(dbkey string, cnt int, csvDir, csvName string) {
-	list := make(map[string]bool, cnt)
-	for {
-		list[MakeUserKey(dbkey)] = true
-		if len(list) == cnt {
-			break
-		}
-		fmt.Println("-------------------", len(list))
+	// 读已生成的key
+	f, e := file.CreateFile(csvDir, csvName, os.O_APPEND|os.O_WRONLY)
+	if e != nil {
+		gamelog.Error("MakeUserKeyCsv: %s", e.Error())
+	}
+	records, e := file.ReadCsv(csvDir + csvName)
+	if e != nil {
+		gamelog.Error("MakeUserKeyCsv: %s", e.Error())
 	}
 
-	f, _ := file.CreateFile(csvDir, csvName, os.O_TRUNC|os.O_WRONLY)
-	w := csv.NewWriter(f)
+	all := make(map[string]bool, len(records))
+	for _, v := range records {
+		all[v[0]] = true
+	}
+	news := make(map[string]bool, cnt)
+	for {
+		v := MakeUserKey(dbkey)
+		if _, ok := all[v]; !ok {
+			all[v] = true
+			news[v] = true
+		}
+		fmt.Println("-------------------", len(all))
+		if len(news) == cnt {
+			break
+		}
+	}
 
-	i := 0
-	for k := range list {
+	w, i := csv.NewWriter(f), 0
+	for k := range news {
 		if e := w.Write([]string{k}); e != nil {
 			f.Close()
 			return
