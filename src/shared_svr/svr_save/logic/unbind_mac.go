@@ -102,3 +102,7 @@ func canUnbindMac(key, mac string, timeNow int64) (bool, int64) {
 	}
 	return true, 0
 }
+func ClearUnbindLimit() {
+	g_unbindTime1 = sync.Map{}
+	g_unbindTime2 = sync.Map{}
+}

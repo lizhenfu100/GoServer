@@ -18,7 +18,7 @@
 * @ author zhoumf
 * @ date 2019-3-29
 ***********************************************************************/
-package gm
+package logic
 
 import (
 	"common"

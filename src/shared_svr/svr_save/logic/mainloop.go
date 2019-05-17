@@ -5,12 +5,11 @@ import (
 	"common/timer"
 	"conf"
 	"nets/tcp"
-	"shared_svr/svr_save/gm"
 	"time"
 )
 
 func MainLoop() {
-	gm.G_Backup.InitDB()
+	G_Backup.InitDB()
 	InitTimeUpdate()
 
 	timeNow, timeOld, timeElapse := time.Now().UnixNano()/int64(time.Millisecond), int64(0), 0

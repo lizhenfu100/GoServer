@@ -124,7 +124,6 @@ func Http_query_order_unfinished(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		b, _ := json.Marshal(&ack)
 		w.Write(b)
-		gamelog.Debug("ack: %v", ack)
 	}()
 	if third == "" {
 		return
@@ -138,4 +137,5 @@ func Http_query_order_unfinished(w http.ResponseWriter, r *http.Request) {
 		}
 		return true
 	})
+	gamelog.Track("third: %s, ack: %v", third, ack.Orders)
 }

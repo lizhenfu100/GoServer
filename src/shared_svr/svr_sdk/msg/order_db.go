@@ -72,6 +72,7 @@ func FindOrder(orderId string) *TOrderInfo {
 	} else {
 		ptr := new(TOrderInfo)
 		if ok, _ := dbmgo.Find(KDBTable, "_id", orderId, ptr); ok {
+			g_order_map.Store(orderId, ptr)
 			return ptr
 		}
 	}

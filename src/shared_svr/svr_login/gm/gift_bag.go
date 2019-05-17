@@ -109,7 +109,7 @@ func MakeUserKey(dbkey string) string {
 		return dbkey
 	}
 }
-func MakeUserKeyCsv(dbkey string, cnt int, csvDir, csvName string) {
+func MakeUserKeyCsv(dbkey string, kAddNum int, csvDir, csvName string) {
 	// 读已生成的key
 	f, e := file.CreateFile(csvDir, csvName, os.O_APPEND|os.O_WRONLY)
 	if e != nil {
@@ -124,7 +124,7 @@ func MakeUserKeyCsv(dbkey string, cnt int, csvDir, csvName string) {
 	for _, v := range records {
 		all[v[0]] = true
 	}
-	news := make(map[string]bool, cnt)
+	news := make(map[string]bool, kAddNum)
 	for {
 		v := MakeUserKey(dbkey)
 		if _, ok := all[v]; !ok {
@@ -132,7 +132,7 @@ func MakeUserKeyCsv(dbkey string, cnt int, csvDir, csvName string) {
 			news[v] = true
 		}
 		fmt.Println("-------------------", len(all))
-		if len(news) == cnt {
+		if len(news) == kAddNum {
 			break
 		}
 	}

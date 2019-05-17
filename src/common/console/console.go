@@ -2,11 +2,9 @@ package console
 
 import (
 	"common"
-	"common/assert"
 	"common/file"
 	"common/tool/wechat"
 	"conf"
-	"fmt"
 	"gamelog"
 	"generate_out/rpc/enum"
 	"math/rand"
@@ -15,22 +13,8 @@ import (
 	http2 "nets/http/http"
 	"nets/tcp"
 	"os"
-	"runtime"
-	"runtime/debug"
-	"strconv"
-	"strings"
 	"time"
 )
-
-type cmdFunc func(args []string)
-
-var g_cmds = map[string]cmdFunc{ //Notice：注意下列函数的线程安全性
-	"loglv":   cmd_LogLv,
-	"gc":      cmd_gc,
-	"routine": cmd_routine,
-	"cpu":     cmd_cpu,
-	"setcpu":  cmd_setcpu,
-}
 
 func Init() {
 	rand.Seed(time.Now().Unix())
@@ -104,48 +88,4 @@ func _Rpc_reload_csv2(req, ack *common.NetPack) {
 		file.ReloadCsv(req.ReadString())
 	}
 	ack.WriteByte(1) //ok
-}
-
-func RegCmd(key string, f cmdFunc)                          { g_cmds[key] = f }
-func _Rpc_gm_cmd1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_gm_cmd2(req, ack) }
-func _Rpc_gm_cmd2(req, ack *common.NetPack) {
-	cmd := req.ReadString()
-
-	args := strings.Split(cmd, " ")
-	defer func() {
-		if r := recover(); r != nil {
-			gamelog.Error("recover HandleCmd\n%v: %s", r, debug.Stack())
-		}
-	}()
-	if cmd, ok := g_cmds[args[0]]; ok {
-		cmd(args)
-		ack.WriteString("ok")
-	} else {
-		ack.WriteString("fail")
-	}
-}
-
-// ------------------------------------------------------------
-//! 命令行函数
-func cmd_LogLv(args []string) {
-	lv, _ := strconv.Atoi(args[1])
-	gamelog.SetLevel(lv)
-	fmt.Println("SetLogLv ", lv)
-}
-func cmd_gc(args []string) {
-	runtime.GC()
-	fmt.Println("GC finished")
-}
-func cmd_routine(args []string) {
-	fmt.Println("Current number of goroutines: ", runtime.NumGoroutine())
-}
-func cmd_cpu(args []string) {
-	fmt.Println(runtime.NumCPU(), " cpus and ", runtime.GOMAXPROCS(0), " in use")
-}
-func cmd_setcpu(args []string) {
-	if assert.IsDebug {
-		n, _ := strconv.Atoi(args[1])
-		runtime.GOMAXPROCS(n)
-		fmt.Println(runtime.NumCPU(), " cpus and ", runtime.GOMAXPROCS(0), " in use")
-	}
 }

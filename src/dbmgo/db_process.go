@@ -5,6 +5,7 @@ import (
 	"gamelog"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"strings"
 	"sync"
 )
 
@@ -31,6 +32,8 @@ type action struct {
 	pData  interface{} //数据，可bson.M指定更新字段，详见dbmgo.go头部注释
 }
 
+func WaitStop() { close(_actions); _finished.Wait() }
+
 func _loop() {
 	_finished.Add(1)
 	var err error
@@ -55,14 +58,19 @@ func _loop() {
 			_, err = pColl.RemoveAll(v.search)
 		}
 		if err != nil {
+			errTips := err.Error()
 			gamelog.Error("DBProcess Failed: op[%d] table[%s] search[%v], data[%v], Error[%s]",
-				v.optype, v.table, v.search, v.pData, err.Error())
+				v.optype, v.table, v.search, v.pData, errTips)
 			wechat.SendMsg("DBProcess: " + err.Error())
+			//FIXME：Mongodb会极低概率忽然断开，所有操作均超时~囧
+			if strings.LastIndex(errTips, "timeout") >= 0 {
+				_actions <- v
+				ReConnect()
+			}
 		}
 	}
 	_finished.Done()
 }
-func WaitStop() { close(_actions); _finished.Wait() }
 
 func Update(table string, search, update bson.M) {
 	_actions <- &action{

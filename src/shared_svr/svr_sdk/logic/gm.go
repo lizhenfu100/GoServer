@@ -42,6 +42,23 @@ func Http_order_success(w http.ResponseWriter, r *http.Request) {
 	}
 	gamelog.Info("Http_order_success: %v", r.Form)
 }
+func Http_order_set_force(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	orderId := q.Get("orderid")
+
+	if q.Get("passwd") != conf.GM_Passwd {
+		w.Write(common.S2B("passwd error"))
+	} else if order := msg.FindOrder(orderId); order == nil {
+		w.Write(common.S2B(orderId + ": order not exists"))
+	} else {
+		order.Status = 1
+		order.Can_send = 1
+		dbmgo.UpdateId(msg.KDBTable, order.Order_id, bson.M{"$set": bson.M{
+			"status": 1, "can_send": 1}})
+		w.Write(common.S2B("ok"))
+	}
+	gamelog.Info("Http_order_set_force: %v", r.Form)
+}
 
 // ------------------------------------------------------------
 // 批量修改订单，配合内部工具使用

@@ -197,17 +197,24 @@ func Rpc_center_player_login_addr(req, ack *common.NetPack) {
 					buf.WriteString("game")
 					buf.WriteString(meta.G_Local.Version)
 				}, func(recvBuf *common.NetPack) {
+					ids, metas := []int{}, map[int]meta.Meta{}
 					for cnt, i := recvBuf.ReadByte(), byte(0); i < cnt; i++ {
 						svrId := recvBuf.ReadInt()
 						outip := recvBuf.ReadString()
 						port := recvBuf.ReadUInt16()
-						recvBuf.ReadString() //svrName
-						gamelog.Debug("GameAddr -- %s:%d(%d)", outip, port, svrId)
-						if svrId == info.GameSvrId {
-							ack.WriteString(outip)
-							ack.WriteUInt16(port)
-							break
+						svrName := recvBuf.ReadString()
+
+						ids = append(ids, svrId) //收集game节点信息，确定具体哪个分流节点
+						metas[svrId] = meta.Meta{
+							SvrID:   svrId,
+							OutIP:   outip,
+							TcpPort: port,
+							SvrName: svrName,
 						}
+					}
+					if gameInfo.ShuntGameSvr(ids, &info.GameSvrId, account.AccountID) {
+						ack.WriteString(metas[info.GameSvrId].OutIP)
+						ack.WriteUInt16(metas[info.GameSvrId].TcpPort)
 					}
 				})
 			}

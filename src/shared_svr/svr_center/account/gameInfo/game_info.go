@@ -34,3 +34,18 @@ func (self *TGameInfo) BufToData(buf *common.NetPack) {
 		self.JsonData = data
 	}
 }
+
+// game的分流节点，【须保证玩家分配到的节点不变】，不能动态增删
+func ShuntGameSvr(gamelist []int, svrId *int, accountId uint32) bool {
+	var ids []int
+	for _, id := range gamelist {
+		if id%10000 == *svrId%10000 { //svrId%10000相同，视为分流节点
+			ids = append(ids, id)
+		}
+	}
+	if length := uint32(len(ids)); length > 0 { //hash选择分流节点
+		*svrId = ids[accountId%length]
+		return true
+	}
+	return false
+}

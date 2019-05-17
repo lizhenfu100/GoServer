@@ -2,7 +2,6 @@ package logic
 
 import (
 	"common/timer"
-	"shared_svr/svr_save/gm"
 	"time"
 )
 
@@ -27,10 +26,10 @@ func updatePerMinute() {
 // ------------------------------------------------------------
 // logic code
 func onEnterNextDay() {
-	gm.G_Backup.OnEnterNextDay()
+	G_Backup.OnEnterNextDay()
 }
 func onEnterNextHour() {
-	gm.G_Backup.OnEnterNextHour()
+	G_Backup.OnEnterNextHour()
 }
 func perMinute() {
 }

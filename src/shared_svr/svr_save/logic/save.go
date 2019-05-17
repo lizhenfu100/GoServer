@@ -46,8 +46,8 @@ type TSaveData struct {
 	Data    []byte
 	UpTime  int64  //上传时刻
 	ChTime  int64  //更换时刻
-	MacCnt  byte   //绑定的设备数目
-	Extra   string //json
+	MacCnt  byte   //绑定的设备次数
+	Extra   string //json TSensitive
 	Version string
 }
 type MacInfo struct {
@@ -90,33 +90,36 @@ func checkMac(pf_id, uid, mac string) uint16 { //Notice：不可调换错误码�
 		}
 	}
 	if okSave, _ := dbmgo.Find(KDBSave, "_id", pSave.Key, pSave); !okSave {
+		gamelog.Track("Record_cannot_find: key(%s)", pSave.Key)
 		return err.Record_cannot_find
 	}
 	if !okMac /*新设备*/ && pSave.MacCnt >= conf.Const.MacFreeBindMax {
 		if now := time.Now().Unix(); now-pSave.ChTime < int64(conf.Const.MacChangePeriod) {
+			gamelog.Track("Record_bind_limit: key(%v)", pSave)
 			return err.Record_bind_limit
 		}
 		if pSave.MacCnt >= conf.Const.MacBindMax {
+			gamelog.Track("Record_bind_limit: key(%v)", pSave)
 			return err.Record_bind_limit
 		}
 	}
 	return err.Success
 }
 
-func upload(pf_id, uid, mac string, data []byte, extra, version string) uint16 {
+func upload(pf_id, uid, mac string, data []byte, extra, cliantVersion string) uint16 {
 	key, now := GetSaveKey(pf_id, uid), time.Now().Unix()
 	switch e := checkMac(pf_id, uid, mac); e {
 	case err.Success:
 		pSave := &TSaveData{Key: key}
 		dbmgo.Find(KDBSave, "_id", key, pSave)
-		if version < pSave.Version { //旧client覆盖新档，报错
+		if cliantVersion < pSave.Version { //旧client覆盖新档，报错
 			return err.Version_not_match
 		}
 		pSave.CheckSensitiveVal(extra) //敏感数据异动，记下历史存档
 		pSave.Data = data
 		pSave.UpTime = now
 		pSave.Extra = extra
-		pSave.Version = version
+		pSave.Version = cliantVersion
 		if dbmgo.DataBase().C(KDBMac).Insert(&MacInfo{mac, key}) == nil {
 			pSave.MacCnt++
 			pSave.ChTime = now
@@ -126,7 +129,7 @@ func upload(pf_id, uid, mac string, data []byte, extra, version string) uint16 {
 		return err.Success
 	case err.Record_cannot_find:
 		dbmgo.Insert(KDBSave, &TSaveData{key, data, now, now, 1,
-			extra, version})
+			extra, cliantVersion})
 		dbmgo.Insert(KDBMac, &MacInfo{mac, key})
 		//fmt.Println("---------------upload new: ", len(pSave.Data), pSave)
 		return err.Success
@@ -134,11 +137,11 @@ func upload(pf_id, uid, mac string, data []byte, extra, version string) uint16 {
 		return e
 	}
 }
-func download(pf_id, uid, mac, version string) (*TSaveData, uint16) {
+func download(pf_id, uid, mac, clientVersion string) (*TSaveData, uint16) {
 	if errCode := checkMac(pf_id, uid, mac); errCode == err.Success {
 		pSave := &TSaveData{Key: GetSaveKey(pf_id, uid)}
 		dbmgo.Find(KDBSave, "_id", pSave.Key, pSave)
-		if version < pSave.Version { //旧client下载新档，报错
+		if clientVersion < pSave.Version { //旧client下载新档，报错
 			return nil, err.Version_not_match
 		}
 		if dbmgo.DataBase().C(KDBMac).Insert(&MacInfo{mac, pSave.Key}) == nil {
@@ -188,7 +191,7 @@ func Rpc_save_upload_binary2(req, ack *common.NetPack) {
 	Sign := req.ReadString()
 	extra := req.ReadString()
 	data := req.ReadLenBuf()
-	version := req.ReadString()
+	clientVersion := req.ReadString()
 
 	//验证签名
 	s := fmt.Sprintf("uid=%s&pf_id=%s", uid, pf_id)
@@ -198,7 +201,7 @@ func Rpc_save_upload_binary2(req, ack *common.NetPack) {
 		return
 	}
 
-	errcode := upload(pf_id, uid, mac, data, extra, version)
+	errcode := upload(pf_id, uid, mac, data, extra, clientVersion)
 	ack.WriteUInt16(errcode)
 }
 func Rpc_save_download_binary(req, ack *common.NetPack) {
@@ -206,7 +209,7 @@ func Rpc_save_download_binary(req, ack *common.NetPack) {
 	pf_id := req.ReadString()
 	mac := req.ReadString()
 	Sign := req.ReadString()
-	version := req.ReadString()
+	clientVersion := req.ReadString()
 
 	//验证签名
 	s := fmt.Sprintf("uid=%s&pf_id=%s", uid, pf_id)
@@ -216,7 +219,7 @@ func Rpc_save_download_binary(req, ack *common.NetPack) {
 		return
 	}
 
-	if ptr, errcode := download(pf_id, uid, mac, version); errcode == err.Success {
+	if ptr, errcode := download(pf_id, uid, mac, clientVersion); errcode == err.Success {
 		ack.WriteUInt16(err.Success)
 		ack.WriteBuf(ptr.Data)
 	} else {

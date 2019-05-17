@@ -33,10 +33,11 @@ func Rpc_login_move_player_db(req, ack *common.NetPack) {
 	accountId := req.ReadUInt32()
 	name := req.ReadString()
 	playerBuf := req.ReadLenBuf()
-	pf_id, mac, saveData := "", "", []byte(nil)
+	pf_id, mac, clientVersion, saveData := "", "", "", []byte(nil)
 	if conf.HaveClientSave { //读取存档数据
 		pf_id = req.ReadString()
 		mac = req.ReadString()
+		clientVersion = req.ReadString()
 		saveData = req.ReadLenBuf()
 	}
 	if gameName != conf.GameName {
@@ -57,7 +58,7 @@ func Rpc_login_move_player_db(req, ack *common.NetPack) {
 		}
 		//5、向game问询save地址，存档写入新区
 		if conf.HaveClientSave {
-			if e := _MoveSave(gameSvrId, accountId, version, pf_id, mac, saveData); e != err.Success {
+			if e := _MoveSave(gameSvrId, accountId, version, pf_id, mac, clientVersion, saveData); e != err.Success {
 				errCode = e
 				return
 			}
@@ -89,7 +90,7 @@ func _MovePlayer(gameSvrId int, accountId uint32, name string, data []byte) (err
 	})
 	return
 }
-func _MoveSave(gameSvrId int, accountId uint32, version, pf_id, mac string, data []byte) (errCode uint16) {
+func _MoveSave(gameSvrId int, accountId uint32, version, pf_id, mac, clientVersion string, data []byte) (errCode uint16) {
 	errCode = err.None_game_server
 	gameAddr := netConfig.GetHttpAddr("game", gameSvrId)
 	http.CallRpc(gameAddr, enum.Rpc_meta_list, func(buf *common.NetPack) {
@@ -108,8 +109,9 @@ func _MoveSave(gameSvrId int, accountId uint32, version, pf_id, mac string, data
 				buf.WriteString(pf_id)
 				buf.WriteString(mac)
 				buf.WriteString(sign.CalcSign(fmt.Sprintf("uid=%s&pf_id=%s", uid, pf_id)))
-				buf.WriteString("")
+				buf.WriteString("") //extra
 				buf.WriteLenBuf(data)
+				buf.WriteString(clientVersion)
 			}, func(recvBuf *common.NetPack) {
 				errCode = recvBuf.ReadUInt16()
 			})

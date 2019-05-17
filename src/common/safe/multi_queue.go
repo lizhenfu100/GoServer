@@ -33,7 +33,6 @@ type MultiQueue struct {
 	multi       [2][]interface{} //须比消费者数目多1，生产者共用一个写
 	writer      []interface{}    //引用自multi，生产者们往里写入
 	writerCycle uint8            //multi中循环挑选，作为writer
-	stop        bool
 	kSize       uint32
 	wpos        uint32
 }
@@ -45,31 +44,22 @@ func (self *MultiQueue) Init(size uint32) {
 	}
 	self.writer = self.multi[0]
 }
-func (self *MultiQueue) Close() {
-	self.Lock()
-	self.stop = true
-	self.Unlock()
-}
 func (self *MultiQueue) PendingPos() (ret uint32) {
 	self.Lock()
 	ret = self.wpos
 	self.Unlock()
 	return
 }
-func (self *MultiQueue) Put(val interface{}) (bool, bool) {
+func (self *MultiQueue) Put(val interface{}) bool {
 	self.Lock()
 	if self.wpos >= self.kSize {
 		self.Unlock()
-		return false, self.stop
-	}
-	if self.stop {
-		self.Unlock()
-		return false, true
+		return false
 	}
 	self.writer[self.wpos] = val
 	self.wpos++
 	self.Unlock()
-	return true, false
+	return true
 }
 func (self *MultiQueue) Get() (ret []interface{}) {
 	self.Lock()

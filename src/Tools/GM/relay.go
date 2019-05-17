@@ -33,6 +33,12 @@ func Http_query_account_login_addr(w http.ResponseWriter, r *http.Request) {
 
 				w.Write(common.S2B(fmt.Sprintf("LoginAddr: %s:%d\nGameAddr: %s:%d",
 					loginIp, loginPort, gameIp, gamePort)))
+			} else if e == err.Svr_not_working {
+				w.Write(common.S2B("Svr_not_working"))
+			} else if e == err.Not_found {
+				w.Write(common.S2B(gameName + ": none data"))
+			} else {
+				w.Write(common.S2B("Unknow_error"))
 			}
 		})
 	}
@@ -76,5 +82,8 @@ func Http_relay_gm_cmd(w http.ResponseWriter, r *http.Request) {
 
 	mhttp.CallRpc("http://"+addr, enum.Rpc_gm_cmd, func(buf *common.NetPack) {
 		buf.WriteString(cmd)
-	}, nil)
+	}, func(recvBuf *common.NetPack) {
+		str := recvBuf.ReadString()
+		w.Write(common.S2B(str))
+	})
 }

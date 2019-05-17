@@ -33,35 +33,37 @@ import (
 )
 
 var (
-	g_db_session *mgo.Session
-	g_database   *mgo.Database
+	g_database *mgo.Database
+	g_dial     = &mgo.DialInfo{
+		Timeout: 10 * time.Second,
+	}
 )
 
 func InitWithUser(ip string, port uint16, dbname, user, pwd string) {
-	pInfo := &mgo.DialInfo{
-		Addrs:    []string{fmt.Sprintf("%s:%d", ip, port)},
-		Timeout:  10 * time.Second,
-		Database: dbname,
-		Username: user,
-		Password: pwd,
+	g_dial.Addrs = []string{fmt.Sprintf("%s:%d", ip, port)}
+	g_dial.Database = dbname
+	g_dial.Username = user
+	g_dial.Password = pwd
+	ReConnect()
+	_init_inc_ids()
+	go _loop()
+}
+func ReConnect() {
+	if g_database != nil {
+		g_database.Session.Close()
 	}
-	var err error
-	if g_db_session, err = mgo.DialWithInfo(pInfo); err != nil {
-		panic(fmt.Sprintf("Mongodb Init: %s:%d %s %s %s", ip, port, dbname, user, pwd))
+	if session, e := mgo.DialWithInfo(g_dial); e != nil {
+		panic(fmt.Sprintf("Mongodb Init: %v", g_dial))
+	} else {
+		g_database = session.DB(g_dial.Database)
 	}
-	g_database = g_db_session.DB(dbname)
-
 	//FIXME：测试db连接可用性（小概率db初始化成功，但后续读写操作均超时）
 	if _, e := Find(kDBIncTable, "_id", "", &nameId{}); e != nil {
-		panic("Mongodb Run Failed:" + err.Error())
+		panic("Mongodb Run Failed:" + e.Error())
 	}
-
-	go _loop()
-	_init_inc_ids()
 }
 func DataBase() *mgo.Database { return g_database }
 
-//! operation
 func InsertSync(table string, pData interface{}) bool {
 	coll := g_database.C(table)
 	if err := coll.Insert(pData); err != nil {

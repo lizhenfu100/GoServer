@@ -15,6 +15,11 @@
 * @ 分流节点（game连接同个db）
 	、常规节点的svrId四位数以内，分流节点是svrId+10000
 	、svrId%10000 即入库的节点id
+	、id取模决定去哪个分流节点的
+		· 节点不变时，玩家每次进的同个节点
+		· 此点非常重要，game带状态的
+		· 若每次可进不同节点，会状态错乱……比如延时写db，脏覆盖bug
+
 * @ 动态分流
 	、无zookeeper的架构，只能重启扩容
 	、取模方式的，不能动态分流，如：gateway、friend、game
@@ -113,9 +118,10 @@ func accountLogin2(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, 
 			return
 		}
 	}
-	if *gameSvrId = ShuntGameSvr(version, *gameSvrId, accountId); *gameSvrId <= 0 {
+	if gameInfo.ShuntGameSvr(meta.GetModuleIDs("game", version), gameSvrId, accountId) {
 		errCode = err.None_free_game_server
 	} else {
+		gamelog.Track("Login game svrId: %d", *gameSvrId)
 		errCode = err.Success
 	}
 	return
@@ -215,16 +221,4 @@ func GetFreeGameSvr(version string) int {
 		}
 	}
 	return ret
-}
-func ShuntGameSvr(version string, svrId int, accountId uint32) int {
-	_ids, ids := meta.GetModuleIDs("game", version), []int{}
-	for _, id := range _ids {
-		if id%10000 == svrId%10000 { //svrId%10000相同，视为分流节点
-			ids = append(ids, id)
-		}
-	}
-	if length := uint32(len(ids)); length > 0 { //hash选择分流节点
-		return ids[accountId%length]
-	}
-	return -1
 }

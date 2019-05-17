@@ -10,6 +10,7 @@ import (
 
 const (
 	Lv_Debug = iota
+	Lv_Track //用于外网问题排查，GM调整日志级别
 	Lv_Info
 	Lv_Warn
 	Lv_Error
@@ -24,6 +25,7 @@ var (
 	g_level    = Lv_Debug
 	g_levelStr = []string{
 		"[D] ",
+		"[T] ",
 		"[I] ",
 		"[W] ",
 		"[E] ",
@@ -61,6 +63,7 @@ func _log(lv int, format string, v ...interface{}) {
 }
 
 func Debug(format string, v ...interface{}) { _log(Lv_Debug, format, v...) }
+func Track(format string, v ...interface{}) { _log(Lv_Track, format, v...) }
 func Info(format string, v ...interface{})  { _log(Lv_Info, format, v...) }
 func Warn(format string, v ...interface{})  { _log(Lv_Warn, format, v...) }
 func Error(format string, v ...interface{}) { _log(Lv_Error, format, v...) }

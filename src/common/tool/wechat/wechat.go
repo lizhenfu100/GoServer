@@ -21,12 +21,16 @@ import (
 )
 
 var (
+	g_corpId  string
+	g_secret  string
 	g_agentId int    //企业微信中的应用id
 	g_touser  string //消息接收者，多个用‘|’分隔，可指定为@all
-	g_token   string
+	g_token   string //有过期时间
 )
 
 func Init(corpId, secret, touser string, agentId int) {
+	g_corpId = corpId
+	g_secret = secret
 	g_touser = touser
 	g_agentId = agentId
 
@@ -42,7 +46,11 @@ func SendMsg(text string) {
 		Text:    map[string]string{"content": text},
 	})
 	if e := sendMsg(buf); e != nil {
-		gamelog.Error("Send Wechat: %s", e.Error())
+		if e = updateToken(g_corpId, g_secret); e != nil {
+			gamelog.Error("Wechat token: ", e.Error())
+		} else if e = sendMsg(buf); e != nil {
+			gamelog.Error("Wechat send: %s", e.Error())
+		}
 	}
 }
 
@@ -64,7 +72,7 @@ type msgWechat struct {
 }
 type token struct {
 	Access_token string `json:"access_token"`
-	Expires_in   int    `json:"expires_in"`
+	Expires_in   int    `json:"expires_in"` //token有效秒数
 }
 type errMsg struct {
 	Errcode int    `json:"errcode"`
