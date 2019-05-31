@@ -53,8 +53,7 @@ func Reg_to_svr(w io.Writer, req []byte) {
 	}
 	if p := meta.GetMeta(pMeta.Module, pMeta.SvrID); p != nil {
 		if p.IP != pMeta.IP || p.OutIP != pMeta.OutIP {
-			//防止配置错误，出现外网节点顶替
-			errCode = err.Data_repeat
+			errCode = err.Data_repeat //防止配置错误，出现外网节点顶替
 			fmt.Println("Error: RegistToSvr repeat: ", pMeta)
 			return
 		}

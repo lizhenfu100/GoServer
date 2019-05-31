@@ -116,13 +116,13 @@ func Http_bind_info_force(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	if sign.CalcSign(name+k+v+flag) != q.Get("sign") {
-		ack = "Error: sign failed"
+		ack, _ = email.Translate("Error: sign failed", "")
 	} else if time.Now().Unix()-timeFlag > 3600 {
-		ack = "Error: url expire"
+		ack, _ = email.Translate("Error: url expire", "")
 	} else if account := GetAccountByName(name); account == nil {
-		ack = "Error: Account_none"
+		ack, _ = email.Translate("Error: Account_none", "")
 	} else {
 		account.bind(k, v)
-		ack = "Bind info ok"
+		ack, _ = email.Translate("Bind info ok", "")
 	}
 }

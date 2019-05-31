@@ -23,7 +23,7 @@ func InitDB() {
 	}
 	println("load active account form db: ", len(list))
 }
-func AddNewAccount(name, passwd string) *TAccount {
+func NewAccountInDB(name, passwd string) *TAccount {
 	account := _NewAccount()
 	if ok, _ := dbmgo.Find(KDBTable, "name", name, account); ok {
 		return nil

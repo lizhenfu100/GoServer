@@ -110,7 +110,16 @@ func Rpc_center_account_reg(req, ack *common.NetPack) {
 		ack.WriteUInt16(err.Passwd_format_err)
 	} else if GetAccountByBindInfo("email", name) != nil {
 		ack.WriteUInt16(err.Account_repeat)
-	} else if AddNewAccount(name, passwd) == nil {
+	} else if NewAccountInDB(name, passwd) == nil {
+		ack.WriteUInt16(err.Account_repeat)
+	} else {
+		ack.WriteUInt16(err.Success)
+	}
+}
+func Rpc_center_account_force_reg(req, ack *common.NetPack) {
+	name := req.ReadString()
+
+	if NewAccountInDB(name, "") == nil {
 		ack.WriteUInt16(err.Account_repeat)
 	} else {
 		ack.WriteUInt16(err.Success)
@@ -150,7 +159,7 @@ func Rpc_center_create_visitor(req, ack *common.NetPack) {
 	name := fmt.Sprintf("ChillyRoomGuest_%d", id)
 	passwd := strconv.Itoa(int(hash.StrHash(name)))
 
-	if account := AddNewAccount(name, passwd); account == nil {
+	if account := NewAccountInDB(name, passwd); account == nil {
 		gamelog.Error("visitor_account fail: %s:%s", name, passwd)
 		name = ""
 		passwd = ""
@@ -212,7 +221,7 @@ func Rpc_center_player_login_addr(req, ack *common.NetPack) {
 							SvrName: svrName,
 						}
 					}
-					if gameInfo.ShuntGameSvr(ids, &info.GameSvrId, account.AccountID) {
+					if gameInfo.ShuntSvr(ids, &info.GameSvrId, account.AccountID) {
 						ack.WriteString(metas[info.GameSvrId].OutIP)
 						ack.WriteUInt16(metas[info.GameSvrId].TcpPort)
 					}

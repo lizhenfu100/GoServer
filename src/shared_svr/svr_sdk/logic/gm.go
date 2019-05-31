@@ -21,7 +21,6 @@ func Http_order_info(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.Write(common.S2B(orderId + ": order not exists"))
 	}
-	gamelog.Info("Http_order_info: %v", r.Form)
 }
 func Http_order_success(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
@@ -40,7 +39,7 @@ func Http_order_success(w http.ResponseWriter, r *http.Request) {
 			"status": 1, "can_send": 1}})
 		w.Write(common.S2B("ok"))
 	}
-	gamelog.Info("Http_order_success: %v", r.Form)
+	gamelog.Info("Http_order_success: %s", r.URL.String())
 }
 func Http_order_set_force(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
@@ -57,7 +56,7 @@ func Http_order_set_force(w http.ResponseWriter, r *http.Request) {
 			"status": 1, "can_send": 1}})
 		w.Write(common.S2B("ok"))
 	}
-	gamelog.Info("Http_order_set_force: %v", r.Form)
+	gamelog.Info("Http_order_set_force: %s", r.URL.String())
 }
 
 // ------------------------------------------------------------

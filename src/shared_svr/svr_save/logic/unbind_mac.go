@@ -6,6 +6,7 @@ import (
 	"common/tool/email"
 	"dbmgo"
 	"fmt"
+	"gamelog"
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
@@ -24,7 +25,7 @@ func Rpc_save_unbind_mac_by_email(req, ack *common.NetPack) {
 	language := req.ReadString()
 
 	if emailAddr == "None" { //无账号的渠道玩家，直接解绑
-		dbmgo.RemoveOneSync(KDBMac, bson.M{"_id": mac})
+		UnbindMac(mac)
 	} else {
 		//1、创建url
 		httpAddr := fmt.Sprintf("http://%s:%d/unbind_mac",
@@ -54,14 +55,18 @@ func Http_unbind_mac(w http.ResponseWriter, r *http.Request) {
 		w.Write(common.S2B(ack))
 	}()
 
+	ptr := &MacInfo{}
 	if sign.CalcSign(mac+flag) != q.Get("sign") {
-		ack = "Error: sign failed"
+		ack, _ = email.Translate("Error: sign failed", "")
 	} else if time.Now().Unix()-timeFlag > 3600 {
-		ack = "Error: url expire"
-	} else if !dbmgo.RemoveOneSync(KDBMac, bson.M{"_id": mac}) {
-		ack = "Error: DB Remove failed"
+		ack, _ = email.Translate("Error: url expire", "")
+	} else if ok, _ := dbmgo.Find(KDBMac, "_id", mac, ptr); !ok {
+		ack, _ = email.Translate("Unbind ok", "")
+	} else if dbmgo.RemoveOneSync(KDBMac, bson.M{"_id": mac}) {
+		ack, _ = email.Translate("Unbind ok", "")
+		gamelog.Info("UnbindMac: %s %s", ptr.Mac, ptr.Key)
 	} else {
-		ack = "Unbind ok"
+		ack, _ = email.Translate("Error: DB Remove failed", "")
 	}
 }
 
@@ -71,33 +76,38 @@ var g_unbindTime1 sync.Map //<MacInfo.Key, int64>
 var g_unbindTime2 sync.Map //<MacInfo.Mac, int64>
 
 func Rpc_save_unbind_mac(req, ack *common.NetPack) {
-	mac, ptr := req.ReadString(), &MacInfo{}
+	mac := req.ReadString()
 
+	errcode, timeBind := UnbindMac(mac)
+	ack.WriteUInt16(errcode)
+	ack.WriteInt64(timeBind)
+}
+func UnbindMac(mac string) (uint16, int64) {
+	ptr := &MacInfo{}
 	if ok, _ := dbmgo.Find(KDBMac, "_id", mac, ptr); ok {
 		timeNow := time.Now().Unix()
-		if ok, timeOld := canUnbindMac(ptr.Key, mac, timeNow); !ok {
-			ack.WriteUInt16(err.Operate_too_often)
-			ack.WriteInt64(timeOld)
-			return
+		if ok, timeBind := canUnbindMac(ptr.Key, mac, timeNow); !ok {
+			return err.Operate_too_often, timeBind
 		} else {
 			g_unbindTime1.Store(ptr.Key, timeNow)
 			g_unbindTime2.Store(ptr.Mac, timeNow)
 			dbmgo.RemoveOneSync(KDBMac, bson.M{"_id": mac})
+			gamelog.Info("UnbindMac: %s %s", ptr.Mac, ptr.Key)
 		}
 	}
-	ack.WriteUInt16(err.Success)
+	return err.Success, 0
 }
 func canUnbindMac(key, mac string, timeNow int64) (bool, int64) {
 	if v, ok := g_unbindTime1.Load(key); ok {
-		timeOld := v.(int64)
-		if timeNow-timeOld < int64(conf.Const.MacUnbindPeriod) {
-			return false, timeOld
+		timeBind := v.(int64)
+		if timeNow-timeBind < int64(conf.Const.MacUnbindPeriod) {
+			return false, timeBind
 		}
 	}
 	if v, ok := g_unbindTime2.Load(mac); ok {
-		timeOld := v.(int64)
-		if timeNow-timeOld < int64(conf.Const.MacUnbindPeriod) {
-			return false, timeOld
+		timeBind := v.(int64)
+		if timeNow-timeBind < int64(conf.Const.MacUnbindPeriod) {
+			return false, timeBind
 		}
 	}
 	return true, 0

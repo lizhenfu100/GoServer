@@ -4,6 +4,7 @@ import (
 	"common"
 	"common/format"
 	"common/std/sign"
+	"common/tool/email"
 	"dbmgo"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
@@ -13,7 +14,7 @@ import (
 
 func Http_reset_password(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	email := q.Get("email")
+	emailAddr := q.Get("email")
 	passwd := q.Get("pwd")
 	flag := q.Get("flag")
 	timeFlag, _ := strconv.ParseInt(flag, 10, 64)
@@ -25,17 +26,17 @@ func Http_reset_password(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	if sign.CalcSign(passwd+flag) != q.Get("sign") {
-		ack = "Error: sign failed"
+		ack, _ = email.Translate("Error: sign failed", "")
 	} else if time.Now().Unix()-timeFlag > 3600 {
-		ack = "Error: url expire"
+		ack, _ = email.Translate("Error: url expire", "")
 	} else if !format.CheckPasswd(passwd) {
-		ack = "Error: Passwd_format_err"
-	} else if account := GetAccountByBindInfo("email", email); account == nil {
-		ack = "Error: Account_none"
+		ack, _ = email.Translate("Error: Passwd_format_err", "")
+	} else if account := GetAccountByBindInfo("email", emailAddr); account == nil {
+		ack, _ = email.Translate("Error: Account_none", "")
 	} else {
 		account.SetPasswd(passwd)
 		dbmgo.UpdateId(KDBTable, account.AccountID, bson.M{"$set": bson.M{
 			"password": account.Password}})
-		ack = "Reset password ok"
+		ack, _ = email.Translate("Reset password ok", "")
 	}
 }

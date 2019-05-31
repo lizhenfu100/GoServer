@@ -97,7 +97,7 @@ func accountLogin1(centerSvrId int, req, ack *common.NetPack) (_ok bool, _aid ui
 	return
 }
 func accountLogin2(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, version, gameName string, centerSvrId int) (errCode uint16) {
-	gamelog.Debug("GameInfo:%v, version:%s gameName:%s", pInfo, version, gameName)
+	gamelog.Track("GameInfo:%v, version:%s gameName:%s", pInfo, version, gameName)
 	if !conf.HandPick_GameSvr {
 		//选取gameSvrId：若账户未绑定游戏服，自动选取空闲节点，并绑定到账号上
 		if *gameSvrId = pInfo.GameSvrId; *gameSvrId <= 0 {
@@ -118,11 +118,11 @@ func accountLogin2(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, 
 			return
 		}
 	}
-	if gameInfo.ShuntGameSvr(meta.GetModuleIDs("game", version), gameSvrId, accountId) {
+	if !gameInfo.ShuntSvr(meta.GetModuleIDs("game", version), gameSvrId, accountId) {
 		errCode = err.None_free_game_server
 	} else {
-		gamelog.Track("Login game svrId: %d", *gameSvrId)
 		errCode = err.Success
+		gamelog.Track("Login game svrId: %d", *gameSvrId)
 	}
 	return
 }

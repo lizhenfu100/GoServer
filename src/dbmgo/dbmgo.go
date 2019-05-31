@@ -67,8 +67,12 @@ func DataBase() *mgo.Database { return g_database }
 func InsertSync(table string, pData interface{}) bool {
 	coll := g_database.C(table)
 	if err := coll.Insert(pData); err != nil {
-		gamelog.Error("InsertSync table[%s], data[%v], Error[%s]", table, pData, err.Error())
-		wechat.SendMsg("InsertSync: " + err.Error())
+		if err.(*mgo.LastError).Code == 11000 {
+			gamelog.Debug("InsertSync: " + err.Error())
+		} else {
+			gamelog.Error("InsertSync table[%s], data[%v], Error[%s]", table, pData, err.Error())
+			wechat.SendMsg("InsertSync: " + err.Error())
+		}
 		return false
 	}
 	return true

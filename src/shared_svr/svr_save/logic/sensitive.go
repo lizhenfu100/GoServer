@@ -32,8 +32,10 @@ func (self *TSaveData) Backup() {
 	dir := fmt.Sprintf("player/%s/", self.Key)
 	name := time.Now().Format("20060102_150405") + ".save"
 	if fi, e := file.CreateFile(dir, name, os.O_TRUNC|os.O_WRONLY); e == nil {
-		fi.Write(self.Data)
+		if _, e = fi.Write(self.Data); e != nil {
+			gamelog.Error("Backup: %s", e.Error())
+		}
 		fi.Close()
+		file.DelExpired(dir, "", 30) //删除30天前的记录
 	}
-	file.DelExpired(dir, "", 30) //删除30天前的记录
 }

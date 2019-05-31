@@ -207,8 +207,7 @@ func _Rpc_regist(req, _ *common.NetPack, conn *TCPConn) {
 	pMeta.BufToData(req)
 	if p := meta.GetMeta(pMeta.Module, pMeta.SvrID); p != nil {
 		if p.IP != pMeta.IP || p.OutIP != pMeta.OutIP {
-			//防止配置错误，出现外网节点顶替
-			conn.Close()
+			conn.Close() //防止配置错误，出现外网节点顶替
 			fmt.Println("Error: RegistToSvr repeat: ", pMeta)
 			return
 		}

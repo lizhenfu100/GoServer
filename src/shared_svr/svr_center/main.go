@@ -4,6 +4,7 @@ import (
 	"common/console"
 	"common/console/shutdown"
 	"common/file"
+	"common/tool/email"
 	"conf"
 	"dbmgo"
 	"flag"
@@ -42,8 +43,9 @@ func main() {
 func InitConf() {
 	var metaCfg []meta.Meta
 	file.G_Csv_Map = map[string]interface{}{
-		"csv/conf_net.csv": &metaCfg,
-		"csv/conf_svr.csv": &conf.SvrCsv,
+		"csv/conf_net.csv":    &metaCfg,
+		"csv/conf_svr.csv":    &conf.SvrCsv,
+		"csv/email/email.csv": &email.G_EmailCsv,
 	}
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)

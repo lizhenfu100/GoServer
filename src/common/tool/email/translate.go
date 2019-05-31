@@ -1,10 +1,11 @@
 package email
 
 import (
+	"conf"
 	"reflect"
 )
 
-var G_Email = make(map[string]*csvEmail)
+var G_EmailCsv = make(map[string]*csvEmail)
 
 type csvEmail struct { // Notice：用支持UTF-8的编辑器写csv，否则容易乱码
 	Title   string
@@ -21,12 +22,19 @@ type csvEmail struct { // Notice：用支持UTF-8的编辑器写csv，否则容�
 	De      string //德语
 }
 
-func translate(title, language string) string {
-	if csv, ok := G_Email[title]; ok {
+func Translate(title, language string) (string, bool) {
+	ret, ok := translate(title, language)
+	if !ok {
+		ret, ok = translate(title, conf.SvrCsv.EmailLanguage)
+	}
+	return ret, ok
+}
+func translate(title, language string) (string, bool) {
+	if csv, ok := G_EmailCsv[title]; ok {
 		ref := reflect.ValueOf(csv).Elem()
 		if v := ref.FieldByName(language); v.IsValid() {
-			return v.String()
+			return v.String(), true
 		}
 	}
-	return ""
+	return title, false
 }

@@ -21,6 +21,8 @@ func (self *ServiceMgr) Init(cap uint32, list []IService) {
 	self.queue.Init(cap)
 	self.list = list
 }
+func (self *ServiceMgr) Cap() uint32 { return self.queue.Cap() }
+
 func (self *ServiceMgr) RunAllService(timelapse int, timenow int64) {
 	for {
 		if v, ok, _ := self.queue.Get(); ok {
@@ -37,5 +39,11 @@ func (self *ServiceMgr) RunAllService(timelapse int, timenow int64) {
 		v.RunSevice(timelapse, timenow)
 	}
 }
-func (self *ServiceMgr) UnRegister(enum int, p interface{}) { self.queue.Put(obj{p, enum, false}) }
-func (self *ServiceMgr) Register(enum int, p interface{})   { self.queue.Put(obj{p, enum, true}) }
+func (self *ServiceMgr) UnRegister(enum int, p interface{}) bool {
+	ok, _ := self.queue.Put(obj{p, enum, false})
+	return ok
+}
+func (self *ServiceMgr) Register(enum int, p interface{}) bool {
+	ok, _ := self.queue.Put(obj{p, enum, true})
+	return ok
+}

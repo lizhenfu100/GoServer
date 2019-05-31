@@ -28,6 +28,7 @@ package email
 import (
 	"bytes"
 	"common"
+	"common/format"
 	"conf"
 	"gamelog"
 	"generate_out/rpc/enum"
@@ -48,6 +49,10 @@ func SendMail(subject, target, body, language string) {
 	}, nil)
 }
 func SendMail2(subject, target, body, language string) { //仅center/login调，其它节点转至login发送
+	if !format.CheckBindValue("email", target) {
+		gamelog.Error("invalid email addr")
+		return //非邮箱格式不必发送，减少转发频率
+	}
 	if g_list == nil {
 		g_list = make([]*gomail.Dialer, len(conf.SvrCsv.EmailUser))
 	}
@@ -73,25 +78,20 @@ func SendMail2(subject, target, body, language string) { //仅center/login调，
 	//msg.Attach("我是附件")
 
 	if e := dialer.DialAndSend(msg); e != nil {
-		gamelog.Error("SendMail: %s", e.Error())
+		gamelog.Error("%s: %s", target, e.Error())
 	}
 }
 
 func packBody(subject, body *string, language string) {
-	content := translate(*subject, language)
-	if content == "" {
-		language = conf.SvrCsv.EmailLanguage
-		content = translate(*subject, language)
-	}
-	if content != "" {
-		if t, e := template.New(*subject).Parse(content); e == nil {
+	if body2, ok := Translate(*subject, language); ok {
+		if t, e := template.New(*subject).Parse(body2); e == nil {
 			var bf bytes.Buffer
 			t.Execute(&bf, body)
 			*body = bf.String()
 		}
 	}
-	if content := translate(*subject+" Ex", language); content != "" {
-		*subject = content
+	if title, ok := Translate(*subject+" Ex", language); ok {
+		*subject = title
 	}
 	return
 }

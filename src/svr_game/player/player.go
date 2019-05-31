@@ -34,6 +34,7 @@ package player
 import (
 	"common/service"
 	"common/timer"
+	"common/tool/wechat"
 	"dbmgo"
 	"gamelog"
 	"netConfig/meta"
@@ -156,8 +157,11 @@ func (self *TPlayer) Login(conn *tcp.TCPConn) {
 		v.OnLogin()
 	}
 
-	G_ServiceMgr.Register(Service_Write_DB, self)
-	G_ServiceMgr.Register(Service_Check_AFK, self)
+	if !G_ServiceMgr.Register(Service_Write_DB, self) ||
+		!G_ServiceMgr.Register(Service_Check_AFK, self) {
+		gamelog.Error("Service cap(%d) too small", G_ServiceMgr.Cap())
+		wechat.SendMsg("Service capacity is too small")
+	}
 }
 func (self *TPlayer) Logout() {
 	if atomic.SwapInt32(&self._isOnlnie, 0) > 0 {
