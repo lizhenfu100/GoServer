@@ -75,8 +75,8 @@ func Fatal(format string, v ...interface{}) {
 // -------------------------------------
 // 每隔一段时间，更换输出文件
 func AutoChangeFile(name string) {
-	file.DelExpired(g_logDir, name, 30) //删除30天前的记录
 	for range time.Tick(Change_File_CD) {
+		file.DelExpired(g_logDir, name, 30) //删除30天前的记录
 		timeStr := time.Now().Format("20060102_150405")
 		if f, err := file.CreateFile(g_logDir, name+timeStr+".log", os.O_WRONLY); err == nil {
 			InitFileLog(f)

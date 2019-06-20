@@ -27,39 +27,27 @@ func Rpc_center_bind_info(req, ack *common.NetPack) {
 
 	errcode := err.Unknow_error
 	if account := GetAccountByName(name); account == nil {
-		errcode = err.Account_none
+		errcode = err.Not_found
 	} else if !account.CheckPasswd(passwd) {
 		errcode = err.Passwd_err
 	} else if !format.CheckBindValue(k, v) {
 		errcode = err.BindInfo_format_err
 	} else if GetAccountByBindInfo(k, v) != nil {
-		errcode = err.BindInfo_had_been_bound //this_value_already_bind_to_account
+		errcode = err.BindInfo_already_in_use
+	} else if v != name && GetAccountByName(v) != nil { //不能是其它账号名
+		errcode = err.BindInfo_already_in_use
 	} else {
-		if force { //强制绑定，须验证
-			errcode = err.Success
-			account.forceBind(k, v)
-		} else if _, ok := account.BindInfo[k]; ok {
-			errcode = err.Account_had_been_bound
-		} else {
+		if _, ok := account.BindInfo[k]; !ok {
 			errcode = err.Success
 			account.bind(k, v)
+		} else if force { //强制绑定，须验证
+			errcode = err.Success
+			account.forceBind(k, v)
+		} else {
+			errcode = err.Account_had_been_bound
 		}
 	}
 	ack.WriteUInt16(errcode)
-}
-func Rpc_center_get_account_by_bind_info(req, ack *common.NetPack) { //拿到账号名，client本地保存
-	val := req.ReadString()
-	key := req.ReadString()
-	passwd := req.ReadString()
-
-	if account := GetAccountByBindInfo(key, val); account == nil {
-		ack.WriteUInt16(err.Account_none)
-	} else if !account.CheckPasswd(passwd) {
-		ack.WriteUInt16(err.Passwd_err)
-	} else {
-		ack.WriteUInt16(err.Success)
-		ack.WriteString(account.Name)
-	}
 }
 func Rpc_center_get_bind_info(req, ack *common.NetPack) {
 	name := req.ReadString()
@@ -72,6 +60,30 @@ func Rpc_center_get_bind_info(req, ack *common.NetPack) {
 		}
 	}
 	ack.WriteString("")
+}
+func Rpc_center_get_account_by_bind_info(req, ack *common.NetPack) { //拿到账号名，client本地保存
+	val := req.ReadString()
+	key := req.ReadString()
+	passwd := req.ReadString()
+
+	if p := GetAccountByBindInfo(key, val); p == nil {
+		ack.WriteUInt16(err.Not_found)
+	} else if !p.CheckPasswd(passwd) {
+		ack.WriteUInt16(err.Passwd_err)
+	} else {
+		ack.WriteUInt16(err.Success)
+		ack.WriteString(p.Name)
+	}
+}
+func Rpc_center_get_account_by_aid(req, ack *common.NetPack) {
+	aid := req.ReadUInt32()
+
+	if p := GetAccountById(aid); p == nil {
+		ack.WriteUInt16(err.Not_found)
+	} else {
+		ack.WriteUInt16(err.Success)
+		ack.WriteString(p.Name)
+	}
 }
 
 // -------------------------------------

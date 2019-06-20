@@ -13,13 +13,13 @@ const ( //the top 100 are reserved for system
 	Version_not_match uint16 = 8
 	Convert_err uint16 = 9
 	Passwd_err uint16 = 100
-	Account_none uint16 = 101
+	Account_mismatch_passwd uint16 = 101
 	Account_forbidden uint16 = 102
 	Account_repeat uint16 = 103
 	Account_format_err uint16 = 104
 	Passwd_format_err uint16 = 105
 	BindInfo_format_err uint16 = 106
-	BindInfo_had_been_bound uint16 = 107
+	BindInfo_already_in_use uint16 = 107
 	Account_had_been_bound uint16 = 108
 	None_free_game_server uint16 = 109
 	None_center_server uint16 = 110
@@ -47,4 +47,5 @@ const ( //the top 100 are reserved for system
 	GameInfo_set_fail uint16 = 132
 	Name_format_err uint16 = 133
 	Create_Player_failed uint16 = 134
+	
 )

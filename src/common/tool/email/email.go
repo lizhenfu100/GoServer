@@ -50,7 +50,7 @@ func SendMail(subject, target, body, language string) {
 }
 func SendMail2(subject, target, body, language string) { //仅center/login调，其它节点转至login发送
 	if !format.CheckBindValue("email", target) {
-		gamelog.Error("invalid email addr")
+		gamelog.Error("invalid email: %s", target)
 		return //非邮箱格式不必发送，减少转发频率
 	}
 	if g_list == nil {

@@ -3,7 +3,7 @@ package account
 import (
 	"common"
 	"common/format"
-	"common/std/hash"
+	"common/std/random"
 	"common/timer"
 	"crypto/md5"
 	"dbmgo"
@@ -15,7 +15,6 @@ import (
 	"netConfig/meta"
 	"nets/http"
 	"shared_svr/svr_center/account/gameInfo"
-	"strconv"
 	"sync/atomic"
 	"time"
 )
@@ -62,29 +61,23 @@ func (self *TAccount) SetPasswd(passwd string) {
 // 注册、登录
 func Rpc_center_account_login(req, ack *common.NetPack) {
 	gameName := req.ReadString()
-	name := req.ReadString() //账号、邮箱均可登录
+	str := req.ReadString() //账号、邮箱均可登录
 	passwd := req.ReadString()
 
-	//1、优先当账号名处理
-	account := GetAccountByName(name)
-	errcode := account.Login(passwd)
-	//2、再当邮箱处理
-	if errcode != err.Success {
-		account = GetAccountByBindInfo("email", name)
-		errcode = account.Login(passwd)
-	}
-	//end、回复登录结果
+	p := GetAccount(str, passwd)
+	errcode := p.Login(passwd)
+
 	if ack.WriteUInt16(errcode); errcode == err.Success {
-		ack.WriteUInt32(account.AccountID)
+		ack.WriteUInt32(p.AccountID)
 		//附带的游戏数据，可能有的游戏空的
-		if v, ok := account.GameInfo[gameName]; ok {
+		if v, ok := p.GameInfo[gameName]; ok {
 			v.DataToBuf(ack)
 		}
 	}
 }
 func (self *TAccount) Login(passwd string) (errcode uint16) {
 	if self == nil {
-		errcode = err.Account_none
+		errcode = err.Account_mismatch_passwd
 	} else if !self.CheckPasswd(passwd) {
 		errcode = err.Passwd_err
 	} else {
@@ -116,10 +109,10 @@ func Rpc_center_account_reg(req, ack *common.NetPack) {
 		ack.WriteUInt16(err.Success)
 	}
 }
-func Rpc_center_account_force_reg(req, ack *common.NetPack) {
-	name := req.ReadString()
+func Rpc_center_account_reg_force(req, ack *common.NetPack) {
+	uuid := req.ReadString()
 
-	if NewAccountInDB(name, "") == nil {
+	if NewAccountInDB(uuid, "") == nil {
 		ack.WriteUInt16(err.Account_repeat)
 	} else {
 		ack.WriteUInt16(err.Success)
@@ -143,29 +136,25 @@ func Rpc_center_change_password(req, ack *common.NetPack) {
 
 	if !format.CheckPasswd(newpasswd) {
 		ack.WriteUInt16(err.Passwd_format_err)
-	} else if account := GetAccountByName(name); account == nil {
-		ack.WriteUInt16(err.Account_none)
-	} else if !account.CheckPasswd(oldpasswd) {
-		ack.WriteUInt16(err.Passwd_err)
+	} else if p := GetAccount(name, oldpasswd); p == nil {
+		ack.WriteUInt16(err.Account_mismatch_passwd)
 	} else {
-		account.SetPasswd(newpasswd)
-		dbmgo.UpdateId(KDBTable, account.AccountID, bson.M{"$set": bson.M{
-			"password": account.Password}})
+		p.SetPasswd(newpasswd)
+		dbmgo.UpdateId(KDBTable, p.AccountID, bson.M{"$set": bson.M{
+			"password": p.Password}})
 		ack.WriteUInt16(err.Success)
 	}
 }
 func Rpc_center_create_visitor(req, ack *common.NetPack) {
-	id := dbmgo.GetNextIncId("VisitorId")
-	name := fmt.Sprintf("ChillyRoomGuest_%d", id)
-	passwd := strconv.Itoa(int(hash.StrHash(name)))
+	name := fmt.Sprintf("%s%d%s",
+		random.String(3),
+		dbmgo.GetNextIncId("VisitorId"),
+		random.String(3))
 
-	if account := NewAccountInDB(name, passwd); account == nil {
-		gamelog.Error("visitor_account fail: %s:%s", name, passwd)
+	if p := NewAccountInDB(name, ""); p == nil {
 		name = ""
-		passwd = ""
 	}
 	ack.WriteString(name)
-	ack.WriteString(passwd)
 }
 
 // ------------------------------------------------------------
@@ -192,43 +181,46 @@ func Rpc_center_player_login_addr(req, ack *common.NetPack) {
 	gameName := req.ReadString()
 	accountName := req.ReadString()
 
-	if account := GetAccountByName(accountName); account != nil {
-		if info, ok := account.GameInfo[gameName]; ok {
-			if p := meta.GetMeta("login", info.LoginSvrId); p == nil {
-				ack.WriteUInt16(err.Svr_not_working) //玩家有对应的登录服，但该服未启动
-			} else {
-				ack.WriteUInt16(err.Success)
-				ack.WriteString(p.OutIP)
-				ack.WriteUInt16(p.Port())
-
-				// 向login查询game的地址，一并回给client
-				http.CallRpc(http.Addr(p.OutIP, p.Port()), enum.Rpc_meta_list, func(buf *common.NetPack) {
-					buf.WriteString("game")
-					buf.WriteString(meta.G_Local.Version)
-				}, func(recvBuf *common.NetPack) {
-					ids, metas := []int{}, map[int]meta.Meta{}
-					for cnt, i := recvBuf.ReadByte(), byte(0); i < cnt; i++ {
-						svrId := recvBuf.ReadInt()
-						outip := recvBuf.ReadString()
-						port := recvBuf.ReadUInt16()
-						svrName := recvBuf.ReadString()
-
-						ids = append(ids, svrId) //收集game节点信息，确定具体哪个分流节点
-						metas[svrId] = meta.Meta{
-							SvrID:   svrId,
-							OutIP:   outip,
-							TcpPort: port,
-							SvrName: svrName,
-						}
-					}
-					if gameInfo.ShuntSvr(ids, &info.GameSvrId, account.AccountID) {
-						ack.WriteString(metas[info.GameSvrId].OutIP)
-						ack.WriteUInt16(metas[info.GameSvrId].TcpPort)
-					}
-				})
-			}
-			return
-		}
+	if p := GetAccountByName(accountName); p == nil {
+		ack.WriteUInt16(err.Not_found)
+	} else {
+		p.WriteLoginAddr(gameName, ack)
 	}
-	ack.WriteUInt16(err.Not_found) //玩家没有对应的登录服，应选取之
+}
+func (self *TAccount) WriteLoginAddr(gameName string, ack *common.NetPack) {
+	if info, ok := self.GameInfo[gameName]; !ok {
+		ack.WriteUInt16(err.Not_found)
+	} else if p := meta.GetMeta("login", info.LoginSvrId); p == nil {
+		ack.WriteUInt16(err.Svr_not_working) //玩家有对应的登录服，但该服未启动
+	} else {
+		ack.WriteUInt16(err.Success)
+		ack.WriteString(p.OutIP)
+		ack.WriteUInt16(p.Port())
+
+		// 向login查询game的地址，一并回给client
+		http.CallRpc(http.Addr(p.OutIP, p.Port()), enum.Rpc_meta_list, func(buf *common.NetPack) {
+			buf.WriteString("game")
+			buf.WriteString(meta.G_Local.Version)
+		}, func(recvBuf *common.NetPack) {
+			ids, metas := []int{}, map[int]meta.Meta{}
+			for cnt, i := recvBuf.ReadByte(), byte(0); i < cnt; i++ {
+				svrId := recvBuf.ReadInt()
+				outip := recvBuf.ReadString()
+				port := recvBuf.ReadUInt16()
+				svrName := recvBuf.ReadString()
+
+				ids = append(ids, svrId) //收集game节点信息，确定具体哪个分流节点
+				metas[svrId] = meta.Meta{
+					SvrID:   svrId,
+					OutIP:   outip,
+					TcpPort: port,
+					SvrName: svrName,
+				}
+			}
+			if gameInfo.ShuntSvr(ids, &info.GameSvrId, self.AccountID) {
+				ack.WriteString(metas[info.GameSvrId].OutIP)
+				ack.WriteUInt16(metas[info.GameSvrId].TcpPort)
+			}
+		})
+	}
 }

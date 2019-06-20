@@ -43,7 +43,7 @@ func (self *ServiceMgr) UnRegister(enum int, p interface{}) bool {
 	ok, _ := self.queue.Put(obj{p, enum, false})
 	return ok
 }
-func (self *ServiceMgr) Register(enum int, p interface{}) bool {
+func (self *ServiceMgr) Register(enum int, p interface{}) bool { //【防止多次注册】
 	ok, _ := self.queue.Put(obj{p, enum, true})
 	return ok
 }

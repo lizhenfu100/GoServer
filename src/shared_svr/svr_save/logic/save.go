@@ -32,7 +32,6 @@ import (
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
 	"shared_svr/svr_save/conf"
-	"strings"
 	"time"
 )
 
@@ -106,20 +105,20 @@ func checkMac(pf_id, uid, mac string) uint16 { //Notice：不可调换错误码�
 	return err.Success
 }
 
-func upload(pf_id, uid, mac string, data []byte, extra, cliantVersion string) uint16 {
+func upload(pf_id, uid, mac string, data []byte, extra, clientVersion string) uint16 {
 	key, now := GetSaveKey(pf_id, uid), time.Now().Unix()
 	switch e := checkMac(pf_id, uid, mac); e {
 	case err.Success:
 		pSave := &TSaveData{Key: key}
 		dbmgo.Find(KDBSave, "_id", key, pSave)
-		if cliantVersion < pSave.Version { //旧client覆盖新档，报错
+		if clientVersion < pSave.Version { //旧client覆盖新档，报错
 			return err.Version_not_match
 		}
 		pSave.CheckSensitiveVal(extra) //敏感数据异动，记下历史存档
 		pSave.Data = data
 		pSave.UpTime = now
 		pSave.Extra = extra
-		pSave.Version = cliantVersion
+		pSave.Version = clientVersion
 		if dbmgo.DataBase().C(KDBMac).Insert(&MacInfo{mac, key}) == nil {
 			pSave.MacCnt++
 			pSave.ChTime = now
@@ -129,7 +128,7 @@ func upload(pf_id, uid, mac string, data []byte, extra, cliantVersion string) ui
 		return err.Success
 	case err.Record_cannot_find:
 		dbmgo.Insert(KDBSave, &TSaveData{key, data, now, now, 1,
-			extra, cliantVersion})
+			extra, clientVersion})
 		dbmgo.Insert(KDBMac, &MacInfo{mac, key})
 		//fmt.Println("---------------upload new: ", len(pSave.Data), pSave)
 		return err.Success
@@ -159,31 +158,6 @@ func download(pf_id, uid, mac, clientVersion string) (*TSaveData, uint16) {
 
 // ------------------------------------------------------------
 // -- Binary 存档
-func Rpc_save_upload_binary(req, ack *common.NetPack) { //TODO:zhoumf: 弃用
-	args := req.ReadString() //包含多个参数：为了兼容旧客户方~囧
-	pf_id := req.ReadString()
-	mac := req.ReadString()
-	Sign := req.ReadString()
-	data := req.LeftBuf()
-
-	//解析组合参数
-	list := strings.Split(args, "_")
-	length, uid := len(list), ""
-	if length > 0 {
-		uid = list[0]
-	}
-
-	//验证签名
-	s := fmt.Sprintf("uid=%s&pf_id=%s", uid, pf_id)
-	if sign.CalcSign(s) != Sign {
-		gamelog.Error("Rpc_save_upload_binary: sign failed")
-		ack.WriteUInt16(err.Sign_failed)
-		return
-	}
-
-	errcode := upload(pf_id, uid, mac, data, "", "")
-	ack.WriteUInt16(errcode)
-}
 func Rpc_save_upload_binary2(req, ack *common.NetPack) {
 	uid := req.ReadString()
 	pf_id := req.ReadString()

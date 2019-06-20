@@ -38,8 +38,8 @@ func Http_view_bind_mac(w http.ResponseWriter, r *http.Request) { //绑定的设
 	pf_id := q.Get("pf_id")
 	uid := q.Get("uid")
 
+	var list []logic.MacInfo
 	key := logic.GetSaveKey(pf_id, uid)
-	var list []logic.MacInfo //只载入近期登录过的
 	if e := dbmgo.FindAll(logic.KDBMac, bson.M{"key": key}, &list); e == nil {
 		ack, _ := json.MarshalIndent(list, "", "     ")
 		w.Write(ack)

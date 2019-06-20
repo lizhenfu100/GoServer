@@ -44,21 +44,22 @@ func InitWithUser(ip string, port uint16, dbname, user, pwd string) {
 	g_dial.Database = dbname
 	g_dial.Username = user
 	g_dial.Password = pwd
-	ReConnect()
+	Init(g_dial, &g_database)
 	_init_inc_ids()
 	go _loop()
 }
-func ReConnect() {
-	if g_database != nil {
-		g_database.Session.Close()
+func Init(dial *mgo.DialInfo, base **mgo.Database) {
+	if *base != nil {
+		(*base).Session.Close()
 	}
-	if session, e := mgo.DialWithInfo(g_dial); e != nil {
-		panic(fmt.Sprintf("Mongodb Init: %v", g_dial))
+	if session, e := mgo.DialWithInfo(dial); e != nil {
+		panic(fmt.Sprintf("Mongodb Init: %v", dial))
 	} else {
-		g_database = session.DB(g_dial.Database)
+		*base = session.DB(dial.Database)
 	}
 	//FIXME：测试db连接可用性（小概率db初始化成功，但后续读写操作均超时）
-	if _, e := Find(kDBIncTable, "_id", "", &nameId{}); e != nil {
+	e := (*base).C(kDBIncTable).Find(bson.M{"_id": ""}).One(&nameId{})
+	if e != nil && e != mgo.ErrNotFound {
 		panic("Mongodb Run Failed:" + e.Error())
 	}
 }

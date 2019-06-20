@@ -38,13 +38,12 @@ func (self *ServiceVec) UnRegister(pObj interface{}) {
 func (self *ServiceVec) RunSevice(timelapse int, timenow int64) {
 	for self.runPos < len(self.objs) {
 		if it := &self.objs[self.runPos]; it.exeTime <= timenow { //callback后it可能失效
-			runObj := it.obj
 			if self.runPos++; self.runPos >= len(self.objs) { //到末尾了，回到队头
 				self.runPos = 0
 			}
 			//timeDiff := int(timenow-it.exeTime) + self.cdMs //实际经过的时间间隔
 			it.exeTime = timenow + int64(self.cdMs)
-			self.cb(runObj) //里头可能把自己删掉，runPos指向改变，it可能失效
+			self.cb(it.obj) //里头可能把自己删掉，runPos指向改变，it可能失效
 		} else {
 			break
 		}

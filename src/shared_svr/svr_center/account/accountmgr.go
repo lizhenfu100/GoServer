@@ -76,6 +76,19 @@ func GetAccountById(accountId uint32) *TAccount {
 	}
 	return nil
 }
+func GetAccount(v, passwd string) *TAccount {
+	//1、优先当账号名处理
+	p := GetAccountByName(v)
+	if p != nil && p.CheckPasswd(passwd) {
+		return p
+	}
+	//2、再当邮箱处理
+	p = GetAccountByBindInfo("email", v)
+	if p != nil && p.CheckPasswd(passwd) {
+		return p
+	}
+	return nil
+}
 
 // ------------------------------------------------------------
 //! 辅助函数

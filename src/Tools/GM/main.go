@@ -76,13 +76,13 @@ func InitConf() {
 	file.LoadCsv("csv/conf_svr.csv", &conf.SvrCsv)
 
 	register.RegHttpHandler(map[string]register.HttpHandle{
-		"/query_account_login_addr": Http_query_account_login_addr,
-		"/reset_password":           Http_reset_password,
-		"/check_passwd":             Http_check_passwd,
-		"/backup_conf":              Http_relay_to_save,
-		"/backup_auto":              Http_relay_to_save,
-		"/backup_force":             Http_relay_to_save,
-		"/relay_gm_cmd":             Http_relay_gm_cmd,
+		"/reset_password":  Http_reset_password,
+		"/bind_info_force": Http_bind_info_force,
+		"/check_passwd":    Http_check_passwd,
+		"/backup_conf":     Http_relay_to_save,
+		"/backup_auto":     Http_relay_to_save,
+		"/backup_force":    Http_relay_to_save,
+		"/relay_gm_cmd":    Http_relay_gm_cmd,
 	})
 	g_file_server = http.FileServer(http.Dir(kFileDirRoot))
 	http.HandleFunc("/", Http_download_file)

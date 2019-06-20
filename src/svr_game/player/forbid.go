@@ -46,9 +46,9 @@ func Rpc_game_permit_player(req, ack *common.NetPack, conn *tcp.TCPConn) {
 var g_whitelist = &WhiteList{DBKey: "whitelist"}
 
 type WhiteList struct {
-	sync.Mutex
-	DBKey string `bson:"_id"`
-	List  []uint32
+	sync.Mutex `bson:"-"`
+	DBKey      string `bson:"_id"`
+	List       []uint32
 }
 
 func (self *WhiteList) Have(v uint32) bool {

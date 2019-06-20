@@ -42,11 +42,11 @@ var G_Backup = &Backup{DBKey: "backup", IsAutoOpen: true}
 var g_keyMap sync.Map //<pSave.key, Empty>
 
 type Backup struct {
-	sync.RWMutex
-	DBKey       string   `bson:"_id"`
-	WeekDays    std.Ints //[1, 2]  周几开启
-	OnlintLimit int32    //在线量超过，关闭备份
-	IsAutoOpen  bool     //是否自动开启，按WeekDays时间
+	sync.RWMutex `bson:"-"`
+	DBKey        string   `bson:"_id"`
+	WeekDays     std.Ints //[1, 2]  周几开启
+	OnlintLimit  int32    //在线量超过，关闭备份
+	IsAutoOpen   bool     //是否自动开启，按WeekDays时间
 
 	isOpen int32 //原子读写
 }

@@ -1,10 +1,12 @@
 package logic
 
 import (
+	"common"
 	"common/format"
 	"common/std/sign"
 	"common/tool/email"
 	"encoding/binary"
+	"fmt"
 	"gamelog"
 	"generate_out/err"
 	"net/http"
@@ -48,4 +50,9 @@ func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) {
 		email.SendMail2("Reset Password", emailAddr, u.String(), language)
 		errCode = err.Success
 	}
+}
+
+// ------------------------------------------------------------
+func Http_timestamp(w http.ResponseWriter, r *http.Request) {
+	w.Write(common.S2B(fmt.Sprintf("%d", time.Now().Unix())))
 }

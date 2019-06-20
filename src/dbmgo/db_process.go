@@ -37,35 +37,35 @@ func WaitStop() { close(_actions); _finished.Wait() }
 func _loop() {
 	_finished.Add(1)
 	var err error
-	var pColl *mgo.Collection
+	var coll *mgo.Collection
 	for v := range _actions {
 		if v.table != _last_table {
-			pColl = g_database.C(v.table)
+			coll = g_database.C(v.table)
 			_last_table = v.table
 		}
 		switch v.optype {
 		case DB_Insert:
-			err = pColl.Insert(v.pData)
+			err = coll.Insert(v.pData)
 		case DB_Update_Field:
-			err = pColl.Update(v.search, v.pData)
+			err = coll.Update(v.search, v.pData)
 		case DB_Update_Id:
-			err = pColl.UpdateId(v.search, v.pData)
+			err = coll.UpdateId(v.search, v.pData)
 		case DB_Update_All:
-			_, err = pColl.UpdateAll(v.search, v.pData)
+			_, err = coll.UpdateAll(v.search, v.pData)
 		case DB_Remove_One:
-			err = pColl.Remove(v.search)
+			err = coll.Remove(v.search)
 		case DB_Remove_All:
-			_, err = pColl.RemoveAll(v.search)
+			_, err = coll.RemoveAll(v.search)
 		}
 		if err != nil {
 			errTips := err.Error()
 			gamelog.Error("DBProcess Failed: op[%d] table[%s] search[%v], data[%v], Error[%s]",
 				v.optype, v.table, v.search, v.pData, errTips)
-			wechat.SendMsg("DBProcess: " + err.Error())
+			wechat.SendMsg("DBLoop: " + err.Error())
 			//FIXME：Mongodb会极低概率忽然断开，所有操作均超时~囧
 			if strings.LastIndex(errTips, "timeout") >= 0 {
 				_actions <- v
-				ReConnect()
+				Init(g_dial, &g_database)
 			}
 		}
 	}

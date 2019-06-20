@@ -146,6 +146,12 @@ func (self *TPlayer) WriteAllToDB() {
 func (self *TPlayer) Login(conn *tcp.TCPConn) {
 	if atomic.SwapInt32(&self._isOnlnie, 1) == 0 {
 		atomic.AddInt32(&g_online_cnt, 1)
+
+		if !G_ServiceMgr.Register(Service_Write_DB, self) || //防止多次登录的重复注册
+			!G_ServiceMgr.Register(Service_Check_AFK, self) {
+			gamelog.Error("Service cap(%d) too small", G_ServiceMgr.Cap())
+			wechat.SendMsg("Service capacity is too small")
+		}
 	}
 	atomic.StoreUint32(&self._idleMin, 0)
 	atomic.StoreInt64(&self.LoginTime, time.Now().Unix())
@@ -155,12 +161,6 @@ func (self *TPlayer) Login(conn *tcp.TCPConn) {
 	}
 	for _, v := range self.modules {
 		v.OnLogin()
-	}
-
-	if !G_ServiceMgr.Register(Service_Write_DB, self) ||
-		!G_ServiceMgr.Register(Service_Check_AFK, self) {
-		gamelog.Error("Service cap(%d) too small", G_ServiceMgr.Cap())
-		wechat.SendMsg("Service capacity is too small")
 	}
 }
 func (self *TPlayer) Logout() {
