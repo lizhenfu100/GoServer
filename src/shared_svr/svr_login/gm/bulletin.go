@@ -22,53 +22,45 @@ import (
 	"gamelog"
 	"net/http"
 	"reflect"
-	"sync"
 )
 
-var g_bulletin = &Bulletin{DBKey: "bulletin"}
+const kDBKey = "bulletin"
 
 type Bulletin struct {
-	sync.RWMutex `bson:"-"`
-	DBKey        string `bson:"_id"`
-	En           string //告示内容，按国家划分
-	Zh           string
-	Zh_Hant      string
-	Jp           string
-	Ru           string //俄语
-	Kr           string //韩语
-	Es           string //西班牙语
-	Pt_Br        string //葡萄牙语
-	Fr           string //法语
-	Id           string //印尼语
-	De           string //德语
+	DBKey   string `bson:"_id"`
+	En      string //告示内容，按国家划分
+	Zh      string
+	Zh_Hant string
+	Jp      string
+	Ru      string //俄语
+	Kr      string //韩语
+	Es      string //西班牙语
+	Pt_Br   string //葡萄牙语
+	Fr      string //法语
+	Id      string //印尼语
+	De      string //德语
 }
 
 func Rpc_login_bulletin(req, ack *common.NetPack) {
 	area := req.ReadString()
 
-	g_bulletin.RLock()
-	ref, ret := reflect.ValueOf(g_bulletin).Elem(), ""
-	if v := ref.FieldByName(area); v.IsValid() {
-		ret = v.String()
+	ptr, ret := &Bulletin{DBKey: kDBKey}, ""
+	if ok, _ := dbmgo.Find(dbmgo.KTableArgs, "_id", ptr.DBKey, ptr); ok {
+		ref := reflect.ValueOf(ptr).Elem()
+		if v := ref.FieldByName(area); v.IsValid() {
+			ret = v.String()
+		}
 	}
-	g_bulletin.RUnlock()
 	ack.WriteString(ret)
 }
 func Http_bulletin(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	g_bulletin.Lock()
-	copy.CopyForm(g_bulletin, r.Form)
-	g_bulletin.UpdateDB()
-	ack, _ := json.MarshalIndent(g_bulletin, "", "     ")
-	g_bulletin.Unlock()
+	ptr := &Bulletin{DBKey: kDBKey}
+	copy.CopyForm(ptr, r.Form)
+	dbmgo.UpdateId(dbmgo.KTableArgs, ptr.DBKey, ptr)
+	ack, _ := json.MarshalIndent(ptr, "", "     ")
 	w.Write(ack)
 	gamelog.Info("Http_bulletin: %v", r.Form)
 }
 
 // ------------------------------------------------------------
-func InitBulletin() {
-	if ok, _ := dbmgo.Find(dbmgo.KTableArgs, "_id", g_bulletin.DBKey, g_bulletin); !ok {
-		dbmgo.Insert(dbmgo.KTableArgs, g_bulletin)
-	}
-}
-func (self *Bulletin) UpdateDB() { dbmgo.UpdateId(dbmgo.KTableArgs, self.DBKey, self) }

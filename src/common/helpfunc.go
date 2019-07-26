@@ -13,3 +13,6 @@ func IsMatchVersion(a, b string) bool {
 	idx := strings.LastIndex(a, ".")
 	return a[:idx] == b[:idx]
 }
+
+func SwapBuf(a, b *[]byte) { *a, *b = *b, *a }
+func ClearBuf(p *[]byte)   { *p = (*p)[:0] } //len(0), cap(old), 旧数据不会修改

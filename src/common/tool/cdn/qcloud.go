@@ -22,7 +22,7 @@ const ( //SecretKey|SecretId from https://console.qcloud.com/capi
 	kSecretId   = "AKIDz4ciT8GgOyUErV6kG0KVIz2HNYvB6V6a"
 )
 
-func RefreshUrl(urls ...interface{}) string {
+func RefreshUrl(urls []string) string {
 	args := make(map[string]interface{})
 	args["Action"] = "RefreshCdnUrl"
 	for i, v := range urls {

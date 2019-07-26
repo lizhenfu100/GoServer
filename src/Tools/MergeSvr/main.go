@@ -9,10 +9,12 @@
 	*、game：无需合并，同大区连的同个db_game
 	*、save：
 		、依次读取本节点数据库条目，逐个发往目标服，以待入库
-		、解决冲突，记得修改相关状态，在真正写库之前
-			· 变更playerId
-			· 变更center里的loginSvrId、gameSvrId
-		、旧节点DB，过几个月再清理
+		、解决冲突
+			· 新存档数据为准
+		、变更center里的loginSvrId、gameSvrId
+		、旧节点DB，过一周再清理
+
+		、center迁移暂时不搞
 
 * @ author zhoumf
 * @ date 2019-3-12
@@ -32,10 +34,18 @@ import (
 	"time"
 )
 
+// ./MergeSvr -addr1 "172.16.0.158" -addr2 "172.16.0.158" -db "save"
 func main() {
-	var svrId int
-	flag.IntVar(&svrId, "id", 1, "svrId")
+	var addr1, addr2, dbname string
+	flag.StringVar(&addr1, "addr1", "", "addr1")
+	flag.StringVar(&addr2, "addr2", "", "addr2")
+	flag.StringVar(&dbname, "db", "", "dbname")
 	flag.Parse()
+
+	g_dial1.Addrs[0] = addr1+":27017"
+	g_dial2.Addrs[0] = addr2+":27017"
+	g_dial1.Database = dbname
+	g_dial2.Database = dbname
 
 	gamelog.InitLogger("MergeSvr")
 	console.Init()
@@ -50,15 +60,15 @@ func main() {
 var (
 	g_dial1 = &mgo.DialInfo{ //操作节点
 		Timeout:  10 * time.Second,
-		Addrs:    []string{"127.0.0.1:27017"},
-		Database: "account",
+		Addrs:    []string{""},
+		Database: "save",
 		Username: "chillyroom",
 		Password: "db#233*",
 	}
 	g_dial2 = &mgo.DialInfo{ //目标节点
 		Timeout:  10 * time.Second,
-		Addrs:    []string{"127.0.0.1:27018"},
-		Database: "account",
+		Addrs:    []string{""},
+		Database: "save",
 		Username: "chillyroom",
 		Password: "db#233*",
 	}
@@ -69,8 +79,6 @@ func do1() {
 	dbmgo.Init(g_dial1, &g_database1)
 	dbmgo.Init(g_dial2, &g_database2)
 
-	moveCenterDB()
-
 	//TODO: 合服工具
 	/*
 		1、把各个大区的子db合到一块，一个大区一个db
@@ -80,19 +88,23 @@ func do1() {
 
 		3、center迁移至新机器
 	*/
+
+	//merge()
+	//resetCenterGameInfo()
+	//delGameInfo()
+	cutSaveMacCnt()
 }
 
 func merge() { //读数据，写入主节点
 	p1, p2 := &logic.TSaveData{}, &logic.TSaveData{}
-	iter := g_database1.C(logic.KDBSave).Find(nil).Iter()
+	iter1 := g_database1.C(logic.KDBSave).Find(nil).Iter()
 	coll2 := g_database2.C(logic.KDBSave)
 	for {
-		if !iter.Next(p1) {
+		if !iter1.Next(p1) {
 			break
 		}
 		if p1.MacCnt = 0; coll2.Insert(p1) != nil {
-			coll2.Find(bson.M{"_id": p1.Key}).One(p2)
-			if p1.UpTime > p2.UpTime {
+			if coll2.Find(bson.M{"_id": p1.Key}).One(p2) != nil && p1.UpTime > p2.UpTime {
 				if coll2.UpdateId(p1.Key, p1) != nil {
 					gamelog.Error("insert fail: %v", p1)
 				}
@@ -108,8 +120,28 @@ func resetCenterGameInfo() {
 		if !iter.Next(p) {
 			break
 		}
-		coll.UpdateId(p.AccountID, bson.M{"$set": bson.M{
-			fmt.Sprintf("gameinfo.HappyDiner.GameSvrId"): 1}})
+		if _, ok := p.BindInfo["email"]; !ok {
+			if coll.Find(bson.M{"bindinfo.email": p.Name}).One(&account.TAccount{}) == mgo.ErrNotFound {
+				p.BindInfo["email"] = p.Name
+				coll.UpdateId(p.AccountID, bson.M{"$set": bson.M{
+					fmt.Sprintf("bindinfo"): p.BindInfo}})
+			}
+		}
+	}
+}
+func delGameInfo() {
+	p := &account.TAccount{}
+	coll := g_database1.C(account.KDBTable)
+	iter := coll.Find(nil).Iter()
+	for {
+		if !iter.Next(p) {
+			break
+		}
+		if v, ok := p.GameInfo["HappyDiner"]; ok && v.LoginSvrId == 0 {
+			delete(p.GameInfo, "HappyDiner")
+			coll.UpdateId(p.AccountID, bson.M{"$set": bson.M{
+				fmt.Sprintf("gameinfo"): p.GameInfo}})
+		}
 	}
 }
 func moveCenterDB() {
@@ -123,5 +155,21 @@ func moveCenterDB() {
 		if coll2.Insert(p1) != nil {
 			gamelog.Error("insert fail: %v", p1)
 		}
+	}
+}
+func cutSaveMacCnt() {
+	p := &logic.TSaveData{}
+	coll := g_database1.C(logic.KDBSave)
+	iter := coll.Find(nil).Iter()
+	for {
+		if !iter.Next(p) {
+			break
+		}
+		if p.MacCnt >= 2 {
+			p.MacCnt -= 2
+		} else {
+			p.MacCnt = 0
+		}
+		coll.UpdateId(p.Key, bson.M{"$set": bson.M{"maccnt": p.MacCnt}})
 	}
 }

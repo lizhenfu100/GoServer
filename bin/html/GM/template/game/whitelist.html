@@ -22,7 +22,8 @@
             <form action="" method="get" onsubmit="setActionAddr(this)">
                 <label>操作类型:</label>
                 <select>
-                    <option value="/permit_account">解封账号</option>
+                    <option value="/permit_player">解封</option>
+                    <option value="/forbid_player">封号</option>
                     <option value="/whitelist_add">添加白名单</option>
                     <option value="/whitelist_del">删除白名单</option>
                 </select>
@@ -34,7 +35,7 @@
                     游戏服:
                 </label>
                 <input type="text" id="addr" placeholder="如 127.0.0.1:7040"><br>
-                <label for="val">角色Pid:</label>
+                <label for="val">玩家Pid:</label>
                 <input type="text" name="val"><br>
                 <br>
                 <input type="submit" value="确认">

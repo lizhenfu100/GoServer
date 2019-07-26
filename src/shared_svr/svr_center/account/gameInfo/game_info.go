@@ -49,3 +49,22 @@ func ShuntSvr(all []int, svrId *int, accountId uint32) bool {
 	}
 	return false
 }
+
+// ------------------------------------------------------------
+// 打包给客户端的账号信息
+type TAccountClient struct {
+	AccountID    uint32
+	IsValidEmail uint8
+	IsValidPhone uint8
+}
+
+func (self *TAccountClient) DataToBuf(buf *common.NetPack) {
+	buf.WriteUInt32(self.AccountID)
+	buf.WriteUInt8(self.IsValidEmail)
+	buf.WriteUInt8(self.IsValidPhone)
+}
+func (self *TAccountClient) BufToData(buf *common.NetPack) {
+	self.AccountID = buf.ReadUInt32()
+	self.IsValidEmail = buf.ReadUInt8()
+	self.IsValidPhone = buf.ReadUInt8()
+}

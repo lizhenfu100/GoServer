@@ -4,36 +4,26 @@ import (
 	"regexp"
 )
 
-//32长，数字、字母、@、.、下划线、横杠
-func CheckAccount(s string) bool {
-	ret, _ := regexp.MatchString(`^[\w-@\.]{3,32}$`, s)
-	return ret
-}
-
 //32长，任意非空字符
 func CheckPasswd(s string) bool {
-	ret, _ := regexp.MatchString(`^\S{1,32}$`, s)
-	return ret
+	ok, _ := regexp.MatchString(`^\S{3,32}$`, s)
+	return ok
 }
 
-//32长，任意非空字符，FIXME：脏字库排查
-func CheckName(s string) bool {
-	ret, _ := regexp.MatchString(`^\S{0,32}$`, s)
-	return ret
-}
-
-func CheckBindValue(key, s string) (ret bool) {
+func CheckBindValue(key, s string) (ok bool) { //格式须不一样，防止用户混用
 	switch key {
-	case "phone": //11位定长数字
-		ret, _ = regexp.MatchString(`^[0-9]{6,14}$`, s)
+	case "name": //非纯数字、32长：数字、字母、下划线、横杠、点、*
+		ok, _ = regexp.MatchString(`^[0-9]*$`, s)
+		if ok {
+			return false
+		}
+		ok, _ = regexp.MatchString(`^[\w-\.\*]{3,32}$`, s)
 	case "email":
-		ret, _ = regexp.MatchString(`^[\w-\.]+@[\w-]+(\.[\w-]+)+$`, s)
-	case "qq":
-		ret, _ = regexp.MatchString(`^[0-9]{3,32}$`, s)
-	case "wechat":
-		ret, _ = regexp.MatchString(`^[\w-]{6,32}$`, s)
+		ok, _ = regexp.MatchString(`^[\w-\.]+@[\w-]+(\.[\w-]+)+$`, s)
+	case "phone":
+		ok, _ = regexp.MatchString(`^[0-9]{6,14}$`, s)
 	default:
-		ret = false
+		ok = false
 	}
 	return
 }

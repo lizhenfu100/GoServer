@@ -5,13 +5,10 @@ import (
 	"common/timer"
 	"conf"
 	"nets/tcp"
-	"shared_svr/svr_login/gm"
 	"time"
 )
 
 func MainLoop() {
-	gm.InitGiftDB()
-	gm.InitBulletin()
 	AccountRegLimit()
 
 	timeNow, timeOld, timeElapse := time.Now().UnixNano()/int64(time.Millisecond), int64(0), 0

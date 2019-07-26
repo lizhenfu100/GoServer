@@ -24,14 +24,13 @@ import (
 
 type ErrEnum struct {
 	Name string
-	Desc string
 }
 
 func generateErrCode() {
 	var errCsv []ErrEnum
 	file.LoadCsv("csv/err_code.csv", &errCsv)
 
-	enums, enumCnt := getOldErr() //旧枚举，追加新增入后重新生成
+	enums, enumCnt := getOldErr() //旧枚举，追加新增后重新生成
 	haveNewEnum := false
 	for _, v := range errCsv {
 		if !IsEnumIn(enums, v.Name) {

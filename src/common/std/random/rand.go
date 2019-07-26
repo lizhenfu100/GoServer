@@ -3,7 +3,6 @@ package random
 import (
 	"common"
 	"math/rand"
-	"time"
 )
 
 type Weight interface {
@@ -60,10 +59,9 @@ func Shuffle(slice []int) {
 var g_strBase = []byte("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func String(length int) string {
-	result := make([]byte, length)
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	ret := make([]byte, length)
 	for i := 0; i < length; i++ {
-		result[i] = g_strBase[r.Intn(len(g_strBase))]
+		ret[i] = g_strBase[rand.Intn(len(g_strBase))]
 	}
-	return common.B2S(result)
+	return common.B2S(ret)
 }

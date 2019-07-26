@@ -66,7 +66,6 @@ func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
 		buf.WriteString(meta.G_Local.Version)
 		//game中的玩家数据迁移
 		buf.WriteUInt32(this.AccountID)
-		buf.WriteString(this.Name)
 		playerBuf, _ := common.T2B(this)
 		buf.WriteLenBuf(playerBuf)
 	}, func(recvBuf *common.NetPack) {
@@ -84,12 +83,11 @@ func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
 
 func Rpc_game_move_player_db2(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	accountId := req.ReadUInt32()
-	playerName := req.ReadString()
 	playerBuf := req.LeftBuf()
 
 	this := FindWithDB(accountId)
 	if this == nil { //载入失败，须新建角色
-		if this = NewPlayerInDB(accountId, playerName); this == nil {
+		if this = NewPlayerInDB(accountId, ""); this == nil {
 			ack.WriteUInt16(err.Create_Player_failed)
 			return
 		}

@@ -16,6 +16,7 @@ package main
 import (
 	"common"
 	"common/file"
+	"encoding/json"
 	"gamelog"
 	"io"
 	"net/http"
@@ -90,5 +91,24 @@ func Rpc_file_update_list(req, ack *common.NetPack) {
 		ack.SetPos(posInBuf, count)
 	} else {
 		ack.WriteUInt32(0)
+	}
+}
+
+// ------------------------------------------------------------
+// -- 登录服列表
+type TLogins struct {
+	GameName string
+	Logins   map[string][]string //<大区名, 地址>
+}
+
+var G_Logins map[string]*TLogins = nil //<游戏名, 登录列表>
+
+func Http_get_login_list(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+
+	gameName := q.Get("name")
+	if v, ok := G_Logins[gameName]; ok {
+		str, _ := json.MarshalIndent(v.Logins, "", "     ")
+		w.Write(str)
 	}
 }

@@ -27,7 +27,7 @@ func (client) Get(url string) []byte {
 	return nil
 }
 func (client) Post(url string, contentType string, b []byte) []byte {
-	//TODO:zhoumf:设置contentType
+	//TODO:设置contentType
 	if _, body, e := http.Post(b, url, nil); e == nil {
 		return body
 	}
@@ -40,6 +40,6 @@ func (client) PostForm(url string, args *http.Args) []byte {
 	return nil
 }
 func (client) PostBody(url string, contentType string, body io.Reader) []byte {
-	//TODO:zhoumf:
+	//TODO:
 	return nil
 }

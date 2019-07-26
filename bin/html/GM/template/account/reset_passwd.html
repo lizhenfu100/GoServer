@@ -11,8 +11,14 @@
         <h1>强制改密码</h1>
         <div class="form-wrapper">
             <form action="{{.LocalAddr}}/reset_password" method="get">
-                <label for="email">邮箱:</label>
-                <input type="text" name="email"><br>
+                <label>类型:</label>
+                <select name="k">
+                    <option value="email">邮箱</option>
+                    <option value="name">账号名</option>
+                    <option value="phone">手机号</option>
+                </select>
+                <label for="v">值:</label>
+                <input type="text" name="v"><br>
                 <label for="pwd">密码:</label>
                 <input type="text" name="pwd"><br>
                 <br>

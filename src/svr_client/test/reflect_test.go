@@ -76,8 +76,6 @@ func SetStruct(ptr interface{}) {
 	fmt.Println(data.Field(2).CanSet()) // 小写开头的私有成员：不可设置
 	data.Field(0).SetString("渣渣")
 	data.Field(1).SetInt(22222)
-
-	fmt.Println("-------------------------")
 }
 
 // ------------------------------------------------------------

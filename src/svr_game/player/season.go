@@ -4,14 +4,22 @@
 	1、赛季结束后清空数据（玩家登录时检查）
 
 * @ 排名机制
-				  分档  积分
-	0 Bronze	   5 * 100
-	1 Silver	   5 * 100
-	2 Gold	       5 * 100
-	3 Platinum     5 * 100
-	4 Diamond	   5 * 100
-	5 Master	   5 * 100
-	6 GrandMaster  只有排名, 前100
+                  到下一级积分 		总共场次		 差值场次
+    0 Unranked		0
+	1 Bronze	   	250        			 1		   1
+	2 Silver	   	500       			10		   9
+	3 Gold	   		1500				30		  20
+	4 Platinum   	5000			   100		  70
+	5 Diamond	   	10000              200		 100
+	6 Master	   	20000        	   400		 200
+	7 Grandmaster  	只有排名, 前100，按积分排名
+
+* @ 获得积分规则:
+	正常完成基础分+50。正常完成定义为打出伤害，存活超过30秒就有。中途主动退出为0分
+	胜利+100
+	击杀第一+30，第二+20，第三+15，前50%+10
+	辅助击杀第一+30，第二+20，第三+10，前50%+5
+	拉起队友一次+5，上限15
 
 * @ author zhoumf
 * @ date 2018-5-8
@@ -20,9 +28,7 @@ package player
 
 import (
 	"common"
-	"common/std/random"
 	"dbmgo"
-	"math/rand"
 	"svr_game/conf"
 	"svr_game/logic/season"
 )
@@ -31,10 +37,8 @@ const kDBSeason = "season"
 
 type TSeasonModule struct {
 	PlayerID  uint32 `bson:"_id"`
-	Score     uint16 //赛季积分
-	Level     uint8  //所处档次
-	SecondLv  uint8  //每个档的小级别
 	TimeBegin int64  //赛季开启时刻，仅用于识别“离线跨赛季”
+	Score     int    //赛季积分
 
 	owner     *TPlayer
 	winStreak byte //连胜纪录，影响赛季得分
@@ -68,46 +72,54 @@ func (self *TSeasonModule) _InitTempData(player *TPlayer) {
 // ------------------------------------------------------------
 // -- API
 func (self *TSeasonModule) AddScore(diff int) {
-	if diff > conf.Const.Score_Once_Max {
-		diff = conf.Const.Score_Once_Max
+	if self.Score += diff; self.Score < 0 {
+		self.Score = 0
 	}
-	//1、变更积分
-	score := 0
-	if score = int(self.Score) + diff; score < 0 {
-		score = 0
-	}
-	self.Score = uint16(score)
-	//2、刷新赛季档次
 	if self.Score >= season.KRankNeedScore {
-		self.Level = conf.Const.Season_Level_Max
-		self.SecondLv = 0
 		if p := self._RankItem(); p.OnValueChange() {
 			season.AddRankItem(p)
 		}
-	} else {
-		confLevelScore := conf.Const.Season_Second_Level_Cnt * conf.Const.Season_Second_Level_Score
-		self.Level = uint8(self.Score / confLevelScore)
-		leftScore := self.Score % confLevelScore
-		self.SecondLv = 1 + uint8(leftScore/conf.Const.Season_Second_Level_Score)
 	}
 }
-func (self *TSeasonModule) calcScore(isWin bool, rank float32) int {
-	if isWin == false {
-		score := random.Between(conf.Const.Score_OneGame[0], conf.Const.Score_OneGame[1])
-		if self.winStreak > 0 {
-			ratio := rand.Float32() + 1 //连胜系数
-			score = int(float32(score) * ratio)
-		}
-		return score
-	} else {
-		confRank := conf.Const.Score_Take_Off[self.Level][0]
-		confScore := int(conf.Const.Score_Take_Off[self.Level][1])
-		if rank > confRank {
-			return -random.Between(1, confScore)
-		} else {
-			return 0
+func (self *TSeasonModule) calcScore(
+	isWin bool,
+	killCnt, //击杀数
+	assistCnt, //助攻数
+	reviveCnt uint8) int { //拉队友次数
+
+	kConf := &conf.Const
+	ret := kConf.Score_Normal
+	if isWin {
+		ret = kConf.Score_Win
+	}
+	for i, kLen := 0, len(kConf.Score_Kill); i < kLen; i++ {
+		if killCnt > 0 {
+			killCnt--
+			ret += int(kConf.Score_Kill[i])
 		}
 	}
+	for i, kLen := 0, len(kConf.Score_Assist); i < kLen; i++ {
+		if assistCnt > 0 {
+			assistCnt--
+			ret += int(kConf.Score_Assist[i])
+		}
+	}
+	if n := reviveCnt * kConf.Score_Revive; n < kConf.Score_Revive_Max {
+		ret += int(n)
+	} else {
+		ret += int(kConf.Score_Revive_Max)
+	}
+	return ret
+}
+func (self *TSeasonModule) calcLv() uint8 {
+	kConf := &conf.Const
+	kLen := uint8(len(kConf.Season_Score))
+	for i := uint8(0); i < kLen; i++ {
+		if self.Score < kConf.Season_Score[i] {
+			return i
+		}
+	}
+	return kLen
 }
 
 func (self *TSeasonModule) GetRank() uint8 {
@@ -118,10 +130,8 @@ func (self *TSeasonModule) GetRank() uint8 {
 	}
 }
 func (self *TSeasonModule) Clear() {
-	self.Score = 0
-	self.Level = 0
-	self.SecondLv = 0
 	self.TimeBegin = season.G_Args.TimeBgein
+	self.Score = 0
 }
 
 // ------------------------------------------------------------
@@ -145,8 +155,7 @@ func Rpc_game_season_info(req, ack *common.NetPack, this *TPlayer) { //客户端
 	if this.season.TimeBegin != season.G_Args.TimeBgein {
 		this.season.Clear()
 	}
-	ack.WriteUInt16(this.season.Score)
-	ack.WriteUInt8(this.season.Level)
-	ack.WriteUInt8(this.season.SecondLv)
+	ack.WriteInt(this.season.Score)
+	ack.WriteUInt8(this.season.calcLv())
 	ack.WriteUInt8(this.season.GetRank()) //仅最高档有排名，其余为0
 }

@@ -1,14 +1,15 @@
 /***********************************************************************
 * @ 赛季排名机制
 * @ brief
-				  分档  积分
-	0 Bronze	   5 * 100
-	1 Silver	   5 * 100
-	2 Gold	       5 * 100
-	3 Platinum     5 * 100
-	4 Diamond	   5 * 100
-	5 Master	   5 * 100
-	6 GrandMaster  只有排名, 前100
+                  到下一级积分 		总共场次		 差值场次
+    0 Unranked		0
+	1 Bronze	   	250        			 1		   1
+	2 Silver	   	500       			10		   9
+	3 Gold	   		1500				30		  20
+	4 Platinum   	5000			   100		  70
+	5 Diamond	   	10000              200		 100
+	6 Master	   	20000        	   400		 200
+	7 Grandmaster  	只有排名, 前100，按积分排名
 
 * @ author zhoumf
 * @ date 2018-5-8
@@ -21,7 +22,7 @@ import (
 )
 
 var (
-	KRankNeedScore uint16 //入排行榜所需积分
+	KRankNeedScore int //入排行榜所需积分
 	g_ranker       rank.TRanker
 	g_rank_map     map[uint32]*RankItem //<pid, >
 )
@@ -29,9 +30,9 @@ var (
 // ------------------------------------------------------------
 // -- 排行榜 rank.IRankItem
 type RankItem struct {
-	Rank uint8 `bson:"_id"`
+	Rank uint8 `bson:"_id"` //0无效，1起始
 	//显示信息，玩家数据的拷贝
-	Score    uint16
+	Score    int
 	PlayerID uint32
 	Name     string
 }
@@ -48,9 +49,8 @@ func (self *RankItem) OnValueChange() bool          { return g_ranker.OnValueCha
 // ------------------------------------------------------------
 //
 func InitRankList() {
-	KRankNeedScore = uint16(conf.Const.Season_Level_Max) *
-		conf.Const.Season_Second_Level_Cnt *
-		conf.Const.Season_Second_Level_Score
+	kLen := len(conf.Const.Season_Score)
+	KRankNeedScore = conf.Const.Season_Score[kLen-1]
 	//初始化排行榜
 	var list []RankItem
 	g_ranker.Init("SeasonRank", 100, &list)

@@ -54,7 +54,7 @@ func _PlayerRpcTcp(req, ack *common.NetPack, conn *tcp.TCPConn) bool {
 	return G_PlayerHandleFunc[rpcId] != nil
 }
 func _PlayerRpcHttp(w http.ResponseWriter, r *http.Request) {
-	buf := http2.ReadRequest(r) //! 接收信息
+	buf := http2.ReadBody(r.Body) //! 接收信息
 	if buf == nil {
 		return
 	}

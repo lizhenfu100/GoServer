@@ -47,7 +47,7 @@ import (
 const (
 	kIdleMinuteMax  = 3 //须客户端心跳包
 	kReLoginWaitSec = 300
-	kLivelyTime     = 1 * 24 * 3600
+	kActiveTime     = 24 * 3600
 	kDBPlayer       = "Player"
 )
 
@@ -81,6 +81,7 @@ type TPlayer struct {
 	mail    TMailModule
 	friend  TFriendModule
 	team    Team
+	money   TMoneyModule
 	battle  TBattleModule
 	season  TSeasonModule
 }
@@ -96,13 +97,11 @@ func (self *TPlayer) init() {
 		&self.mail,
 		&self.friend,
 		&self.team,
+		&self.money,
 		&self.battle,
 		&self.season,
 	}
 }
-
-// -------------------------------------
-// modules
 func NewPlayerInDB(accountId uint32, name string) *TPlayer {
 	player := _NewPlayer()
 	// if dbmgo.Find("Player", "name", name, player) { //禁止重名
@@ -178,7 +177,7 @@ func (self *TPlayer) Logout() {
 
 	//Notice: timer在主线程执行，传入函数必须线程安全
 	timer.G_TimerMgr.AddTimerSec(func() { //延时删除，提升重连效率
-		if !self.IsOnline() && FindAccountId(self.AccountID) != nil {
+		if !self.IsOnline() {
 			gamelog.Debug("Aid(%d) Delete", self.AccountID)
 			self.WriteAllToDB()
 			DelCache(self)
@@ -197,7 +196,7 @@ const ( //须与ServiceMgr初始化顺序一致
 var G_ServiceMgr service.ServiceMgr
 
 func init() {
-	G_ServiceMgr.Init(2048, []service.IService{
+	G_ServiceMgr.Init(4096, []service.IService{
 		service.NewServicePatch(_Service_Write_DB, 15*60*1000),
 		service.NewServiceVec(_Service_Check_AFK, 60*1000),
 	})

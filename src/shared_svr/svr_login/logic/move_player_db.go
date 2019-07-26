@@ -13,7 +13,6 @@ package logic
 
 import (
 	"common"
-	"common/format"
 	"common/std/sign"
 	"conf"
 	"fmt"
@@ -31,7 +30,6 @@ func Rpc_login_move_player_db(req, ack *common.NetPack) {
 	version := req.ReadString()
 	//读取玩家数据
 	accountId := req.ReadUInt32()
-	name := req.ReadString()
 	playerBuf := req.ReadLenBuf()
 	pf_id, mac, clientVersion, saveData := "", "", "", []byte(nil)
 	if conf.HaveClientSave { //读取存档数据
@@ -42,8 +40,6 @@ func Rpc_login_move_player_db(req, ack *common.NetPack) {
 	}
 	if gameName != conf.GameName {
 		ack.WriteUInt16(err.LoginSvr_not_match)
-	} else if !format.CheckName(name) {
-		ack.WriteUInt16(err.Name_format_err)
 	} else if gameSvrId := GetFreeGameSvr(version); gameSvrId <= 0 {
 		ack.WriteUInt16(err.None_free_game_server)
 	} else {
@@ -52,7 +48,7 @@ func Rpc_login_move_player_db(req, ack *common.NetPack) {
 			ack.WriteUInt16(errCode) //同步调用，才可用ack直接回复
 		}()
 		//4、新大区选取空闲svr_game，创建角色
-		if e := _MovePlayer(gameSvrId, accountId, name, playerBuf); e != err.Success {
+		if e := _MovePlayer(gameSvrId, accountId, playerBuf); e != err.Success {
 			errCode = e
 			return
 		}
@@ -78,12 +74,11 @@ func Rpc_login_move_player_db(req, ack *common.NetPack) {
 			})
 	}
 }
-func _MovePlayer(gameSvrId int, accountId uint32, name string, data []byte) (errCode uint16) {
+func _MovePlayer(gameSvrId int, accountId uint32, data []byte) (errCode uint16) {
 	errCode = err.None_game_server
 	gameAddr := netConfig.GetHttpAddr("game", gameSvrId)
 	http.CallRpc(gameAddr, enum.Rpc_game_move_player_db2, func(buf *common.NetPack) {
 		buf.WriteUInt32(accountId)
-		buf.WriteString(name)
 		buf.WriteBuf(data)
 	}, func(recvBuf *common.NetPack) {
 		errCode = recvBuf.ReadUInt16()

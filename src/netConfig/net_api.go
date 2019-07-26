@@ -22,7 +22,6 @@ package netConfig
 import (
 	"common"
 	"common/std/hash"
-	"conf"
 	"gamelog"
 	"generate_out/rpc/enum"
 	"math/rand"
@@ -122,18 +121,13 @@ func GetGatewayConn(svrId int) (ret *tcp.TCPConn) {
 var g_cache_game sync.Map //<int, *tcp.TCPConn>
 
 func CallRpcGame(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	if conf.IsTcpGame {
-		if conn := GetGameConn(svrId); conn != nil {
-			conn.CallRpcSafe(rid, sendFun, recvFun)
-			return
-		}
+	if addr := GetHttpAddr("game", svrId); addr != "" {
+		http.CallRpc(addr, rid, sendFun, recvFun)
+	} else if conn := GetGameConn(svrId); conn != nil {
+		conn.CallRpcSafe(rid, sendFun, recvFun)
 	} else {
-		if addr := GetHttpAddr("game", svrId); addr != "" {
-			http.CallRpc(addr, rid, sendFun, recvFun)
-			return
-		}
+		gamelog.Error("game nil: svrId(%d) rpcId(%d)", svrId, rid)
 	}
-	gamelog.Error("game nil: svrId(%d) rpcId(%d)", svrId, rid)
 }
 func GetGameConn(svrId int) (ret *tcp.TCPConn) {
 	v, ok := g_cache_game.Load(svrId)

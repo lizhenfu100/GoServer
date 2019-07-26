@@ -48,11 +48,8 @@ func HandleRpc(request []byte, w io.Writer, clientIp string) { //G_Intercept==ni
 	if conf.TestFlag_CalcQPS {
 		qps.AddQps()
 	}
-	if G_Intercept != nil { //拦截器
-		if G_Intercept(req, ack, clientIp) {
-			gamelog.Info("Intercept msg:%d ip:%s", msgId, clientIp)
-			return
-		}
+	if G_Intercept != nil && G_Intercept(req, ack, clientIp) { //拦截器
+		return
 	}
 	if handler := G_HandleFunc[msgId]; handler != nil {
 		handler(req, ack)

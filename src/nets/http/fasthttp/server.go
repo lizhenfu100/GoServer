@@ -47,3 +47,17 @@ func NewHttpServer(port uint16, module string, svrId int) error {
 func CloseServer() { _svr.Shutdown() }
 
 func HandleFunc(path string, f http.RequestHandler) { _map[path] = f }
+
+// ------------------------------------------------------------
+// -- rpc
+func _HandleRpc(ctx *http.RequestCtx) {
+	//TODO: 检查是否需要recover()
+	ip := ""
+	if mhttp.G_Intercept != nil {
+		ip = ctx.RemoteIP().String()
+	}
+	mhttp.HandleRpc(ctx.Request.Body(), ctx, ip)
+}
+func RegHandlePlayerRpc(cb func(*http.RequestCtx)) {
+	HandleFunc("/player_rpc", cb)
+}

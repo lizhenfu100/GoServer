@@ -1,25 +1,24 @@
 <html>
 
 <head>
-    <title>查看邮箱</title>
+    <title>改邮箱</title>
     <link rel="stylesheet" href="main.css">
     <script src="app.js"></script>
 </head>
 
 <body bgcolor="white">
     <div class="all-wrapper">
-        <h1>查看邮箱信息</h1>
+        <h1>强制改邮箱</h1>
         <div class="form-wrapper">
-            <form action="" method="get" onsubmit="SetSelectAddr(this)">
-                <label>操作类型:</label>
-                <select>
-                    <option value="{{.CenterAddr}}/show_email_account">基本信息</option>
-                </select>
+            <form action="{{.LocalAddr}}/bind_info_force" method="get">
+                <label for="name">账号ID:</label>
+                <input type="text" name="aid"><br>
                 <label>绑定类型:</label>
                 <select name="k">
-                    <option value="email">email</option>
+                    <option value="email">邮箱</option>
+                    <option value="name">账号名</option>
                 </select>
-                <label for="v">绑定值:</label>
+                <label for="v">值:</label>
                 <input type="text" name="v"><br>
                 <br>
                 <input type="submit" value="确认">

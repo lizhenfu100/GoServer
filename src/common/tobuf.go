@@ -9,9 +9,6 @@ import (
 //【多字符串拼接，用bytes.Buffer.WriteString()快400-500倍】
 // bytes.Buffer > string + > fmt.Sprintf > strings.Join
 
-func SwapBuf(a, b *[]byte) { *a, *b = *b, *a }
-func ClearBuf(p *[]byte)   { *p = (*p)[:0] } //len(0), cap(old), 旧数据不会修改
-
 // ------------------------------------------------------------
 //【仅限只读数据】
 func S2B(s string) []byte {

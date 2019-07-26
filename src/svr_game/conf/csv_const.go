@@ -2,18 +2,14 @@ package conf
 
 var Const struct {
 	// 赛季
-	Season_Begin_Month        []int       //开始月份
-	Season_Level_Max          uint8       //赛季档次，从0开始
-	Season_Second_Level_Cnt   uint16      //每个档的小级别，1起始
-	Season_Second_Level_Score uint16      //每个小级需要的积分
-	Score_OneGame             []int       //单场基础积分范围
-	Score_Once_Max            int         //单场最高值
-	Score_Take_Off            [][]float32 //各档次失败扣除的最大积分
+	Season_Begin_Month []int //开始月份
+	Season_Score       []int //赛季，各档次积分门槛
+	Score_Normal       int   //正常完成基础分。正常完成定义为打出伤害，存活超过30秒就有。中途主动退出为0分
+	Score_Win          int
+	Score_Kill         []uint8 //击杀得分，第一次、第二次、第三次...
+	Score_Assist       []uint8 //助攻得分
+	Score_Revive       uint8   //拉起队友得分
+	Score_Revive_Max   uint8   //拉队友得分上限
 
-	// 经验
-	Exp_LvUp     []uint32 //升级分布
-	Exp_LvUp_Max uint32
-	Exp_Once_Max uint32 //单场最高值
-	Exp_Win      uint32 //胜利经验
-	Exp_Fail     uint32 //失败经验
+	Hero_LvUp []uint16 //升级经验分布，0位留空
 }

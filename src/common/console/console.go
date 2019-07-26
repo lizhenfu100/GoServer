@@ -17,7 +17,7 @@ import (
 )
 
 func Init() {
-	rand.Seed(time.Now().Unix())
+	rand.Seed(time.Now().UnixNano())
 	http.InitClient(http2.Client)
 	tcp.G_HandleFunc[enum.Rpc_log] = _Rpc_log1
 	http.G_HandleFunc[enum.Rpc_log] = _Rpc_log2

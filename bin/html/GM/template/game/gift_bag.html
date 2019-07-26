@@ -1,47 +1,49 @@
 <html>
 
 <head>
-    <title>礼包码</title>
+    <title>礼包</title>
     <link rel="stylesheet" href="main.css">
     <script src="app.js"></script>
 </head>
 
 <body bgcolor="white">
     <div class="all-wrapper">
-        <h1>礼包码</h1>
+        <h1>礼包</h1>
         <div class="form-wrapper">
-            <form action="" method="post" onsubmit="SetSelectAddr2(this)">
-                <label>大区:</label>
-                <select>
-                    <option value="{{index .LoginAddrs 1}}">北美</option>
-                    <option value="{{index .LoginAddrs 2}}">亚洲</option>
-                    <option value="{{index .LoginAddrs 3}}">欧洲</option>
-                    <option value="{{index .LoginAddrs 4}}">南美</option>
-                    <option value="{{index .LoginAddrs 5}}">中国华北</option>
-                    <option value="{{index .LoginAddrs 6}}">中国华南</option>
-                </select>
+            <script>
+                function setActionAddr(form) {
+                    var select = form.getElementsByTagName("select")[0];
+                    var uri = select.options[select.selectedIndex].value;
+                    // window.alert(document.getElementById("gameaddr").value)
+                    form.action="{{.LocalAddr}}"+uri;
+                    // window.alert(form.action)
+                }
+            </script>
+            <form action="" method="post" onsubmit="setActionAddr(this)">
                 <label>操作类型:</label>
                 <select>
                     <option value="/gift_bag_add">投放</option>
                     <option value="/gift_bag_set">修改</option>
                     <option value="/gift_bag_del">删除</option>
                 </select>
+                <label>游戏名称:</label>
+                <select name="game">
+                    <option value="{{.GameName}}">{{.GameName}}</option>
+                </select>
                 <label for="passwd">权限密码:</label>
                 <input type="password" name="passwd"><br>
-                <label for="key">礼包码:</label>
+                <label for="key">Key:</label>
                 <input type="text" name="key" placeholder="不填则自动分配"><br>
                 <label for="begin">开始时间:</label>
                 <input type="text" name="begin"><br>
                 <label for="end">结束时间:</label>
                 <input type="text" name="end"><br>
-                <label for="desc">描述:</label>
-                <input type="text" name="desc"><br>
                 <label for="json">Json内容:</label>
                 <input type="text" name="json"><br>
+                <label for="version">版本号:</label>
+                <input type="text" name="version" placeholder="客户端版本小于此的无法领取"><br>
                 <label for="pf_id">限定平台:</label>
                 <input type="text" name="pf_id" placeholder="不填则都能领"><br>
-                <label for="maxnum">总数量:</label>
-                <input type="text" name="maxnum" placeholder="限制领取总数"><br>
                 <br>
                 <input type="submit" value="确认">
             </form>

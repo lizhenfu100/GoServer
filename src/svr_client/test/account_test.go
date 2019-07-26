@@ -12,21 +12,30 @@ import (
 // go test -v ./src/svr_client/test/account_test.go
 
 // ------------------------------------------------------------
-// -- 修复元气测试账号
-func Test_account_set_gameinfo(t *testing.T) {
-	dbmgo.InitWithUser("52.14.1.205", 27017, "account",
+// -- 修改账号
+func Test_account_set_bindinfo(t *testing.T) {
+	dbmgo.InitWithUser("3.17.67.102", 27017, "account",
 		"chillyroom", "db#233*")
+	coll := dbmgo.DataBase().C("Account")
+
 	var list []account.TAccount
-	dbmgo.FindAll("Account", bson.M{"gameinfo.SoulKnight": bson.M{"$exists": true}}, &list)
-	fmt.Println("-------------------- SoulKnight count:", len(list))
-	for i := 0; i < len(list); i++ {
-		p := &list[i]
-		info := p.GameInfo["SoulKnight"]
-		if info.LoginSvrId < 100 {
-			info.LoginSvrId += 100
-			p.GameInfo["SoulKnight"] = info
-			dbmgo.UpdateIdSync("Account", p.AccountID, bson.M{"$set": bson.M{
-				"gameinfo.SoulKnight": info}})
+	//dbmgo.FindAll(account.KDBTable, bson.M{}, &list)
+	//for _, v := range list {
+	//	fmt.Println(v.AccountID, v.Name)
+	//}
+
+	//bindVal := "1003303623@qq.com"
+	q := coll.Find(bson.M{
+		"bindinfo.email": bson.M{"$exists": false},
+		"bindinfo.name":  bson.M{"$exists": false},
+	})
+	if err := q.All(&list); err == nil {
+		//fmt.Println("-------- ok", n)
+		for _, v := range list {
+			fmt.Println("---------------- ", v.Name, v.AccountID)
 		}
+	} else {
+		fmt.Println("-------- err: ", err.Error())
 	}
+	fmt.Println("... finish ...")
 }

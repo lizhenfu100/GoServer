@@ -16,7 +16,6 @@ package player
 
 import (
 	"common"
-	"common/format"
 	"gamelog"
 	"generate_out/err"
 	"netConfig/meta"
@@ -61,9 +60,7 @@ func Rpc_game_create_player(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	accountId := req.ReadUInt32()
 	playerName := req.ReadString()
 
-	if !format.CheckName(playerName) { //名字不合格
-		ack.WriteUInt32(0)
-	} else if this := NewPlayerInDB(accountId, playerName); this == nil {
+	if this := NewPlayerInDB(accountId, playerName); this == nil {
 		ack.WriteUInt32(0)
 	} else {
 		this.Login(conn)

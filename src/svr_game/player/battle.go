@@ -11,20 +11,18 @@ const kDBBattle = "battle"
 
 type TBattleModule struct {
 	PlayerID uint32 `bson:"_id"`
-	Diamond  uint32
-	Exp      uint32
-	Level    uint32
-	Heros    []THeroInfo //英雄成长属性
+	Heros    map[uint8]THero
 
 	//小写私有数据，不入库
-	owner *TPlayer
+	owner *TPlayer //可能是nil
 	aid   uint32
 	name  string
 	svrId int
 }
-type THeroInfo struct {
-	HeroId uint8 //哪个英雄
-	StarLv uint8 //升星
+type THero struct {
+	ID    uint8
+	Level uint8 //1起始
+	Exp   uint16
 }
 
 // ------------------------------------------------------------
@@ -46,6 +44,9 @@ func (self *TBattleModule) OnLogin() {
 func (self *TBattleModule) OnLogout() {
 }
 func (self *TBattleModule) _InitTempData(player *TPlayer) {
+	if self.Heros == nil {
+		self.Heros = make(map[uint8]THero)
+	}
 	self.owner = player
 	self.aid = player.AccountID
 	self.name = player.Name
@@ -54,20 +55,32 @@ func (self *TBattleModule) _InitTempData(player *TPlayer) {
 
 // ------------------------------------------------------------
 // -- API
-func (self *TBattleModule) AddExp(exp uint32) {
-	if exp > conf.Const.Exp_Once_Max {
-		exp = conf.Const.Exp_Once_Max
-	}
-	levelUpExp := uint32(0)
-	if int(self.Level) < len(conf.Const.Exp_LvUp) {
-		levelUpExp = conf.Const.Exp_LvUp[self.Level]
+func (self *TBattleModule) AddHero(id uint8) *THero {
+	if _, ok := self.Heros[id]; ok {
+		return nil
 	} else {
-		levelUpExp = conf.Const.Exp_LvUp_Max
+		v := THero{id, 1, 0}
+		self.Heros[id] = v
+		return &v
 	}
-	if self.Exp += exp; self.Exp >= levelUpExp {
-		self.Exp -= levelUpExp
-		self.Level++
+}
+func (self *TBattleModule) GetHero(id uint8) *THero {
+	if v, ok := self.Heros[id]; ok {
+		return &v
 	}
+	return nil
+}
+func (self *TBattleModule) AddHeroExp(id uint8, exp uint16) bool {
+	if p := self.GetHero(id); p != nil {
+		if kConf := conf.Const.Hero_LvUp; p.Level < uint8(len(kConf)) {
+			if p.Exp += exp; p.Exp >= kConf[p.Level] {
+				p.Exp -= kConf[p.Level]
+				p.Level++
+			}
+			return true
+		}
+	}
+	return false
 }
 
 // ------------------------------------------------------------
@@ -77,7 +90,7 @@ func (self *TBattleModule) BufToData(buf *common.NetPack) {
 	self.name = buf.ReadString()
 	self.svrId = buf.ReadInt()
 
-	self._BufToDB(buf)
+	self._BufToData(buf)
 }
 func (self *TBattleModule) DataToBuf(buf *common.NetPack) {
 	if self.owner != nil {
@@ -89,53 +102,38 @@ func (self *TBattleModule) DataToBuf(buf *common.NetPack) {
 	}
 	buf.WriteInt(self.svrId)
 
-	self._DBToBuf(buf)
+	self._DataToBuf(buf)
 }
-func (self *TBattleModule) _BufToDB(buf *common.NetPack) {
-	self.Diamond = buf.ReadUInt32()
-	self.Exp = buf.ReadUInt32()
-	self.Level = buf.ReadUInt32()
-	var v THeroInfo
-	length := buf.ReadUInt8()
-	self.Heros = self.Heros[:0]
-	for i := uint8(0); i < length; i++ {
-		v.HeroId = buf.ReadUInt8()
-		v.StarLv = buf.ReadUInt8()
-		self.Heros = append(self.Heros, v)
+func (self *TBattleModule) _BufToData(buf *common.NetPack) {
+	for cnt, i := buf.ReadUInt8(), uint8(0); i < cnt; i++ {
+		id := buf.ReadUInt8()
+		lv := buf.ReadUInt8()
+		exp := buf.ReadUInt16()
+		self.Heros[id] = THero{id, lv, exp}
 	}
 }
-func (self *TBattleModule) _DBToBuf(buf *common.NetPack) {
-	buf.WriteUInt32(self.Diamond)
-	buf.WriteUInt32(self.Exp)
-	buf.WriteUInt32(self.Level)
+func (self *TBattleModule) _DataToBuf(buf *common.NetPack) {
 	buf.WriteUInt8(uint8(len(self.Heros)))
-	for i := 0; i < len(self.Heros); i++ {
-		ptr := &self.Heros[i]
-		buf.WriteUInt8(ptr.HeroId)
-		buf.WriteUInt8(ptr.StarLv)
+	for _, v := range self.Heros {
+		buf.WriteUInt8(v.ID)
+		buf.WriteUInt8(v.Level)
+		buf.WriteUInt16(v.Exp)
 	}
 }
 
 // ------------------------------------------------------------
 // --
 func Rpc_game_write_db_battle_info(req, ack *common.NetPack, this *TPlayer) {
-	this.battle._BufToDB(req)
+	this.battle._BufToData(req)
 }
 func Rpc_game_on_battle_end(req, ack *common.NetPack, this *TPlayer) {
 	isWin := req.ReadBool()
-	rank := req.ReadFloat()
+	killCnt := req.ReadUInt8()   //击杀数
+	assistCnt := req.ReadUInt8() //助攻数
+	reviveCnt := req.ReadUInt8() //拉队友次数
 
-	//TODO: 特定动作加经验，比如连杀
-	exp := uint32(0)
-	if isWin {
-		exp = conf.Const.Exp_Win
-		this.season.winStreak++
-	} else {
-		exp = conf.Const.Exp_Fail
-		this.season.winStreak = 0
-	}
-	score := this.season.calcScore(isWin, rank)
+	this.money.Add(KExp, 5)
 
-	this.battle.AddExp(exp)
+	score := this.season.calcScore(isWin, killCnt, assistCnt, reviveCnt)
 	this.season.AddScore(score)
 }

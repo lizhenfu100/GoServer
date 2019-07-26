@@ -13,6 +13,7 @@
 package main
 
 import (
+	"common/console"
 	"common/file"
 	"conf"
 	"flag"
@@ -53,14 +54,14 @@ func main() {
 	InitConf()
 
 	//地址信息
-	for i := 0; i < len(g_list); i++ {
-		p := &g_list[i]
-		p._TCommon = g_common
-		if !p.LoadAddrs() || _getaddrs {
-			p.GetAddrs()
+	for k, v := range g_map {
+		v.TCommon = g_common
+		if !v.LoadAddrs() || _getaddrs {
+			v.GetAddrs()
 		}
-		UpdateHtmls("game", "game."+p.GameName, p) //game中的页面往各游戏都导一份
-		UpdateHtmls("game."+p.GameName, "game."+p.GameName, p)
+		UpdateHtmls("game", "game."+v.GameName, &v) //game中的页面往各游戏都导一份
+		UpdateHtmls("game."+v.GameName, "game."+v.GameName, &v)
+		g_map[k] = v
 	}
 	UpdateHtmls("account/", "account/", g_common)
 	UpdateHtml("index", "index", g_common)
@@ -74,6 +75,7 @@ func main() {
 }
 func InitConf() {
 	file.LoadCsv("csv/conf_svr.csv", &conf.SvrCsv)
+	console.Init()
 
 	register.RegHttpHandler(map[string]register.HttpHandle{
 		"/reset_password":  Http_reset_password,
@@ -83,6 +85,10 @@ func InitConf() {
 		"/backup_auto":     Http_relay_to_save,
 		"/backup_force":    Http_relay_to_save,
 		"/relay_gm_cmd":    Http_relay_gm_cmd,
+		"/gift_bag_add":    Http_relay_to_login,
+		"/gift_bag_set":    Http_relay_to_login,
+		"/gift_bag_del":    Http_relay_to_login,
+		"/gift_code_spawn": Http_gift_code_spawn,
 	})
 	g_file_server = http.FileServer(http.Dir(kFileDirRoot))
 	http.HandleFunc("/", Http_download_file)

@@ -1,51 +1,89 @@
 <html>
 
 <head>
-    <title>存档备份</title>
+    <title>云存档</title>
     <link rel="stylesheet" href="main.css">
     <script src="app.js"></script>
 </head>
 
 <body bgcolor="white">
     <div class="all-wrapper">
-        <h1>存档备份</h1>
+        <h1>回退</h1>
         <div class="form-wrapper">
             <script>
                 function setActionAddr(form) {
                     var select = form.getElementsByTagName("select")[0];
                     var uri = select.options[select.selectedIndex].value;
                     // window.alert(document.getElementById("gameaddr").value)
-                    form.action="{{.LocalAddr}}"+uri;
+                    form.action="http://"+document.getElementById("addr").value+uri;
                     // window.alert(form.action)
                 }
             </script>
             <form action="" method="get" onsubmit="setActionAddr(this)">
                 <label>操作类型:</label>
                 <select>
-                    <option value="/backup_auto">自动开关</option>
-                    <option value="/backup_force">强制开关</option>
-                    <option value="/backup_conf">编辑配置</option>
+                    <option value="/save_backup">存档回退</option>
                 </select>
-                <label>游戏名称:</label>
-                <select name="game">
-                    <option value="{{.GameName}}">{{.GameName}}</option>
+                <label>平台名:</label>
+                <select name="pf_id">
+                    <option value="TapTap">TapTap</option>
+                    <option value="IOS">IOS</option>
+                    <option value="Android">Android</option>
+                    <option value="4399_360">4399_360</option>
+                    <option value="4399_4399">4399_4399</option>
+                    <option value="4399_4399hezi">4399_4399hezi</option>
+                    <option value="4399_4399jm">4399_4399jm</option>
+                    <option value="4399_anzhi_dj">4399_anzhi_dj</option>
+                    <option value="4399_baidu_dj">4399_baidu_dj</option>
+                    <option value="4399_biligame">4399_biligame</option>
+                    <option value="4399_dn_dj">4399_dn_dj</option>
+                    <option value="4399_douyu">4399_douyu</option>
+                    <option value="4399_duowan_mc">4399_duowan_mc</option>
+                    <option value="4399_leap">4399_leap</option>
+                    <option value="4399_letv">4399_letv</option>
+                    <option value="4399_meiyou_dj">4399_meiyou_dj</option>
+                    <option value="4399_migu">4399_migu</option>
+                    <option value="4399_muzhiwan">4399_muzhiwan</option>
+                    <option value="4399_pps">4399_pps</option>
+                    <option value="4399_samsungapp">4399_samsungapp</option>
+                    <option value="4399_snssdk">4399_snssdk</option>
+                    <option value="4399_sogou">4399_sogou</option>
+                    <option value="4399_uc_dj">4399_uc_dj</option>
+                    <option value="4399_wdj_dj">4399_wdj_dj</option>
+                    <option value="4399_wo">4399_wo</option>
+                    <option value="4399_xiaomi">4399_xiaomi</option>
+                    <option value="4399_yxgame">4399_yxgame</option>
+                    <option value="4399_yyb_dj">4399_yyb_dj</option>
+                    <option value="4399_yyh_dj">4399_yyh_dj</option>
+                    <option value="BlackBox">BlackBox</option>
+                    <option value="CatClaw">CatClaw</option>
+                    <option value="CoolPad">CoolPad</option>
+                    <option value="GamePop">GamePop</option>
+                    <option value="Gourd">Gourd</option>
+                    <option value="HuaWei">HuaWei</option>
+                    <option value="JinLi">JinLi</option>
+                    <option value="KuaiKan">KuaiKan</option>
+                    <option value="Lenovo">Lenovo</option>
+                    <option value="LianYun001">LianYun001</option>
+                    <option value="MeiZu">MeiZu</option>
+                    <option value="OPPO">OPPO</option>
+                    <option value="VIVO">VIVO</option>
+                    <option value="Xiao7">Xiao7</option>
+                    <option value="YYBShare">YYBShare</option>
+                    <option value="YouPinWei">YouPinWei</option>
                 </select>
                 <label for="passwd" title="我们自己约定的操作权限密码，一般不会变">
                     权限密码:
                 </label>
                 <input type="password" name="passwd"><br>
-                <label for="weekdays">周几开启:</label>
-                <input type="text" name="weekdays" placeholder="参考值 [1, 2]"><br>
-                <label for="onlintlimit" title="在线量超过，关闭备份">
-                    在线限制:
+                <label title="玩家所在svr_save地址，端口一般是7090">
+                    存档服:
                 </label>
-                <input type="text" name="onlintlimit"><br>
-                <label for="auto" title="是否自动开启，按配置的周几">
-                    自动开关:
-                </label>
-                <input type="text" name="auto" placeholder="填 1或0"><br>
-                <label for="force">强制开关:</label>
-                <input type="text" name="force" placeholder="填 1或0"><br>
+                <input type="text" id="addr" placeholder="游戏服地址,端口7090"><br>
+                <label for="uid" title="账号id，或渠道uuid">Uid:</label>
+                <input type="text" name="uid"><br>
+                <label for="filename">备份名称:</label>
+                <input type="text" name="filename" placeholder="只需日期部分.save"><br>
                 <br>
                 <input type="submit" value="确认">
             </form>

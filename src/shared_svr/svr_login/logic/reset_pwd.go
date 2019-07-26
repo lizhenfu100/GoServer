@@ -19,10 +19,10 @@ import (
 // Client须提示玩家查收邮件
 func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	emailAddr := q.Get("name")
+	k, v := "email", q.Get("name")
 	passwd := q.Get("passwd")
 	language := q.Get("language")
-	gamelog.Debug("ask_reset_password: %s %s %s", emailAddr, passwd, language)
+	gamelog.Debug("ask_reset_password: %s %s %s %s", k, v, passwd, language)
 
 	//! 创建回复
 	errCode := err.Unknow_error
@@ -35,20 +35,21 @@ func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) {
 	if !format.CheckPasswd(passwd) {
 		errCode = err.Passwd_format_err
 	} else {
-		centerAddr := netConfig.GetHttpAddr("center", netConfig.HashCenterID(emailAddr))
+		centerAddr := netConfig.GetHttpAddr("center", netConfig.HashCenterID(v))
 		//1、创建url
 		u, _ := url.Parse(centerAddr + "/reset_password")
 		q := u.Query()
 		//2、写入参数
-		q.Set("email", emailAddr)
+		q.Set("k", k)
+		q.Set("v", v)
 		q.Set("pwd", passwd)
 		flag := strconv.FormatInt(time.Now().Unix(), 10)
 		q.Set("flag", flag)
-		q.Set("sign", sign.CalcSign(passwd+flag))
+		q.Set("language", language)
+		q.Set("sign", sign.CalcSign(k+v+passwd+flag))
 		//3、生成完整url
 		u.RawQuery = q.Encode()
-		email.SendMail2("Reset Password", emailAddr, u.String(), language)
-		errCode = err.Success
+		errCode = email.SendMail2("Reset Password", v, u.String(), language)
 	}
 }
 

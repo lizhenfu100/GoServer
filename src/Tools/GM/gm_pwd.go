@@ -3,7 +3,6 @@ package main
 import (
 	"common"
 	"common/timer"
-	"common/tool/email"
 	"gamelog"
 	"io/ioutil"
 	"math/rand"
@@ -13,18 +12,9 @@ import (
 	"time"
 )
 
-var (
-	g_passwd string
-	g_emails = []string{
-		"515693380@qq.com",  //许嘉琪
-		"707723219@qq.com",  //杨添怿
-		"2370159093@qq.com", //单泽永
-		"734688714@qq.com",  //周梦飞
-	}
-)
+var g_passwd string
 
 func UpdatePasswd() {
-	rand.Seed(time.Now().Unix())
 	g_passwd = strconv.Itoa(rand.Intn(100000000))
 	gamelog.Info("Passwd: " + g_passwd)
 
@@ -32,10 +22,6 @@ func UpdatePasswd() {
 	wday := int(time.Now().Weekday()+6) % 7 // weekday but Monday = 0.
 	leftSec := wday*24*3600 + timer.TodayLeftSec()
 	time.AfterFunc(time.Duration(leftSec)*time.Second, UpdatePasswd)
-
-	for _, v := range g_emails {
-		email.SendMail("凉屋GM密码", v, g_passwd, "")
-	}
 }
 
 func Http_check_passwd(w http.ResponseWriter, r *http.Request) {

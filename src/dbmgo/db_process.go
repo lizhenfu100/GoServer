@@ -1,7 +1,6 @@
 package dbmgo
 
 import (
-	"common/tool/wechat"
 	"gamelog"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -59,13 +58,12 @@ func _loop() {
 		}
 		if err != nil {
 			errTips := err.Error()
-			gamelog.Error("DBProcess Failed: op[%d] table[%s] search[%v], data[%v], Error[%s]",
+			gamelog.Error("DBLoop: op[%d] table[%s] search[%v], data[%v], Error[%s]",
 				v.optype, v.table, v.search, v.pData, errTips)
-			wechat.SendMsg("DBLoop: " + err.Error())
 			//FIXME：Mongodb会极低概率忽然断开，所有操作均超时~囧
 			if strings.LastIndex(errTips, "timeout") >= 0 {
-				_actions <- v
 				Init(g_dial, &g_database)
+				_actions <- v
 			}
 		}
 	}

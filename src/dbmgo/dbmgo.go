@@ -143,6 +143,7 @@ func FindEx(table string, search bson.M, pData interface{}) (bool, error) {
 in($in)		bson.M{"name": bson.M{"$in": []string{"Jimmy Kuu", "Tracy Yu"}}}
 and			bson.M{"name": "Jimmy Kuu", "age": 33}
 or			bson.M{"$or": []bson.M{bson.M{"name": "Jimmy Kuu"}, bson.M{"age": 31}}}
+$exists		bson.M{"bindinfo.email": bson.M{ "$exists": false }]
 */
 func FindAll(table string, search bson.M, pSlice interface{}) error {
 	coll := g_database.C(table)

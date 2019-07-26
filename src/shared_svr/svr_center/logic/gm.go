@@ -18,13 +18,11 @@ func Http_show_account(w http.ResponseWriter, r *http.Request) {
 
 	var ptr *account.TAccount
 	switch k {
-	case "account":
-		ptr = account.GetAccountByName(v)
 	case "aid":
 		id, _ := strconv.Atoi(v)
 		ptr = account.GetAccountById(uint32(id))
-	case "email":
-		ptr = account.GetAccountByBindInfo("email", v)
+	default:
+		ptr = account.GetAccountByBindInfo(k, v)
 	}
 	if ptr != nil {
 		//账号

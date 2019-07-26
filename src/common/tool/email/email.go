@@ -28,49 +28,56 @@ package email
 import (
 	"bytes"
 	"common"
+	"common/assert"
 	"common/format"
 	"conf"
 	"gamelog"
+	"generate_out/err"
 	"generate_out/rpc/enum"
 	"gopkg.in/gomail"
 	"math/rand"
 	"netConfig"
+	"sync"
 	"text/template"
+	"time"
 )
 
-var g_list []*gomail.Dialer
-
-func SendMail(subject, target, body, language string) {
-	netConfig.CallRpcLogin(enum.Rpc_login_relay_email, func(buf *common.NetPack) {
+func SendMail(subject, addr, body, language string) (errcode uint16) {
+	netConfig.CallRpcLogin(enum.Rpc_login_send_email, func(buf *common.NetPack) {
 		buf.WriteString(subject)
-		buf.WriteString(target)
+		buf.WriteString(addr)
 		buf.WriteString(body)
 		buf.WriteString(language)
-	}, nil)
+	}, func(recvBuf *common.NetPack) {
+		errcode = recvBuf.ReadUInt16()
+	})
+	return errcode
 }
-func SendMail2(subject, target, body, language string) { //仅center/login调，其它节点转至login发送
-	if !format.CheckBindValue("email", target) {
-		gamelog.Error("invalid email: %s", target)
-		return //非邮箱格式不必发送，减少转发频率
+
+// ------------------------------------------------------------
+//仅center/login调，其它节点转至login发送
+func SendMail2(subject, addr, body, language string) (errcode uint16) {
+	return _SendMail(subject, addr, body, language, true) //TODO:zhoumf:
+}
+func SendMailForce(subject, addr, body, language string) (errcode uint16) {
+	return _SendMail(subject, addr, body, language, true)
+}
+func _SendMail(subject, addr, body, language string, forceSend bool) (errcode uint16) {
+	if !format.CheckBindValue("email", addr) || InCsvInvalid(addr) {
+		return err.Invalid
 	}
-	if g_list == nil {
-		g_list = make([]*gomail.Dialer, len(conf.SvrCsv.EmailUser))
+	if !assert.IsDebug && !checkFreq(subject, addr) { //同subject，每小时只发一次
+		return err.Operate_too_often
+		//return err.Email_already_send_please_check
 	}
-	idx := rand.Intn(len(g_list))
-	dialer := g_list[idx]
-	if dialer == nil || dialer.Password != conf.SvrCsv.EmailPasswd[idx] {
-		dialer = gomail.NewDialer(
-			conf.SvrCsv.EmailHost,
-			conf.SvrCsv.EmailPort,
-			conf.SvrCsv.EmailUser[idx],
-			conf.SvrCsv.EmailPasswd[idx])
-		g_list[idx] = dialer
+	if !forceSend && !isVerifyEmail(addr) {
+		return err.Invalid
 	}
 	packBody(&subject, &body, language) //嵌入模板，并本地化
 
-	msg := gomail.NewMessage()
+	msg, dialer := gomail.NewMessage(), dialer()
 	msg.SetAddressHeader("From", dialer.Username, "ChillyRoom")
-	msg.SetHeader("To", target)
+	msg.SetHeader("To", addr)
 	//msg.SetHeader("Cc" /*抄送*/, "xxxx@foxmail.com")
 	//msg.SetHeader("Bcc" /*暗送*/, "xxxx@gmail.com")
 	msg.SetHeader("Subject", subject)
@@ -78,10 +85,53 @@ func SendMail2(subject, target, body, language string) { //仅center/login调，
 	//msg.Attach("我是附件")
 
 	if e := dialer.DialAndSend(msg); e != nil {
-		gamelog.Error("%s: %s", target, e.Error())
+		gamelog.Error("%s: %s", addr, e.Error())
+		return err.Invalid
 	}
+	return err.Success
 }
 
+// ------------------------------------------------------------
+var (
+	g_list []*gomail.Dialer
+	g_freq sync.Map //<string, int64>
+)
+
+func dialer() *gomail.Dialer {
+	if g_list == nil {
+		g_list = make([]*gomail.Dialer, len(conf.SvrCsv.EmailUser))
+	}
+	idx := rand.Intn(len(g_list))
+	ret := g_list[idx]
+	if ret == nil || ret.Password != conf.SvrCsv.EmailPasswd[idx] {
+		ret = gomail.NewDialer(
+			conf.SvrCsv.EmailHost,
+			conf.SvrCsv.EmailPort,
+			conf.SvrCsv.EmailUser[idx],
+			conf.SvrCsv.EmailPasswd[idx])
+		g_list[idx] = ret
+	}
+	return ret
+}
+func checkFreq(subject, addr string) bool {
+	key := subject + addr
+	timenow, timeOld := time.Now().Unix(), int64(0)
+	if v, ok := g_freq.Load(key); ok {
+		timeOld = v.(int64)
+	}
+	g_freq.Store(key, timenow)
+	return timenow-timeOld >= 3600
+}
+func isVerifyEmail(addr string) (ret bool) {
+	netConfig.CallRpcCenter(netConfig.HashCenterID(addr),
+		enum.Rpc_center_isvalid_bind_info, func(buf *common.NetPack) {
+			buf.WriteString(addr)
+			buf.WriteString("email")
+		}, func(recvBuf *common.NetPack) {
+			ret = recvBuf.ReadUInt16() == err.Success
+		})
+	return
+}
 func packBody(subject, body *string, language string) {
 	if body2, ok := Translate(*subject, language); ok {
 		if t, e := template.New(*subject).Parse(body2); e == nil {

@@ -21,17 +21,19 @@ import (
 
 const (
 	KDBTable    = "Account"
-	kLivelyTime = 1 * 24 * 3600
+	kActiveTime = 24 * 3600
 )
 
 type TAccount struct {
 	AccountID  uint32 `bson:"_id"`
-	Name       string //账户名
-	Password   string //密码 //FIXME:可以StrHash后存成uint32，省不少字节
+	Name       string //TODO:待删除
+	Password   string //FIXME:可以StrHash后存成uint32，省不少字节
 	CreateTime int64
 	LoginTime  int64
 
-	BindInfo map[string]string //email、phone、qq、wechat
+	BindInfo     map[string]string //email、phone
+	IsValidEmail uint8
+	IsValidPhone uint8
 
 	// 有需要可参考player的iModule改写
 	GameInfo map[string]gameInfo.TGameInfo
@@ -63,47 +65,57 @@ func Rpc_center_account_login(req, ack *common.NetPack) {
 	gameName := req.ReadString()
 	str := req.ReadString() //账号、邮箱均可登录
 	passwd := req.ReadString()
+	gamelog.Debug("Login: %s %s", str, passwd)
 
-	p := GetAccount(str, passwd)
-	errcode := p.Login(passwd)
-
+	errcode, p := GetAccount(str, passwd)
 	if ack.WriteUInt16(errcode); errcode == err.Success {
-		ack.WriteUInt32(p.AccountID)
-		//附带的游戏数据，可能有的游戏空的
+		timeNow := time.Now().Unix()
+		atomic.StoreInt64(&p.LoginTime, timeNow)
+		dbmgo.UpdateId(KDBTable, p.AccountID, bson.M{"$set": bson.M{"logintime": timeNow}})
+		timer.G_TimerMgr.AddTimerSec(func() {
+			if time.Now().Unix()-atomic.LoadInt64(&p.LoginTime) >= 15*60 {
+				DelCache(p)
+			}
+		}, 15*60, 0, 0)
+
+		//先回复，给Client的账号信息
+		v := gameInfo.TAccountClient{
+			p.AccountID,
+			p.IsValidEmail,
+			p.IsValidPhone,
+		}
+		v.DataToBuf(ack)
+		//再回复，附带的游戏数据，可能有的游戏空的
 		if v, ok := p.GameInfo[gameName]; ok {
 			v.DataToBuf(ack)
 		}
 	}
 }
-func (self *TAccount) Login(passwd string) (errcode uint16) {
-	if self == nil {
-		errcode = err.Account_mismatch_passwd
-	} else if !self.CheckPasswd(passwd) {
-		errcode = err.Passwd_err
-	} else {
-		errcode = err.Success
-		timeNow := time.Now().Unix()
-		atomic.StoreInt64(&self.LoginTime, timeNow)
-		dbmgo.UpdateId(KDBTable, self.AccountID, bson.M{"$set": bson.M{"logintime": timeNow}})
-		timer.G_TimerMgr.AddTimerSec(func() {
-			if time.Now().Unix()-atomic.LoadInt64(&self.LoginTime) >= 15*60 {
-				DelCache(self)
-			}
-		}, 15*60, 0, 0)
-	}
-	return
-}
 func Rpc_center_account_reg(req, ack *common.NetPack) {
-	name := req.ReadString()
+	str := req.ReadString()
 	passwd := req.ReadString()
+	bindType := req.ReadString() //邮箱、名字、手机号
+	gamelog.Track("account_reg: %s %s %s", bindType, str, passwd)
 
-	if !format.CheckAccount(name) {
-		ack.WriteUInt16(err.Account_format_err)
-	} else if !format.CheckPasswd(passwd) {
+	if !format.CheckPasswd(passwd) {
 		ack.WriteUInt16(err.Passwd_format_err)
-	} else if GetAccountByBindInfo("email", name) != nil {
-		ack.WriteUInt16(err.Account_repeat)
-	} else if NewAccountInDB(name, passwd) == nil {
+	} else if !format.CheckBindValue(bindType, str) {
+		ack.WriteUInt16(err.BindInfo_format_err)
+	} else {
+		errcode, _ := NewAccountInDB(passwd, bindType, str)
+		ack.WriteUInt16(errcode)
+	}
+}
+func Rpc_center_reg_check(req, ack *common.NetPack) {
+	str := req.ReadString()
+	passwd := req.ReadString()
+	bindType := req.ReadString() //邮箱、名字、手机号
+
+	if passwd != "" && !format.CheckPasswd(passwd) {
+		ack.WriteUInt16(err.Passwd_format_err)
+	} else if !format.CheckBindValue(bindType, str) {
+		ack.WriteUInt16(err.BindInfo_format_err)
+	} else if GetAccountByBindInfo(bindType, str) != nil {
 		ack.WriteUInt16(err.Account_repeat)
 	} else {
 		ack.WriteUInt16(err.Success)
@@ -111,33 +123,22 @@ func Rpc_center_account_reg(req, ack *common.NetPack) {
 }
 func Rpc_center_account_reg_force(req, ack *common.NetPack) {
 	uuid := req.ReadString()
-
-	if NewAccountInDB(uuid, "") == nil {
-		ack.WriteUInt16(err.Account_repeat)
+	if uuid == "" {
+		ack.WriteUInt16(err.BindInfo_format_err)
 	} else {
-		ack.WriteUInt16(err.Success)
-	}
-}
-func Rpc_center_account_check(req, ack *common.NetPack) {
-	name := req.ReadString()
-
-	if !format.CheckAccount(name) {
-		ack.WriteUInt16(err.Account_format_err)
-	} else if ok, _ := dbmgo.Find(KDBTable, "name", name, &TAccount{}); ok {
-		ack.WriteUInt16(err.Account_repeat)
-	} else {
-		ack.WriteUInt16(err.Success)
+		errcode, _ := NewAccountInDB("", "name", uuid)
+		ack.WriteUInt16(errcode)
 	}
 }
 func Rpc_center_change_password(req, ack *common.NetPack) {
-	name := req.ReadString()
+	str := req.ReadString()
 	oldpasswd := req.ReadString()
 	newpasswd := req.ReadString()
 
 	if !format.CheckPasswd(newpasswd) {
 		ack.WriteUInt16(err.Passwd_format_err)
-	} else if p := GetAccount(name, oldpasswd); p == nil {
-		ack.WriteUInt16(err.Account_mismatch_passwd)
+	} else if e, p := GetAccount(str, oldpasswd); p == nil {
+		ack.WriteUInt16(e)
 	} else {
 		p.SetPasswd(newpasswd)
 		dbmgo.UpdateId(KDBTable, p.AccountID, bson.M{"$set": bson.M{
@@ -151,8 +152,8 @@ func Rpc_center_create_visitor(req, ack *common.NetPack) {
 		dbmgo.GetNextIncId("VisitorId"),
 		random.String(3))
 
-	if p := NewAccountInDB(name, ""); p == nil {
-		name = ""
+	if _, p := NewAccountInDB("", "name", name); p == nil {
+		name = "" //failed
 	}
 	ack.WriteString(name)
 }
@@ -164,8 +165,8 @@ func Rpc_center_set_game_info(req, ack *common.NetPack) {
 	gameName, info := req.ReadString(), gameInfo.TGameInfo{}
 	info.BufToData(req)
 
-	if account := GetAccountById(accountId); account != nil && gameName != "" {
-		account.GameInfo[gameName] = info
+	if p := GetAccountById(accountId); p != nil && gameName != "" {
+		p.GameInfo[gameName] = info
 		if dbmgo.UpdateIdSync(KDBTable, accountId, bson.M{"$set": bson.M{
 			fmt.Sprintf("gameinfo.%s", gameName): info}}) {
 			ack.WriteUInt16(err.Success)
@@ -175,13 +176,33 @@ func Rpc_center_set_game_info(req, ack *common.NetPack) {
 	ack.WriteUInt16(err.GameInfo_set_fail)
 	gamelog.Error("set_game_info: %d %s %v", accountId, gameName, info)
 }
+func Rpc_center_get_game_info(req, ack *common.NetPack) {
+	accountId := req.ReadUInt32()
+	gameName := req.ReadString()
+
+	if p := GetAccountById(accountId); p != nil && gameName != "" {
+		if v, ok := p.GameInfo[gameName]; ok {
+			v.DataToBuf(ack)
+		}
+	}
+}
 
 // 玩家在哪个大区登录的
 func Rpc_center_player_login_addr(req, ack *common.NetPack) {
 	gameName := req.ReadString()
-	accountName := req.ReadString()
+	str := req.ReadString()
 
-	if p := GetAccountByName(accountName); p == nil {
+	if str == "" {
+		ack.WriteUInt16(err.Not_found)
+		return
+	}
+
+	var p *TAccount
+	if p = GetAccountByBindInfo("email", str); p == nil {
+		if p = GetAccountByBindInfo("name", str); p == nil {
+		}
+	}
+	if p == nil {
 		ack.WriteUInt16(err.Not_found)
 	} else {
 		p.WriteLoginAddr(gameName, ack)

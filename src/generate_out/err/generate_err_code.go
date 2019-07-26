@@ -12,6 +12,8 @@ const ( //the top 100 are reserved for system
 	Data_repeat uint16 = 7
 	Version_not_match uint16 = 8
 	Convert_err uint16 = 9
+	Invalid uint16 = 10
+	Is_forbidden uint16 = 11
 	Passwd_err uint16 = 100
 	Account_mismatch_passwd uint16 = 101
 	Account_forbidden uint16 = 102
@@ -47,5 +49,7 @@ const ( //the top 100 are reserved for system
 	GameInfo_set_fail uint16 = 132
 	Name_format_err uint16 = 133
 	Create_Player_failed uint16 = 134
+	Email_already_send_please_verify uint16 = 135
+	Email_already_send_please_check uint16 = 136
 	
 )

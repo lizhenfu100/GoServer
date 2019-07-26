@@ -32,6 +32,9 @@
 
 /pkg
 /bin/log
-/bin/reg_addr.csv
+/bin/mongodb
 /src/gopkg.in
 /src/github.com
+*reg_addr.csv
+/bin/html/GM/account
+/bin/html/GM/game*

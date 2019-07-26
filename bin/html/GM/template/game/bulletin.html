@@ -13,12 +13,12 @@
             <form action="" method="post" onsubmit="SetSelectAddr(this)">
                 <label>大区:</label>
                 <select>
-                    <option value="{{index .LoginAddrs 1}}/bulletin">北美</option>
-                    <option value="{{index .LoginAddrs 2}}/bulletin">亚洲</option>
-                    <option value="{{index .LoginAddrs 3}}/bulletin">欧洲</option>
-                    <option value="{{index .LoginAddrs 4}}/bulletin">南美</option>
-                    <option value="{{index .LoginAddrs 5}}/bulletin">中国华北</option>
-                    <option value="{{index .LoginAddrs 6}}/bulletin">中国华南</option>
+                    <option value="{{.AddrLogin 1}}/bulletin">北美</option>
+                    <option value="{{.AddrLogin 2}}/bulletin">亚洲</option>
+                    <option value="{{.AddrLogin 3}}/bulletin">欧洲</option>
+                    <option value="{{.AddrLogin 4}}/bulletin">南美</option>
+                    <option value="{{.AddrLogin 5}}/bulletin">中国华北</option>
+                    <option value="{{.AddrLogin 6}}/bulletin">中国华南</option>
                 </select>
                 <label for="zh">中文简体:</label>
                 <input type="text" name="zh"><br>

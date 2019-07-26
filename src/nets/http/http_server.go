@@ -16,9 +16,11 @@ import (
 	"sync"
 )
 
-//TODO:zhoumf: 原生HttpHandle的参数与fasthttp如何统一？
-//TODO:zhoumf: w http.ResponseWriter 可替换为 w io.Writer
-//TODO:zhoumf: r *http.Request 关键是如何统一接口，能取到get/post参数
+/*TODO:
+原生HttpHandle的参数与fasthttp如何统一？
+w http.ResponseWriter 可替换为 w io.Writer
+r *http.Request 关键是如何统一接口，能取到get/post参数
+*/
 
 //idx1 := strings.Index(addr, "//") + 2
 //idx2 := strings.LastIndex(addr, ":")

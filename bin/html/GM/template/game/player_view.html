@@ -1,0 +1,35 @@
+<html>
+
+<head>
+    <title>玩家信息</title>
+    <link rel="stylesheet" href="main.css">
+    <script src="app.js"></script>
+</head>
+
+<body bgcolor="white">
+    <div class="all-wrapper">
+        <h1>查看玩家信息</h1>
+        <div class="form-wrapper">
+            <script>
+                function setActionAddr(form) {
+                    var uri = "/show_player"
+                    // window.alert(document.getElementById("gameaddr").value)
+                    form.action="http://"+document.getElementById("gameaddr").value+uri;
+                    // window.alert(form.action)
+                }
+            </script>
+            <form action="" method="get" onsubmit="setActionAddr(this)">
+                <label title="玩家所在GameServer地址，可由“查看账号信息”得到">
+                    游戏服:
+                </label>
+                <input type="text" id="gameaddr" placeholder="如 127.0.0.1:7040"><br>
+                <label for="aid">账号ID:</label>
+                <input type="text" name="aid"><br>
+                <br>
+                <input type="submit" value="确认">
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

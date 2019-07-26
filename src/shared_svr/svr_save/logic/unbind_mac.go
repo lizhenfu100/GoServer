@@ -6,7 +6,6 @@ import (
 	"common/tool/email"
 	"dbmgo"
 	"fmt"
-	"gamelog"
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
@@ -26,6 +25,7 @@ func Rpc_save_unbind_mac_by_email(req, ack *common.NetPack) {
 
 	if emailAddr == "None" { //无账号的渠道玩家，直接解绑
 		UnbindMac(mac)
+		ack.WriteUInt16(err.Success)
 	} else {
 		//1、创建url
 		httpAddr := fmt.Sprintf("http://%s:%d/unbind_mac",
@@ -39,7 +39,8 @@ func Rpc_save_unbind_mac_by_email(req, ack *common.NetPack) {
 		q.Set("sign", sign.CalcSign(mac+flag))
 		//3、生成完整url
 		u.RawQuery = q.Encode()
-		email.SendMail("Unbind Device", emailAddr, u.String(), language)
+		errcode := email.SendMail("Unbind Device", emailAddr, u.String(), language)
+		ack.WriteUInt16(errcode)
 	}
 }
 func Http_unbind_mac(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +65,7 @@ func Http_unbind_mac(w http.ResponseWriter, r *http.Request) {
 		ack, _ = email.Translate("Unbind ok", "")
 	} else if dbmgo.RemoveOneSync(KDBMac, bson.M{"_id": mac}) {
 		ack, _ = email.Translate("Unbind ok", "")
-		gamelog.Info("UnbindMac: %s %s", ptr.Mac, ptr.Key)
+		dbmgo.Log("UnbindMac", ptr.Mac, ptr.Key)
 	} else {
 		ack, _ = email.Translate("Error: DB Remove failed", "")
 	}
@@ -92,7 +93,7 @@ func UnbindMac(mac string) (uint16, int64) {
 			g_unbindTime1.Store(ptr.Key, timeNow)
 			g_unbindTime2.Store(ptr.Mac, timeNow)
 			dbmgo.RemoveOneSync(KDBMac, bson.M{"_id": mac})
-			gamelog.Info("UnbindMac: %s %s", ptr.Mac, ptr.Key)
+			dbmgo.Log("UnbindMac", ptr.Mac, ptr.Key)
 		}
 	}
 	return err.Success, 0

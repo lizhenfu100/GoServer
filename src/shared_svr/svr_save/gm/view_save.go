@@ -47,3 +47,19 @@ func Http_view_bind_mac(w http.ResponseWriter, r *http.Request) { //绑定的设
 		w.Write(common.S2B("none mac data"))
 	}
 }
+
+// ------------------------------------------------------------
+// 设备码绑定过的所有账户
+func Http_find_aid_in_mac(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	mac := q.Get("mac")
+
+	ret := dbmgo.LogFind("UnbindMac", mac)
+	pMac := &logic.MacInfo{}
+	if ok, _ := dbmgo.Find(logic.KDBMac, "_id", mac, pMac); ok {
+		ret = append(ret, pMac.Key)
+	}
+
+	ack, _ := json.MarshalIndent(ret, "", "     ")
+	w.Write(ack)
+}

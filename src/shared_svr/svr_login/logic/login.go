@@ -31,13 +31,14 @@ package logic
 
 import (
 	"common"
+	"common/tool/wechat"
 	"conf"
 	"gamelog"
 	"generate_out/err"
 	"generate_out/rpc/enum"
 	"netConfig"
 	"netConfig/meta"
-	"shared_svr/svr_center/account/gameInfo"
+	info "shared_svr/svr_center/account/gameInfo"
 	"sync"
 	"sync/atomic"
 )
@@ -58,21 +59,26 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 
 	if gameName != conf.GameName {
 		ack.WriteUInt16(err.LoginSvr_not_match)
+		wechat.SendMsg("LoginSvr_not_match: " + conf.GameName + account)
 	} else {
 		//2、同步转至center验证账号信息，取得accountId、gameInfo
 		centerSvrId := netConfig.HashCenterID(account)
-		if ok, accountId, gameInfo2 := accountLogin1(centerSvrId, req, ack); ok {
+		if ok, _1, _2 := accountLogin1(centerSvrId, req, ack); ok {
 			//3、确定gameSvrId，处理gameInfo
-			if errCode := accountLogin2(&gameSvrId, &gameInfo2, accountId, version, gameName, centerSvrId); errCode == err.Success {
+			errCode := accountLogin2(_1.AccountID, &gameSvrId, &_2, version, gameName, centerSvrId)
+			if errCode == err.Success {
 				//4、登录成功，设置各类信息，回复client待连接的节点(gateway或game)
-				accountLogin3(accountId, gameSvrId, ack)
+				accountLogin3(&_1, gameSvrId, ack)
 			} else {
 				ack.WriteUInt16(errCode)
 			}
 		}
 	}
 }
-func accountLogin1(centerSvrId int, req, ack *common.NetPack) (_ok bool, _aid uint32, _info gameInfo.TGameInfo) {
+func accountLogin1(centerSvrId int, req, ack *common.NetPack) (
+	_ok bool,
+	_1 info.TAccountClient,
+	_2 info.TGameInfo) {
 	//同步至center验证账号信息，取得accountId、gameInfo
 	netConfig.SyncRelayToCenter(centerSvrId, enum.Rpc_center_account_login, req, ack)
 
@@ -82,12 +88,12 @@ func accountLogin1(centerSvrId int, req, ack *common.NetPack) (_ok bool, _aid ui
 		ack.ReadPos = oldPos
 		_ok = false
 	} else {
-		_aid = ack.ReadUInt32()
-		_info.BufToData(ack)
+		_1.BufToData(ack)
+		_2.BufToData(ack)
 		ack.Clear()
 
 		//Notice: 玩家不是这个大区的，更换大区再登录
-		if _info.LoginSvrId > 0 && _info.LoginSvrId != meta.G_Local.SvrID {
+		if _2.LoginSvrId > 0 && _2.LoginSvrId != meta.G_Local.SvrID {
 			ack.WriteUInt16(err.LoginSvr_not_match)
 			_ok = false
 		} else {
@@ -96,7 +102,12 @@ func accountLogin1(centerSvrId int, req, ack *common.NetPack) (_ok bool, _aid ui
 	}
 	return
 }
-func accountLogin2(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, version, gameName string, centerSvrId int) (errCode uint16) {
+func accountLogin2(
+	accountId uint32,
+	gameSvrId *int,
+	pInfo *info.TGameInfo,
+	version, gameName string,
+	centerSvrId int) (errCode uint16) {
 	gamelog.Track("GameInfo:%v, version:%s gameName:%s", pInfo, version, gameName)
 	if !conf.HandPick_GameSvr {
 		//选取gameSvrId：若账户未绑定游戏服，自动选取空闲节点，并绑定到账号上
@@ -105,20 +116,21 @@ func accountLogin2(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, 
 				errCode = err.None_free_game_server
 			} else {
 				errCode = err.None_center_server
-				netConfig.CallRpcCenter(centerSvrId, enum.Rpc_center_set_game_info, func(buf *common.NetPack) {
-					buf.WriteUInt32(accountId)
-					buf.WriteString(gameName)
-					pInfo.GameSvrId = *gameSvrId % 10000
-					pInfo.LoginSvrId = meta.G_Local.SvrID % 10000
-					pInfo.DataToBuf(buf)
-				}, func(backBuf *common.NetPack) {
-					errCode = backBuf.ReadUInt16()
-				})
+				netConfig.CallRpcCenter(centerSvrId, enum.Rpc_center_set_game_info,
+					func(buf *common.NetPack) {
+						buf.WriteUInt32(accountId)
+						buf.WriteString(gameName)
+						pInfo.GameSvrId = *gameSvrId % 10000
+						pInfo.LoginSvrId = meta.G_Local.SvrID % 10000
+						pInfo.DataToBuf(buf)
+					}, func(backBuf *common.NetPack) {
+						errCode = backBuf.ReadUInt16()
+					})
 			}
 			return
 		}
 	}
-	if !gameInfo.ShuntSvr(meta.GetModuleIDs("game", version), gameSvrId, accountId) {
+	if !info.ShuntSvr(meta.GetModuleIDs("game", version), gameSvrId, accountId) {
 		errCode = err.None_free_game_server
 	} else {
 		errCode = err.Success
@@ -126,9 +138,9 @@ func accountLogin2(gameSvrId *int, pInfo *gameInfo.TGameInfo, accountId uint32, 
 	}
 	return
 }
-func accountLogin3(accountId uint32, gameSvrId int, ack *common.NetPack) {
+func accountLogin3(pInfo *info.TAccountClient, gameSvrId int, ack *common.NetPack) {
 	//登录成功，回复client待连接的节点(gateway或game)
-	gatewayId := netConfig.HashGatewayID(accountId) //此玩家要连接的gateway
+	gatewayId := netConfig.HashGatewayID(pInfo.AccountID) //此玩家要连接的gateway
 	errCode := err.Unknow_error
 
 	//生成一个临时token，发给gamesvr、client用以登录验证
@@ -139,7 +151,7 @@ func accountLogin3(accountId uint32, gameSvrId int, ack *common.NetPack) {
 	if conn := netConfig.GetGatewayConn(gatewayId); conn != nil {
 		conn.CallRpcSafe(enum.Rpc_gateway_login_token, func(buf *common.NetPack) {
 			buf.WriteUInt32(token)
-			buf.WriteUInt32(accountId)
+			buf.WriteUInt32(pInfo.AccountID)
 			buf.WriteInt(gameSvrId)
 		}, func(backBuf *common.NetPack) {
 			cnt := backBuf.ReadInt32()
@@ -150,7 +162,7 @@ func accountLogin3(accountId uint32, gameSvrId int, ack *common.NetPack) {
 	} else {
 		netConfig.CallRpcGame(gameSvrId, enum.Rpc_game_login_token, func(buf *common.NetPack) {
 			buf.WriteUInt32(token)
-			buf.WriteUInt32(accountId)
+			buf.WriteUInt32(pInfo.AccountID)
 		}, func(backBuf *common.NetPack) {
 			cnt := backBuf.ReadInt32()
 			g_game_player_cnt.Store(gameSvrId, cnt)
@@ -160,10 +172,11 @@ func accountLogin3(accountId uint32, gameSvrId int, ack *common.NetPack) {
 	}
 	if pMetaToClient != nil { //回复client要连接的目标节点
 		ack.WriteUInt16(err.Success)
-		ack.WriteUInt32(accountId)
+		ack.WriteUInt32(pInfo.AccountID)
 		ack.WriteString(pMetaToClient.OutIP)
 		ack.WriteUInt16(pMetaToClient.Port())
 		ack.WriteUInt32(token)
+		ack.WriteUInt8(pInfo.IsValidEmail)
 	} else {
 		ack.WriteUInt16(errCode)
 	}

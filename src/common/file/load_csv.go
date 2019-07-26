@@ -29,7 +29,7 @@
 				M map[string]int
 			}
 
-	3、首次出现的有效行(非注释的)，即为表头
+	3、首次出现的有效行(非注释的)，即为表头；常量表除外（不需要表头）
 
 	4、行列注释："#"开头的行，没命名/前缀"_"的列    有些列仅client显示用的
 
@@ -115,8 +115,8 @@ func ParseRefCsvByMap(records [][]string, pMap interface{}) {
 				data := slice.Index(idx)
 				idx++
 				_parseData(v, nilFlag, data)
-				if table.MapIndex(data.Field(0)).IsValid() {
-					panic("csv map key is repeated !!!\n")
+				if table.MapIndex(data.Field(0)).IsValid() { //首列作Key
+					fmt.Println("csv map key is repeated !!!", data.Field(0))
 				} else {
 					table.SetMapIndex(data.Field(0), data.Addr())
 				}
@@ -166,11 +166,15 @@ func _parseHead(record []string) (nilFlag uint64) { // 不读的列：没命名/
 	return nilFlag
 }
 func _parseData(record []string, nilFlag uint64, data reflect.Value) {
+	fidx := -1
 	for i, s := range record {
-		if s == "" || nilFlag&(1<<uint(i)) > 0 { // 跳过空只、没命名的列
+		if nilFlag&(1<<uint(i)) > 0 { //跳过不读的列
 			continue
 		}
-		SetField(data.Field(i), s)
+		fidx++
+		if s != "" && fidx < data.NumField() {
+			SetField(data.Field(fidx), s)
+		}
 	}
 }
 func _validCnt(records [][]string) (ret int) {
