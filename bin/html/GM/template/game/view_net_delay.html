@@ -1,0 +1,32 @@
+<html>
+
+<head>
+    <title>查看延迟</title>
+    <link rel="stylesheet" href="main.css">
+    <script src="app.js"></script>
+</head>
+
+<body bgcolor="white">
+    <div class="all-wrapper">
+        <h1>查看延迟</h1>
+        <div class="form-wrapper">
+            <form action="{{.LocalAddr}}/view_net_delay" method="get">
+                <label>大区:</label>
+                <select name="idx">
+                    <option value="1">北美</option>
+                    <option value="2">亚洲</option>
+                    <option value="3">欧洲</option>
+                    <option value="4">南美</option>
+                    <option value="5">中国华北</option>
+                    <option value="6">中国华南</option>
+                </select>
+                <label>游戏:</label>
+                <select name="game">
+                    <option value="{{.GameName}}">{{.GameName}}</option>
+                </select>
+                <input type="submit" value="确认">
+            </form>
+        </div>
+    </div>
+</body>
+</html>

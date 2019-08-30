@@ -1,5 +1,5 @@
 /***********************************************************************
-* @ 临时对象池
+* @ 临时对象池，按尺寸划分
 * @ brief
 	1、我们可以把sync.Pool类型值看作是存放可被重复使用的值的容器，自动伸缩、高效、并发安全
 
@@ -29,12 +29,10 @@ package pool
 
 import "sync"
 
-// SyncPool is a sync.Pool base slab allocation memory pool
-type SyncPool struct {
-	classes     []sync.Pool
-	classesSize []int
-	minSize     int
-	maxSize     int
+type SyncPool []syncPool
+type syncPool struct {
+	sync.Pool
+	size int
 }
 
 // create a sync.Pool base slab allocation memory pool.
@@ -43,47 +41,25 @@ type SyncPool struct {
 // factor is used to control growth of chunk size.
 // pool.Init(128, 1024, 2)
 func (self *SyncPool) Init(minSize, maxSize, factor int) {
-	n := 0
-	for chunkSize := minSize; chunkSize <= maxSize; chunkSize *= factor {
-		n++
-	}
-	self.classes = make([]sync.Pool, n)
-	self.classesSize = make([]int, n)
-	self.minSize = minSize
-	self.maxSize = maxSize
-	n = 0
-	for chunkSize := minSize; chunkSize <= maxSize; chunkSize *= factor {
-		self.classesSize[n] = chunkSize
-		self.classes[n].New = func(size int) func() interface{} { //为唯一公开字段New赋值
-			return func() interface{} {
-				return make([]byte, size)
-			}
-		}(chunkSize)
-		n++
+	for size := minSize; size <= maxSize; size *= factor {
+		v := syncPool{size: size}
+		v.New = func() interface{} { return make([]byte, v.size) }
+		*self = append(*self, v)
 	}
 }
-
-// Alloc try alloc a []byte from internal slab class if no free chunk in slab class Alloc will make one.
-func (self *SyncPool) Alloc(size int) []byte {
-	if size <= self.maxSize {
-		for i := 0; i < len(self.classesSize); i++ {
-			if self.classesSize[i] >= size {
-				mem := self.classes[i].Get().([]byte) //sync.Pool.Get()返回interface{}
-				return mem[:size]
-			}
+func (self *SyncPool) Alloc(nLen int) []byte {
+	for i := 0; i < len(*self); i++ {
+		if p := (*self)[i]; p.size >= nLen {
+			return p.Get().([]byte)[:nLen]
 		}
 	}
-	return make([]byte, size)
+	return make([]byte, nLen)
 }
-
-// Free release a []byte that alloc from Pool.Alloc.
-func (self *SyncPool) Free(mem []byte) {
-	if size := cap(mem); size <= self.maxSize {
-		for i := 0; i < len(self.classesSize); i++ {
-			if self.classesSize[i] >= size {
-				self.classes[i].Put(mem)
-				return
-			}
+func (self *SyncPool) Free(buf []byte) {
+	for i := 0; i < len(*self); i++ {
+		if p := (*self)[i]; p.size >= cap(buf) {
+			p.Put(buf)
+			return
 		}
 	}
 }

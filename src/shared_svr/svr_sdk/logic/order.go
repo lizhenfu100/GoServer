@@ -23,7 +23,7 @@ import (
 
 func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	//gamelog.Debug("%v", r.Form)
+	gamelog.Debug("pre_buy: %v", r.Form)
 
 	//反射解析订单信息
 	var order msg.TOrderInfo
@@ -31,7 +31,7 @@ func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 
 	//! 创建回复
 	ack := platform.NewPreBuyAck(order.Pay_id)
-	ack.SetRetcode(-1)
+	ack.SetRetcode(-1, "")
 	defer func() {
 		b, _ := json.Marshal(&ack)
 		w.Write(b)
@@ -42,13 +42,13 @@ func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 	s := fmt.Sprintf("pf_id=%s&pk_id=%s&pay_id=%d&item_id=%d&item_count=%d&total_price=%d",
 		order.Pf_id, order.Pk_id, order.Pay_id, order.Item_id, order.Item_count, order.Total_price)
 	if r.Form.Get("sign") != sign.CalcSign(s) {
-		ack.SetRetcode(-2)
+		ack.SetRetcode(-2, "sign failed")
 		gamelog.Error("pre_buy_request: sign failed")
 		return
 	}
 	//生成订单
 	if !msg.CreateOrderInDB(&order) {
-		ack.SetRetcode(-3)
+		ack.SetRetcode(-3, "create order failed")
 		gamelog.Error("pre_buy_request: create order failed")
 		return
 	}
@@ -56,19 +56,19 @@ func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 	//如需后台下单的，在各自HandleOrder()中处理
 	if ack.HandleOrder(&order) {
 		ack.SetOrderId(order.Order_id)
-		ack.SetRetcode(0)
+		ack.SetRetcode(0, "")
 	}
 }
 
 //客户端查询订单，是否购买成功、是否发货过
 func Http_query_order(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	//gamelog.Debug("%v", r.Form)
+	gamelog.Debug("query_order: %v", r.Form)
 
 	orderId := r.Form.Get("order_id")
 
 	//! 创建回复
-	ack := msg.Retcode_ack{Retcode: -1}
+	ack := msg.Retcode_ack{-1, "unpaid"}
 	var pResult interface{}
 	pResult = &ack
 	defer func() {
@@ -79,8 +79,10 @@ func Http_query_order(w http.ResponseWriter, r *http.Request) {
 
 	if order := msg.FindOrder(orderId); order == nil {
 		ack.Retcode = -2
+		ack.Msg = "order none"
 	} else if r.Form.Get("sign") != sign.CalcSign("order_id="+order.Order_id) {
 		ack.Retcode = -3
+		ack.Msg = "sign failed"
 	} else if order.Status == 1 && order.Can_send == 1 {
 		stOk := msg.Query_order_ack{}
 		copy.CopySameField(&stOk.Order, order)
@@ -91,13 +93,12 @@ func Http_query_order(w http.ResponseWriter, r *http.Request) {
 //【先通知后台，再才发货，避免通知不成功重复发】
 func Http_confirm_order(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	//gamelog.Debug("%v", r.Form)
+	gamelog.Debug("confirm: %v", r.Form)
 
 	orderId := r.Form.Get("order_id")
 
 	//! 创建回复
-	var ack msg.Retcode_ack
-	ack.Retcode = -1
+	ack := msg.Retcode_ack{-1, ""}
 	defer func() {
 		b, _ := json.Marshal(&ack)
 		w.Write(b)
@@ -106,8 +107,10 @@ func Http_confirm_order(w http.ResponseWriter, r *http.Request) {
 
 	if order := msg.FindOrder(orderId); order == nil {
 		ack.Retcode = -2
+		ack.Msg = "order none"
 	} else if r.Form.Get("sign") != sign.CalcSign("order_id="+order.Order_id) {
 		ack.Retcode = -3
+		ack.Msg = "sign failed"
 	} else {
 		ack.Retcode = 0
 		msg.ConfirmOrder(order)
@@ -129,13 +132,11 @@ func Http_query_order_unfinished(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var order msg.UnfinishedOrder
-	msg.OrderRange(func(k, v interface{}) bool {
-		p := v.(*msg.TOrderInfo)
+	msg.OrderRange(func(p *msg.TOrderInfo) {
 		if p.Third_account == third && p.Can_send == 1 {
 			copy.CopySameField(&order, p)
 			ack.Orders = append(ack.Orders, order)
 		}
-		return true
 	})
 	gamelog.Track("third: %s, ack: %v", third, ack.Orders)
 }

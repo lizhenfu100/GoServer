@@ -13,8 +13,7 @@ func CheckPasswd(s string) bool {
 func CheckBindValue(key, s string) (ok bool) { //格式须不一样，防止用户混用
 	switch key {
 	case "name": //非纯数字、32长：数字、字母、下划线、横杠、点、*
-		ok, _ = regexp.MatchString(`^[0-9]*$`, s)
-		if ok {
+		if ok, _ = regexp.MatchString(`^[0-9]*$`, s); ok {
 			return false
 		}
 		ok, _ = regexp.MatchString(`^[\w-\.\*]{3,32}$`, s)

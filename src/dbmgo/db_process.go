@@ -9,9 +9,8 @@ import (
 )
 
 var (
-	_actions    = make(chan *action, 4096)
-	_finished   sync.WaitGroup //告知DBProcess结束
-	_last_table string
+	_actions  = make(chan *action, 4096)
+	_finished sync.WaitGroup //告知DBProcess结束
 )
 
 const (
@@ -36,11 +35,12 @@ func WaitStop() { close(_actions); _finished.Wait() }
 func _loop() {
 	_finished.Add(1)
 	var err error
+	var lastTable string
 	var coll *mgo.Collection
 	for v := range _actions {
-		if v.table != _last_table {
-			coll = g_database.C(v.table)
-			_last_table = v.table
+		if v.table != lastTable {
+			coll = DB().C(v.table)
+			lastTable = v.table
 		}
 		switch v.optype {
 		case DB_Insert:
@@ -62,7 +62,8 @@ func _loop() {
 				v.optype, v.table, v.search, v.pData, errTips)
 			//FIXME：Mongodb会极低概率忽然断开，所有操作均超时~囧
 			if strings.LastIndex(errTips, "timeout") >= 0 {
-				Init(g_dial, &g_database)
+				_default.Connect()
+				coll = DB().C(v.table) //重连后缓存须更新
 				_actions <- v
 			}
 		}

@@ -9,8 +9,6 @@ import (
 	_ "generate_out/rpc/shared_svr/svr_file"
 	"netConfig"
 	"netConfig/meta"
-	"netConfig/register"
-	"shared_svr/svr_file/logic"
 )
 
 const kModuleName = "file"
@@ -38,8 +36,4 @@ func InitConf() {
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
 	console.Init()
-
-	register.RegHttpRpc(map[uint16]register.HttpRpc{
-		116: logic.Rpc_file_update_list, //旧版本
-	})
 }

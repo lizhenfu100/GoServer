@@ -73,15 +73,24 @@ func (self *ByteBuffer) WriteString(v string) {
 	self.WriteBuf(buf)
 }
 func (self *ByteBuffer) WriteBuf(v []byte) { self.buf = append(self.buf, v...) }
-func (self *ByteBuffer) WriteLenBuf(v []byte) {
-	self.WriteUInt16(uint16(len(v)))
-	self.buf = append(self.buf, v...)
-}
-func (self *ByteBuffer) ReadLenBuf() []byte {
+func (self *ByteBuffer) ReadLenBuf2() []byte { //TODO:zhoumf:待删除
 	cnt := self.ReadUInt16()
 	old := self.ReadPos
 	self.ReadPos += int(cnt)
 	return self.buf[old:self.ReadPos]
+}
+func (self *ByteBuffer) WriteLenBuf(v []byte) {
+	self.WriteInt(len(v))
+	self.buf = append(self.buf, v...)
+}
+func (self *ByteBuffer) ReadLenBuf() (ret []byte) {
+	length := self.ReadInt()
+	if self.readableBytes() >= length {
+		old := self.ReadPos
+		self.ReadPos += length
+		ret = self.buf[old:self.ReadPos]
+	}
+	return
 }
 
 //! Read
@@ -91,9 +100,9 @@ func (self *ByteBuffer) readableBytes() int { //剩余多少字节没读
 func (self *ByteBuffer) ReadString() (ret string) {
 	length := int(self.ReadUInt16())
 	if self.readableBytes() >= length {
-		bytes := self.buf[self.ReadPos : self.ReadPos+length]
+		old := self.ReadPos
 		self.ReadPos += length
-		ret = string(bytes)
+		ret = B2S(self.buf[old:self.ReadPos])
 	}
 	return
 }

@@ -1,25 +1,25 @@
 <html>
 
 <head>
-    <title>公告发布</title>
+    <title>公告查看</title>
     <link rel="stylesheet" href="main.css">
     <script src="app.js"></script>
 </head>
 
 <body bgcolor="white">
     <div class="all-wrapper">
-        <h1>公告发布</h1>
+        <h1>公告查看</h1>
         <div class="form-wrapper">
             <form action="" method="get" onsubmit="SetSelectAddr(this)">
                 <label>大区:</label>
                 <select>
-                    <option value="{{.LocalAddr}}/bulletin">全区</option>
-                    <option value="{{.AddrLogin 1}}/bulletin">北美</option>
-                    <option value="{{.AddrLogin 2}}/bulletin">亚洲</option>
-                    <option value="{{.AddrLogin 3}}/bulletin">欧洲</option>
-                    <option value="{{.AddrLogin 4}}/bulletin">南美</option>
-                    <option value="{{.AddrLogin 5}}/bulletin">中国华北</option>
-                    <option value="{{.AddrLogin 6}}/bulletin">中国华南</option>
+                    <option value="{{.LocalAddr}}/view_bulletin">全区</option>
+                    <option value="{{.AddrLogin 1}}/view_bulletin">北美</option>
+                    <option value="{{.AddrLogin 2}}/view_bulletin">亚洲</option>
+                    <option value="{{.AddrLogin 3}}/view_bulletin">欧洲</option>
+                    <option value="{{.AddrLogin 4}}/view_bulletin">南美</option>
+                    <option value="{{.AddrLogin 5}}/view_bulletin">中国华北</option>
+                    <option value="{{.AddrLogin 6}}/view_bulletin">中国华南</option>
                 </select>
                 <label>平台名:</label>
                 <select name="pf_id">
@@ -74,30 +74,7 @@
                 <select name="game">
                     <option value="{{.GameName}}">{{.GameName}}</option>
                 </select>
-                <label>中文简体:</label>
-                <input type="text" name="zh"><br>
-                <label>中文繁体:</label>
-                <input type="text" name="zhhant"><br>
-                <label>英语:</label>
-                <input type="text" name="en"><br>
-                <label>日语:</label>
-                <input type="text" name="jp"><br>
-                <label>俄语:</label>
-                <input type="text" name="ru"><br>
-                <label>韩语:</label>
-                <input type="text" name="kr"><br>
-                <label>西班牙语:</label>
-                <input type="text" name="es"><br>
-                <label>葡萄牙语:</label>
-                <input type="text" name="pt_br"><br>
-                <label>法语:</label>
-                <input type="text" name="fr"><br>
-                <label>印尼语:</label>
-                <input type="text" name="id"><br>
-                <label>德语:</label>
-                <input type="text" name="de"><br>
-                <br>
-                <input type="submit" value="确认发布">
+                <input type="submit" value="确认">
             </form>
         </div>
     </div>

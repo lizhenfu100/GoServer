@@ -148,8 +148,8 @@ func (self *TPlayer) Login(conn *tcp.TCPConn) {
 
 		if !G_ServiceMgr.Register(Service_Write_DB, self) || //防止多次登录的重复注册
 			!G_ServiceMgr.Register(Service_Check_AFK, self) {
-			gamelog.Error("Service cap(%d) too small", G_ServiceMgr.Cap())
-			wechat.SendMsg("Service capacity is too small")
+			gamelog.Error("Login Service cap(%d)", G_ServiceMgr.Cap())
+			wechat.SendMsg("登录排队，满了")
 		}
 	}
 	atomic.StoreUint32(&self._idleMin, 0)

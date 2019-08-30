@@ -15,6 +15,7 @@ package logic
 
 import (
 	"common"
+	"common/console"
 	"common/file"
 	"gamelog"
 	"io"
@@ -50,6 +51,8 @@ func init() {
 	for _, v := range names {
 		g_file_md5.Store(v, file.CalcMd5(v))
 	}
+
+	console.RegCmd("clog", Client_debug_log)
 }
 func Http_download_file(w http.ResponseWriter, r *http.Request) {
 	gamelog.Debug("download path: %s", r.URL.Path)

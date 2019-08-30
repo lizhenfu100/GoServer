@@ -23,32 +23,31 @@ package logic
 import (
 	"common"
 	"common/copy"
+	"common/file"
 	"common/std"
 	"conf"
 	"dbmgo"
 	"encoding/json"
+	"fmt"
 	"gamelog"
-	"generate_out/rpc/enum"
+	"generate_out/err"
+	"io/ioutil"
 	"net/http"
-	"netConfig"
-	"netConfig/meta"
+	"os"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
-var G_Backup = &Backup{DBKey: "backup", IsAutoOpen: true}
+var G_Backup = &Backup{DBKey: "backup"}
 var g_keyMap sync.Map //<pSave.key, Empty>
 
 type Backup struct {
 	sync.RWMutex `bson:"-"`
 	DBKey        string   `bson:"_id"`
 	WeekDays     std.Ints //[1, 2]  周几开启
-	OnlintLimit  int32    //在线量超过，关闭备份
-	IsAutoOpen   bool     //是否自动开启，按WeekDays时间
-
-	isOpen int32 //原子读写
+	isOpen       int32    //原子读写
 }
 
 // ------------------------------------------------------------
@@ -61,25 +60,12 @@ func Http_backup_conf(w http.ResponseWriter, r *http.Request) {
 	}
 	G_Backup.Lock()
 	copy.CopyForm(G_Backup, q)
+	fmt.Println(G_Backup)
 	G_Backup.UpdateDB()
 	ack, _ := json.MarshalIndent(G_Backup, "", "     ")
 	G_Backup.Unlock()
 	w.Write(ack)
 	gamelog.Info("Http_backup_conf: %v", q)
-}
-func Http_backup_auto(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
-	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.S2B("passwd error"))
-		return
-	}
-	n, _ := strconv.Atoi(q.Get("auto"))
-	G_Backup.Lock()
-	G_Backup.IsAutoOpen = n > 0
-	ack, _ := json.MarshalIndent(G_Backup, "", "     ")
-	G_Backup.Unlock()
-	w.Write(ack)
-	gamelog.Info("Http_backup_auto: %v", q)
 }
 func Http_backup_force(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
@@ -101,11 +87,8 @@ func (self *Backup) InitDB() {
 	if ok, _ := dbmgo.Find(dbmgo.KTableArgs, "_id", self.DBKey, self); !ok {
 		dbmgo.Insert(dbmgo.KTableArgs, self)
 	}
-	if self.WeekDays.Index(int(time.Now().Weekday())) < 0 {
-		atomic.StoreInt32(&G_Backup.isOpen, 0)
-	} else if self.IsAutoOpen {
-		atomic.StoreInt32(&G_Backup.isOpen, 1)
-	}
+	idx := self.WeekDays.Index(int(time.Now().Weekday()))
+	atomic.StoreInt32(&self.isOpen, int32(idx+1))
 }
 func (self *Backup) UpdateDB() { dbmgo.UpdateId(dbmgo.KTableArgs, self.DBKey, self) }
 func (self *Backup) IsValid(key string) bool {
@@ -117,39 +100,52 @@ func (self *Backup) IsValid(key string) bool {
 	}
 	return false
 }
-
-// ------------------------------------------------------------
-//
 func (self *Backup) OnEnterNextDay() {
 	G_Backup.RLock()
 	idx := G_Backup.WeekDays.Index(int(time.Now().Weekday()))
-	isAutoOpen := G_Backup.IsAutoOpen
 	G_Backup.RUnlock()
-	if idx < 0 {
-		atomic.StoreInt32(&G_Backup.isOpen, 0)
-	} else if isAutoOpen {
-		atomic.StoreInt32(&G_Backup.isOpen, 1)
-		g_keyMap = sync.Map{}
+	atomic.StoreInt32(&G_Backup.isOpen, int32(idx+1))
+	g_keyMap = sync.Map{} //清空昨日记录
+}
+
+// ------------------------------------------------------------
+// 敏感数据（如游戏进度）异动，记录历史存档
+type TSensitive struct {
+	GameSession int //进度，不同游戏含义不一
+}
+
+func (self *TSaveData) CheckBackup(newExtra string) {
+	pNew, pOld := &TSensitive{}, &TSensitive{}
+	json.Unmarshal(common.S2B(newExtra), pNew)
+	json.Unmarshal(common.S2B(self.Extra), pOld)
+	if pNew.GameSession < pOld.GameSession {
+		gamelog.Error("GameSession rollback: %s", self.Key)
+	}
+	if pNew.GameSession < pOld.GameSession || G_Backup.IsValid(self.Key) {
+		self.Backup()
 	}
 }
-func (self *Backup) OnEnterNextHour() {
-	G_Backup.RLock()
-	kOnlintLimit := G_Backup.OnlintLimit
-	G_Backup.RUnlock()
-
-	// 查看svr_game在线量，有超过限制值时，关闭备份
-	netConfig.CallRpcLogin(enum.Rpc_login_get_game_list, func(buf *common.NetPack) {
-		buf.WriteString(meta.G_Local.Version)
-	}, func(backBuf *common.NetPack) {
-		for cnt, i := backBuf.ReadByte(), byte(0); i < cnt; i++ {
-			backBuf.ReadInt()
-			backBuf.ReadString()
-			backBuf.ReadString()
-			backBuf.ReadUInt16()
-			onlineCnt := backBuf.ReadInt32()
-			if onlineCnt > kOnlintLimit {
-				atomic.StoreInt32(&G_Backup.isOpen, 0)
-			}
+func (self *TSaveData) Backup() {
+	dir := fmt.Sprintf("player/%s/", self.Key)
+	name := time.Now().Format("20060102_150405") + ".save"
+	if fi, e := file.CreateFile(dir, name, os.O_TRUNC|os.O_WRONLY); e == nil {
+		if _, e = fi.Write(self.Data); e != nil {
+			gamelog.Error("Backup: %s", e.Error())
 		}
-	})
+		fi.Close()
+		file.DelExpired(dir, "", 30) //删除30天前的记录
+	}
+}
+func (self *TSaveData) RollBack(filename string) uint16 {
+	if f, e := os.Open(fmt.Sprintf("player/%s/%s", self.Key, filename)); e != nil {
+		return err.Not_found
+	} else {
+		if buf, e := ioutil.ReadAll(f); e == nil {
+			self.Data = buf
+			self.UpTime = time.Now().Unix()
+			dbmgo.UpdateIdSync(KDBSave, self.Key, self)
+		}
+		f.Close()
+		return err.Success
+	}
 }

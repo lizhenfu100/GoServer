@@ -35,11 +35,9 @@ func Rpc_center_bind_info(req, ack *common.NetPack) {
 			errcode = err.Is_forbidden
 		} else {
 			if _, ok := ptr.BindInfo[k]; !ok {
-				errcode = err.Success
-				ptr.bind(k, v)
+				errcode = ptr.bind(k, v)
 			} else if force { //强制绑定，须验证
-				errcode = err.Success
-				ptr.forceBind(k, v)
+				errcode = ptr.forceBind(k, v)
 			} else {
 				errcode = err.Account_had_been_bound
 			}
@@ -64,14 +62,18 @@ func Rpc_center_isvalid_bind_info(req, ack *common.NetPack) {
 
 // ------------------------------------------------------------
 // 辅助函数
-func (self *TAccount) bind(k, newVal string) {
+func (self *TAccount) bind(k, newVal string) uint16 {
+	if GetAccountByBindInfo(k, newVal) != nil {
+		return err.BindInfo_already_in_use
+	}
 	DelCache(self) //更新缓存
 	dbmgo.Log("Change_"+k, self.BindInfo[k], newVal)
 	self.BindInfo[k] = newVal
 	AddCache(self)
 	dbmgo.UpdateId(KDBTable, self.AccountID, bson.M{"$set": bson.M{"bindinfo." + k: newVal}})
+	return err.Success
 }
-func (self *TAccount) forceBind(k, v string) {
+func (self *TAccount) forceBind(k, v string) uint16 {
 	switch k {
 	case "email":
 		//1、创建url
@@ -88,9 +90,10 @@ func (self *TAccount) forceBind(k, v string) {
 		q.Set("sign", sign.CalcSign(aid+k+v+flag))
 		//3、生成完整url
 		u.RawQuery = q.Encode()
-		email.SendMailForce("Verify Email", v, u.String(), "")
+		email.SendMail("Verify Email", v, u.String(), "")
+		return err.Success
 	default:
-		self.bind(k, v)
+		return self.bind(k, v)
 	}
 }
 func Http_bind_info_force(w http.ResponseWriter, r *http.Request) {
@@ -115,10 +118,14 @@ func Http_bind_info_force(w http.ResponseWriter, r *http.Request) {
 	} else if account := GetAccountById(accountId); account == nil {
 		ack, _ = email.Translate("Error: Account_none", "")
 	} else {
-		if account.bind(k, v); k == "email" {
-			account.verifyEmailOK()
+		if account.bind(k, v) == err.Success {
+			if k == "email" {
+				account.verifyEmailOK()
+			}
+			ack, _ = email.Translate("Bind info ok", "")
+		} else {
+			ack = "Error: BindInfo_already_in_use"
 		}
-		ack, _ = email.Translate("Bind info ok", "")
 	}
 }
 

@@ -25,9 +25,7 @@ package logic
 
 import (
 	"common"
-	"common/std/sign"
 	"dbmgo"
-	"fmt"
 	"gamelog"
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
@@ -42,7 +40,7 @@ const (
 
 type TSaveData struct {
 	Key     string `bson:"_id"` // Pf_id + Uid
-	Data    []byte
+	Data    []byte `json:"-"`
 	UpTime  int64  //上传时刻
 	ChTime  int64  //更换时刻
 	MacCnt  byte   //绑定的设备次数
@@ -114,12 +112,12 @@ func upload(pf_id, uid, mac string, data []byte, extra, clientVersion string) ui
 		if clientVersion < pSave.Version { //旧client覆盖新档，报错
 			return err.Version_not_match
 		}
-		pSave.CheckSensitiveVal(extra) //敏感数据异动，记下历史存档
+		pSave.CheckBackup(extra) //敏感数据异动，记下历史存档
 		pSave.Data = data
 		pSave.UpTime = now
 		pSave.Extra = extra
 		pSave.Version = clientVersion
-		if dbmgo.DataBase().C(KDBMac).Insert(&MacInfo{mac, key}) == nil {
+		if dbmgo.DB().C(KDBMac).Insert(&MacInfo{mac, key}) == nil {
 			pSave.MacCnt++
 			pSave.ChTime = now
 		}
@@ -143,7 +141,7 @@ func download(pf_id, uid, mac, clientVersion string) (*TSaveData, uint16) {
 		if clientVersion < pSave.Version { //旧client下载新档，报错
 			return nil, err.Version_not_match
 		}
-		if dbmgo.DataBase().C(KDBMac).Insert(&MacInfo{mac, pSave.Key}) == nil {
+		if dbmgo.DB().C(KDBMac).Insert(&MacInfo{mac, pSave.Key}) == nil {
 			pSave.MacCnt++
 			pSave.ChTime = time.Now().Unix()
 			dbmgo.UpdateId(KDBSave, pSave.Key, bson.M{"$set": bson.M{
@@ -162,18 +160,22 @@ func Rpc_save_upload_binary2(req, ack *common.NetPack) {
 	uid := req.ReadString()
 	pf_id := req.ReadString()
 	mac := req.ReadString()
-	Sign := req.ReadString()
+	req.ReadString() //sign签名：不必要的，底层对消息加密
+	extra := req.ReadString()
+	data := req.ReadLenBuf2()
+	clientVersion := req.ReadString()
+
+	errcode := upload(pf_id, uid, mac, data, extra, clientVersion)
+	ack.WriteUInt16(errcode)
+}
+func Rpc_save_upload_binary(req, ack *common.NetPack) {
+	uid := req.ReadString()
+	pf_id := req.ReadString()
+	mac := req.ReadString()
+	req.ReadString() //sign签名：不必要的，底层对消息加密
 	extra := req.ReadString()
 	data := req.ReadLenBuf()
 	clientVersion := req.ReadString()
-
-	//验证签名
-	s := fmt.Sprintf("uid=%s&pf_id=%s", uid, pf_id)
-	if sign.CalcSign(s) != Sign {
-		gamelog.Error("Rpc_save_upload_binary: sign failed")
-		ack.WriteUInt16(err.Sign_failed)
-		return
-	}
 
 	errcode := upload(pf_id, uid, mac, data, extra, clientVersion)
 	ack.WriteUInt16(errcode)
@@ -182,16 +184,8 @@ func Rpc_save_download_binary(req, ack *common.NetPack) {
 	uid := req.ReadString()
 	pf_id := req.ReadString()
 	mac := req.ReadString()
-	Sign := req.ReadString()
+	req.ReadString() //sign签名：不必要的，底层对消息加密
 	clientVersion := req.ReadString()
-
-	//验证签名
-	s := fmt.Sprintf("uid=%s&pf_id=%s", uid, pf_id)
-	if sign.CalcSign(s) != Sign {
-		gamelog.Error("Rpc_save_download_binary: sign failed")
-		ack.WriteUInt16(err.Sign_failed)
-		return
-	}
 
 	if ptr, errcode := download(pf_id, uid, mac, clientVersion); errcode == err.Success {
 		ack.WriteUInt16(err.Success)

@@ -209,6 +209,12 @@ func SetField(field reflect.Value, s string) {
 				field.SetFloat(v)
 			}
 		}
+	case reflect.Bool:
+		{
+			if v, err := strconv.ParseBool(s); err == nil {
+				field.SetBool(v)
+			}
+		}
 	case reflect.String:
 		{
 			field.SetString(s)

@@ -1,3 +1,17 @@
+/***********************************************************************
+* @ 账号管理
+
+* @ 目前，所有center同质化的，连一个db
+
+* @ 若注册数量到亿级，必须分库，哈希AccountID分流至多个db
+	· 玩家分别用 “账号名、邮箱、手机号” 登录，如何快速定位节点？
+		· <字符串,ID>模块，哈希字符串，同样分流至多个db
+		· 须保证注册、改名、改邮箱...，事务性修改此对应表
+		· 先查映射表，再查账号数据
+
+* @ author zhoumf
+* @ date 2019-8-23
+***********************************************************************/
 package account
 
 import (
@@ -20,8 +34,7 @@ import (
 )
 
 const (
-	KDBTable    = "Account"
-	kActiveTime = 24 * 3600
+	KDBTable = "Account"
 )
 
 type TAccount struct {
@@ -64,10 +77,10 @@ func (self *TAccount) SetPasswd(passwd string) {
 func Rpc_center_account_login(req, ack *common.NetPack) {
 	gameName := req.ReadString()
 	str := req.ReadString() //账号、邮箱均可登录
-	passwd := req.ReadString()
-	gamelog.Debug("Login: %s %s", str, passwd)
+	pwd := req.ReadString()
+	gamelog.Debug("Login: %s %s", str, pwd)
 
-	errcode, p := GetAccount(str, passwd)
+	errcode, p := GetAccount(str, pwd)
 	if ack.WriteUInt16(errcode); errcode == err.Success {
 		timeNow := time.Now().Unix()
 		atomic.StoreInt64(&p.LoginTime, timeNow)
@@ -78,14 +91,14 @@ func Rpc_center_account_login(req, ack *common.NetPack) {
 			}
 		}, 15*60, 0, 0)
 
-		//先回复，给Client的账号信息
+		//1、先回复，Client账号信息
 		v := gameInfo.TAccountClient{
 			p.AccountID,
 			p.IsValidEmail,
 			p.IsValidPhone,
 		}
 		v.DataToBuf(ack)
-		//再回复，附带的游戏数据，可能有的游戏空的
+		//2、再回复，附带的游戏数据，可能有的游戏空的
 		if v, ok := p.GameInfo[gameName]; ok {
 			v.DataToBuf(ack)
 		}
@@ -93,30 +106,40 @@ func Rpc_center_account_login(req, ack *common.NetPack) {
 }
 func Rpc_center_account_reg(req, ack *common.NetPack) {
 	str := req.ReadString()
-	passwd := req.ReadString()
-	bindType := req.ReadString() //邮箱、名字、手机号
-	gamelog.Track("account_reg: %s %s %s", bindType, str, passwd)
+	pwd := req.ReadString()
+	typ := req.ReadString() //邮箱、名字、手机号
+	gamelog.Track("account_reg: %s %s %s", typ, str, pwd)
 
-	if !format.CheckPasswd(passwd) {
+	if !format.CheckPasswd(pwd) {
 		ack.WriteUInt16(err.Passwd_format_err)
-	} else if !format.CheckBindValue(bindType, str) {
+	} else if !format.CheckBindValue(typ, str) {
 		ack.WriteUInt16(err.BindInfo_format_err)
 	} else {
-		errcode, _ := NewAccountInDB(passwd, bindType, str)
+		errcode, _ := NewAccountInDB(pwd, typ, str)
 		ack.WriteUInt16(errcode)
 	}
 }
 func Rpc_center_reg_check(req, ack *common.NetPack) {
 	str := req.ReadString()
-	passwd := req.ReadString()
-	bindType := req.ReadString() //邮箱、名字、手机号
+	pwd := req.ReadString()
+	typ := req.ReadString() //邮箱、名字、手机号
 
-	if passwd != "" && !format.CheckPasswd(passwd) {
+	if !format.CheckPasswd(pwd) {
 		ack.WriteUInt16(err.Passwd_format_err)
-	} else if !format.CheckBindValue(bindType, str) {
+	} else if !format.CheckBindValue(typ, str) {
 		ack.WriteUInt16(err.BindInfo_format_err)
-	} else if GetAccountByBindInfo(bindType, str) != nil {
+	} else if GetAccountByBindInfo(typ, str) != nil {
 		ack.WriteUInt16(err.Account_repeat)
+	} else {
+		ack.WriteUInt16(err.Success)
+	}
+}
+func Rpc_center_reg_if(req, ack *common.NetPack) {
+	str := req.ReadString()
+	typ := req.ReadString() //邮箱、名字、手机号
+
+	if GetAccountByBindInfo(typ, str) == nil {
+		ack.WriteUInt16(err.Account_not_found)
 	} else {
 		ack.WriteUInt16(err.Success)
 	}
@@ -162,40 +185,67 @@ func Rpc_center_create_visitor(req, ack *common.NetPack) {
 // 记录于账号上面的游戏信息，一套账号系统可关联多个游戏
 func Rpc_center_set_game_info(req, ack *common.NetPack) {
 	accountId := req.ReadUInt32()
-	gameName, info := req.ReadString(), gameInfo.TGameInfo{}
+	gameName := req.ReadString()
+	info := gameInfo.TGameInfo{}
 	info.BufToData(req)
 
-	if p := GetAccountById(accountId); p != nil && gameName != "" {
+	if p := GetAccountById(accountId); p == nil {
+		ack.WriteUInt16(err.Account_not_found)
+	} else if dbmgo.UpdateIdSync(KDBTable, accountId, bson.M{"$set": bson.M{
+		fmt.Sprintf("gameinfo.%s", gameName): info}}) {
 		p.GameInfo[gameName] = info
-		if dbmgo.UpdateIdSync(KDBTable, accountId, bson.M{"$set": bson.M{
-			fmt.Sprintf("gameinfo.%s", gameName): info}}) {
-			ack.WriteUInt16(err.Success)
-			return
-		}
+		ack.WriteUInt16(err.Success)
+	} else {
+		ack.WriteUInt16(err.GameInfo_set_fail)
 	}
-	ack.WriteUInt16(err.GameInfo_set_fail)
-	gamelog.Error("set_game_info: %d %s %v", accountId, gameName, info)
 }
 func Rpc_center_get_game_info(req, ack *common.NetPack) {
 	accountId := req.ReadUInt32()
 	gameName := req.ReadString()
 
-	if p := GetAccountById(accountId); p != nil && gameName != "" {
+	if p := GetAccountById(accountId); p != nil {
 		if v, ok := p.GameInfo[gameName]; ok {
 			v.DataToBuf(ack)
 		}
 	}
 }
+func Rpc_center_set_game_json(req, ack *common.NetPack) {
+	str := req.ReadString()
+	typ := req.ReadString() //邮箱、名字、手机号
+	gameName := req.ReadString()
+	json := req.ReadString()
 
+	if p := GetAccountByBindInfo(typ, str); p == nil {
+		ack.WriteUInt16(err.Account_not_found)
+	} else {
+		v := p.GameInfo[gameName]
+		v.JsonData = json
+		if dbmgo.UpdateIdSync(KDBTable, p.AccountID, bson.M{"$set": bson.M{
+			fmt.Sprintf("gameinfo.%s", gameName): v}}) {
+			p.GameInfo[gameName] = v
+			ack.WriteUInt16(err.Success)
+		} else {
+			ack.WriteUInt16(err.GameInfo_set_fail)
+		}
+	}
+}
+func Rpc_center_get_game_json(req, ack *common.NetPack) {
+	str := req.ReadString()
+	typ := req.ReadString() //邮箱、名字、手机号
+	gameName := req.ReadString()
+
+	if p := GetAccountByBindInfo(typ, str); p != nil {
+		if v, ok := p.GameInfo[gameName]; ok {
+			ack.WriteString(v.JsonData)
+		}
+	}
+}
+
+// ------------------------------------------------------------
 // 玩家在哪个大区登录的
-func Rpc_center_player_login_addr(req, ack *common.NetPack) {
+func Rpc_center_player_login_addr_2(req, ack *common.NetPack) { //TODO:zhoumf:待删除
 	gameName := req.ReadString()
 	str := req.ReadString()
-
-	if str == "" {
-		ack.WriteUInt16(err.Not_found)
-		return
-	}
 
 	var p *TAccount
 	if p = GetAccountByBindInfo("email", str); p == nil {
@@ -204,6 +254,17 @@ func Rpc_center_player_login_addr(req, ack *common.NetPack) {
 	}
 	if p == nil {
 		ack.WriteUInt16(err.Not_found)
+	} else {
+		p.WriteLoginAddr(gameName, ack)
+	}
+}
+func Rpc_center_player_login_addr(req, ack *common.NetPack) {
+	str := req.ReadString()
+	typ := req.ReadString() //邮箱、名字、手机号
+	gameName := req.ReadString()
+
+	if p := GetAccountByBindInfo(typ, str); p == nil {
+		ack.WriteUInt16(err.Account_not_found)
 	} else {
 		p.WriteLoginAddr(gameName, ack)
 	}

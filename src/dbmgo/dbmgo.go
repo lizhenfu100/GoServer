@@ -32,63 +32,64 @@ import (
 	"time"
 )
 
-var (
-	g_database *mgo.Database
-	g_dial     = &mgo.DialInfo{
-		Timeout: 10 * time.Second,
-	}
-)
+var _default DBInfo
+
+type DBInfo struct {
+	mgo.DialInfo
+	DB *mgo.Database
+}
 
 func InitWithUser(ip string, port uint16, dbname, user, pwd string) {
-	g_dial.Addrs = []string{fmt.Sprintf("%s:%d", ip, port)}
-	g_dial.Database = dbname
-	g_dial.Username = user
-	g_dial.Password = pwd
-	Init(g_dial, &g_database)
+	_default.Init(ip, port, dbname, user, pwd)
+	_default.Connect()
 	_init_inc_ids()
 	go _loop()
 }
-func Init(dial *mgo.DialInfo, base **mgo.Database) {
-	if *base != nil {
-		(*base).Session.Close()
-	}
-	if session, e := mgo.DialWithInfo(dial); e != nil {
-		panic(fmt.Sprintf("Mongodb Init: %v", dial))
+func (self *DBInfo) Init(ip string, port uint16, dbname, user, pwd string) {
+	self.Addrs = []string{fmt.Sprintf("%s:%d", ip, port)}
+	self.Database = dbname
+	self.Username = user
+	self.Password = pwd
+	self.Timeout = 10 * time.Second
+}
+func (self *DBInfo) Connect() {
+	if session, e := mgo.DialWithInfo(&self.DialInfo); e != nil {
+		panic(fmt.Sprintf("Mongodb Init: %v", self.DialInfo))
 	} else {
-		*base = session.DB(dial.Database)
+		if self.DB == nil {
+			self.DB = session.DB(self.Database)
+		} else {
+			self.DB.Session.Refresh()
+		}
 	}
 	//FIXME：测试db连接可用性（小概率db初始化成功，但后续读写操作均超时）
-	e := (*base).C(kDBIncTable).Find(bson.M{"_id": ""}).One(&nameId{})
+	e := self.DB.C(kDBIncTable).Find(bson.M{"_id": ""}).One(&nameId{})
 	if e != nil && e != mgo.ErrNotFound {
 		panic("Mongodb Run Failed:" + e.Error())
 	}
 }
-func DataBase() *mgo.Database { return g_database }
+func DB() (ret *mgo.Database) { return _default.DB }
 
 func InsertSync(table string, pData interface{}) bool {
-	coll := g_database.C(table)
+	coll := DB().C(table)
 	if err := coll.Insert(pData); err != nil {
-		if err.(*mgo.LastError).Code == 11000 {
-			gamelog.Debug("InsertSync: " + err.Error())
-		} else {
-			gamelog.Error("InsertSync table[%s], data[%v], Error[%s]", table, pData, err.Error())
-			wechat.SendMsg("InsertSync: " + err.Error())
-		}
+		gamelog.Error("InsertSync table[%s], data[%v], Error[%s]", table, pData, err.Error())
+		wechat.SendMsg("数据库插入失败：" + err.Error())
 		return false
 	}
 	return true
 }
 func UpdateIdSync(table string, id, pData interface{}) bool {
-	coll := g_database.C(table)
+	coll := DB().C(table)
 	if err := coll.UpdateId(id, pData); err != nil {
 		gamelog.Error("UpdateSync table[%s] id[%v], data[%v], Error[%s]", table, id, pData, err.Error())
-		wechat.SendMsg("UpdateIdSync: " + err.Error())
+		wechat.SendMsg("数据库更新失败：" + err.Error())
 		return false
 	}
 	return true
 }
 func RemoveOneSync(table string, search bson.M) bool {
-	coll := g_database.C(table)
+	coll := DB().C(table)
 	if err := coll.Remove(search); err != nil && err != mgo.ErrNotFound {
 		gamelog.Error("RemoveOneSync table[%s] search[%v], Error[%s]", table, search, err.Error())
 		return false
@@ -96,7 +97,7 @@ func RemoveOneSync(table string, search bson.M) bool {
 	return true
 }
 func RemoveAllSync(table string, search bson.M) bool {
-	coll := g_database.C(table)
+	coll := DB().C(table)
 	if _, err := coll.RemoveAll(search); err != nil && err != mgo.ErrNotFound {
 		gamelog.Error("RemoveAllSync table[%s] search[%v], Error[%s]", table, search, err.Error())
 		return false
@@ -104,7 +105,7 @@ func RemoveAllSync(table string, search bson.M) bool {
 	return true
 }
 func Find(table, key string, value, pData interface{}) (bool, error) {
-	coll := g_database.C(table)
+	coll := DB().C(table)
 	err := coll.Find(bson.M{key: value}).One(pData)
 	if err != nil {
 		if err == mgo.ErrNotFound {
@@ -112,21 +113,21 @@ func Find(table, key string, value, pData interface{}) (bool, error) {
 			return false, nil
 		} else {
 			gamelog.Error("Find table[%s] key[%s] val[%v], Error[%s]", table, key, value, err.Error())
-			wechat.SendMsg("Find: " + err.Error())
+			wechat.SendMsg("数据库查询失败：" + err.Error())
 			return false, err
 		}
 	}
 	return true, nil
 }
 func FindEx(table string, search bson.M, pData interface{}) (bool, error) {
-	coll := g_database.C(table)
+	coll := DB().C(table)
 	if err := coll.Find(search).One(pData); err != nil {
 		if err == mgo.ErrNotFound {
 			gamelog.Debug("None table[%s] search[%v]", table, search)
 			return false, nil
 		} else {
 			gamelog.Error("FindEx table[%s] search[%v], Error[%s]", table, search, err.Error())
-			wechat.SendMsg("FindEx: " + err.Error())
+			wechat.SendMsg("数据库查询失败：" + err.Error())
 			return false, err
 		}
 	}
@@ -146,7 +147,7 @@ or			bson.M{"$or": []bson.M{bson.M{"name": "Jimmy Kuu"}, bson.M{"age": 31}}}
 $exists		bson.M{"bindinfo.email": bson.M{ "$exists": false }]
 */
 func FindAll(table string, search bson.M, pSlice interface{}) error {
-	coll := g_database.C(table)
+	coll := DB().C(table)
 	if err := coll.Find(search).All(pSlice); err != nil {
 		if err == mgo.ErrNotFound {
 			gamelog.Debug("None table[%s] search[%v]", table, search)
@@ -166,7 +167,7 @@ func Find_Desc(table, key string, cnt int, pList interface{}) error { //降序
 	return _find_sort(table, sortKey, cnt, pList)
 }
 func _find_sort(table, sortKey string, cnt int, pList interface{}) error {
-	coll := g_database.C(table)
+	coll := DB().C(table)
 	query := coll.Find(nil).Sort(sortKey).Limit(cnt)
 	if err := query.All(pList); err != nil {
 		if err == mgo.ErrNotFound {

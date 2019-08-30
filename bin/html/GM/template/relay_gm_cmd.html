@@ -11,10 +11,19 @@
         <h1>GM - 调试指令</h1>
         <div class="form-wrapper">
             <form action="{{.LocalAddr}}/relay_gm_cmd" method="get">
-                <label for="addr">地址:</label>
+                <label>命令行:</label>
+                <select name="cmd">
+                    <option value="clog">开关客户端日志</option>
+                    <option value="loglv">后台日志级别</option>
+                    <option value="gc">GC</option>
+                    <option value="routine">协程数目</option>
+                    <option value="cpu">CPU数</option>
+                    <option value="setcpu">设置CPU数</option>
+                </select>
+                <label>参数:</label>
+                <input type="text" name="args" placeholder="多参数，空格隔开"><br>
+                <label>地址:</label>
                 <input type="text" name="addr"><br>
-                <label for="cmd">命令行:</label>
-                <input type="text" name="cmd"><br>
                 <br>
                 <input type="submit" value="确认">
             </form>

@@ -42,10 +42,8 @@ func main() {
 	flag.StringVar(&dbname, "db", "", "dbname")
 	flag.Parse()
 
-	g_dial1.Addrs[0] = addr1+":27017"
-	g_dial2.Addrs[0] = addr2+":27017"
-	g_dial1.Database = dbname
-	g_dial2.Database = dbname
+	g_db1.Init(addr1, 27017, dbname, "chillyroom", "db#233*")
+	g_db2.Init(addr2, 27017, dbname, "chillyroom", "db#233*")
 
 	gamelog.InitLogger("MergeSvr")
 	console.Init()
@@ -58,26 +56,13 @@ func main() {
 
 // ------------------------------------------------------------
 var (
-	g_dial1 = &mgo.DialInfo{ //操作节点
-		Timeout:  10 * time.Second,
-		Addrs:    []string{""},
-		Database: "save",
-		Username: "chillyroom",
-		Password: "db#233*",
-	}
-	g_dial2 = &mgo.DialInfo{ //目标节点
-		Timeout:  10 * time.Second,
-		Addrs:    []string{""},
-		Database: "save",
-		Username: "chillyroom",
-		Password: "db#233*",
-	}
-	g_database1, g_database2 *mgo.Database
+	g_db1 dbmgo.DBInfo //操作节点
+	g_db2 dbmgo.DBInfo //目标节点
 )
 
 func do1() {
-	dbmgo.Init(g_dial1, &g_database1)
-	dbmgo.Init(g_dial2, &g_database2)
+	g_db1.Connect()
+	g_db2.Connect()
 
 	//TODO: 合服工具
 	/*
@@ -97,8 +82,8 @@ func do1() {
 
 func merge() { //读数据，写入主节点
 	p1, p2 := &logic.TSaveData{}, &logic.TSaveData{}
-	iter1 := g_database1.C(logic.KDBSave).Find(nil).Iter()
-	coll2 := g_database2.C(logic.KDBSave)
+	iter1 := g_db1.DB.C(logic.KDBSave).Find(nil).Iter()
+	coll2 := g_db2.DB.C(logic.KDBSave)
 	for {
 		if !iter1.Next(p1) {
 			break
@@ -114,7 +99,7 @@ func merge() { //读数据，写入主节点
 }
 func resetCenterGameInfo() {
 	p := &account.TAccount{}
-	coll := g_database1.C(account.KDBTable)
+	coll := g_db1.DB.C(account.KDBTable)
 	iter := coll.Find(nil).Iter()
 	for {
 		if !iter.Next(p) {
@@ -131,7 +116,7 @@ func resetCenterGameInfo() {
 }
 func delGameInfo() {
 	p := &account.TAccount{}
-	coll := g_database1.C(account.KDBTable)
+	coll := g_db1.DB.C(account.KDBTable)
 	iter := coll.Find(nil).Iter()
 	for {
 		if !iter.Next(p) {
@@ -146,8 +131,8 @@ func delGameInfo() {
 }
 func moveCenterDB() {
 	p1 := &account.TAccount{}
-	iter := g_database1.C(account.KDBTable).Find(nil).Iter()
-	coll2 := g_database2.C(account.KDBTable)
+	iter := g_db1.DB.C(account.KDBTable).Find(nil).Iter()
+	coll2 := g_db2.DB.C(account.KDBTable)
 	for {
 		if !iter.Next(p1) {
 			break
@@ -159,7 +144,7 @@ func moveCenterDB() {
 }
 func cutSaveMacCnt() {
 	p := &logic.TSaveData{}
-	coll := g_database1.C(logic.KDBSave)
+	coll := g_db1.DB.C(logic.KDBSave)
 	iter := coll.Find(nil).Iter()
 	for {
 		if !iter.Next(p) {

@@ -13,9 +13,7 @@ package logic
 
 import (
 	"common"
-	"common/std/sign"
 	"conf"
-	"fmt"
 	"generate_out/err"
 	"generate_out/rpc/enum"
 	"netConfig"
@@ -99,11 +97,11 @@ func _MoveSave(gameSvrId int, accountId uint32, version, pf_id, mac, clientVersi
 			port := recvBuf.ReadUInt16()
 			recvBuf.ReadString() //svrName
 			saveAddr, uid := http.Addr(ip, port), strconv.Itoa(int(accountId))
-			http.CallRpc(saveAddr, enum.Rpc_save_upload_binary2, func(buf *common.NetPack) {
+			http.CallRpc(saveAddr, enum.Rpc_save_upload_binary, func(buf *common.NetPack) {
 				buf.WriteString(uid)
 				buf.WriteString(pf_id)
 				buf.WriteString(mac)
-				buf.WriteString(sign.CalcSign(fmt.Sprintf("uid=%s&pf_id=%s", uid, pf_id)))
+				buf.WriteString("") //sign
 				buf.WriteString("") //extra
 				buf.WriteLenBuf(data)
 				buf.WriteString(clientVersion)

@@ -29,12 +29,12 @@ import (
 
 const (
 	kFileDirRoot = "html/GM/"
-	kNeedPasswd  = false
+	kTemplateDir = "html/GM/template/"
 )
 
 func main() {
 	ip, port, _getaddrs := "", 0, false
-	flag.StringVar(&ip, "ip", "192.168.1.111", "ip")
+	flag.StringVar(&ip, "ip", "192.168.1.210", "ip")
 	flag.IntVar(&port, "port", 7701, "port")
 	flag.BoolVar(&_getaddrs, "getaddrs", false, "")
 	flag.Parse() //内部获取了所有参数：os.Args[1:]
@@ -65,12 +65,8 @@ func main() {
 	}
 	UpdateHtmls("account/", "account/", g_common)
 	UpdateHtml("index", "index", g_common)
-	UpdateHtml("passwd", "passwd", g_common)
 	UpdateHtml("relay_gm_cmd", "relay_gm_cmd", g_common)
 
-	if kNeedPasswd {
-		go UpdatePasswd()
-	}
 	netConfig.RunNetSvr()
 }
 func InitConf() {
@@ -78,17 +74,22 @@ func InitConf() {
 	console.Init()
 
 	register.RegHttpHandler(map[string]register.HttpHandle{
-		"/reset_password":  Http_reset_password,
-		"/bind_info_force": Http_bind_info_force,
-		"/check_passwd":    Http_check_passwd,
-		"/backup_conf":     Http_relay_to_save,
-		"/backup_auto":     Http_relay_to_save,
-		"/backup_force":    Http_relay_to_save,
-		"/relay_gm_cmd":    Http_relay_gm_cmd,
-		"/gift_bag_add":    Http_relay_to_login,
-		"/gift_bag_set":    Http_relay_to_login,
-		"/gift_bag_del":    Http_relay_to_login,
-		"/gift_code_spawn": Http_gift_code_spawn,
+		"/reset_password":     Http_reset_password,
+		"/bind_info_force":    Http_bind_info_force,
+		"/backup_conf":        Http_relay_to_save,
+		"/backup_auto":        Http_relay_to_save,
+		"/backup_force":       Http_relay_to_save,
+		"/relay_gm_cmd":       Http_relay_gm_cmd,
+		"/gift_bag_add":       Http_relay_to_login,
+		"/gift_bag_set":       Http_relay_to_login,
+		"/gift_bag_del":       Http_relay_to_login,
+		"/gift_bag_clear":     Http_relay_to_login,
+		"/gift_code_spawn":    Http_gift_code_spawn,
+		"/bulletin":           Http_relay_to_login,
+		"/download_save_data": Http_download_save_data,
+		"/upload_save_data":   Http_upload_save_data,
+		"/view_bulletin":      Http_relay_to_login,
+		"/view_net_delay":     Http_view_net_delay,
 	})
 	g_file_server = http.FileServer(http.Dir(kFileDirRoot))
 	http.HandleFunc("/", Http_download_file)
@@ -98,9 +99,6 @@ var g_file_server http.Handler
 
 func Http_download_file(w http.ResponseWriter, r *http.Request) {
 	gamelog.Debug("download path: " + r.URL.Path)
-	if kNeedPasswd && r.URL.Path == "/" {
-		r.URL.Path = "/passwd.html"
-	}
 	if strings.HasSuffix(r.URL.Path, "app.js") {
 		r.URL.Path = "/app.js"
 	}

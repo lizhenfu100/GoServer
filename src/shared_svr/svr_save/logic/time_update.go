@@ -29,7 +29,6 @@ func onEnterNextDay() {
 	G_Backup.OnEnterNextDay()
 }
 func onEnterNextHour() {
-	G_Backup.OnEnterNextHour()
 }
 func perMinute() {
 }

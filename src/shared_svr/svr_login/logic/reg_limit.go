@@ -58,13 +58,13 @@ func _banReg(req, ack *common.NetPack, ip string) bool {
 	if !assert.IsDebug {
 		freq, _ := g_regFreq.Load(ip)
 		if freq == nil {
-			freq = timer.NewOpFreq(5, 30) //30秒超5次
+			freq = timer.NewOpFreq(5, 10) //10秒超5次
 			g_regFreq.Store(ip, freq)
 		}
 		if !freq.(*timer.OpFreq).Check(time.Now().Unix()) {
 			timer.G_TimerMgr.AddTimerSec(func() {
 				g_regFreq.Delete(ip)
-			}, 3600, 0, 0)
+			}, 300, 0, 0)
 			gamelog.Info("Ban ip:%s", ip)
 			ack.WriteUInt16(err.Operate_too_often) //Notice：回复内容须与原rpc一致
 			return true                            //拦截，原rpc函数不会调用了
@@ -92,7 +92,7 @@ func _banLogin(req, ack *common.NetPack, ip string) bool {
 		if !freq.(*timer.OpFreq).Check(time.Now().Unix()) {
 			timer.G_TimerMgr.AddTimerSec(func() {
 				g_loginFreq.Delete(ip)
-			}, 3600, 0, 0)
+			}, 300, 0, 0)
 			gamelog.Info("Ban ip:%s", ip)
 			ack.WriteUInt16(err.Operate_too_often) //Notice：回复内容须与原rpc一致
 			return true                            //拦截，原rpc函数不会调用了
@@ -103,10 +103,10 @@ func _banLogin(req, ack *common.NetPack, ip string) bool {
 
 // ------------------------------------------------------------
 // -- 邮件注册账户
-func _NeedVerifyEmail(addr, passwd string) (errcode uint16) {
-	centerAddr := netConfig.GetHttpAddr("center", netConfig.HashCenterID(addr))
+func _NeedVerifyEmail(emailAddr, passwd string) (errcode uint16) {
+	centerAddr := netConfig.GetHttpAddr("center", netConfig.HashCenterID(emailAddr))
 	http.CallRpc(centerAddr, enum.Rpc_center_reg_check, func(buf *common.NetPack) {
-		buf.WriteString(addr)
+		buf.WriteString(emailAddr)
 		buf.WriteString(passwd)
 		buf.WriteString("email")
 	}, func(backBuf *common.NetPack) {
@@ -115,17 +115,17 @@ func _NeedVerifyEmail(addr, passwd string) (errcode uint16) {
 			u, _ := url.Parse(centerAddr + "/reg_account_by_email")
 			q := u.Query()
 			//2、写入参数
-			q.Set("email", addr)
+			q.Set("email", emailAddr)
 			q.Set("pwd", passwd)
 			flag := strconv.FormatInt(time.Now().Unix(), 10)
 			q.Set("flag", flag)
 			q.Set("language", conf.SvrCsv.EmailLanguage)
-			q.Set("sign", sign.CalcSign(addr+passwd+flag))
+			q.Set("sign", sign.CalcSign(emailAddr+passwd+flag))
 			//3、生成完整url
 			u.RawQuery = q.Encode()
-			errcode = email.SendMailForce("Verify Email", addr, u.String(), "")
+			errcode = email.SendMail("Verify Email", emailAddr, u.String(), "")
 			if errcode == err.Success {
-				errcode = err.Email_already_send_please_check
+				errcode = err.Email_try_send_please_check
 			}
 		}
 	})

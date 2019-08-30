@@ -39,7 +39,7 @@ func Rpc_save_unbind_mac_by_email(req, ack *common.NetPack) {
 		q.Set("sign", sign.CalcSign(mac+flag))
 		//3、生成完整url
 		u.RawQuery = q.Encode()
-		errcode := email.SendMail("Unbind Device", emailAddr, u.String(), language)
+		errcode := email.SendByLogin("Unbind Device", emailAddr, u.String(), language)
 		ack.WriteUInt16(errcode)
 	}
 }
@@ -87,8 +87,8 @@ func UnbindMac(mac string) (uint16, int64) {
 	ptr := &MacInfo{}
 	if ok, _ := dbmgo.Find(KDBMac, "_id", mac, ptr); ok {
 		timeNow := time.Now().Unix()
-		if ok, timeBind := canUnbindMac(ptr.Key, mac, timeNow); !ok {
-			return err.Operate_too_often, timeBind
+		if ok, timeUnbind := canUnbindMac(ptr.Key, mac, timeNow); !ok {
+			return err.Operate_too_often, timeUnbind
 		} else {
 			g_unbindTime1.Store(ptr.Key, timeNow)
 			g_unbindTime2.Store(ptr.Mac, timeNow)
@@ -100,9 +100,9 @@ func UnbindMac(mac string) (uint16, int64) {
 }
 func canUnbindMac(key, mac string, timeNow int64) (bool, int64) {
 	if v, ok := g_unbindTime1.Load(key); ok {
-		timeBind := v.(int64)
-		if timeNow-timeBind < int64(conf.Const.MacUnbindPeriod) {
-			return false, timeBind
+		timeUnbind := v.(int64)
+		if timeNow-timeUnbind < int64(conf.Const.MacUnbindPeriod) {
+			return false, timeUnbind
 		}
 	}
 	if v, ok := g_unbindTime2.Load(mac); ok {

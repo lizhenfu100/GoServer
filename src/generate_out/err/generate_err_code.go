@@ -49,7 +49,12 @@ const ( //the top 100 are reserved for system
 	GameInfo_set_fail uint16 = 132
 	Name_format_err uint16 = 133
 	Create_Player_failed uint16 = 134
-	Email_already_send_please_verify uint16 = 135
-	Email_already_send_please_check uint16 = 136
+	Email_try_send_please_check uint16 = 135
+	Login_queue_full uint16 = 136
+	Phone_not_verify uint16 = 137
+	Email_not_verify uint16 = 138
+	Email_unreachable uint16 = 139
+	Email_format_err uint16 = 140
+	Account_not_found uint16 = 141
 	
 )

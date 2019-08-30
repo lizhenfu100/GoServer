@@ -38,7 +38,8 @@ type TOrderInfo struct {
 	Item_count     int    //物品数量
 	Item_price     int    //物品价格（单位是分）
 	Total_price    int    //物品总价格（单位是分）
-	Currency       string //货币（在大陆，直接填RMB即可）
+	Currency       string //货币类型
+	Pay_channel    string //支付渠道，微信、支付宝...
 	Code           string //计费点
 	Imsi           string
 	Imei           string
@@ -65,11 +66,7 @@ func CreateOrderInDB(ptr *TOrderInfo) bool {
 	return false
 }
 func FindOrder(orderId string) *TOrderInfo {
-	if orderId == "" || orderId == "0" {
-
-	} else if v, ok := g_order_map.Load(orderId); ok {
-		return v.(*TOrderInfo)
-	} else {
+	if orderId != "" && orderId != "0" {
 		ptr := new(TOrderInfo)
 		if ok, _ := dbmgo.Find(KDBTable, "_id", orderId, ptr); ok {
 			g_order_map.Store(orderId, ptr)
@@ -80,10 +77,18 @@ func FindOrder(orderId string) *TOrderInfo {
 }
 func ConfirmOrder(ptr *TOrderInfo) {
 	ptr.Can_send = 0
-	dbmgo.UpdateId(KDBTable, ptr.Order_id, bson.M{"$set": bson.M{"can_send": 0}})
+	dbmgo.UpdateIdSync(KDBTable, ptr.Order_id, bson.M{"$set": bson.M{"can_send": 0}})
 	g_order_map.Delete(ptr.Order_id)
 }
-func OrderRange(f func(k, v interface{}) bool) { g_order_map.Range(f) }
+func OrderRange(f func(*TOrderInfo)) {
+	g_order_map.Range(func(k, v interface{}) bool {
+		// 本地缓存，不是最新数据；比如支付平台回调到另个节点
+		if p := FindOrder(k.(string)); p != nil {
+			f(p)
+		}
+		return true
+	})
+}
 
 func InitDB() {
 	now := time.Now().Unix()

@@ -10,7 +10,7 @@
     <div class="all-wrapper">
         <h1>查看账号信息</h1>
         <div class="form-wrapper">
-            <form action="{{.CenterAddr}}/show_account" method="get">
+            <form action="{{index .CenterList 0}}/show_account" method="get">
                 <label>游戏名称:</label>
                 <select name="game">
                     <option value="HappyDiner">HappyDiner</option>
@@ -22,7 +22,7 @@
                     <option value="aid">账户Id</option>
                     <option value="name">账号名</option>
                 </select>
-                <label for="v">值:</label>
+                <label>值:</label>
                 <input type="text" name="v"><br>
                 <br>
                 <input type="submit" value="确认">

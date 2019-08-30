@@ -11,14 +11,14 @@
         <h1>强制改邮箱</h1>
         <div class="form-wrapper">
             <form action="{{.LocalAddr}}/bind_info_force" method="get">
-                <label for="name">账号ID:</label>
+                <label>账号ID:</label>
                 <input type="text" name="aid"><br>
                 <label>绑定类型:</label>
                 <select name="k">
                     <option value="email">邮箱</option>
                     <option value="name">账号名</option>
                 </select>
-                <label for="v">值:</label>
+                <label>值:</label>
                 <input type="text" name="v"><br>
                 <br>
                 <input type="submit" value="确认">

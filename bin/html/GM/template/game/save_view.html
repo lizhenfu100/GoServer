@@ -14,9 +14,7 @@
                 function setActionAddr(form) {
                     var select = form.getElementsByTagName("select")[0];
                     var uri = select.options[select.selectedIndex].value;
-                    // window.alert(document.getElementById("gameaddr").value)
                     form.action="http://"+document.getElementById("addr").value+uri;
-                    // window.alert(form.action)
                 }
             </script>
             <form action="" method="get" onsubmit="setActionAddr(this)">
@@ -25,8 +23,9 @@
                     <option value="/view_save_data">查看存档</option>
                     <option value="/view_bind_mac">查询绑定设备</option>
                     <option value="/show_backup_file">查询备份文件</option>
-                    <option value="/clear_maccnt">归零绑定次数</option>
-                    <option value="/clear_unbind_limit">解绑受限，清空</option>
+                    <option value="/clear_maccnt">绑定次数 +1</option>
+                    <option value="/clear_bind_limit">绑定受限 清空</option>
+                    <option value="/clear_unbind_limit">解绑受限 清空</option>
                     <option value="/del_save_data">删除存档</option>
                 </select>
                 <label>平台名:</label>
@@ -77,16 +76,12 @@
                     <option value="YYBShare">YYBShare</option>
                     <option value="YouPinWei">YouPinWei</option>
                 </select>
-                <label for="passwd" title="我们自己约定的操作权限密码，一般不会变">
-                    权限密码:
-                </label>
+                <label title="我们自己约定的操作权限密码，一般不会变">权限密码:</label>
                 <input type="password" name="passwd"><br>
-                <label title="玩家所在svr_save地址，端口一般是7090">
-                    存档服:
-                </label>
-                <input type="text" id="addr" placeholder="游戏服地址,端口7090"><br>
-                <label for="uid" title="账号id，或渠道uuid">uid:</label>
-                <input type="text" name="uid"><br>
+                <label title="玩家所在svr_save地址，端口一般是7090">存档服:</label>
+                <input type="text" id="addr" placeholder="存档服地址,端口7090"><br>
+                <label title="账号id，或渠道uuid">uid:</label>
+                <input type="text" name="uid" placeholder="账号id，或渠道uuid"><br>
                 <br>
                 <input type="submit" value="确认">
             </form>

@@ -14,66 +14,23 @@ import (
 	"strings"
 )
 
-var (
-	g_common = TCommon{
-		CenterAddr: "http://3.17.67.102:7000",
-		CenterList: []string{
-			"http://3.16.163.125:7000",
-			"http://18.221.148.84:7000",
-			"http://18.223.109.103:7000",
-			"http://18.216.113.27:7000",
-		},
-		SdkAddrs: []string{"",
-			"http://120.78.152.152:7002", //1 北美
-			"http://120.78.152.152:7002", //2 亚洲
-			"http://120.78.152.152:7002", //3 欧洲
-			"http://120.78.152.152:7002", //4 南美
-			"http://120.78.152.152:7002", //5 中国华北
-			"http://120.78.152.152:7002", //6 中国华南
-		},
-	}
-	g_map = map[string]TemplateData{
-		"HappyDiner": {
-			GameName: "HappyDiner", //游戏名，以及对应的大区
-			Logins: []TLogin{{Login: ""}, //0位空，大区编号从1起始
-				{Login: "http://3.17.67.102:7030"},    //1 北美
-				{Login: "http://13.229.215.168:7030"}, //2 亚洲
-				{Login: "http://18.185.80.202:7030"},  //3 欧洲
-				{Login: "http://54.94.211.178:7030"},  //4 南美
-				{Login: "http://39.96.196.250:7030"},  //5 中国华北
-				{Login: "http://47.106.35.74:7030"},   //6 中国华南
-			},
-		},
-		"SoulKnight": {
-			GameName: "SoulKnight",
-			Logins: []TLogin{{Login: ""},
-				{Login: ""},                          //1 北美
-				{Login: ""},                          //2 亚洲
-				{Login: ""},                          //3 欧洲
-				{Login: ""},                          //4 南美
-				{Login: "http://39.97.111.110:7030"}, //5 中国华北
-				{Login: "http://39.108.87.225:7030"}, //6 中国华南
-			},
-		},
-	}
-)
-
 type TCommon struct {
-	LocalAddr  string
-	CenterAddr string
-	CenterList []string
+	LocalAddr  string   //GM地址
+	CenterList []string //center地址
 	SdkAddrs   []string //支付sdk暂时各项目共用
 }
 type TLogin struct {
-	Login string
-	Games map[int]TGame
+	Name  string
+	Addrs []string //登录节点同质的
+	Games []TGame
 }
 type TGame struct {
-	Game  string
-	Saves []string
+	ID        int
+	GameAddr  string
+	SaveAddrs []string //同节点下的save同质的
 }
 type TemplateData struct {
-	TCommon
+	*TCommon
 	GameName string
 	Logins   []TLogin //0位空，1起始
 }
@@ -81,9 +38,9 @@ type TemplateData struct {
 func (self *TemplateData) GetAddrs() {
 	// 先拉login下所有game
 	for i := 1; i < len(self.Logins); i++ {
-		if p1 := &self.Logins[i]; p1.Login != "" {
-			p1.Games = map[int]TGame{} //清空旧值
-			http.CallRpc(p1.Login, enum.Rpc_meta_list, func(buf *common.NetPack) {
+		if p1 := &self.Logins[i]; len(p1.Addrs) > 0 {
+			p1.Games = p1.Games[:0] //清空旧值
+			http.CallRpc(p1.Addrs[0], enum.Rpc_meta_list, func(buf *common.NetPack) {
 				buf.WriteString("game")
 				buf.WriteString("")
 			}, func(recvBuf *common.NetPack) {
@@ -93,15 +50,16 @@ func (self *TemplateData) GetAddrs() {
 					outip := recvBuf.ReadString()
 					port := recvBuf.ReadUInt16()
 					recvBuf.ReadString() //name
-					p1.Games[svrId] = TGame{
-						Game: http.Addr(outip, port),
-					}
+					p1.Games = append(p1.Games, TGame{
+						ID:       svrId,
+						GameAddr: http.Addr(outip, port),
+					})
 				}
 				// 再拉game下所有save
-				for k, v := range p1.Games {
-					tmpk, tmpv := k, v          //rang k v 均是固定地址，不可直接闭包(go是引用捕获)
-					tmpv.Saves = tmpv.Saves[:0] //清空旧值
-					http.CallRpc(v.Game, enum.Rpc_meta_list, func(buf *common.NetPack) {
+				for i := 0; i < len(p1.Games); i++ {
+					ptr := &p1.Games[i]
+					ptr.SaveAddrs = ptr.SaveAddrs[:0] //清空旧值
+					http.CallRpc(ptr.GameAddr, enum.Rpc_meta_list, func(buf *common.NetPack) {
 						buf.WriteString("save")
 						buf.WriteString("")
 					}, func(recvBuf *common.NetPack) {
@@ -111,9 +69,8 @@ func (self *TemplateData) GetAddrs() {
 							outip := recvBuf.ReadString()
 							port := recvBuf.ReadUInt16()
 							recvBuf.ReadString() //name
-							tmpv.Saves = append(tmpv.Saves, http.Addr(outip, port))
+							ptr.SaveAddrs = append(ptr.SaveAddrs, http.Addr(outip, port))
 						}
-						p1.Games[tmpk] = tmpv
 					})
 				}
 			})
@@ -142,7 +99,7 @@ func (self *TemplateData) LoadAddrs() bool {
 }
 
 func UpdateHtmls(dirIn, dirOut string, ptr interface{}) { //填充模板，生成可用的HTML文件，方便查看
-	if names, err := file.WalkDir(kFileDirRoot+"template/"+dirIn, ".html"); err == nil {
+	if names, err := file.WalkDir(kTemplateDir+dirIn, ".html"); err == nil {
 		for _, name := range names {
 			if t, e := template.ParseFiles(name); e != nil {
 				fmt.Println("parse template error: ", e.Error())
@@ -160,7 +117,7 @@ func UpdateHtmls(dirIn, dirOut string, ptr interface{}) { //填充模板，生�
 	}
 }
 func UpdateHtml(fileIn, fileOut string, ptr interface{}) {
-	fullname := kFileDirRoot + "template/" + fileIn + ".html"
+	fullname := kTemplateDir + fileIn + ".html"
 	if t, e := template.ParseFiles(fullname); e != nil {
 		fmt.Println("parse template error: ", e.Error())
 	} else {
@@ -178,14 +135,24 @@ func UpdateHtml(fileIn, fileOut string, ptr interface{}) {
 // ------------------------------------------------------------
 // template func
 func (self *TemplateData) AddrLogin(id int) string {
-	return self.Logins[id].Login
+	if v := self.Logins[id].Addrs; len(v) > 0 {
+		return v[0]
+	}
+	return ""
 }
 func (self *TemplateData) AddrGame(id1, id2 int) string {
-	return self.Logins[id1].Games[id2].Game
+	for _, v := range self.Logins[id1].Games {
+		if v.ID == id2 {
+			return v.GameAddr
+		}
+	}
+	return ""
 }
 func (self *TemplateData) AddrSave(id1, id2 int) string {
-	if v, ok := self.Logins[id1].Games[id2]; ok {
-		return v.Saves[0]
+	for _, v := range self.Logins[id1].Games {
+		if v.ID == id2 {
+			return v.SaveAddrs[0]
+		}
 	}
 	return ""
 }

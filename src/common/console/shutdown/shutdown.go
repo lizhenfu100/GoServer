@@ -23,12 +23,13 @@ import (
 )
 
 func Default(args []string) {
-	gamelog.Info("Begin Default")
+	gamelog.Info("Shutdown Begin")
 	tcp.CloseServer()
 	http.CloseServer()
 
 	//关服任务，阻塞，等待任务都完成才能关服
 	dbmgo.WaitStop()
 
+	gamelog.Info("Shutdown End")
 	os.Exit(0)
 }

@@ -1,0 +1,14 @@
+<html>
+<body bgcolor="white">
+    <table border="1" cellpadding="5" cellspacing="0">
+        <tr>
+            <th>节点名称</th><th>地址</th><th>延时</th>
+        </tr>
+{{range $_, $v := .}}
+        <tr>
+            <td>{{$v.Name}}</td><td>{{$v.Addr}}</td><td>{{$v.Info}}</td>
+        </tr>
+{{end}}
+    </table>
+</body>
+</html>

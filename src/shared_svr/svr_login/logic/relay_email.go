@@ -19,7 +19,7 @@ func Rpc_login_send_email(req, ack *common.NetPack) {
 	body := req.ReadString()
 	language := req.ReadString()
 
-	e := email.SendMail2(subject, target, body, language)
+	e := email.SendMail(subject, target, body, language)
 	ack.WriteUInt16(e)
 }
 
@@ -46,5 +46,5 @@ func Http_verify_email(w http.ResponseWriter, r *http.Request) {
 	u, _ := url.Parse(centerAddr + r.RequestURI)
 	//3、生成完整url
 	u.RawQuery = q.Encode()
-	errCode = email.SendMailForce("Verify Email", addr, u.String(), language)
+	errCode = email.SendMail("Verify Email", addr, u.String(), language)
 }

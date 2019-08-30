@@ -22,30 +22,22 @@
             <form action="" method="get" onsubmit="setActionAddr(this)">
                 <label>操作类型:</label>
                 <select>
-                    <option value="/backup_auto">自动开关</option>
-                    <option value="/backup_force">强制开关</option>
                     <option value="/backup_conf">编辑配置</option>
+                    <option value="/backup_force">强制开关</option>
                 </select>
                 <label>游戏名称:</label>
                 <select name="game">
                     <option value="{{.GameName}}">{{.GameName}}</option>
                 </select>
-                <label for="passwd" title="我们自己约定的操作权限密码，一般不会变">
-                    权限密码:
-                </label>
+                <label>强制开关:</label>
+                <select name="force">
+                    <option value="1">开启</option>
+                    <option value="0">关闭</option>
+                </select>
+                <label title="我们自己约定的操作权限密码，一般不会变">权限密码:</label>
                 <input type="password" name="passwd"><br>
-                <label for="weekdays">周几开启:</label>
+                <label title="0：周日、1：周一">周几开启:</label>
                 <input type="text" name="weekdays" placeholder="参考值 [1, 2]"><br>
-                <label for="onlintlimit" title="在线量超过，关闭备份">
-                    在线限制:
-                </label>
-                <input type="text" name="onlintlimit"><br>
-                <label for="auto" title="是否自动开启，按配置的周几">
-                    自动开关:
-                </label>
-                <input type="text" name="auto" placeholder="填 1或0"><br>
-                <label for="force">强制开关:</label>
-                <input type="text" name="force" placeholder="填 1或0"><br>
                 <br>
                 <input type="submit" value="确认">
             </form>

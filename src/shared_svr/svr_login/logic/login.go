@@ -59,7 +59,7 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 
 	if gameName != conf.GameName {
 		ack.WriteUInt16(err.LoginSvr_not_match)
-		wechat.SendMsg("LoginSvr_not_match: " + conf.GameName + account)
+		wechat.SendMsg("登录服不匹配：" + conf.GameName + account)
 	} else {
 		//2、同步转至center验证账号信息，取得accountId、gameInfo
 		centerSvrId := netConfig.HashCenterID(account)

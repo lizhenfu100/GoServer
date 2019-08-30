@@ -35,7 +35,7 @@ func Http_order_success(w http.ResponseWriter, r *http.Request) {
 	} else {
 		order.Status = 1
 		order.Can_send = 1
-		dbmgo.UpdateId(msg.KDBTable, order.Order_id, bson.M{"$set": bson.M{
+		dbmgo.UpdateIdSync(msg.KDBTable, order.Order_id, bson.M{"$set": bson.M{
 			"status": 1, "can_send": 1}})
 		w.Write(common.S2B("ok"))
 	}
@@ -52,7 +52,7 @@ func Http_order_set_force(w http.ResponseWriter, r *http.Request) {
 	} else {
 		order.Status = 1
 		order.Can_send = 1
-		dbmgo.UpdateId(msg.KDBTable, order.Order_id, bson.M{"$set": bson.M{
+		dbmgo.UpdateIdSync(msg.KDBTable, order.Order_id, bson.M{"$set": bson.M{
 			"status": 1, "can_send": 1}})
 		w.Write(common.S2B("ok"))
 	}
@@ -73,7 +73,7 @@ func Rpc_order_success(req, ack *common.NetPack) {
 			} else {
 				order.Status = 1
 				order.Can_send = 1
-				dbmgo.UpdateId(msg.KDBTable, order.Order_id, bson.M{"$set": bson.M{
+				dbmgo.UpdateIdSync(msg.KDBTable, order.Order_id, bson.M{"$set": bson.M{
 					"status": 1, "can_send": 1}})
 				ackInfo.WriteString(": ok\n")
 			}

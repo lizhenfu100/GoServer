@@ -1,28 +1,43 @@
-<html>
 
+<html>
 <head>
     <title>云存档</title>
     <link rel="stylesheet" href="main.css">
     <script src="app.js"></script>
+    <script type="text/javascript" language="javascript">
+        function browseFolder(path) {
+            try {
+                var Message = "\u8bf7\u9009\u62e9\u6587\u4ef6\u5939"; //选择框提示信息
+                var Shell = new ActiveXObject("Shell.Application");
+                var Folder = Shell.BrowseForFolder(0, Message, 0, "d:\\");
+                if (Folder != null) {
+                    var i = 0;
+                    var savePath = Folder.Self.Path;
+                    document.getElementsByName("path")[0].value = savePath;
+                }
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+    </script>
 </head>
 
 <body bgcolor="white">
     <div class="all-wrapper">
-        <h1>回退</h1>
+        <h1>下载 & 上传</h1>
         <div class="form-wrapper">
             <script>
                 function setActionAddr(form) {
                     var select = form.getElementsByTagName("select")[0];
                     var uri = select.options[select.selectedIndex].value;
-                    // window.alert(document.getElementById("gameaddr").value)
-                    form.action="http://"+document.getElementById("addr").value+uri;
-                    // window.alert(form.action)
+                    form.action="{{.LocalAddr}}"+uri;
                 }
             </script>
-            <form action="" method="get" onsubmit="setActionAddr(this)">
+            <form action="" method="post" onsubmit="setActionAddr(this)" enctype="multipart/form-data">
                 <label>操作类型:</label>
                 <select>
-                    <option value="/save_backup">存档回退</option>
+                    <option value="/download_save_data">下载存档</option>
+                    <option value="/upload_save_data">上传存档</option>
                 </select>
                 <label>平台名:</label>
                 <select name="pf_id">
@@ -72,18 +87,18 @@
                     <option value="YYBShare">YYBShare</option>
                     <option value="YouPinWei">YouPinWei</option>
                 </select>
-                <label for="passwd" title="我们自己约定的操作权限密码，一般不会变">
-                    权限密码:
-                </label>
-                <input type="password" name="passwd"><br>
-                <label title="玩家所在svr_save地址，端口一般是7090">
-                    存档服:
-                </label>
-                <input type="text" id="addr" placeholder="游戏服地址,端口7090"><br>
-                <label for="uid" title="账号id，或渠道uuid">Uid:</label>
-                <input type="text" name="uid"><br>
-                <label for="filename">备份名称:</label>
-                <input type="text" name="filename" placeholder="只需日期部分.save"><br>
+                <label title="玩家所在svr_save地址，端口一般是7090">存档服:</label>
+                <input type="text" name="addr" id="addr" placeholder="存档服地址,端口7090"><br>
+                <label title="账号id，或渠道uuid">uid:</label>
+                <input type="text" name="uid" placeholder="账号id，或渠道uuid"><br>
+                <label>设备码:</label>
+                <input type="text" name="mac"><br>
+                <label>版本号:</label>
+                <input type="text" name="version" placeholder="玩家客户端版本号"><br>
+                <br>
+                <div>
+                     <input type="file" name="save"><br>
+                </div>
                 <br>
                 <input type="submit" value="确认">
             </form>

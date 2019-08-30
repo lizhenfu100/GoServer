@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"gamelog"
+	"netConfig/meta"
 	"nets/http"
 )
 
@@ -43,7 +44,7 @@ func SendMsg(text string) {
 		Agentid: g_agentId,
 		Touser:  g_touser,
 		Msgtype: "text",
-		Text:    map[string]string{"content": text},
+		Text:    map[string]string{"content": format(text)},
 	})
 	if e := sendMsg(buf); e != nil {
 		if e = updateToken(g_corpId, g_secret); e != nil {
@@ -53,7 +54,15 @@ func SendMsg(text string) {
 		}
 	}
 }
+func format(text string) string {
+	return fmt.Sprintf("%s(%d) %s %s",
+		meta.G_Local.Module,
+		meta.G_Local.SvrID,
+		meta.G_Local.SvrName,
+		meta.G_Local.OutIP) +
+		"\n--------------------------\n\n" + text
 
+}
 // ------------------------------------------------------------
 const (
 	kUrlSend     = "https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token="

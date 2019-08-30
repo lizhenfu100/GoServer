@@ -42,7 +42,7 @@ import (
 	"time"
 )
 
-func SendMail(subject, addr, body, language string) (errcode uint16) {
+func SendByLogin(subject, addr, body, language string) (errcode uint16) {
 	netConfig.CallRpcLogin(enum.Rpc_login_send_email, func(buf *common.NetPack) {
 		buf.WriteString(subject)
 		buf.WriteString(addr)
@@ -51,27 +51,22 @@ func SendMail(subject, addr, body, language string) (errcode uint16) {
 	}, func(recvBuf *common.NetPack) {
 		errcode = recvBuf.ReadUInt16()
 	})
-	return errcode
+	return
 }
 
-// ------------------------------------------------------------
-//仅center/login调，其它节点转至login发送
-func SendMail2(subject, addr, body, language string) (errcode uint16) {
-	return _SendMail(subject, addr, body, language, true) //TODO:zhoumf:
-}
-func SendMailForce(subject, addr, body, language string) (errcode uint16) {
-	return _SendMail(subject, addr, body, language, true)
-}
-func _SendMail(subject, addr, body, language string, forceSend bool) (errcode uint16) {
-	if !format.CheckBindValue("email", addr) || InCsvInvalid(addr) {
+// 仅center/login调，其它节点由login转发
+func SendMail(subject, addr, body, language string) (errcode uint16) {
+	if !format.CheckBindValue("email", addr) {
 		return err.Invalid
+		//TODO:return err.Email_format_err
 	}
-	if !assert.IsDebug && !checkFreq(subject, addr) { //同subject，每小时只发一次
+	if InCsvInvalid(addr) {
+		return err.Invalid
+		//TODO:return err.Email_unreachable
+	}
+	if !assert.IsDebug && !checkFreq(subject, addr) { //同内容的，限制发送频率
 		return err.Operate_too_often
-		//return err.Email_already_send_please_check
-	}
-	if !forceSend && !isVerifyEmail(addr) {
-		return err.Invalid
+		//TODO:return err.Email_try_send_please_check
 	}
 	packBody(&subject, &body, language) //嵌入模板，并本地化
 
@@ -87,6 +82,7 @@ func _SendMail(subject, addr, body, language string, forceSend bool) (errcode ui
 	if e := dialer.DialAndSend(msg); e != nil {
 		gamelog.Error("%s: %s", addr, e.Error())
 		return err.Invalid
+		//TODO:return err.Email_unreachable
 	}
 	return err.Success
 }
@@ -120,17 +116,7 @@ func checkFreq(subject, addr string) bool {
 		timeOld = v.(int64)
 	}
 	g_freq.Store(key, timenow)
-	return timenow-timeOld >= 3600
-}
-func isVerifyEmail(addr string) (ret bool) {
-	netConfig.CallRpcCenter(netConfig.HashCenterID(addr),
-		enum.Rpc_center_isvalid_bind_info, func(buf *common.NetPack) {
-			buf.WriteString(addr)
-			buf.WriteString("email")
-		}, func(recvBuf *common.NetPack) {
-			ret = recvBuf.ReadUInt16() == err.Success
-		})
-	return
+	return timenow-timeOld >= 60
 }
 func packBody(subject, body *string, language string) {
 	if body2, ok := Translate(*subject, language); ok {

@@ -21,7 +21,6 @@ func Http_view_save_data(w http.ResponseWriter, r *http.Request) {
 
 	ptr := &logic.TSaveData{Key: logic.GetSaveKey(pf_id, uid)}
 	if ok, _ := dbmgo.Find(logic.KDBSave, "_id", ptr.Key, ptr); ok {
-		ptr.Data = nil
 		ack, _ := json.MarshalIndent(ptr, "", "     ")
 		w.Write(ack)
 	} else {
@@ -39,8 +38,7 @@ func Http_view_bind_mac(w http.ResponseWriter, r *http.Request) { //绑定的设
 	uid := q.Get("uid")
 
 	var list []logic.MacInfo
-	key := logic.GetSaveKey(pf_id, uid)
-	if e := dbmgo.FindAll(logic.KDBMac, bson.M{"key": key}, &list); e == nil {
+	if e := dbmgo.FindAll(logic.KDBMac, bson.M{"key": logic.GetSaveKey(pf_id, uid)}, &list); e == nil {
 		ack, _ := json.MarshalIndent(list, "", "     ")
 		w.Write(ack)
 	} else {
@@ -59,7 +57,6 @@ func Http_find_aid_in_mac(w http.ResponseWriter, r *http.Request) {
 	if ok, _ := dbmgo.Find(logic.KDBMac, "_id", mac, pMac); ok {
 		ret = append(ret, pMac.Key)
 	}
-
 	ack, _ := json.MarshalIndent(ret, "", "     ")
 	w.Write(ack)
 }

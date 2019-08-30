@@ -24,7 +24,7 @@ import (
 )
 
 func Shutdown(args []string) {
-	gamelog.Info("Begin Shutdown")
+	gamelog.Info("Shutdown Begin")
 	tcp.CloseServer()
 	http.CloseServer()
 
@@ -36,5 +36,6 @@ func Shutdown(args []string) {
 	//关服任务，阻塞，等待任务都完成才能关服
 	dbmgo.WaitStop()
 
+	gamelog.Info("Shutdown End")
 	os.Exit(0)
 }

@@ -4,8 +4,8 @@ package service
 // -- 花一段时长，遍历完所有对象
 type ServicePatch struct {
 	cb       func(interface{})
-	timeWait int // msec
-	kTimeAll int // msec
+	kTimeAll int //共计多少毫秒遍历完
+	timeWait int //暂停了几毫秒
 	runPos   int
 	objs     []interface{}
 }

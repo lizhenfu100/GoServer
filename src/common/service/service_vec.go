@@ -1,26 +1,26 @@
 package service
 
 // -------------------------------------
-// -- 周期性调用传入的函数
-type TimePair struct {
-	exeTime int64
-	obj     interface{}
-}
+// -- 固定周期回调
 type ServiceVec struct {
-	cb     func(interface{})
-	runPos int
-	cdMs   int
-	objs   []TimePair
+	cb       func(interface{})
+	interval int //每隔几毫秒执行回调
+	runPos   int
+	objs     []TimePair
+}
+type TimePair struct {
+	obj     interface{}
+	exeTime int64 //obj待回调的时刻
 }
 
-func NewServiceVec(fun func(interface{}), cdMs int) *ServiceVec {
+func NewServiceVec(fun func(interface{}), interval int) *ServiceVec {
 	ptr := new(ServiceVec)
-	ptr.cdMs = cdMs
+	ptr.interval = interval
 	ptr.cb = fun
 	return ptr
 }
 func (self *ServiceVec) Register(pObj interface{}) {
-	self.objs = append(self.objs, TimePair{0, pObj})
+	self.objs = append(self.objs, TimePair{pObj, 0})
 }
 func (self *ServiceVec) UnRegister(pObj interface{}) {
 	for i, it := range self.objs {
@@ -41,8 +41,8 @@ func (self *ServiceVec) RunSevice(timelapse int, timenow int64) {
 			if self.runPos++; self.runPos >= len(self.objs) { //到末尾了，回到队头
 				self.runPos = 0
 			}
-			//timeDiff := int(timenow-it.exeTime) + self.cdMs //实际经过的时间间隔
-			it.exeTime = timenow + int64(self.cdMs)
+			//timeDiff := int(timenow-it.exeTime) + self.interval //实际经过的间隔
+			it.exeTime = timenow + int64(self.interval)
 			self.cb(it.obj) //里头可能把自己删掉，runPos指向改变，it可能失效
 		} else {
 			break

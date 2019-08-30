@@ -16,7 +16,7 @@ import (
 func Test_account_set_bindinfo(t *testing.T) {
 	dbmgo.InitWithUser("3.17.67.102", 27017, "account",
 		"chillyroom", "db#233*")
-	coll := dbmgo.DataBase().C("Account")
+	coll := dbmgo.DB().C("Account")
 
 	var list []account.TAccount
 	//dbmgo.FindAll(account.KDBTable, bson.M{}, &list)

@@ -7,7 +7,6 @@ import (
 	"common/tool/email"
 	"encoding/binary"
 	"fmt"
-	"gamelog"
 	"generate_out/err"
 	"net/http"
 	"net/url"
@@ -22,7 +21,6 @@ func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) {
 	k, v := "email", q.Get("name")
 	passwd := q.Get("passwd")
 	language := q.Get("language")
-	gamelog.Debug("ask_reset_password: %s %s %s %s", k, v, passwd, language)
 
 	//! 创建回复
 	errCode := err.Unknow_error
@@ -49,7 +47,7 @@ func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) {
 		q.Set("sign", sign.CalcSign(k+v+passwd+flag))
 		//3、生成完整url
 		u.RawQuery = q.Encode()
-		errCode = email.SendMail2("Reset Password", v, u.String(), language)
+		errCode = email.SendMail("Reset Password", v, u.String(), language)
 	}
 }
 

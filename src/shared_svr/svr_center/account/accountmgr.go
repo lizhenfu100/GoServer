@@ -13,15 +13,8 @@ var (
 	g_bind_cache sync.Map //map[string]*TAccount
 )
 
-func InitDB() {
-	var list []TAccount //只载入近期登录过的
-	//dbmgo.FindAll(KDBTable, bson.M{"logintime": bson.M{"$gt": time.Now().Unix() - kActiveTime}}, &list)
-	//for i := 0; i < len(list); i++ {
-	//	list[i].init()
-	//	AddCache(&list[i])
-	//}
-	println("load active account form db: ", len(list))
-}
+// 账号活跃量很大，预加载内存占用过大
+
 func NewAccountInDB(passwd, bindKey, bindVal string) (uint16, *TAccount) {
 	if ok, _ := dbmgo.FindEx(KDBTable, bson.M{"$or": []bson.M{
 		{"bindinfo.email": bindVal},
