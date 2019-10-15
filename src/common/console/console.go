@@ -43,8 +43,8 @@ func _Rpc_log2(req, ack *common.NetPack) {
 	log := req.ReadString()
 	uuid := req.ReadString()
 	version := req.ReadString()
-	platform := req.ReadString()
-	gamelog.Info("%s\nUUID: %s version: %s platform: %s", log, uuid, version, platform)
+	pf_id := req.ReadString()
+	gamelog.Info("%s, UUID:%s (%s, %s)", log, uuid, version, pf_id)
 }
 
 func _Rpc_meta_list1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_meta_list2(req, ack) }

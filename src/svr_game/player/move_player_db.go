@@ -33,28 +33,27 @@ func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
 		ack.WriteUInt16(errCode)
 	}()
 
-	//本节点的login
-	loginAddr := netConfig.GetLoginAddr()
-
 	//1、向center查询新大区地址
 	newLoginAddr := ""
-	http.CallRpc(loginAddr, enum.Rpc_login_relay_to_center, func(buf *common.NetPack) {
-		buf.WriteUInt16(enum.Rpc_meta_list)
-		buf.WriteString("login")
-		buf.WriteString(meta.G_Local.Version)
-	}, func(recvBuf *common.NetPack) {
-		cnt := recvBuf.ReadByte()
-		for i := byte(0); i < cnt; i++ {
-			id := recvBuf.ReadInt()
-			ip := recvBuf.ReadString()
-			port := recvBuf.ReadUInt16()
-			recvBuf.ReadString() //svrName
-			if id == newLoginId {
-				newLoginAddr = http.Addr(ip, port)
-				return
+	if p, ok := netConfig.GetLoginRpc(); ok {
+		p.CallRpcSafe(enum.Rpc_login_relay_to_center, func(buf *common.NetPack) {
+			buf.WriteUInt16(enum.Rpc_meta_list)
+			buf.WriteString("login")
+			buf.WriteString(meta.G_Local.Version)
+		}, func(recvBuf *common.NetPack) {
+			cnt := recvBuf.ReadByte()
+			for i := byte(0); i < cnt; i++ {
+				id := recvBuf.ReadInt()
+				ip := recvBuf.ReadString()
+				port := recvBuf.ReadUInt16()
+				recvBuf.ReadString() //svrName
+				if id == newLoginId {
+					newLoginAddr = http.Addr(ip, port)
+					return
+				}
 			}
-		}
-	})
+		})
+	}
 	if newLoginAddr == "" {
 		errCode = err.Svr_not_working
 		return

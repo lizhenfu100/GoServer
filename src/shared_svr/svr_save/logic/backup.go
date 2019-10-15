@@ -60,7 +60,6 @@ func Http_backup_conf(w http.ResponseWriter, r *http.Request) {
 	}
 	G_Backup.Lock()
 	copy.CopyForm(G_Backup, q)
-	fmt.Println(G_Backup)
 	G_Backup.UpdateDB()
 	ack, _ := json.MarshalIndent(G_Backup, "", "     ")
 	G_Backup.Unlock()
@@ -119,7 +118,7 @@ func (self *TSaveData) CheckBackup(newExtra string) {
 	json.Unmarshal(common.S2B(newExtra), pNew)
 	json.Unmarshal(common.S2B(self.Extra), pOld)
 	if pNew.GameSession < pOld.GameSession {
-		gamelog.Error("GameSession rollback: %s", self.Key)
+		gamelog.Warn("GameSession rollback: %s", self.Key)
 	}
 	if pNew.GameSession < pOld.GameSession || G_Backup.IsValid(self.Key) {
 		self.Backup()

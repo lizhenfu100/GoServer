@@ -6,7 +6,7 @@
 		tcp的消息处理，是在readRoutine中及时调用的，所以函数中不能有阻塞调用
 		否则“该条连接”的读会被挂起，c++中的话，整个系统的处理线程都会阻塞掉
 
-	2、server端目前是一条连接两个goroutine(readRoutine/writeRoutine)
+	2、server端目前是一条连接两个goroutine(readLoop/writeLoop)
 		假设5k玩家，就有1w个goroutine，太多了
 
 	3、msghandler可考虑设计成：不执行逻辑，仅将消息加入buf队列，由一个goroutine来处理
@@ -181,7 +181,7 @@ func (self *TCPConn) _WriteFull(buf []byte) error { //brief.6：err可能是io.E
 	}
 	return nil
 }
-func (self *TCPConn) writeRoutine() {
+func (self *TCPConn) writeLoop() {
 	atomic.StoreInt32(&self._isWriteClose, 0)
 LOOP:
 	for {
@@ -212,7 +212,7 @@ LOOP:
 	atomic.StoreInt32(&self._isWriteClose, 1)
 	self.Close()
 }
-func (self *TCPConn) readRoutine() {
+func (self *TCPConn) readLoop() {
 	var err error
 	var msgLen int
 	var msgHeader = make([]byte, 2) //前2字节存msgLen

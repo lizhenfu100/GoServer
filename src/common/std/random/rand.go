@@ -56,7 +56,7 @@ func Shuffle(slice []int) {
 }
 
 //生成随机字符串s
-var g_strBase = []byte("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+var g_strBase = []byte("0123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNOPQRSTUVWXYZ")
 
 func String(length int) string {
 	ret := make([]byte, length)

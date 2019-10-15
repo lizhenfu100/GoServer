@@ -3,11 +3,13 @@ package http
 import (
 	"common"
 	"common/std/compress"
+	"common/timer"
 	"conf"
 	"gamelog"
 	"generate_out/rpc/enum"
 	"io"
 	"svr_client/test/qps"
+	"time"
 )
 
 var (
@@ -19,10 +21,14 @@ func CallRpc(addr string, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	req := common.NewNetPackCap(64)
 	req.SetOpCode(rid)
 	sendFun(req)
-	if buf := Client.PostReq(addr+"/client_rpc", req.Data()); buf != nil && recvFun != nil {
+	buf := Client.PostReq(addr+"/client_rpc", req.Data())
+	if buf != nil && recvFun != nil {
 		if ack := common.NewNetPack(compress.Decompress(buf)); ack != nil {
 			recvFun(ack)
 		}
+	}
+	if buf == nil {
+		timer.G_Freq.NetError = !timer.G_Freq.NetFreq.Check(time.Now().Unix())
 	}
 	req.Free()
 }
@@ -56,34 +62,4 @@ func HandleRpc(request []byte, w io.Writer, clientIp string) { //G_Intercept==ni
 	} else {
 		gamelog.Error("Msg(%d) Not Regist", msgId)
 	}
-}
-
-// ------------------------------------------------------------
-//! player rpc
-type PlayerRpc struct {
-	url       string
-	AccountId uint32
-}
-
-var G_RecvHttpSvrData func(*common.NetPack) //对应于http_to_client.go
-
-func NewPlayerRpc(addr string, accountId uint32) *PlayerRpc {
-	return &PlayerRpc{addr + "/player_rpc", accountId}
-}
-func (self *PlayerRpc) CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	req := common.NewNetPackCap(64)
-	req.SetOpCode(rid)
-	req.SetReqIdx(self.AccountId)
-	sendFun(req)
-	if buf := Client.PostReq(self.url, req.Data()); buf != nil {
-		if ack := common.NewNetPack(compress.Decompress(buf)); ack != nil {
-			if recvFun != nil {
-				recvFun(ack)
-			}
-			if G_RecvHttpSvrData != nil {
-				G_RecvHttpSvrData(ack) //服务器主动下发的数据
-			}
-		}
-	}
-	req.Free()
 }

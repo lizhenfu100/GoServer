@@ -8,7 +8,7 @@
 		· 之后网络交互，从存档取
 
 	3、限制设备更换频率
-		· 前三次绑定，可任意时间
+		· 前几次绑定，可任意时间
 		· 后续的绑定，一周一次
 
 	4、云存档里打上玩家标识，比如SaveKey
@@ -79,18 +79,16 @@ func Rpc_save_check_mac(req, ack *common.NetPack) {
 }
 func checkMac(pf_id, uid, mac string) uint16 { //Notice：不可调换错误码判断顺序
 	pSave, pMac := &TSaveData{Key: GetSaveKey(pf_id, uid)}, &MacInfo{}
-	okMac, _ := dbmgo.Find(KDBMac, "_id", mac, pMac)
-	if okMac {
-		if pMac.Key != pSave.Key {
-			gamelog.Info("Record_mac_already_bind: mac(%s) new(%s) old(%s)", mac, pSave.Key, pMac.Key)
-			return err.Record_mac_already_bind
-		}
+	oldMac, _ := dbmgo.Find(KDBMac, "_id", mac, pMac)
+	if oldMac && pMac.Key != pSave.Key {
+		gamelog.Info("Record_mac_already_bind: mac(%s) new(%s) old(%s)", mac, pSave.Key, pMac.Key)
+		return err.Record_mac_already_bind
 	}
 	if okSave, _ := dbmgo.Find(KDBSave, "_id", pSave.Key, pSave); !okSave {
 		gamelog.Track("Record_cannot_find: key(%s)", pSave.Key)
 		return err.Record_cannot_find
 	}
-	if !okMac /*新设备*/ && pSave.MacCnt >= conf.Const.MacFreeBindMax {
+	if !oldMac /*新设备*/ && pSave.MacCnt >= conf.Const.MacFreeBindMax {
 		if now := time.Now().Unix(); now-pSave.ChTime < int64(conf.Const.MacChangePeriod) {
 			gamelog.Track("Record_bind_limit: key(%v)", pSave)
 			return err.Record_bind_limit

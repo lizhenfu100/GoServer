@@ -43,7 +43,7 @@ func Rpc_game_permit_player(req, ack *common.NetPack, conn *tcp.TCPConn) {
 
 // ------------------------------------------------------------
 // 白名单
-var g_whitelist = &WhiteList{DBKey: "whitelist"}
+var g_whitelist = WhiteList{DBKey: "whitelist"}
 
 type WhiteList struct {
 	sync.Mutex `bson:"-"`

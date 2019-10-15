@@ -118,31 +118,28 @@ func RegHandlePlayerRpc(cb func(req, ack *common.NetPack, conn *TCPConn) bool) {
 }
 
 //Notice：非线程安全的，仅供主逻辑线程调用，内部操作的同个sendBuffer，多线程下须每次new新的
-func (self *RpcQueue) CallRpc(conn *TCPConn, msgId uint16, sendFun, recvFun func(*common.NetPack)) {
-	assert.True((msgId < 100 || G_HandleFunc[msgId] == nil) && self.sendBuffer.GetOpCode() == 0)
+func (self *TCPConn) CallRpc(msgId uint16, sendFun, recvFun func(*common.NetPack)) {
+	g := &G_RpcQueue
+	assert.True((msgId < 100 || G_HandleFunc[msgId] == nil) && g.sendBuffer.GetOpCode() == 0)
 	//CallRpc中途不能再CallRpc
 	//gamelog.Error("[%d] Server and Client have the same Rpc or Repeat CallRpc", msgID)
-
-	self.sendBuffer.SetOpCode(msgId)
-	self.sendBuffer.SetReqIdx(atomic.AddUint32(&self._reqIdx, 1))
+	g.sendBuffer.SetOpCode(msgId)
+	g.sendBuffer.SetReqIdx(atomic.AddUint32(&g._reqIdx, 1))
 	if recvFun != nil {
-		self.response.Store(self.sendBuffer.GetReqKey(), recvFun)
+		g.response.Store(g.sendBuffer.GetReqKey(), recvFun)
 	}
-	sendFun(self.sendBuffer)
-	conn.WriteMsg(self.sendBuffer)
-	self.sendBuffer.Clear()
-}
-func (self *TCPConn) CallRpc(msgId uint16, sendFun, recvFun func(*common.NetPack)) {
-	G_RpcQueue.CallRpc(self, msgId, sendFun, recvFun)
+	sendFun(g.sendBuffer)
+	self.WriteMsg(g.sendBuffer)
+	g.sendBuffer.Clear()
 }
 func (self *TCPConn) CallRpcSafe(msgId uint16, sendFun, recvFun func(*common.NetPack)) {
+	g := &G_RpcQueue
 	assert.True(msgId < 100 || G_HandleFunc[msgId] == nil)
 	req := common.NewNetPackCap(64)
 	req.SetOpCode(msgId)
-	req.SetReqIdx(atomic.AddUint32(&G_RpcQueue._reqIdx, 1))
-
+	req.SetReqIdx(atomic.AddUint32(&g._reqIdx, 1))
 	if recvFun != nil {
-		G_RpcQueue.response.Store(req.GetReqKey(), recvFun)
+		g.response.Store(req.GetReqKey(), recvFun)
 	}
 	sendFun(req)
 	self.WriteMsg(req)

@@ -11,11 +11,9 @@
 package msg
 
 import (
-	"common/timer"
 	"dbmgo"
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
-	"sync"
 	"time"
 )
 
@@ -30,10 +28,11 @@ type TOrderInfo struct {
 	Pay_id         int    //支付商id（不同平台下的同一种支付渠道pay_id必须一样）
 	Op_id          int    //运营商 注：1代表移动 2代表联通 3代表电信
 	Server_id      int    //服务器id（只有一个服务器的话，默认传1）
+	Game_id        string //游戏名称
 	Account        string //账号（没有必须传空字符）
 	Third_account  string //第三方账号，相当于登录账号
 	Role_id        string //角色id
-	Item_name      string //物品名（中文需要urlencode）
+	Item_name      string //物品名
 	Item_id        int    //物品id
 	Item_count     int    //物品数量
 	Item_price     int    //物品价格（单位是分）
@@ -42,34 +41,29 @@ type TOrderInfo struct {
 	Pay_channel    string //支付渠道，微信、支付宝...
 	Code           string //计费点
 	Imsi           string
-	Imei           string
+	Imei           string //移动设备识别码
 	Ip             string
 	Net            string //网络类型 CMNET， WIFI等
 	Status         int    //1成功 0失败（第三方通告）
 	Can_send       int    //1能发货 （client发货后置0）
 	Time           int64
+	Mac            string //设备码
+	Version_code   string //客户端版本号
 	Extra          string
 }
 
-var g_order_map sync.Map //<orderId, *TOrderInfo>
-
-func CreateOrderInDB(ptr *TOrderInfo) bool {
+func CreateOrderInDB(ptr *TOrderInfo) error {
 	ptr.Order_id = fmt.Sprintf("%03d%s%06d", //生成订单号
 		ptr.Pay_id,
 		time.Now().Format("060102"),
 		dbmgo.GetNextIncId("OrderId"))
 	ptr.Time = time.Now().Unix()
-	if dbmgo.InsertSync(KDBTable, ptr) {
-		g_order_map.Store(ptr.Order_id, ptr)
-		return true
-	}
-	return false
+	return dbmgo.DB().C(KDBTable).Insert(ptr)
 }
 func FindOrder(orderId string) *TOrderInfo {
 	if orderId != "" && orderId != "0" {
 		ptr := new(TOrderInfo)
 		if ok, _ := dbmgo.Find(KDBTable, "_id", orderId, ptr); ok {
-			g_order_map.Store(orderId, ptr)
 			return ptr
 		}
 	}
@@ -78,16 +72,6 @@ func FindOrder(orderId string) *TOrderInfo {
 func ConfirmOrder(ptr *TOrderInfo) {
 	ptr.Can_send = 0
 	dbmgo.UpdateIdSync(KDBTable, ptr.Order_id, bson.M{"$set": bson.M{"can_send": 0}})
-	g_order_map.Delete(ptr.Order_id)
-}
-func OrderRange(f func(*TOrderInfo)) {
-	g_order_map.Range(func(k, v interface{}) bool {
-		// 本地缓存，不是最新数据；比如支付平台回调到另个节点
-		if p := FindOrder(k.(string)); p != nil {
-			f(p)
-		}
-		return true
-	})
 }
 
 func InitDB() {
@@ -99,23 +83,4 @@ func InitDB() {
 	})
 	//删除超过30天的
 	dbmgo.RemoveAllSync(KDBTable, bson.M{"time": bson.M{"$lt": now - 30*24*3600}})
-	//载入所有未完成的
-	var list []TOrderInfo
-	dbmgo.FindAll(KDBTable, bson.M{"can_send": 1}, &list)
-	for i := 0; i < len(list); i++ {
-		g_order_map.Store(list[i].Order_id, &list[i])
-	}
-	println("load active order form db: ", len(list))
-
-	timer.G_TimerMgr.AddTimerSec(DeleteTimeOutOrder, 24*3600, 24*3600, -1)
-}
-func DeleteTimeOutOrder() { //删除内存中滞留一天的订单(完成的、无效的)
-	timenow := time.Now().Unix()
-	g_order_map.Range(func(k, v interface{}) bool {
-		p := v.(*TOrderInfo)
-		if p.Can_send == 0 && timenow-p.Time > 24*3600 {
-			g_order_map.Delete(k)
-		}
-		return true
-	})
 }

@@ -9,7 +9,10 @@
 ***********************************************************************/
 package dbmgo
 
-import "gopkg.in/mgo.v2/bson"
+import (
+	"gopkg.in/mgo.v2/bson"
+	"time"
+)
 
 const KTableArgs = "args"
 
@@ -23,17 +26,17 @@ const KTableArgs = "args"
 // ------------------------------------------------------------
 const KTableLog = "log"
 
-type log struct {
-	Id uint32 `bson:"_id"`
-	K1 string
-	K2 string
-	V  string
+type log struct { //多节点取自增id可能重复，导致写入失败
+	K1   string
+	K2   string
+	V    string
+	Time int64
 }
 
 func Log(key1, key2, val string) {
 	Insert(KTableLog, &log{
-		GetNextIncId("LogId"),
 		key1, key2, val,
+		time.Now().Unix(),
 	})
 }
 func LogFind(key1, key2 string) []string {
@@ -41,7 +44,7 @@ func LogFind(key1, key2 string) []string {
 		return nil
 	}
 	var list []log
-	FindAll(KTableLog, bson.M{"k1": key1, "k2": key2}, &list)
+	FindAll(KTableLog, bson.M{"k2": key2, "k1": key1}, &list)
 	ret := make([]string, len(list))
 	for i := 0; i < len(list); i++ {
 		ret[i] = list[i].V

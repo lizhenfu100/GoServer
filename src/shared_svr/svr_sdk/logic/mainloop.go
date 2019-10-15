@@ -12,6 +12,8 @@ import (
 func MainLoop() {
 	msg.InitDB()
 
+	updateEnterNextDay()
+
 	timeNow, timeOld, timeElapse := time.Now().UnixNano()/int64(time.Millisecond), int64(0), 0
 	for {
 		timeOld = timeNow
@@ -28,4 +30,14 @@ func MainLoop() {
 	}
 }
 func Rpc_net_error(req, ack *common.NetPack, conn *tcp.TCPConn) {
+}
+
+// ------------------------------------------------------------
+// logic code
+func updateEnterNextDay() {
+	delay := float32(timer.TodayLeftSec())
+	timer.G_TimerMgr.AddTimerSec(onEnterNextDay, delay, timer.OneDaySec, -1)
+}
+func onEnterNextDay() {
+	ClearIpOrder()
 }

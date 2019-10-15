@@ -15,11 +15,10 @@ import (
 
 // ------------------------------------------------------------
 // 与客户端约定的签名规则
-func CalcSign(s string) string {
-	const k_pt_key = "yqqs(#(%$(%!$"
-	key := fmt.Sprintf("%x", md5.Sum([]byte(k_pt_key)))
-	sign := fmt.Sprintf("%s&%s", s, strings.ToLower(key))
-	//fmt.Println("-----------CalcSign: ", key)
+func CalcSign(s string) string { return GetSign(s, "yqqs(#(%$(%!$") }
+func GetSign(s, key string) string {
+	k := fmt.Sprintf("%x", md5.Sum([]byte(key)))
+	sign := fmt.Sprintf("%s&%s", s, strings.ToLower(k))
 	return fmt.Sprintf("%x", md5.Sum(common.S2B(sign)))
 }
 

@@ -50,13 +50,13 @@ func Reg_to_svr(w io.Writer, req []byte) {
 	pMeta := new(meta.Meta)
 	if e := common.B2T(req, pMeta); e != nil {
 		errCode = err.Convert_err
-		fmt.Println(e.Error())
+		gamelog.Warn(e.Error())
 		return
 	}
 	if p := meta.GetMeta(pMeta.Module, pMeta.SvrID); p != nil {
 		if p.IP != pMeta.IP || p.OutIP != pMeta.OutIP {
 			errCode = err.Data_repeat //防止配置错误，出现外网节点顶替
-			fmt.Println("Error: RegistToSvr repeat: ", pMeta)
+			gamelog.Warn("RegistToSvr repeat: %v", pMeta)
 			return
 		}
 	}

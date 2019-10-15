@@ -30,7 +30,7 @@ func (self *Pipe) MoveToStack(retList *[]interface{}) {
 	for _, v := range self.list {
 		*retList = append(*retList, v)
 		if v == nil {
-			break
+			break //stop loop flag
 		}
 	}
 	self.list = self.list[:0]

@@ -13,6 +13,7 @@ package wechat
 
 import (
 	"common"
+	"common/assert"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -40,6 +41,9 @@ func Init(corpId, secret, touser string, agentId int) {
 	}
 }
 func SendMsg(text string) {
+	if assert.IsDebug {
+		return
+	}
 	buf, _ := json.Marshal(&msgWechat{
 		Agentid: g_agentId,
 		Touser:  g_touser,
@@ -55,14 +59,17 @@ func SendMsg(text string) {
 	}
 }
 func format(text string) string {
+	if meta.G_Local == nil {
+		return "test\n--------------------------\n" + text
+	}
 	return fmt.Sprintf("%s(%d) %s %s",
 		meta.G_Local.Module,
 		meta.G_Local.SvrID,
 		meta.G_Local.SvrName,
 		meta.G_Local.OutIP) +
-		"\n--------------------------\n\n" + text
-
+		"\n--------------------------\n" + text
 }
+
 // ------------------------------------------------------------
 const (
 	kUrlSend     = "https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token="

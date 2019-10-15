@@ -2,6 +2,13 @@
 * @ 【单线程】时间轮
 * @ brief
 
+* @ go 原生定时器    https://www.jianshu.com/p/ac94989215d6
+	、time.After、time.Tick
+		· 不会粗暴的增加协程，都是打包成runtimeTimer交给底层执行
+	、time.AfterFunc
+		· 为确保外界传入的回调不会阻塞内部定时器协程，time.AfterFunc回调都是另开协程执行的
+		· time.AfterFunc -> goFunc
+
 * @ author zhoumf
 * @ date 2017-5-11
 ***********************************************************************/
@@ -9,6 +16,8 @@ package timer
 
 import (
 	"common/assert"
+	"common/safe"
+	"gamelog"
 	"time"
 )
 
@@ -25,7 +34,7 @@ var (
 )
 
 func init() {
-	G_TimerMgr.Init(2048)
+	G_TimerMgr.Init(10240)
 }
 
 // ------------------------------------------------------------
@@ -66,7 +75,7 @@ func (self *TimeNode) _Callback() {
 	}
 	self.callback()
 }
-func (self *TimeNode) Stop() { G_TimerMgr.DelTimer(self) }
+func (self *TimeNode) Stop() bool { return G_TimerMgr.DelTimer(self) }
 
 // ------------------------------------------------------------
 // wheel
@@ -209,4 +218,49 @@ func (self *timeWheel) _DoTimeOutCallBack() {
 	}
 	self.readyNode.next = &self.readyNode
 	self.readyNode.prev = &self.readyNode
+}
+
+// ------------------------------------------------------------
+// 多线程写，单线程读
+type SafeMgr struct {
+	timeWheel
+	queue safe.SafeQueue
+}
+type obj struct {
+	ptr   *TimeNode
+	delay int
+}
+
+func (self *SafeMgr) Init(cap uint32) {
+	self.queue.Init(cap)
+	self.timeWheel.Init()
+}
+func (self *SafeMgr) Refresh(timelapse int, timenow int64) {
+	for {
+		if v, ok, _ := self.queue.Get(); ok {
+			if v := v.(obj); v.delay >= 0 {
+				self.timeWheel._AddTimerNode(v.delay, v.ptr)
+			} else {
+				self.timeWheel.DelTimer(v.ptr)
+			}
+		} else {
+			break
+		}
+	}
+	self.timeWheel.Refresh(timelapse, timenow)
+}
+func (self *SafeMgr) DelTimer(p *TimeNode) bool {
+	ok, _ := self.queue.Put(obj{p, -1})
+	if !ok {
+		gamelog.Error("timer del fail")
+	}
+	return ok
+}
+func (self *SafeMgr) AddTimerSec(cb func(), delay, cd, total float32) *TimeNode {
+	p := newNode(cb, delay, cd, total)
+	if ok, _ := self.queue.Put(obj{p, int(delay * 1000)}); ok {
+		return p
+	}
+	gamelog.Error("timer add fail")
+	return nil
 }

@@ -23,6 +23,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"reflect"
+	"strconv"
 )
 
 const (
@@ -54,16 +55,12 @@ func Rpc_login_bulletin(req, ack *common.NetPack) {
 
 	pAll, ret := &Bulletins{}, ""
 	if ok, _ := dbmgo.Find(dbmgo.KTableArgs, "_id", kDBKey, pAll); ok {
-		var pVal *Bulletin
 		if v, ok := pAll.Pf[pf_id]; ok { //优先找本平台的
-			pVal = &v
-		} else if v, ok = pAll.Pf[kAllPf]; !ok { //再找全平台的
-			pVal = &v
+			ret = v.Get(area)
 		}
-		if pVal != nil {
-			ref := reflect.ValueOf(pVal).Elem()
-			if v := ref.FieldByName(area); v.IsValid() {
-				ret = v.String()
+		if ret == "" {
+			if v, ok := pAll.Pf[kAllPf]; ok { //再找全平台的
+				ret = v.Get(area)
 			}
 		}
 	}
@@ -106,5 +103,25 @@ func (self *Bulletins) setPlatform(pf_id string, pVal *Bulletin) {
 	} else {
 		self.Pf[pf_id] = *pVal
 		dbmgo.Insert(dbmgo.KTableArgs, self)
+	}
+}
+func (self *Bulletin) Get(area string) string {
+	if self != nil {
+		ref := reflect.ValueOf(self).Elem()
+		if v := ref.FieldByName(area); v.IsValid() {
+			return v.String()
+		}
+	}
+	return ""
+}
+
+// ------------------------------------------------------------
+// 运营用自增id
+func Http_get_inc_id(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+
+	if key := q.Get("key"); key != "" {
+		id := dbmgo.GetNextIncId(key)
+		w.Write(common.S2B(strconv.FormatInt(int64(id), 10)))
 	}
 }

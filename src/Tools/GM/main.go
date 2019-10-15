@@ -21,7 +21,7 @@ import (
 	"net/http"
 	"netConfig"
 	"netConfig/meta"
-	"netConfig/register"
+	"nets"
 	mhttp "nets/http"
 	http2 "nets/http/http"
 	"strings"
@@ -73,7 +73,7 @@ func InitConf() {
 	file.LoadCsv("csv/conf_svr.csv", &conf.SvrCsv)
 	console.Init()
 
-	register.RegHttpHandler(map[string]register.HttpHandle{
+	nets.RegHttpHandler(map[string]nets.HttpHandle{
 		"/reset_password":     Http_reset_password,
 		"/bind_info_force":    Http_bind_info_force,
 		"/backup_conf":        Http_relay_to_save,
@@ -90,6 +90,8 @@ func InitConf() {
 		"/upload_save_data":   Http_upload_save_data,
 		"/view_bulletin":      Http_relay_to_login,
 		"/view_net_delay":     Http_view_net_delay,
+		"/stats_insert":       Http_stats_insert,
+		"/stats_query":        Http_stats_query,
 	})
 	g_file_server = http.FileServer(http.Dir(kFileDirRoot))
 	http.HandleFunc("/", Http_download_file)

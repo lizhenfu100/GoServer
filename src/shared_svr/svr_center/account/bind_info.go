@@ -47,13 +47,13 @@ func Rpc_center_bind_info(req, ack *common.NetPack) {
 }
 func Rpc_center_isvalid_bind_info(req, ack *common.NetPack) {
 	val := req.ReadString()
-	key := req.ReadString()
+	typ := req.ReadString()
 
-	if p := GetAccountByBindInfo(key, val); p == nil {
+	if p := GetAccountByBindInfo(typ, val); p == nil {
 		ack.WriteUInt16(err.Not_found)
-	} else if key == "email" && p.IsValidEmail <= 0 {
+	} else if typ == "email" && p.IsValidEmail <= 0 {
 		ack.WriteUInt16(err.Invalid)
-	} else if key == "phone" && p.IsValidPhone <= 0 {
+	} else if typ == "phone" && p.IsValidPhone <= 0 {
 		ack.WriteUInt16(err.Invalid)
 	} else {
 		ack.WriteUInt16(err.Success)

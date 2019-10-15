@@ -145,14 +145,14 @@ func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
 			// newconn.Close()
 			self._AddNewConn(newconn)
 		}
-	} else { //服务器重启
+	} else {
 		gamelog.Debug("_ResetOldConn to _AddNewConn: %d", oldId)
 		self._AddNewConn(newconn)
 	}
 }
 func (self *TCPServer) _RunConn(conn *TCPConn, connId uint32) {
-	go conn.readRoutine()
-	conn.writeRoutine() //block
+	go conn.readLoop()
+	conn.writeLoop() //block
 
 	//针对玩家链接，延时删除，以待断线重连
 	if _, ok := conn.UserPtr.(*meta.Meta); ok {

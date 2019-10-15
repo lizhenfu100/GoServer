@@ -43,14 +43,16 @@ import (
 )
 
 func SendByLogin(subject, addr, body, language string) (errcode uint16) {
-	netConfig.CallRpcLogin(enum.Rpc_login_send_email, func(buf *common.NetPack) {
-		buf.WriteString(subject)
-		buf.WriteString(addr)
-		buf.WriteString(body)
-		buf.WriteString(language)
-	}, func(recvBuf *common.NetPack) {
-		errcode = recvBuf.ReadUInt16()
-	})
+	if p, ok := netConfig.GetLoginRpc(); ok {
+		p.CallRpcSafe(enum.Rpc_login_send_email, func(buf *common.NetPack) {
+			buf.WriteString(subject)
+			buf.WriteString(addr)
+			buf.WriteString(body)
+			buf.WriteString(language)
+		}, func(recvBuf *common.NetPack) {
+			errcode = recvBuf.ReadUInt16()
+		})
+	}
 	return
 }
 
@@ -80,7 +82,7 @@ func SendMail(subject, addr, body, language string) (errcode uint16) {
 	//msg.Attach("我是附件")
 
 	if e := dialer.DialAndSend(msg); e != nil {
-		gamelog.Error("%s: %s", addr, e.Error())
+		gamelog.Warn("%s: %s", addr, e.Error())
 		return err.Invalid
 		//TODO:return err.Email_unreachable
 	}

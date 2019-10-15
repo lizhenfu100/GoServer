@@ -31,6 +31,7 @@ package logic
 
 import (
 	"common"
+	"common/assert"
 	"common/tool/wechat"
 	"conf"
 	"gamelog"
@@ -57,9 +58,11 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 	account := req.ReadString()
 	req.ReadPos = oldPos
 
-	if gameName != conf.GameName {
+	if !assert.IsDebug && gameName != conf.GameName {
 		ack.WriteUInt16(err.LoginSvr_not_match)
 		wechat.SendMsg("登录服不匹配：" + conf.GameName + account)
+	//} else if timer.G_Freq.NetError {
+	//	ack.WriteUInt16(err.Svr_net_exception)
 	} else {
 		//2、同步转至center验证账号信息，取得accountId、gameInfo
 		centerSvrId := netConfig.HashCenterID(account)
@@ -139,34 +142,32 @@ func accountLogin2(
 	return
 }
 func accountLogin3(pInfo *info.TAccountClient, gameSvrId int, ack *common.NetPack) {
-	//登录成功，回复client待连接的节点(gateway或game)
-	gatewayId := netConfig.HashGatewayID(pInfo.AccountID) //此玩家要连接的gateway
-	errCode := err.Unknow_error
-
 	//生成一个临时token，发给gamesvr、client用以登录验证
 	token := atomic.AddUint32(&g_login_token, 1)
 
-	var pMetaToClient *meta.Meta //回复client要连接的目标节点
-	//【Notice: tcp.CallRpc接口不是线程安全的，http后台不适用】
-	if conn := netConfig.GetGatewayConn(gatewayId); conn != nil {
-		conn.CallRpcSafe(enum.Rpc_gateway_login_token, func(buf *common.NetPack) {
+	if p, ok := netConfig.GetGameRpc(gameSvrId); ok {
+		p.CallRpcSafe(enum.Rpc_game_login_token, func(buf *common.NetPack) {
 			buf.WriteUInt32(token)
 			buf.WriteUInt32(pInfo.AccountID)
-			buf.WriteInt(gameSvrId)
 		}, func(backBuf *common.NetPack) {
 			cnt := backBuf.ReadInt32()
 			g_game_player_cnt.Store(gameSvrId, cnt)
 		})
-		pMetaToClient = meta.GetMeta("gateway", gatewayId)
-		errCode = err.None_gateway
+	}
+
+	//回复client待连接的节点(gateway或game)
+	var pMetaToClient *meta.Meta
+	errCode := err.Unknow_error
+	gatewayId := netConfig.HashGatewayID(pInfo.AccountID)
+	if pMetaToClient = meta.GetMeta("gateway", gatewayId); pMetaToClient != nil {
+		if p, ok := netConfig.GetGatewayRpc(gatewayId); ok {
+			p.CallRpcSafe(enum.Rpc_gateway_login_token, func(buf *common.NetPack) {
+				buf.WriteUInt32(token)
+				buf.WriteUInt32(pInfo.AccountID)
+				buf.WriteInt(gameSvrId)
+			}, nil)
+		}
 	} else {
-		netConfig.CallRpcGame(gameSvrId, enum.Rpc_game_login_token, func(buf *common.NetPack) {
-			buf.WriteUInt32(token)
-			buf.WriteUInt32(pInfo.AccountID)
-		}, func(backBuf *common.NetPack) {
-			cnt := backBuf.ReadInt32()
-			g_game_player_cnt.Store(gameSvrId, cnt)
-		})
 		pMetaToClient = meta.GetMeta("game", gameSvrId)
 		errCode = err.None_game_server
 	}

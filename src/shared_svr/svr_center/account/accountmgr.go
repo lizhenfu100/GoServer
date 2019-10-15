@@ -16,21 +16,22 @@ var (
 // 账号活跃量很大，预加载内存占用过大
 
 func NewAccountInDB(passwd, bindKey, bindVal string) (uint16, *TAccount) {
-	if ok, _ := dbmgo.FindEx(KDBTable, bson.M{"$or": []bson.M{
+	if ok, e := dbmgo.FindEx(KDBTable, bson.M{"$or": []bson.M{
 		{"bindinfo.email": bindVal},
 		{"bindinfo.name": bindVal},
 		{"bindinfo.phone": bindVal},
 	}}, &TAccount{}); ok {
 		return err.Account_repeat, nil
-	}
-	account := _NewAccount()
-	account.BindInfo[bindKey] = bindVal
-	account.SetPasswd(passwd)
-	account.CreateTime = time.Now().Unix()
-	account.AccountID = dbmgo.GetNextIncId("AccountId")
-	if dbmgo.InsertSync(KDBTable, account) {
-		AddCache(account)
-		return err.Success, account
+	} else if e == nil {
+		account := _NewAccount()
+		account.BindInfo[bindKey] = bindVal
+		account.SetPasswd(passwd)
+		account.CreateTime = time.Now().Unix()
+		account.AccountID = dbmgo.GetNextIncId("AccountId")
+		if dbmgo.DB().C(KDBTable).Insert(account) == nil {
+			AddCache(account)
+			return err.Success, account
+		}
 	}
 	return err.Unknow_error, nil
 }

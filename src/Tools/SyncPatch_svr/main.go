@@ -7,7 +7,7 @@ import (
 	"gamelog"
 	"netConfig"
 	"netConfig/meta"
-	"netConfig/register"
+	"nets"
 )
 
 const kModuleName = "file"
@@ -39,11 +39,11 @@ func InitConf() {
 	meta.InitConf(metaCfg)
 	console.Init()
 
-	register.RegHttpRpc(map[uint16]register.HttpRpc{
+	nets.RegHttpRpc(map[uint16]nets.HttpRpc{
 		116: Rpc_file_update_list, //enum.Rpc_file_update_list
 		119: Rpc_file_update_list, //enum.Rpc_file_update_list
 	})
-	register.RegHttpHandler(map[string]register.HttpHandle{
+	nets.RegHttpHandler(map[string]nets.HttpHandle{
 		"/upload_patch_file": Http_upload_patch_file,
 		"/get_login_list":    Http_get_login_list,
 	})

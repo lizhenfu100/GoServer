@@ -80,11 +80,11 @@ func (self *ByteBuffer) ReadLenBuf2() []byte { //TODO:zhoumf:待删除
 	return self.buf[old:self.ReadPos]
 }
 func (self *ByteBuffer) WriteLenBuf(v []byte) {
-	self.WriteInt(len(v))
+	self.WriteUInt32(uint32(len(v)))
 	self.buf = append(self.buf, v...)
 }
 func (self *ByteBuffer) ReadLenBuf() (ret []byte) {
-	length := self.ReadInt()
+	length := int(self.ReadUInt32())
 	if self.readableBytes() >= length {
 		old := self.ReadPos
 		self.ReadPos += length

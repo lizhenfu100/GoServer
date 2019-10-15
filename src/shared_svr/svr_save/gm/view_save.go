@@ -52,11 +52,13 @@ func Http_find_aid_in_mac(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	mac := q.Get("mac")
 
-	ret := dbmgo.LogFind("UnbindMac", mac)
+	ret := []string{"正在使用的："}
 	pMac := &logic.MacInfo{}
 	if ok, _ := dbmgo.Find(logic.KDBMac, "_id", mac, pMac); ok {
 		ret = append(ret, pMac.Key)
 	}
+	ret = append(ret, "解绑过的：")
+	ret = append(ret, dbmgo.LogFind("UnbindMac", mac)...)
 	ack, _ := json.MarshalIndent(ret, "", "     ")
 	w.Write(ack)
 }

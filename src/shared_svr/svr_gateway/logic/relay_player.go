@@ -7,6 +7,7 @@ import (
 	"netConfig"
 	"netConfig/meta"
 	"nets/tcp"
+	"sync"
 )
 
 func Rpc_gateway_relay_player_msg(req, ack *common.NetPack, conn *tcp.TCPConn) {
@@ -38,19 +39,19 @@ func RelayPlayerMsg(accountId uint32, rpcId uint16, rpcData []byte, oldReqKey ui
 		return
 	}
 	if rpcModule == "client" { //转给客户端
-		if pConn := GetClientConn(accountId); pConn != nil {
-			pConn.CallRpc(rpcId, func(buf *common.NetPack) {
+		if p := GetClientConn(accountId); p != nil {
+			p.CallRpcSafe(rpcId, func(buf *common.NetPack) {
 				buf.WriteBuf(rpcData)
 			}, func(backBuf *common.NetPack) {
 				backBuf.SetReqKey(oldReqKey)
 				conn.WriteMsg(backBuf)
 			})
 		} else {
-			gamelog.Debug("rid(%d) accountId(%d) client conn nil", rpcId, accountId)
+			gamelog.Error("rid(%d) accountId(%d) client conn nil", rpcId, accountId)
 		}
 	} else { //转给后台节点
-		if pConn := _GetSvrNodeConn(rpcModule, accountId); pConn != nil {
-			pConn.CallRpc(enum.Rpc_recv_player_msg, func(buf *common.NetPack) {
+		if p, ok := _GetModuleRpc(rpcModule, accountId); ok {
+			p.CallRpcSafe(enum.Rpc_recv_player_msg, func(buf *common.NetPack) {
 				buf.WriteUInt16(rpcId)
 				buf.WriteUInt32(accountId)
 				buf.WriteBuf(rpcData)
@@ -59,7 +60,7 @@ func RelayPlayerMsg(accountId uint32, rpcId uint16, rpcData []byte, oldReqKey ui
 				conn.WriteMsg(backBuf)
 			})
 		} else {
-			gamelog.Debug("rid(%d) accountId(%d) svr conn nil", rpcId, accountId)
+			gamelog.Error("rid(%d) accountId(%d) svr conn nil", rpcId, accountId)
 		}
 	}
 }
@@ -75,39 +76,41 @@ func _GetAidOfConn(req *common.NetPack, conn *tcp.TCPConn) uint32 {
 	}
 	return 0
 }
-func _GetSvrNodeConn(module string, aid uint32) *tcp.TCPConn {
+func _GetModuleRpc(module string, aid uint32) (netConfig.Rpc, bool) {
 	if module == "game" {
-		return GetGameConn(aid)
+		return GetGameRpc(aid)
 	} else {
 		// 其它节点无状态的，AccountId取模得节点id
 		ids := meta.GetModuleIDs(module, meta.G_Local.Version)
 		if length := uint32(len(ids)); length > 0 {
 			id := ids[aid%length]
-			return netConfig.GetTcpConn(module, id)
+			return netConfig.GetRpc(module, id)
 		}
 	}
-	return nil
+	return nil, false
 }
 
 // ------------------------------------------------------------
 // 与玩家相关的网络连接
 var (
-	g_clients     = make(map[uint32]*tcp.TCPConn) //accountId-clientConn
-	g_client_game = make(map[uint32]int)          //accountId-gameSvrId
-	g_game_online = make(map[int]int32)           //gameSvrId-online
+	g_clients = make(map[uint32]*tcp.TCPConn) //accountId-clientConn
+	//TODO:zhoumf:gateway重启，得重登录收集该信息，挫 …… 把<aid, gameSvr>扔redis里，抽离出gateway
+	//可以研究一下orleans，灵感的源泉
+	//状态抽离到单独节点，统一记录
+	//感觉轮询的方式也挺不错，gateway收到消息，问询下后面的节点可否处理，并缓存结果信息，只玩家上来时会轮询次，后面就是固定路由了
+	g_client_game sync.Map //accountId-gameSvrId
 )
 
 func AddClientConn(aid uint32, conn *tcp.TCPConn) { g_clients[aid] = conn }
 func DelClientConn(aid uint32)                    { delete(g_clients, aid) }
 func GetClientConn(aid uint32) *tcp.TCPConn       { return g_clients[aid] }
 
-func AddGameConn(aid uint32, svrId int) { g_client_game[aid] = svrId; g_game_online[svrId]++ }
-func DelGameConn(aid uint32) {
-	if svrId, ok := g_client_game[aid]; ok {
-		if n, ok := g_game_online[svrId]; ok {
-			g_game_online[svrId] = n - 1
-		}
+func AddPlayer(aid uint32, svrId int) { g_client_game.Store(aid, svrId) }
+func DelPlayer(aid uint32)            { g_client_game.Delete(aid) }
+
+func GetGameRpc(aid uint32) (netConfig.Rpc, bool) {
+	if v, ok := g_client_game.Load(aid); ok {
+		return netConfig.GetGameRpc(v.(int))
 	}
-	delete(g_client_game, aid)
+	return nil, false
 }
-func GetGameConn(aid uint32) *tcp.TCPConn { return netConfig.GetGameConn(g_client_game[aid]) }

@@ -54,7 +54,7 @@ type TGiftBag struct {
 	End     int64
 	Json    string
 	Version string
-	Time    int64
+	Time    int64 `json:"-"`
 }
 type TGiftCode struct { //已被领的礼包码
 	Code string `bson:"_id"`
@@ -193,6 +193,7 @@ func Http_gift_bag_add(w http.ResponseWriter, r *http.Request) {
 		w.Write(common.S2B("gift repeat"))
 	} else {
 		gamelog.Info("Http_gift_bag_add: %v", q)
+		w.Write(common.S2B("add ok: \n\n"))
 		ack, _ := json.MarshalIndent(p, "", "     ")
 		w.Write(ack)
 	}
@@ -207,6 +208,7 @@ func Http_gift_bag_set(w http.ResponseWriter, r *http.Request) {
 		gamelog.Info("Http_gift_bag_set: %v\n%v", q, p)
 		copy.CopyForm(p, q)
 		dbmgo.UpdateId(KDBGift, p.Key, p)
+		w.Write(common.S2B("set ok: \n\n"))
 		ack, _ := json.MarshalIndent(p, "", "     ")
 		w.Write(ack)
 	}
@@ -220,6 +222,7 @@ func Http_gift_bag_del(w http.ResponseWriter, r *http.Request) {
 	} else {
 		gamelog.Info("Http_gift_bag_del: %v", p)
 		dbmgo.Remove(KDBGift, bson.M{"_id": p.Key})
+		w.Write(common.S2B("del ok: \n\n"))
 		ack, _ := json.MarshalIndent(p, "", "     ")
 		w.Write(ack)
 	}

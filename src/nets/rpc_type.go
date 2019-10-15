@@ -11,7 +11,7 @@
 * @ author zhoumf
 * @ date 2017-5-25
 ***********************************************************************/
-package register
+package nets
 
 import (
 	"common"

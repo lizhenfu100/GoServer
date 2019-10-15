@@ -12,6 +12,9 @@
 * @ optimize
     1、公用的tcp_rpc是单线程的，适合业务逻辑；gateway可改用多线程版，提高转发性能
 
+	轮询的方式也挺不错，gateway收到消息，依次问询后面节点可否处理，并缓存结果信息
+	仅玩家上来时会轮询次，后面就固定路由了
+
 * @ author zhoumf
 * @ date 2018-3-13
 ***********************************************************************/
@@ -42,9 +45,9 @@ func Rpc_gateway_login(req, ack *common.NetPack, client *tcp.TCPConn) {
 // 登录之前，游戏服尚无玩家数据，所以登录、创建是单独抽离的
 func Rpc_gateway_relay_game_login(req, ack *common.NetPack, client *tcp.TCPConn) {
 	if accountId, ok := client.UserPtr.(uint32); ok {
-		if pConn := GetGameConn(accountId); pConn != nil {
+		if p, ok := GetGameRpc(accountId); ok {
 			oldReqKey := req.GetReqKey()
-			pConn.CallRpc(enum.Rpc_game_login, func(buf *common.NetPack) {
+			p.CallRpc(enum.Rpc_game_login, func(buf *common.NetPack) {
 				buf.WriteUInt32(accountId)
 				buf.WriteBuf(req.LeftBuf())
 			}, func(backBuf *common.NetPack) {
@@ -57,9 +60,9 @@ func Rpc_gateway_relay_game_login(req, ack *common.NetPack, client *tcp.TCPConn)
 }
 func Rpc_gateway_relay_game_create_player(req, ack *common.NetPack, client *tcp.TCPConn) {
 	if accountId, ok := client.UserPtr.(uint32); ok {
-		if pConn := GetGameConn(accountId); pConn != nil {
+		if p, ok := GetGameRpc(accountId); ok {
 			oldReqKey := req.GetReqKey()
-			pConn.CallRpc(enum.Rpc_game_create_player, func(buf *common.NetPack) {
+			p.CallRpc(enum.Rpc_game_create_player, func(buf *common.NetPack) {
 				buf.WriteUInt32(accountId)
 				buf.WriteBuf(req.LeftBuf())
 			}, func(backBuf *common.NetPack) {
@@ -81,9 +84,7 @@ func Rpc_gateway_login_token(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	gameSvrId := req.ReadInt()
 
 	g_login_token.Store(accountId, token)
-	AddGameConn(accountId, gameSvrId) //设置此玩家的game路由
-
-	ack.WriteInt32(g_game_online[gameSvrId])
+	AddPlayer(accountId, gameSvrId) //设置此玩家的game路由
 }
 func CheckLoginToken(accountId, token uint32) bool {
 	if value, ok := g_login_token.Load(accountId); ok {

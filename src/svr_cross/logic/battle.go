@@ -73,8 +73,8 @@ func _SelectBattleSvrId(version string) int {
 // - 转至svr_game
 func Rpc_cross_relay_to_game(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	svrId := req.ReadInt()
-	if conn := netConfig.GetGameConn(svrId); conn != nil {
-		conn.CallRpc(enum.Rpc_recv_player_msg, func(buf *common.NetPack) {
+	if p := netConfig.GetGameRpc(svrId); p != nil {
+		p.CallRpc(enum.Rpc_recv_player_msg, func(buf *common.NetPack) {
 			buf.WriteBuf(req.LeftBuf()) //头两字段须是：rid、aid
 		}, nil)
 	} else {

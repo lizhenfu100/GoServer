@@ -13,8 +13,27 @@ func CopyForm(ptr interface{}, form url.Values) {
 	for i := 0; i < typ.NumField(); i++ {
 		if val.Field(i).CanSet() {
 			name := strings.ToLower(typ.Field(i).Name)
-			if vs := form[name]; len(vs) > 0 {
-				file.SetField(val.Field(i), vs[0])
+			if vs, ok := form[name]; ok {
+				v := ""
+				if len(vs) > 0 {
+					v = vs[0]
+				}
+				file.SetField(val.Field(i), v)
+			}
+		}
+	}
+}
+func Form2Json(ptr interface{}, form url.Values) {
+	val, typ := reflect.ValueOf(ptr).Elem(), reflect.TypeOf(ptr).Elem()
+	for i := 0; i < typ.NumField(); i++ {
+		if val.Field(i).CanSet() {
+			name := typ.Field(i).Tag.Get("json")
+			if vs, ok := form[name]; ok {
+				v := ""
+				if len(vs) > 0 {
+					v = vs[0]
+				}
+				file.SetField(val.Field(i), v)
 			}
 		}
 	}

@@ -50,7 +50,7 @@ func (self *DBInfo) Init(ip string, port uint16, dbname, user, pwd string) {
 	self.Database = dbname
 	self.Username = user
 	self.Password = pwd
-	self.Timeout = 10 * time.Second
+	self.Timeout = 32 * time.Second
 }
 func (self *DBInfo) Connect() {
 	if session, e := mgo.DialWithInfo(&self.DialInfo); e != nil {

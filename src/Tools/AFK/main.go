@@ -33,7 +33,7 @@ import (
 	"gamelog"
 	"netConfig"
 	"netConfig/meta"
-	"netConfig/register"
+	"nets"
 	"nets/http"
 	http2 "nets/http/http"
 	"os"
@@ -88,12 +88,12 @@ func main() {
 func InitConf() {
 	file.LoadCsv("csv/conf_svr.csv", &conf.SvrCsv)
 
-	register.RegHttpHandler(map[string]register.HttpHandle{
+	nets.RegHttpHandler(map[string]nets.HttpHandle{
 		"/afk":    Http_afk,
 		"/delete": Http_del,
 		"/count":  Http_count_one,
 	})
-	register.RegHttpRpc(map[uint16]register.HttpRpc{
+	nets.RegHttpRpc(map[uint16]nets.HttpRpc{
 		20: Http_count_all,
 	})
 }

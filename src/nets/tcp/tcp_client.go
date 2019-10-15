@@ -50,8 +50,8 @@ func (self *TCPClient) connectRoutine() {
 			//if self.onConnect != nil { //Notice：放这里，回调就是多线程执行的了，健壮性低
 			//	self.onConnect(self.Conn)
 			//}
-			go self.Conn.readRoutine()
-			self.Conn.writeRoutine() //goroutine会阻塞在这里
+			go self.Conn.readLoop()
+			self.Conn.writeLoop() //goroutine会阻塞在这里
 		}
 
 		//有zookeeper管理节点连接，无需自动重连
@@ -72,7 +72,7 @@ func (self *TCPClient) connect() bool {
 		self.Conn = newTCPConn(conn)
 		self.Conn.UserPtr = self
 	} else {
-		//断线重连的新连接标记得重置，否则tcpConn.readRoutine.readLoop会直接break
+		//断线重连的新连接标记得重置，否则tcpConn.readLoop会直接break
 		self.Conn.resetConn(conn)
 	}
 	return true

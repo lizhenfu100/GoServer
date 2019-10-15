@@ -4,7 +4,6 @@ import (
 	"common"
 	"common/file"
 	"common/std/sign"
-	"fmt"
 	"generate_out/err"
 	"generate_out/rpc/enum"
 	"io/ioutil"
@@ -156,7 +155,7 @@ func Http_download_save_data(w http.ResponseWriter, r *http.Request) {
 		buf.WriteString(uid)
 		buf.WriteString(pf_id)
 		buf.WriteString(mac)
-		buf.WriteString(sign.CalcSign(fmt.Sprintf("uid=%s&pf_id=%s", uid, pf_id)))
+		buf.WriteString("") //sign
 		buf.WriteString(clientVersion)
 	}, func(backBuf *common.NetPack) {
 		if e := backBuf.ReadUInt16(); e == err.Success {
@@ -189,7 +188,7 @@ func Http_upload_save_data(w http.ResponseWriter, r *http.Request) {
 		buf.WriteString(uid)
 		buf.WriteString(pf_id)
 		buf.WriteString(mac)
-		buf.WriteString(sign.CalcSign(fmt.Sprintf("uid=%s&pf_id=%s", uid, pf_id)))
+		buf.WriteString("") //sign
 		buf.WriteString("") //extra
 		buf.WriteLenBuf(data)
 		buf.WriteString(clientVersion)

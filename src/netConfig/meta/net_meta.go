@@ -107,9 +107,13 @@ func InitConf(list []Meta) {
 }
 
 //Notice：ptr必须是堆上的，且指向不同内存
-func AddMeta(ptr *Meta) {
-	gamelog.Debug("AddMeta: %v", ptr)
-	G_Metas.Store(std.KeyPair{ptr.Module, ptr.SvrID}, ptr)
+func AddMeta(pNew *Meta) {
+	key := std.KeyPair{pNew.Module, pNew.SvrID}
+	if v, ok := G_Metas.Load(key); ok {
+		*v.(*Meta) = *pNew
+	} else {
+		G_Metas.Store(key, pNew)
+	}
 }
 func GetMeta(module string, svrID int) *Meta {
 	if v, ok := G_Metas.Load(std.KeyPair{module, svrID}); ok && !v.(*Meta).IsClosed {

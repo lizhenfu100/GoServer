@@ -1,6 +1,9 @@
 package service
 
-import "common/safe"
+import (
+	"common/safe"
+	"gamelog"
+)
 
 type IService interface {
 	UnRegister(pObj interface{})
@@ -41,9 +44,15 @@ func (self *ServiceMgr) RunAllService(timelapse int, timenow int64) {
 }
 func (self *ServiceMgr) UnRegister(enum int, p interface{}) bool {
 	ok, _ := self.queue.Put(obj{p, enum, false})
+	if !ok {
+		gamelog.Error("UnRegister fail")
+	}
 	return ok
 }
 func (self *ServiceMgr) Register(enum int, p interface{}) bool { //【防止多次注册】
 	ok, _ := self.queue.Put(obj{p, enum, true})
+	if !ok {
+		gamelog.Error("Register fail")
+	}
 	return ok
 }
