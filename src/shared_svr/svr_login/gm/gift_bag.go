@@ -56,8 +56,9 @@ type TGiftBag struct {
 	Version string
 	Time    int64 `json:"-"`
 }
-type TGiftCode struct { //已被领的礼包码
-	Code string `bson:"_id"`
+type TGiftCode struct {
+	Code string `bson:"_id"` //已被领的礼包码
+	Key  string //对应的礼包key
 	Uuid string
 	Time int64
 }
@@ -87,7 +88,7 @@ func Rpc_login_gift_get(req, ack *common.NetPack) {
 	} else if _playerGot(key, uuid) {
 		ack.WriteUInt16(err.Already_get_it) //已领过
 	} else {
-		dbmgo.Insert(KDBGiftCode, &TGiftCode{code, uuid, timenow})
+		dbmgo.Insert(KDBGiftCode, &TGiftCode{code, key, uuid, timenow})
 		ack.WriteUInt16(err.Success)
 		ack.WriteString(p.Json)
 	}
@@ -203,7 +204,7 @@ func Http_gift_bag_set(w http.ResponseWriter, r *http.Request) {
 	if q.Get("passwd") != conf.GM_Passwd {
 		w.Write(common.S2B("passwd error"))
 	} else if p := getGift(q.Get("key")); p == nil {
-		w.Write(common.S2B("fail"))
+		w.Write(common.S2B("none gift"))
 	} else {
 		gamelog.Info("Http_gift_bag_set: %v\n%v", q, p)
 		copy.CopyForm(p, q)
@@ -213,12 +214,21 @@ func Http_gift_bag_set(w http.ResponseWriter, r *http.Request) {
 		w.Write(ack)
 	}
 }
+func Http_gift_bag_view(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	if p := getGift(q.Get("key")); p == nil {
+		w.Write(common.S2B("none gift"))
+	} else {
+		ack, _ := json.MarshalIndent(p, "", "     ")
+		w.Write(ack)
+	}
+}
 func Http_gift_bag_del(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	if q.Get("passwd") != conf.GM_Passwd {
 		w.Write(common.S2B("passwd error"))
 	} else if p := getGift(q.Get("key")); p == nil {
-		w.Write(common.S2B("not find"))
+		w.Write(common.S2B("none gift"))
 	} else {
 		gamelog.Info("Http_gift_bag_del: %v", p)
 		dbmgo.Remove(KDBGift, bson.M{"_id": p.Key})

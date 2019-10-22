@@ -140,8 +140,8 @@ func (self *TCPConn) IsClose() bool { return atomic.LoadInt32(&self._isClose) > 
 func (self *TCPConn) WriteMsg(msg *common.NetPack) {
 	msgLen := uint16(msg.Size())
 
-	//【Notice: chan里传递的是地址，这里不能像readLoop中那样，优化为"操作同一块buf"，必须每次new新的】
-	//【否则writeRoutine里拿到的极可能是同样数据】
+	// chan里传递的是地址，这里不能像readLoop中那样，优化为"操作同一块buf"，必须每次new新的
+	// 否则writeRoutine里拿到的极可能是同样数据
 	buf := make([]byte, 2+msgLen)
 
 	binary.LittleEndian.PutUint16(buf, msgLen)
@@ -249,8 +249,8 @@ func (self *TCPConn) readLoop() {
 		if packet.GetOpCode() >= enum.RpcEnumCnt {
 			gamelog.Error("Msg(%d) Not Regist", packet.GetOpCode())
 		} else {
-			//【Notice: 在io线程直接调消息响应函数(多线程处理玩家操作)，玩家之间互改数据须考虑竞态问题(可用actor模式解决)】
-			//【Notice: 若友好支持玩家强交互，可将packet放入主逻辑循环的消息队列(SafeQueue)】
+			//在io线程直接调消息响应函数(多线程处理玩家操作)，玩家之间互改数据须考虑竞态问题(可用actor模式解决)
+			//若友好支持玩家强交互，可将packet放入主逻辑循环的消息队列(SafeQueue)
 			G_RpcQueue.Insert(self, packet) //转至逻辑线程处理消息
 			//G_RpcQueue._Handle(self, packet) //直接在io线程处理消息，响应函数中须考虑竞态问题了
 		}

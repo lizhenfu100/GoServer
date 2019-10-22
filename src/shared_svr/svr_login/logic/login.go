@@ -61,8 +61,8 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 	if !assert.IsDebug && gameName != conf.GameName {
 		ack.WriteUInt16(err.LoginSvr_not_match)
 		wechat.SendMsg("登录服不匹配：" + conf.GameName + account)
-	//} else if timer.G_Freq.NetError {
-	//	ack.WriteUInt16(err.Svr_net_exception)
+		//} else if timer.G_Freq.NetError {
+		//	ack.WriteUInt16(err.Svr_net_exception)
 	} else {
 		//2、同步转至center验证账号信息，取得accountId、gameInfo
 		centerSvrId := netConfig.HashCenterID(account)
@@ -218,7 +218,7 @@ func Rpc_login_get_game_list(req, ack *common.NetPack) {
 	}
 }
 
-//【维护不同进程的数据一致，须保证“增删改查”，成本过高】
+// 维护不同进程的数据一致，须保证“增删改查”，成本过高
 // 登录流程中附带，或，各节点主动周期性上报
 var g_game_player_cnt sync.Map //<gameSvrId, playerCnt>
 

@@ -14,6 +14,7 @@ package main
 
 import (
 	"common/console"
+	"common/console/shutdown"
 	"common/file"
 	"common/tool/email"
 	"conf"
@@ -62,4 +63,5 @@ func InitConf() {
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
 	console.Init()
+	console.RegShutdown(shutdown.Default)
 }

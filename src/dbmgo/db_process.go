@@ -57,11 +57,10 @@ func _loop() {
 			_, err = coll.RemoveAll(v.search)
 		}
 		if err != nil {
-			errTips := err.Error()
-			gamelog.Error("DBLoop: op[%d] table[%s] search[%v], data[%v], Error[%s]",
-				v.optype, v.table, v.search, v.pData, errTips)
+			gamelog.Error("DBLoop: op[%d] table[%s] search[%v], data[%v], Error[%v]",
+				v.optype, v.table, v.search, v.pData, err)
 			//FIXME：Mongodb会极低概率忽然断开，所有操作均超时~囧
-			if strings.LastIndex(errTips, "timeout") >= 0 {
+			if strings.LastIndex(err.Error(), "timeout") >= 0 {
 				_default.Connect()
 				coll = DB().C(v.table) //重连后缓存须更新
 				_actions <- v

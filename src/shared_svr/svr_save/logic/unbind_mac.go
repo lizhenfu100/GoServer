@@ -2,6 +2,7 @@ package logic
 
 import (
 	"common"
+	"common/assert"
 	"common/std/sign"
 	"common/tool/email"
 	"dbmgo"
@@ -87,7 +88,7 @@ func UnbindMac(mac string) (uint16, int64) {
 	ptr := &MacInfo{}
 	if ok, _ := dbmgo.Find(KDBMac, "_id", mac, ptr); ok {
 		timeNow := time.Now().Unix()
-		if ok, timeUnbind := canUnbindMac(ptr.Key, mac, timeNow); !ok {
+		if ok, timeUnbind := canUnbindMac(ptr.Key, mac, timeNow); !ok && !assert.IsDebug {
 			return err.Operate_too_often, timeUnbind
 		} else {
 			g_unbindTime1.Store(ptr.Key, timeNow)

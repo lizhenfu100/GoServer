@@ -10,7 +10,7 @@ import (
 // https://zhuanlan.zhihu.com/p/24432607
 // https://zhuanlan.zhihu.com/p/23863915
 
-//【2019.3.28】https://github.com/yireyun/go-queue
+//2019.3.28 https://github.com/yireyun/go-queue
 type SafeQueue struct { //lock free queue
 	kCap    uint32
 	kCapMod uint32

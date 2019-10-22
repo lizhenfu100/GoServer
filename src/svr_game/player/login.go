@@ -23,9 +23,6 @@ import (
 	"sync/atomic"
 )
 
-// -------------------------------------
-// -- 玩家登录
-// Notice：登录、创建角色，可做成普通rpc，用以建立玩家缓存
 func Rpc_game_login(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	accountId := req.ReadUInt32()
 	token := req.ReadUInt32()

@@ -182,7 +182,7 @@ func (self *timeWheel) _Cascade(wheelIdx int, timenow int64) {
 	isCascade := false
 	wheel := &self.wheels[wheelIdx]
 	slot := wheel.GetCurSlot()
-	//【Bug】须先更新槽位————扫格子时加新Node，不能再放入当前槽位了
+	//Bug：须先更新槽位————扫格子时加新Node，不能再放入当前槽位了
 	if wheel.slotIdx++; wheel.slotIdx >= wheel.size() {
 		wheel.slotIdx = 0
 		isCascade = true
@@ -195,7 +195,7 @@ func (self *timeWheel) _Cascade(wheelIdx int, timenow int64) {
 		if tmp.timeDead <= timenow {
 			self._AddToReadyNode(tmp)
 		} else {
-			//【Bug】加新Node，须加到其它槽位，本槽位已扫过(失效，等一整轮才会再扫到)
+			//Bug：加新Node，须加到其它槽位，本槽位已扫过(失效，等一整轮才会再扫到)
 			self._AddTimerNode(int(tmp.timeDead-timenow), tmp)
 		}
 	}

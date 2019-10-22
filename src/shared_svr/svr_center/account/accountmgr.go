@@ -35,7 +35,7 @@ func NewAccountInDB(passwd, bindKey, bindVal string) (uint16, *TAccount) {
 	}
 	return err.Unknow_error, nil
 }
-func GetAccountByBindInfo(k, v string) *TAccount {
+func GetAccountByBindInfo(k, v string) *TAccount { //email、name、phone
 	if p, ok := g_bind_cache.Load("bindinfo." + k + v); ok {
 		return p.(*TAccount)
 	} else {

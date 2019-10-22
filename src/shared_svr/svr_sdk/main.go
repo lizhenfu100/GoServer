@@ -12,6 +12,7 @@ import (
 	"netConfig"
 	"netConfig/meta"
 	"shared_svr/svr_sdk/logic"
+	"shared_svr/svr_sdk/platform"
 )
 
 const kModuleName = "sdk"
@@ -34,6 +35,7 @@ func main() {
 		conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
 
 	go netConfig.RunNetSvr()
+	platform.Init()
 	logic.MainLoop()
 }
 func InitConf() {

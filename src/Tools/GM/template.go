@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"generate_out/rpc/enum"
-	"html/template"
 	"io/ioutil"
 	"nets/http"
 	"os"
@@ -85,51 +84,43 @@ func (self *TemplateData) GetAddrs() {
 	buf, _ := json.MarshalIndent(self, "", "     ")
 	fmt.Println(common.B2S(buf))
 }
-func (self *TemplateData) LoadAddrs() bool {
+func (self *TemplateData) LoadAddrs() (ret bool) {
 	if f, e := os.Open("log/" + self.GameName + ".addr"); e == nil {
 		if buf, e := ioutil.ReadAll(f); e == nil {
-			f.Close()
 			common.B2T(buf, self)
 			buf, _ = json.MarshalIndent(self, "", "     ")
 			fmt.Println(common.B2S(buf))
-			return true
+			ret = true
 		}
+		f.Close()
 	}
-	return false
+	return
 }
 
 func UpdateHtmls(dirIn, dirOut string, ptr interface{}) { //填充模板，生成可用的HTML文件，方便查看
 	if names, err := file.WalkDir(kTemplateDir+dirIn, ".html"); err == nil {
 		for _, name := range names {
-			if t, e := template.ParseFiles(name); e != nil {
+			fmt.Println("UpdateHtmls:", name)
+			out := strings.Replace(name, "template/"+dirIn, dirOut, -1)
+			outDir, outName := filepath.Split(out)
+			f, _ := file.CreateFile(outDir, outName, os.O_WRONLY|os.O_TRUNC)
+			if e := file.TemplateParse(ptr, name, f); e != nil {
 				fmt.Println("parse template error: ", e.Error())
-			} else {
-				fmt.Println("UpdateHtmls:", name)
-				fullname := strings.Replace(name, "template/"+dirIn, dirOut, -1)
-				dir, name := filepath.Split(fullname)
-				f, _ := file.CreateFile(dir, name, os.O_WRONLY|os.O_TRUNC)
-				if e := t.Execute(f, ptr); e != nil {
-					fmt.Println(e.Error())
-				}
-				f.Close()
 			}
+			f.Close()
 		}
 	}
 }
 func UpdateHtml(fileIn, fileOut string, ptr interface{}) {
-	fullname := kTemplateDir + fileIn + ".html"
-	if t, e := template.ParseFiles(fullname); e != nil {
+	fmt.Println("UpdateHtml:", fileIn)
+	in := kTemplateDir + fileIn + ".html"
+	out := strings.Replace(in, "template/"+fileIn, fileOut, -1)
+	outDir, outName := filepath.Split(out)
+	f, _ := file.CreateFile(outDir, outName, os.O_WRONLY|os.O_TRUNC)
+	if e := file.TemplateParse(ptr, in, f); e != nil {
 		fmt.Println("parse template error: ", e.Error())
-	} else {
-		fmt.Println("UpdateHtmls:", fileIn)
-		fullname = strings.Replace(fullname, "template/"+fileIn, fileOut, -1)
-		dir, name := filepath.Split(fullname)
-		f, _ := file.CreateFile(dir, name, os.O_WRONLY|os.O_TRUNC)
-		if e := t.Execute(f, ptr); e != nil {
-			fmt.Println(e.Error())
-		}
-		f.Close()
 	}
+	f.Close()
 }
 
 // ------------------------------------------------------------

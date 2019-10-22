@@ -5,6 +5,9 @@
 			支持轻量线程的架构里
 			是否比“同步读-处理-再写回”的方式好呢？
 
+* @ 研究学习
+	· Mongo批量查询，比如查一天内的活跃数据，效率很高，即便time字段没建索引
+
 * @ 几种更新方式
 	UpdateToDB("Player", bson.M{"_id": playerID}, bson.M{"$set": bson.M{
 		"module.data": self.data,
@@ -50,7 +53,7 @@ func (self *DBInfo) Init(ip string, port uint16, dbname, user, pwd string) {
 	self.Database = dbname
 	self.Username = user
 	self.Password = pwd
-	self.Timeout = 32 * time.Second
+	self.Timeout = 10 * time.Second
 }
 func (self *DBInfo) Connect() {
 	if session, e := mgo.DialWithInfo(&self.DialInfo); e != nil {
@@ -73,7 +76,7 @@ func DB() (ret *mgo.Database) { return _default.DB }
 func InsertSync(table string, pData interface{}) bool {
 	coll := DB().C(table)
 	if err := coll.Insert(pData); err != nil {
-		gamelog.Error("InsertSync table[%s], data[%v], Error[%s]", table, pData, err.Error())
+		gamelog.Error("InsertSync table[%s] data[%v] Error[%v]", table, pData, err)
 		wechat.SendMsg("数据库插入失败：" + err.Error())
 		return false
 	}
@@ -82,7 +85,7 @@ func InsertSync(table string, pData interface{}) bool {
 func UpdateIdSync(table string, id, pData interface{}) bool {
 	coll := DB().C(table)
 	if err := coll.UpdateId(id, pData); err != nil {
-		gamelog.Error("UpdateSync table[%s] id[%v], data[%v], Error[%s]", table, id, pData, err.Error())
+		gamelog.Error("UpdateSync table[%s] id[%v] data[%v] Error[%v]", table, id, pData, err)
 		wechat.SendMsg("数据库更新失败：" + err.Error())
 		return false
 	}
@@ -91,7 +94,7 @@ func UpdateIdSync(table string, id, pData interface{}) bool {
 func RemoveOneSync(table string, search bson.M) bool {
 	coll := DB().C(table)
 	if err := coll.Remove(search); err != nil && err != mgo.ErrNotFound {
-		gamelog.Error("RemoveOneSync table[%s] search[%v], Error[%s]", table, search, err.Error())
+		gamelog.Error("RemoveOneSync table[%s] search[%v] Error[%v]", table, search, err)
 		return false
 	}
 	return true
@@ -99,7 +102,7 @@ func RemoveOneSync(table string, search bson.M) bool {
 func RemoveAllSync(table string, search bson.M) bool {
 	coll := DB().C(table)
 	if _, err := coll.RemoveAll(search); err != nil && err != mgo.ErrNotFound {
-		gamelog.Error("RemoveAllSync table[%s] search[%v], Error[%s]", table, search, err.Error())
+		gamelog.Error("RemoveAllSync table[%s] search[%v] Error[%v]", table, search, err)
 		return false
 	}
 	return true
@@ -112,7 +115,7 @@ func Find(table, key string, value, pData interface{}) (bool, error) {
 			gamelog.Debug("None table[%s] key[%s] val[%v]", table, key, value)
 			return false, nil
 		} else {
-			gamelog.Error("Find table[%s] key[%s] val[%v], Error[%s]", table, key, value, err.Error())
+			gamelog.Error("Find table[%s] key[%s] val[%v] Error[%v]", table, key, value, err)
 			wechat.SendMsg("数据库查询失败：" + err.Error())
 			return false, err
 		}
@@ -126,7 +129,7 @@ func FindEx(table string, search bson.M, pData interface{}) (bool, error) {
 			gamelog.Debug("None table[%s] search[%v]", table, search)
 			return false, nil
 		} else {
-			gamelog.Error("FindEx table[%s] search[%v], Error[%s]", table, search, err.Error())
+			gamelog.Error("FindEx table[%s] search[%v] Error[%v]", table, search, err)
 			wechat.SendMsg("数据库查询失败：" + err.Error())
 			return false, err
 		}
@@ -146,13 +149,14 @@ and			bson.M{"name": "Jimmy Kuu", "age": 33}
 or			bson.M{"$or": []bson.M{bson.M{"name": "Jimmy Kuu"}, bson.M{"age": 31}}}
 $exists		bson.M{"bindinfo.email": bson.M{ "$exists": false }]
 */
+//【学习研究】Mongo批量查询，比如查一天内的活跃数据，效率很高，即便time字段没建索引
 func FindAll(table string, search bson.M, pSlice interface{}) error {
 	coll := DB().C(table)
 	if err := coll.Find(search).All(pSlice); err != nil {
 		if err == mgo.ErrNotFound {
 			gamelog.Debug("None table[%s] search[%v]", table, search)
 		} else {
-			gamelog.Error("FindAll table[%s] search[%v], Error[%s]", table, search, err.Error())
+			gamelog.Error("FindAll table[%s] search[%v] Error[%v]", table, search, err)
 			return err
 		}
 	}
@@ -173,7 +177,7 @@ func _find_sort(table, sortKey string, cnt int, pList interface{}) error {
 		if err == mgo.ErrNotFound {
 			gamelog.Debug("None table[%s] sortKey[%s]", table, sortKey)
 		} else {
-			gamelog.Error("FindSort table[%s] sortKey[%s] limit[%d], Error[%s]", table, sortKey, cnt, err.Error())
+			gamelog.Error("FindSort table[%s] sortKey[%s] limit[%d] Error[%v]", table, sortKey, cnt, err)
 			return err
 		}
 	}

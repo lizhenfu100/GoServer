@@ -135,7 +135,7 @@ func (self *TPlayer) AsyncNotify(handler func(*TPlayer)) {
 		//gen_server
 		//将某个独立模块的所有操作扔进gen_server，外界只读(有滞后性)
 		//会加大代码量，每个操作都得转一次到chan
-		//【Notice】可能gen_server里还有修改操作，且玩家已下线，会重新读到内存，此时修改完毕后须及时入库
+		//Notice：可能gen_server里还有修改操作，且玩家已下线，会重新读到内存，此时修改完毕后须及时入库
 
 		//设计统一的接口，编辑离线数据，也很麻烦呐
 	}

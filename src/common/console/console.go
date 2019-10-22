@@ -63,7 +63,13 @@ func _Rpc_meta_list2(req, ack *common.NetPack) {
 	}
 }
 
-func _Rpc_update_file1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_update_file2(req, ack) }
+//TODO:动态加载配置文件，有多线程访问竞态，竞态木问题，写完最终一致的，关键是会不会宕机？配表里头有map~囧
+/*
+	Tcp可将更新、读取文件抽离，都读到内存后，于帧循环末尾一并刷新配置 …… 本质是找个StopWorld时机
+	Http貌似没啥好办法 …… 拦截器？抽离文件读写，条件变量，待内存刷新完，拦截器才放开
+		拦截不完全啊，拦截生效同时，可能有rpc正在执行，正执行的木办法了 …… 本质还是要找StopWorld时机
+*/
+func _Rpc_update_file1(req, ack *common.NetPack, _ *tcp.TCPConn) { go _Rpc_update_file2(req, ack) } //TcpRpc主线程调的，不应直接加载
 func _Rpc_update_file2(req, ack *common.NetPack) {
 	for cnt, i := req.ReadByte(), byte(0); i < cnt; i++ {
 		dir := req.ReadString()
@@ -82,7 +88,7 @@ func _Rpc_update_file2(req, ack *common.NetPack) {
 		}
 	}
 }
-func _Rpc_reload_csv1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_reload_csv2(req, ack) }
+func _Rpc_reload_csv1(req, ack *common.NetPack, _ *tcp.TCPConn) { go _Rpc_reload_csv2(req, ack) }
 func _Rpc_reload_csv2(req, ack *common.NetPack) {
 	for cnt, i := req.ReadByte(), byte(0); i < cnt; i++ {
 		file.ReloadCsv(req.ReadString())

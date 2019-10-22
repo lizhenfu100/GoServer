@@ -3,10 +3,12 @@
 
 * @ 目前，所有center同质化的，连一个db
 
-* @ 若注册数量到亿级，必须分库，哈希AccountID分流至多个db
+* @ 若注册数量到亿级，必须分库，“哈希id”或“id分段”至多个db TODO:optimize
+	· 哈希：每次扩容须迁移部分账号
+	· 分段：新玩家集中，单点压力大 …… 倾向于JumpHash方式
 	· 玩家分别用 “账号名、邮箱、手机号” 登录，如何快速定位节点？
-		· <字符串,ID>模块，哈希字符串，同样分流至多个db
-		· 须保证注册、改名、改邮箱...，事务性修改此对应表
+		· <字符串,ID>映射，哈希字符串，同样存到多个db
+		· 须保证注册、改名、改邮箱...事务性修改映射表
 		· 先查映射表，再查账号数据
 
 * @ author zhoumf
@@ -107,7 +109,7 @@ func Rpc_center_account_login(req, ack *common.NetPack) {
 func Rpc_center_account_reg(req, ack *common.NetPack) {
 	str := req.ReadString()
 	pwd := req.ReadString()
-	typ := req.ReadString() //邮箱、名字、手机号
+	typ := req.ReadString() //email、name、phone
 	gamelog.Track("account_reg: %s %s %s", typ, str, pwd)
 
 	if !format.CheckPasswd(pwd) {
@@ -122,7 +124,7 @@ func Rpc_center_account_reg(req, ack *common.NetPack) {
 func Rpc_center_reg_check(req, ack *common.NetPack) {
 	str := req.ReadString()
 	pwd := req.ReadString()
-	typ := req.ReadString() //邮箱、名字、手机号
+	typ := req.ReadString() //email、name、phone
 
 	if !format.CheckPasswd(pwd) {
 		ack.WriteUInt16(err.Passwd_format_err)
@@ -136,7 +138,7 @@ func Rpc_center_reg_check(req, ack *common.NetPack) {
 }
 func Rpc_center_reg_if(req, ack *common.NetPack) {
 	str := req.ReadString()
-	typ := req.ReadString() //邮箱、名字、手机号
+	typ := req.ReadString() //email、name、phone
 
 	if GetAccountByBindInfo(typ, str) == nil {
 		ack.WriteUInt16(err.Account_not_found)
@@ -211,7 +213,7 @@ func Rpc_center_get_game_info(req, ack *common.NetPack) {
 }
 func Rpc_center_set_game_json(req, ack *common.NetPack) {
 	str := req.ReadString()
-	typ := req.ReadString() //邮箱、名字、手机号
+	typ := req.ReadString() //email、name、phone
 	gameName := req.ReadString()
 	json := req.ReadString()
 
@@ -231,7 +233,7 @@ func Rpc_center_set_game_json(req, ack *common.NetPack) {
 }
 func Rpc_center_get_game_json(req, ack *common.NetPack) {
 	str := req.ReadString()
-	typ := req.ReadString() //邮箱、名字、手机号
+	typ := req.ReadString() //email、name、phone
 	gameName := req.ReadString()
 
 	if p := GetAccountByBindInfo(typ, str); p != nil {
@@ -260,7 +262,7 @@ func Rpc_center_player_login_addr_2(req, ack *common.NetPack) { //TODO:zhoumf:�
 }
 func Rpc_center_player_login_addr(req, ack *common.NetPack) {
 	str := req.ReadString()
-	typ := req.ReadString() //邮箱、名字、手机号
+	typ := req.ReadString() //email、name、phone
 	gameName := req.ReadString()
 
 	if p := GetAccountByBindInfo(typ, str); p == nil {

@@ -74,7 +74,6 @@ func HashCenterID(key string) int {
 	return -1
 }
 func SyncRelayToCenter(svrId int, rid uint16, req, ack *common.NetPack) {
-	//【Notice：确保对center的调用是同步的】
 	CallRpcCenter(svrId, rid, func(buf *common.NetPack) {
 		buf.WriteBuf(req.LeftBuf())
 	}, func(recvBuf *common.NetPack) {

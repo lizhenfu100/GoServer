@@ -12,6 +12,7 @@ package main
 
 import (
 	"common/console"
+	"common/console/shutdown"
 	"common/file"
 	"conf"
 	"flag"
@@ -51,4 +52,5 @@ func InitConf() {
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
 	console.Init()
+	console.RegShutdown(shutdown.Default)
 }

@@ -38,7 +38,7 @@ func Http_view_bind_mac(w http.ResponseWriter, r *http.Request) { //绑定的设
 	uid := q.Get("uid")
 
 	var list []logic.MacInfo
-	if e := dbmgo.FindAll(logic.KDBMac, bson.M{"key": logic.GetSaveKey(pf_id, uid)}, &list); e == nil {
+	if dbmgo.FindAll(logic.KDBMac, bson.M{"key": logic.GetSaveKey(pf_id, uid)}, &list) == nil {
 		ack, _ := json.MarshalIndent(list, "", "     ")
 		w.Write(ack)
 	} else {

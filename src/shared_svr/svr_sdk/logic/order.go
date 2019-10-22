@@ -11,6 +11,7 @@
 package logic
 
 import (
+	"common/assert"
 	"common/copy"
 	"common/safe"
 	"common/std/sign"
@@ -102,7 +103,7 @@ func Http_query_order(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//【先通知后台，再才发货，避免通知不成功重复发】
+//先通知后台，再才发货，避免通知不成功重复发
 func Http_confirm_order(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	gamelog.Debug("confirm: %v", r.Form)
@@ -125,14 +126,13 @@ func Http_confirm_order(w http.ResponseWriter, r *http.Request) {
 		ack.Msg = "sign failed"
 	} else {
 		ack.Retcode = 0
-		msg.ConfirmOrder(order)
+		platform.ConfirmOrder(order)
 		DelIpOrder(order.Ip, order.Order_id) //统计ip下的无效订单
 	}
 }
 
 func Http_query_order_unfinished(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-
 	third := r.Form.Get("third_account")
 
 	//! 创建回复
@@ -173,7 +173,7 @@ var (
 )
 
 func CheckIp(ip string) bool {
-	if t, ok := g_ban_ip.Load(ip); ok {
+	if t, ok := g_ban_ip.Load(ip); ok && !assert.IsDebug {
 		if time.Now().Unix()-t.(int64) < 3600*1 {
 			return false
 		} else {

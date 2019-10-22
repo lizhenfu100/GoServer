@@ -27,7 +27,6 @@ type PlayerRpc func(req, ack *common.NetPack, this *TPlayer)
 var G_PlayerHandleFunc [enum.RpcEnumCnt]PlayerRpc
 
 // 访问玩家数据的消息，要求该玩家已在缓存中，否则不处理
-//【Notice：登录、创建角色，可做成普通rpc，用以建立玩家缓存】
 func RegPlayerRpc(list map[uint16]PlayerRpc) {
 	for k, v := range list {
 		G_PlayerHandleFunc[k] = v
@@ -80,8 +79,8 @@ func _PlayerRpcHttp(w http.ResponseWriter, r *http.Request) {
 	//}()
 	ack := common.NewNetPackCap(128) //! 创建回复
 	accountId := req.GetReqIdx()
-	//FIXME: http通信中途安全性不够，能修改client net pack里的uid，进而操作别人数据
-	//FIXME: 账号服登录验证后下发给client的token，client应该保留，附在每个HttpReq里，防止恶意窜改他人数据
+	//TODO:通信中途安全性不够，能修改client net pack里的uid，进而操作别人数据
+	//TODO:账号服登录验证后下发给client的token，client应该保留，附在每个HttpReq里，防止恶意窜改他人数据
 	if player := BeforeRecvHttpMsg(accountId); player != nil {
 		if DoPlayerRpc(player, msgId, req, ack) {
 			AfterRecvHttpMsg(player, ack)
@@ -102,13 +101,14 @@ func _PlayerRpcHttp(w http.ResponseWriter, r *http.Request) {
 func Rpc_recv_player_msg(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	rpcId := req.ReadUInt16()
 	accountId := req.ReadUInt32()
-
 	gamelog.Debug("PlayerMsg:%d", rpcId)
 
 	if player := FindAccountId(accountId); player != nil {
 		if !DoPlayerRpc(player, rpcId, req, ack) {
 			gamelog.Error("PlayerMsg(%d) Not Regist", rpcId)
 		}
+	} else if rpcId == enum.Rpc_game_login || rpcId == enum.Rpc_game_create_player {
+		tcp.G_HandleFunc[rpcId](req, ack, conn)
 	} else {
 		gamelog.Debug("Player(%d) isn't online", accountId)
 	}

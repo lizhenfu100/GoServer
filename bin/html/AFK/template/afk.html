@@ -1,0 +1,51 @@
+<html>
+
+<head>
+    <title>请假</title>
+    <link rel="stylesheet" href="main.css">
+    <script src="app.js"></script>
+</head>
+
+<body bgcolor="white">
+    <div class="all-wrapper">
+            <h1>请假/补班</h1>
+            <div class="link-wrapper">
+                <a href="http://{{.IP}}:{{.Port}}/afk.html">请假/补班</a>
+                <a href="http://{{.IP}}:{{.Port}}/myafk.html">我的请假</a>
+                <a href="http://{{.IP}}:{{.Port}}/count.html">统计</a>
+            </div>
+            <div class="form-wrapper">
+                <form action="http://{{.IP}}:{{.Port}}/afk" method="post">
+                    <label>类型:</label>
+                    <select name="type">
+                        <option value="周调">周调</option>
+                        <option value="周补">周补</option>
+                        <option value="事调">事调</option>
+                        <option value="事补">事补</option>
+                        <option value="事假">事假</option>
+                        <option value="年假">年假</option>
+                        <option value="特殊">特殊</option>
+                        <option value="事务外出">事务外出</option>
+                    </select>
+                    <label>姓名:</label><input type="text" name="name"><br>
+                    <label>原因:</label><input type="text" name="reason"><br>
+                    <label>Date:</label><input type="date" name="date"><br>
+                    <label>Hours:</label>
+                    <select name="hour">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                    </select>
+                    <br>
+                    <input type="submit" value="确认">
+                </form>
+            </div>
+    </div>
+</body>
+
+</html>

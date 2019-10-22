@@ -69,7 +69,7 @@ func FindOrder(orderId string) *TOrderInfo {
 	}
 	return nil
 }
-func ConfirmOrder(ptr *TOrderInfo) {
+func ConfirmOrder(ptr *TOrderInfo) { //确认发货
 	ptr.Can_send = 0
 	dbmgo.UpdateIdSync(KDBTable, ptr.Order_id, bson.M{"$set": bson.M{"can_send": 0}})
 }

@@ -53,7 +53,7 @@ var g_regFreq sync.Map //<ip, *timer.OpFreq>
 func _banReg(req, ack *common.NetPack, ip string) bool {
 	emailAddr := req.ReadString()
 	passwd := req.ReadString()
-	req.WriteString("email") //TODO:zhoumf:目前只邮箱注册
+	req.WriteString("email") //TODO:目前只邮箱注册
 
 	if !assert.IsDebug {
 		freq, _ := g_regFreq.Load(ip)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"common/console"
+	"common/console/shutdown"
 	"common/file"
 	"conf"
 	"flag"
@@ -9,6 +10,8 @@ import (
 	_ "generate_out/rpc/shared_svr/svr_file"
 	"netConfig"
 	"netConfig/meta"
+	"nets"
+	"shared_svr/svr_file/logic"
 )
 
 const kModuleName = "file"
@@ -36,4 +39,10 @@ func InitConf() {
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
 	console.Init()
+	console.RegShutdown(shutdown.Default)
+
+	nets.RegHttpRpc(map[uint16]nets.HttpRpc{
+		116: logic.Rpc_file_update_list, //enum.Rpc_file_update_list
+		119: logic.Rpc_file_update_list, //enum.Rpc_file_update_list
+	})
 }

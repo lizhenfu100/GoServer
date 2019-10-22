@@ -34,7 +34,7 @@ const (
 
 func main() {
 	ip, port, _getaddrs := "", 0, false
-	flag.StringVar(&ip, "ip", "192.168.1.210", "ip")
+	flag.StringVar(&ip, "ip", "192.168.1.111", "ip")
 	flag.IntVar(&port, "port", 7701, "port")
 	flag.BoolVar(&_getaddrs, "getaddrs", false, "")
 	flag.Parse() //内部获取了所有参数：os.Args[1:]
@@ -82,6 +82,7 @@ func InitConf() {
 		"/relay_gm_cmd":       Http_relay_gm_cmd,
 		"/gift_bag_add":       Http_relay_to_login,
 		"/gift_bag_set":       Http_relay_to_login,
+		"/gift_bag_view":      Http_relay_to_login,
 		"/gift_bag_del":       Http_relay_to_login,
 		"/gift_bag_clear":     Http_relay_to_login,
 		"/gift_code_spawn":    Http_gift_code_spawn,
@@ -100,7 +101,6 @@ func InitConf() {
 var g_file_server http.Handler
 
 func Http_download_file(w http.ResponseWriter, r *http.Request) {
-	gamelog.Debug("download path: " + r.URL.Path)
 	if strings.HasSuffix(r.URL.Path, "app.js") {
 		r.URL.Path = "/app.js"
 	}

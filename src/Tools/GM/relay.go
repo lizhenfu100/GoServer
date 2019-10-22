@@ -248,9 +248,7 @@ func Http_view_net_delay(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	//格式化html
-	if b, e := file.ParseTemplate(rets, kTemplateDir+"ack/net_delay.html"); e == nil {
-		w.Write(b)
-	} else {
+	if e := file.TemplateParse(rets, kTemplateDir+"ack/net_delay.html", w); e != nil {
 		w.Write(common.S2B(e.Error()))
 	}
 }

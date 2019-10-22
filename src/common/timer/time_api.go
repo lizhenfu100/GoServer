@@ -32,10 +32,10 @@ func TodayLeftSec() int { return OneDaySec - TodayRunSec() }
 const kTimeLayout = "2006/01/02 15:04:05"
 
 func Str2Time(date string) int64 {
-	if v, err := time.ParseInLocation(kTimeLayout, date, time.Local); err == nil {
+	if v, e := time.ParseInLocation(kTimeLayout, date, time.Local); e == nil {
 		return v.Unix()
 	} else {
-		gamelog.Error(err.Error())
+		gamelog.Error(e.Error())
 		return 0
 	}
 }
