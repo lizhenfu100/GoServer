@@ -208,7 +208,7 @@ func _Rpc_regist(req, _ *common.NetPack, conn *TCPConn) {
 	if p := meta.GetMeta(pMeta.Module, pMeta.SvrID); p != nil {
 		if p.IP != pMeta.IP || p.OutIP != pMeta.OutIP {
 			conn.Close() //防止配置错误，出现外网节点顶替
-			fmt.Println("Error: RegistToSvr repeat: ", pMeta)
+			gamelog.Warn("RegistToSvr repeat: %v", pMeta)
 			return
 		}
 	}

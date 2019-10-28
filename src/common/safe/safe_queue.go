@@ -1,3 +1,19 @@
+/***********************************************************************
+* @ 高性能队列 Disruptor
+* @ 多生产者
+	· 每个线程获取不同的一段数组空间进行操作
+	· 引入了一个与Ring Buffer大小相同的buffer：available Buffer
+	· 当某个位置写入成功的时候，便把availble Buffer相应的位置置位，标记为写入成功
+	· 读取的时候，会遍历available Buffer，来判断元素是否已经就绪
+* @ 读数据
+	· 申请读取到序号n
+	· 若writer cursor >= n，这时仍然无法确定连续可读的最大下标
+	· 从reader cursor开始读取available Buffer，一直查到第一个不可用的元素，然后返回最大连续可读元素的位置；
+* @ 写数据
+	· 申请写入m个元素
+	· 若是有m个元素可以写入，则返回最大的序列号，每个生产者会被分配一段独享的空间
+	· 生产者写入元素，写入元素的同时设置available Buffer里面相应的位置，以标记哪些位置是已经写入成功的
+***********************************************************************/
 package safe
 
 import (
@@ -6,11 +22,10 @@ import (
 	"sync/atomic"
 )
 
-// 若goroutine会执行很长时间，且不是通过io阻塞或channel来同步，就需要主动调用Gosched()让出CPU
+// 2019.3.28 https://github.com/yireyun/go-queue
 // https://zhuanlan.zhihu.com/p/24432607
-// https://zhuanlan.zhihu.com/p/23863915
 
-//2019.3.28 https://github.com/yireyun/go-queue
+// 若goroutine会执行很长时间，且不是通过io阻塞或channel来同步，就需要主动调用Gosched()让出CPU
 type SafeQueue struct { //lock free queue
 	kCap    uint32
 	kCapMod uint32
@@ -38,13 +53,6 @@ func (q *SafeQueue) Init(capaciity uint32) {
 	cache := &q.cache[0]
 	cache.getNo = q.kCap
 	cache.putNo = q.kCap
-}
-
-func (q *SafeQueue) String() string {
-	getPos := atomic.LoadUint32(&q.getPos)
-	putPos := atomic.LoadUint32(&q.putPos)
-	return fmt.Sprintf("Queue{cap: %v, capMod: %v, putPos: %v, getPos: %v}",
-		q.kCap, q.kCapMod, putPos, getPos)
 }
 
 func (q *SafeQueue) Size() (putPos, getPos, size uint32) {
@@ -198,4 +206,8 @@ func minQuantity(v uint32) uint32 {
 	v |= v >> 16
 	v++
 	return v
+}
+func (q *SafeQueue) Print() string {
+	return fmt.Sprintf("Queue{cap: %v, capMod: %v, putPos: %v, getPos: %v}",
+		q.kCap, q.kCapMod, atomic.LoadUint32(&q.putPos), atomic.LoadUint32(&q.getPos))
 }

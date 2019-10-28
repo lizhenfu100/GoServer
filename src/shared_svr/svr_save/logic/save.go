@@ -39,13 +39,14 @@ const (
 )
 
 type TSaveData struct {
-	Key     string `bson:"_id"` // Pf_id + Uid
-	Data    []byte `json:"-"`
-	UpTime  int64  //上传时刻
-	ChTime  int64  //更换时刻
-	MacCnt  byte   //绑定的设备次数
-	Extra   string //json TSensitive
-	Version string
+	Key       string `bson:"_id"` // Pf_id + Uid
+	Data      []byte `json:"-"`
+	UpTime    int64  //上传时刻
+	ChTime    int64  //更换时刻
+	RaiseTime int64  //提升绑定上限的时刻
+	MacCnt    byte   //绑定的设备次数
+	Extra     string //json TSensitive
+	Version   string
 }
 type MacInfo struct {
 	Mac string `bson:"_id"` //机器码，取自存档，中途不用API取
@@ -89,13 +90,20 @@ func checkMac(pf_id, uid, mac string) uint16 { //Notice：不可调换错误码�
 		return err.Record_cannot_find
 	}
 	if !oldMac /*新设备*/ && pSave.MacCnt >= conf.Const.MacFreeBindMax {
-		if now := time.Now().Unix(); now-pSave.ChTime < int64(conf.Const.MacChangePeriod) {
+		now := time.Now().Unix()
+		if now-pSave.ChTime < int64(conf.Const.MacChangePeriod) {
 			gamelog.Track("Record_bind_limit: key(%v)", pSave)
 			return err.Record_bind_limit
 		}
 		if pSave.MacCnt >= conf.Const.MacBindMax {
-			gamelog.Track("Record_bind_limit: key(%v)", pSave)
-			return err.Record_bind_limit
+			if now-pSave.RaiseTime >= int64(conf.Const.RaiseBindCntPeriod) {
+				pSave.MacCnt-- //90天，绑定次数+1
+				pSave.RaiseTime = now
+				return err.Success
+			} else {
+				gamelog.Track("Record_bind_limit: key(%v)", pSave)
+				return err.Record_bind_limit
+			}
 		}
 	}
 	return err.Success
@@ -123,8 +131,8 @@ func upload(pf_id, uid, mac string, data []byte, extra, clientVersion string) ui
 		//fmt.Println("---------------upload: ", len(pSave.Data), pSave)
 		return err.Success
 	case err.Record_cannot_find:
-		dbmgo.Insert(KDBSave, &TSaveData{key, data, now, now, 1,
-			extra, clientVersion})
+		dbmgo.Insert(KDBSave, &TSaveData{key, data, now, now,
+			0, 1, extra, clientVersion})
 		dbmgo.Insert(KDBMac, &MacInfo{mac, key})
 		//fmt.Println("---------------upload new: ", len(pSave.Data), pSave)
 		return err.Success
@@ -143,8 +151,9 @@ func download(pf_id, uid, mac, clientVersion string) (*TSaveData, uint16) {
 			pSave.MacCnt++
 			pSave.ChTime = time.Now().Unix()
 			dbmgo.UpdateId(KDBSave, pSave.Key, bson.M{"$set": bson.M{
-				"maccnt": pSave.MacCnt,
-				"chtime": pSave.ChTime}})
+				"maccnt":    pSave.MacCnt,
+				"chtime":    pSave.ChTime,
+				"raisetime": pSave.RaiseTime}})
 		}
 		return pSave, err.Success
 	} else {

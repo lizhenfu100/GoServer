@@ -76,7 +76,6 @@ const (
 	kUrlGetToken = "https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid="
 )
 
-//定义一个简单的文本消息格式
 type msgWechat struct {
 	Agentid int               `json:"agentid"`
 	Touser  string            `json:"touser"`  //消息接收者，多个用‘|’分隔，指定为@all，则向全部成员发送

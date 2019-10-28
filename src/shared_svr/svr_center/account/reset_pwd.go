@@ -24,12 +24,11 @@ func Http_reset_password(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		w.Write(common.S2B(ack))
 	}()
-
 	if sign.CalcSign(k+v+passwd+flag) != q.Get("sign") {
 		ack, _ = email.Translate("Error: sign failed", language)
 	} else if time.Now().Unix()-timeFlag > 3600 {
 		ack, _ = email.Translate("Error: url expire", language)
-	} else if !format.CheckPasswd(passwd) {
+	} else if sign.Decode(&passwd); !format.CheckPasswd(passwd) {
 		ack, _ = email.Translate("Error: Passwd_format_err", language)
 	} else if p := GetAccountByBindInfo(k, v); p == nil {
 		ack, _ = email.Translate("Error: Account_none", language)

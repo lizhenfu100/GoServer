@@ -20,6 +20,7 @@ import (
 	"common"
 	"common/format"
 	"common/std/random"
+	"common/std/sign"
 	"common/timer"
 	"crypto/md5"
 	"dbmgo"
@@ -80,6 +81,7 @@ func Rpc_center_account_login(req, ack *common.NetPack) {
 	gameName := req.ReadString()
 	str := req.ReadString() //账号、邮箱均可登录
 	pwd := req.ReadString()
+	sign.Decode(&pwd)
 	gamelog.Debug("Login: %s %s", str, pwd)
 
 	errcode, p := GetAccount(str, pwd)
@@ -110,6 +112,7 @@ func Rpc_center_account_reg(req, ack *common.NetPack) {
 	str := req.ReadString()
 	pwd := req.ReadString()
 	typ := req.ReadString() //email、name、phone
+	sign.Decode(&pwd)
 	gamelog.Track("account_reg: %s %s %s", typ, str, pwd)
 
 	if !format.CheckPasswd(pwd) {
@@ -125,6 +128,7 @@ func Rpc_center_reg_check(req, ack *common.NetPack) {
 	str := req.ReadString()
 	pwd := req.ReadString()
 	typ := req.ReadString() //email、name、phone
+	sign.Decode(&pwd)
 
 	if !format.CheckPasswd(pwd) {
 		ack.WriteUInt16(err.Passwd_format_err)
@@ -139,6 +143,7 @@ func Rpc_center_reg_check(req, ack *common.NetPack) {
 func Rpc_center_reg_if(req, ack *common.NetPack) {
 	str := req.ReadString()
 	typ := req.ReadString() //email、name、phone
+	sign.Decode(&str)
 
 	if GetAccountByBindInfo(typ, str) == nil {
 		ack.WriteUInt16(err.Account_not_found)
@@ -148,7 +153,7 @@ func Rpc_center_reg_if(req, ack *common.NetPack) {
 }
 func Rpc_center_account_reg_force(req, ack *common.NetPack) {
 	uuid := req.ReadString()
-	if uuid == "" {
+	if sign.Decode(&uuid); uuid == "" {
 		ack.WriteUInt16(err.BindInfo_format_err)
 	} else {
 		errcode, _ := NewAccountInDB("", "name", uuid)
@@ -157,15 +162,16 @@ func Rpc_center_account_reg_force(req, ack *common.NetPack) {
 }
 func Rpc_center_change_password(req, ack *common.NetPack) {
 	str := req.ReadString()
-	oldpasswd := req.ReadString()
-	newpasswd := req.ReadString()
+	oldpwd := req.ReadString()
+	newpwd := req.ReadString()
+	sign.Decode(&oldpwd, &newpwd)
 
-	if !format.CheckPasswd(newpasswd) {
+	if !format.CheckPasswd(newpwd) {
 		ack.WriteUInt16(err.Passwd_format_err)
-	} else if e, p := GetAccount(str, oldpasswd); p == nil {
+	} else if e, p := GetAccount(str, oldpwd); p == nil {
 		ack.WriteUInt16(e)
 	} else {
-		p.SetPasswd(newpasswd)
+		p.SetPasswd(newpwd)
 		dbmgo.UpdateId(KDBTable, p.AccountID, bson.M{"$set": bson.M{
 			"password": p.Password}})
 		ack.WriteUInt16(err.Success)
@@ -211,11 +217,12 @@ func Rpc_center_get_game_info(req, ack *common.NetPack) {
 		}
 	}
 }
-func Rpc_center_set_game_json(req, ack *common.NetPack) {
+func Rpc_center_set_game_json(req, ack *common.NetPack) { //TODO:zhoumf:换accountId + pwd
 	str := req.ReadString()
 	typ := req.ReadString() //email、name、phone
 	gameName := req.ReadString()
 	json := req.ReadString()
+	sign.Decode(&str)
 
 	if p := GetAccountByBindInfo(typ, str); p == nil {
 		ack.WriteUInt16(err.Account_not_found)
@@ -235,6 +242,7 @@ func Rpc_center_get_game_json(req, ack *common.NetPack) {
 	str := req.ReadString()
 	typ := req.ReadString() //email、name、phone
 	gameName := req.ReadString()
+	sign.Decode(&str)
 
 	if p := GetAccountByBindInfo(typ, str); p != nil {
 		if v, ok := p.GameInfo[gameName]; ok {
@@ -264,6 +272,7 @@ func Rpc_center_player_login_addr(req, ack *common.NetPack) {
 	str := req.ReadString()
 	typ := req.ReadString() //email、name、phone
 	gameName := req.ReadString()
+	sign.Decode(&str)
 
 	if p := GetAccountByBindInfo(typ, str); p == nil {
 		ack.WriteUInt16(err.Account_not_found)

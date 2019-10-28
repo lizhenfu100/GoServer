@@ -24,6 +24,7 @@ func Rpc_center_bind_info(req, ack *common.NetPack) {
 	k := req.ReadString()
 	v := req.ReadString()
 	force := req.ReadBool()
+	sign.Decode(&passwd)
 
 	errcode, ptr := GetAccount(str, passwd)
 	if errcode == err.Success {
@@ -48,7 +49,6 @@ func Rpc_center_bind_info(req, ack *common.NetPack) {
 func Rpc_center_isvalid_bind_info(req, ack *common.NetPack) {
 	val := req.ReadString()
 	typ := req.ReadString()
-
 	if p := GetAccountByBindInfo(typ, val); p == nil {
 		ack.WriteUInt16(err.Not_found)
 	} else if typ == "email" && p.IsValidEmail <= 0 {
@@ -159,7 +159,7 @@ func Http_verify_email(w http.ResponseWriter, r *http.Request) {
 }
 func Http_reg_account_by_email(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	emailAddr := q.Get("email")
+	addr := q.Get("email")
 	passwd := q.Get("pwd")
 	flag := q.Get("flag")
 	language := q.Get("language")
@@ -169,13 +169,13 @@ func Http_reg_account_by_email(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		w.Write(common.S2B(ack))
 	}()
-	if sign.CalcSign(emailAddr+passwd+flag) != q.Get("sign") {
+	if sign.CalcSign(addr+passwd+flag) != q.Get("sign") {
 		ack, _ = email.Translate("Error: sign failed", language)
 	} else if time.Now().Unix()-timeFlag > 7*24*3600 {
 		ack, _ = email.Translate("Error: url expire", language)
-	} else if !format.CheckPasswd(passwd) {
+	} else if sign.Decode(&passwd); !format.CheckPasswd(passwd) {
 		ack, _ = email.Translate("Error: Passwd_format_err", language)
-	} else if _, p := NewAccountInDB(passwd, "email", emailAddr); p == nil {
+	} else if _, p := NewAccountInDB(passwd, "email", addr); p == nil {
 		ack, _ = email.Translate("Error: Account_reg_fail", language)
 	} else {
 		p.verifyEmailOK()

@@ -64,7 +64,7 @@ func SendMail(subject, addr, body, language string) (errcode uint16) {
 	}
 	if InCsvInvalid(addr) {
 		return err.Invalid
-		//TODO:return err.Email_unreachable
+		//TODO:return err.Is_forbidden
 	}
 	if !assert.IsDebug && !checkFreq(subject, addr) { //同内容的，限制发送频率
 		return err.Operate_too_often

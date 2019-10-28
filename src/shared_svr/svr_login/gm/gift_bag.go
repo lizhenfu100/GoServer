@@ -93,8 +93,7 @@ func Rpc_login_gift_get(req, ack *common.NetPack) {
 		ack.WriteString(p.Json)
 	}
 }
-
-func _playerGot(key, uuid string) bool { //玩家是否领过该礼包
+func _playerGot(key, uuid string) bool { //一类礼包只能领一次
 	p := &TGiftPlayer{Uuid: uuid}
 	if ok, _ := dbmgo.Find(KDBGiftPlayer, "_id", uuid, p); !ok {
 		p.Keys = append(p.Keys, key)

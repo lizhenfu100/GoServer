@@ -6,6 +6,7 @@ import (
 	"common/file"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"generate_out/err"
 	"io"
 	"mime/multipart"
@@ -37,7 +38,7 @@ func RegistToSvr(destAddr string) {
 			if b := Client.PostReq(destAddr+"/reg_to_svr", firstMsg); b == nil {
 				time.Sleep(3 * time.Second)
 			} else if e := binary.LittleEndian.Uint16(b); e != err.Success {
-				panic("RegistToSvr fail")
+				panic(fmt.Sprintf("RegistToSvr errcode: %d", e))
 			} else {
 				return
 			}

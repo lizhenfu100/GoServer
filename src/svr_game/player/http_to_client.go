@@ -113,6 +113,23 @@ func Rpc_game_heart_beat(req, ack *common.NetPack, this *TPlayer) {
 // ------------------------------------------------------------
 //! for other player write my data
 /*
+	准备将离线的操作转给mainloop，这样所有离线玩家就都在一个chan里处理了
+	要是中途玩家上线，mainloop的chan里还有他的操作没处理完怎么整！？囧~
+	mainloop设计成map<accountId, chan>，玩家上线时，检测自己的chan有效否，等它处理完？
+	设计成task含义，玩家上线，把自己的task拉到自己的chan …… 实际就actor模型了
+
+	actor的小水管现象（大量任务堆积到一处造成阻塞）
+		· 可用tcprpc思路缓解，actor间无阻塞调用
+		· 读数据，是直接读内存，还是过rpc，由业务方决定~挫~囧
+
+	gen_server
+	将某个独立模块的所有操作扔进gen_server，外界只读(有滞后性)
+	会加大代码量，每个操作都得转一次到chan
+	Notice：可能gen_server里还有修改操作，且玩家已下线，会重新读到内存，此时修改完毕后须及时入库
+
+	设计统一的接口，编辑离线数据，也很麻烦呐
+*/
+/*
 func AsyncNotifyPlayer(accountId uint32, handler func(*TPlayer)) {
 	if player := FindAccountId(accountId); player != nil {
 		player.AsyncNotify(handler)
@@ -128,16 +145,6 @@ func (self *TPlayer) AsyncNotify(handler func(*TPlayer)) {
 		}
 	} else { //FIXME:zhoumf: 如何安全方便的修改离线玩家数据……应该不允许的~囧，除非特殊玩法
 
-		//准备将离线的操作转给mainloop，这样所有离线玩家就都在一个chan里处理了
-		//要是中途玩家上线，mainloop的chan里还有他的操作没处理完怎么整！？囧~
-		//mainloop设计成map<accountId, chan>，玩家上线时，检测自己的chan有效否，等它处理完？
-
-		//gen_server
-		//将某个独立模块的所有操作扔进gen_server，外界只读(有滞后性)
-		//会加大代码量，每个操作都得转一次到chan
-		//Notice：可能gen_server里还有修改操作，且玩家已下线，会重新读到内存，此时修改完毕后须及时入库
-
-		//设计统一的接口，编辑离线数据，也很麻烦呐
 	}
 }
 func (self *TPlayer) _HandleAsyncNotify() {

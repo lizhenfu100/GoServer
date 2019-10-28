@@ -140,35 +140,3 @@ func (self *MultiQueueEx) free() {
 		}
 	}
 }
-
-// ------------------------------------------------------------
-type TReadyIDs struct {
-	sync.Mutex
-	multi      [2]map[uint32]Empty //须比消费者数目多1，生产者共用一个写入
-	ready      map[uint32]Empty
-	readyCycle uint8
-}
-type Empty struct{}
-
-func (self *TReadyIDs) Init() {
-	for i := 0; i < len(self.multi); i++ {
-		self.multi[i] = make(map[uint32]Empty)
-	}
-	self.ready = self.multi[0]
-}
-func (self *TReadyIDs) SetReady(clusterID uint32) {
-	self.Lock()
-	self.ready[clusterID] = Empty{}
-	self.Unlock()
-}
-func (self *TReadyIDs) GetReady() (ret map[uint32]Empty) {
-	self.Lock()
-	ret = self.ready
-	self.readyCycle = (self.readyCycle + 1) % uint8(len(self.multi))
-	self.ready = self.multi[self.readyCycle] //change ready
-	for k := range self.ready {
-		delete(self.ready, k)
-	}
-	self.Unlock()
-	return
-}

@@ -23,6 +23,46 @@ func GetSign(s, key string) string {
 }
 
 // ------------------------------------------------------------
+var ( //我们生成的私钥公钥
+	KPrivateKey = []byte(`-----BEGIN RSA PRIVATE KEY-----
+MIICXAIBAAKBgQCm5KmHwtDFdLTva5ntFqB1OrW7HnO8WR7m+ufFPrF/K0O2Hss
+Y9DnL/IR4/zcNutvVDm6EtqfmSi8N9WjPZcQxpgceP2vD/DVftcjqagxk6n9XAX
+BXIa/VkoDQn/+VtAqWn+n8SMfiypbgKPhnuEEjhac8zmiyUeK/RpVuCLG/NwIDA
+QABAoGAOQHObtM64Ne2njmRAI1EDgcZ4GrMeb+vcJKv7I43rwqmPGVUVpfFzknZ
+LkNvGL+FK8ecNLT3sRAR9qCnRoCqfQWgZbtjAMu8A7iI+Cv/2BOq4llTRg0hxC1
+dFtNmrUbEnkfgYjKp0zhmjddTGfe8SIsCJAq4HJgtU9JCjc5jkYECQQDaNvywcv
+ZDQSAXpQjogA49ZkuNkxuKS3nimshqzv7/UrD31tx8z8pSk7PNnM4BopyPvG9qT
+JMLRHSJcDzVzppXAkEAw8qx7OtaZXDzJvjaBBkiX/EFAB28w73oYReL6zTVxNIv
+7/O4iwlu90tmBGPL6BZY84259p9dx7p+ESuv2Zq2IQJBAMwnWa2zQJaXXXEBpB3
+xgGENTW48zS1Lg9LvwMW8t3EkahDVYh8bQEyVh0i8hTeebR9EynAHCCMofmb/LM
+tTqa0CQEg/7Bh5YQo9+/xNqGYKwFyXHDlGv/mbgr0Ra1iITroqtfXeAiOMf55R/
+HtyODSUyo5VpmITvQ+PCiZb8LBkHwECQBWqACittloSz2U67ntJIl+1Cx2rjX5c
+WHSxN2wrm6eniwVY4jGRQPIxAmX7VN2+xkcoKsPnWxhjsAtkxalus+s=
+-----END RSA PRIVATE KEY-----`)
+	KPublicKey = []byte(`-----BEGIN PUBLIC KEY-----
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCm5KmHwtDFdLTva5ntFqB1OrW7
+HnO8WR7m+ufFPrF/K0O2HssY9DnL/IR4/zcNutvVDm6EtqfmSi8N9WjPZcQxpgce
+P2vD/DVftcjqagxk6n9XAXBXIa/VkoDQn/+VtAqWn+n8SMfiypbgKPhnuEEjhac8
+zmiyUeK/RpVuCLG/NwIDAQAB
+-----END PUBLIC KEY-----`)
+
+	g_rsa RSA
+)
+
+func init() {
+	if e := g_rsa.Init(KPrivateKey, KPublicKey); e != nil {
+		panic(e)
+	}
+}
+func Decode(s ...*string) {
+	for _, v := range s {
+		if b, e := g_rsa.Decrypt(common.S2B(*v)); e == nil {
+			*v = common.B2S(b)
+		}
+	}
+}
+
+// ------------------------------------------------------------
 type RSA struct {
 	PrivateKey *rsa.PrivateKey //私钥，自己保留：给数据签名，产生sign发给用户
 	PublicKey  *rsa.PublicKey  //公钥，发给用户：验证数据是否来自公钥发放者
