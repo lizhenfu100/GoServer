@@ -1,9 +1,11 @@
 package main
 
 import (
+	"Tools/AFK"
 	"common/console"
 	"common/file"
 	"conf"
+	"dbmgo"
 	"gamelog"
 	"netConfig"
 	"netConfig/meta"
@@ -22,10 +24,10 @@ func main() {
 	gamelog.InitLogger(kModuleName)
 	InitConf()
 
-	meta.G_Local = &meta.Meta{
-		Module:   kModuleName,
-		HttpPort: 7071,
-	}
+	meta.G_Local = meta.GetMeta(kModuleName, 0)
+
+	dbmgo.InitWithUser("", 27017, "other", conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
+	afk.Init()
 	netConfig.RunNetSvr()
 }
 func InitConf() {

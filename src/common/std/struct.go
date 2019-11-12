@@ -17,7 +17,7 @@ type Addr struct {
 	Port uint16
 }
 type Empty struct{} //unsafe.Sizeof(Empty) //0
-type Set struct{ M map[uint32]Empty }
+type Set map[interface{}]Empty
 
 // ------------------------------------------------------------
 // 数组封装

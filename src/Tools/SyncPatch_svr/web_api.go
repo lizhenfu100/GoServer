@@ -6,7 +6,7 @@ import (
 )
 
 // ------------------------------------------------------------
-// -- 登录服列表  http://www.chillyroom.com/api/public_addr
+// -- 登录服列表  http://www.chillyroom.com/api/
 type TLogins struct {
 	GameName string
 	Logins   map[string][]string //<大区名, 地址>

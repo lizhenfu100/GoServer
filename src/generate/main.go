@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"runtime/debug"
+	"sort"
 	"time"
 )
 
@@ -69,8 +70,10 @@ func main() {
 		"shared_svr/svr_friend",
 		"shared_svr/svr_gateway",
 		"shared_svr/svr_login",
+		"shared_svr/svr_relay",
 		"shared_svr/svr_save",
 		"shared_svr/svr_sdk",
+		"shared_svr/svr_stats",
 		"shared_svr/zookeeper",
 		"svr_cross",
 		"svr_game",
@@ -81,12 +84,18 @@ func main() {
 	}
 
 	//2、收集Rpc函数名 -- 战斗服、客户端
-	funcs := make([]string, 0, 1024)
+	funcs1 := make(map[string]struct{}, 1024)
 	for _, ptr := range rpcInfos {
-		addRpc_Go(&funcs, ptr)
+		addRpc_Go(funcs1, ptr)
 	}
-	addRpc_C(&funcs)  //svr_battle
-	addRpc_CS(&funcs) //client
+	addRpc_C(funcs1)  //svr_battle
+	addRpc_CS(funcs1) //client
+	//对结果排序
+	funcs := make([]string, 0, len(funcs1))
+	for k := range funcs1 {
+		funcs = append(funcs, k)
+	}
+	sort.Strings(funcs)
 
 	//3、RpcFunc收集完毕，生成RpcEunm
 	isChange := generateRpcEnum(funcs)

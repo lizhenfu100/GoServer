@@ -29,30 +29,30 @@ import (
 
 // -------------------------------------
 // 收集各处的 Rpc 函数名
-func addRpc_Go(funcs *[]string, info *RpcInfo) {
+func addRpc_Go(funcs map[string]struct{}, info *RpcInfo) {
 	for _, v := range info.TcpRpc {
-		*funcs = append(*funcs, v.Name)
+		funcs[v.Name] = struct{}{}
 	}
 	for _, v := range info.HttpRpc {
-		*funcs = append(*funcs, v.Name)
+		funcs[v.Name] = struct{}{}
 	}
 	for _, v := range info.PlayerRpc {
-		*funcs = append(*funcs, v.Name)
+		funcs[v.Name] = struct{}{}
 	}
 }
-func addRpc_C(funcs *[]string) {
+func addRpc_C(funcs map[string]struct{}) {
 	reg := regexp.MustCompile(`Rpc_\w+`)
 	file.ReadLine(K_RpcFuncFile_C, func(line string) {
 		if ok, _ := regexp.MatchString(`Rpc_Declare\(Rpc_`, line); ok {
-			*funcs = append(*funcs, reg.FindAllString(line, -1)[1])
+			funcs[reg.FindAllString(line, -1)[1]] = struct{}{}
 		}
 	})
 }
-func addRpc_CS(funcs *[]string) {
+func addRpc_CS(funcs map[string]struct{}) {
 	reg := regexp.MustCompile(`Rpc_\w+`)
 	file.ReadLine(K_RpcFuncFile_CS, func(line string) {
 		if ok, _ := regexp.MatchString(`public void Rpc_`, line); ok {
-			*funcs = append(*funcs, reg.FindAllString(line, -1)[0])
+			funcs[reg.FindAllString(line, -1)[0]] = struct{}{}
 		}
 	})
 }

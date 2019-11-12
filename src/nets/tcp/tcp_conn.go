@@ -202,8 +202,7 @@ LOOP:
 				break LOOP
 			}
 			//FIXME: 这里能不能加句 sleep(10ms)，让包更易积累，合并发送；不加的话，调度权就完全依赖golang了，其实只要不是写一个包就唤醒一次，问题不大
-			//! block
-			buf := <-self.writeChan
+			buf := <-self.writeChan //阻塞，待数据写入
 			if self._WriteFull(buf) != nil {
 				break LOOP
 			}

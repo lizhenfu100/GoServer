@@ -10,7 +10,7 @@ func Rpc_gateway_login(req, ack *common.NetPack) {
 	accountId := req.ReadUInt32()
 	token := req.ReadUInt32()
 
-	if logic.CheckLoginToken(accountId, token) {
+	if logic.CheckToken(accountId, token) {
 		ack.WriteUInt16(err.Success)
 	} else {
 		ack.WriteUInt16(err.Token_verify_err)

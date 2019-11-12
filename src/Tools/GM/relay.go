@@ -137,7 +137,11 @@ func Http_gift_code_spawn(w http.ResponseWriter, r *http.Request) {
 
 	gm.MakeGiftCodeCsv(key, count)
 
-	r.URL.Path = gm.KGiftCodeDir + key + ".csv"
+	if q.Get("all") == "" {
+		r.URL.Path = gm.KGiftCodeDir + gm.KGiftCodeTemp //只给新礼包码
+	} else {
+		r.URL.Path = gm.KGiftCodeDir + key + ".csv" //历史所有礼包码
+	}
 	svr := http.FileServer(http.Dir("."))
 	svr.ServeHTTP(w, r)
 }

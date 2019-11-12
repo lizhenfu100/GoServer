@@ -45,6 +45,7 @@ const (
 	KDBGiftCode   = "giftcode"
 	KDBGiftPlayer = "giftuid"
 	KGiftCodeDir  = "log/gift/"
+	KGiftCodeTemp  = "temp.csv"
 )
 
 type TGiftBag struct {
@@ -138,10 +139,12 @@ func MakeGiftCodeCsv(dbkey string, kAddNum int) {
 	f, e := file.CreateFile(KGiftCodeDir, dbkey+".csv", os.O_APPEND|os.O_WRONLY)
 	if e != nil {
 		gamelog.Error("MakeGiftCode: %s", e.Error())
+		return
 	}
 	records, e := file.ReadCsv(KGiftCodeDir + dbkey + ".csv")
 	if e != nil {
 		gamelog.Error("MakeGiftCode: %s", e.Error())
+		return
 	}
 
 	all := make(map[string]bool, len(records))
@@ -161,18 +164,26 @@ func MakeGiftCodeCsv(dbkey string, kAddNum int) {
 		}
 	}
 
-	w, i := csv.NewWriter(f), 0
-	for _, v := range news {
-		if e := w.Write([]string{v}); e != nil {
-			f.Close()
-			return
+	wr := func(f *os.File) {
+		w, i := csv.NewWriter(f), 0
+		for _, v := range news {
+			if e := w.Write([]string{v}); e != nil {
+				f.Close()
+				return
+			}
+			if i++; i%4096 == 0 {
+				w.Flush()
+			}
 		}
-		if i++; i%4096 == 0 {
-			w.Flush()
-		}
+		w.Flush()
+		f.Close()
 	}
-	w.Flush()
-	f.Close()
+	wr(f) //新礼包码写入文件
+
+	// 临时文件，仅含新礼包码
+	if f, e = file.CreateFile(KGiftCodeDir, KGiftCodeTemp, os.O_TRUNC|os.O_WRONLY); e == nil {
+		wr(f)
+	}
 	fmt.Println("MakeGiftCode End...")
 }
 

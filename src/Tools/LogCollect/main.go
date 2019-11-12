@@ -34,7 +34,7 @@ var g_conf struct {
 func main() {
 	_file, _day := "", 0
 	flag.StringVar(&_file, "f", "", "file list")
-	flag.IntVar(&_day, "d", 3, "number of days")
+	flag.IntVar(&_day, "d", 30, "number of days")
 	flag.Parse()
 
 	defer func() {
@@ -44,6 +44,7 @@ func main() {
 		}
 	}()
 	file.LoadCsv("csv/log_match.csv", &g_conf)
+	//g_conf.Match = K_Match
 
 	var files []string
 	if _file != "" {
@@ -67,9 +68,10 @@ func main() {
 			}
 		})
 	}
-	//fmt.Println(result)
 	file.CreateTemplate(result, "./", "log.out", g_conf.Template)
 	fmt.Println("Collect success...")
+
+	//DoStats(result)
 }
 
 // 排除重复数据

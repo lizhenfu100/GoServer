@@ -1,14 +1,18 @@
-package main
+package afk
 
 import (
+	"Tools/AFK/qqmsg"
 	"bytes"
 	"common"
 	"common/copy"
+	"common/file"
 	"common/std"
 	"dbmgo"
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
+	"netConfig/meta"
+	"nets"
 	"sort"
 	"strconv"
 	"text/template"
@@ -19,7 +23,6 @@ const (
 	kDBTable     = "afk"
 	kFileDirRoot = "html/AFK/"
 	kTimeLayout  = "2006-01-02"
-	kUrl         = "http://www.chillyroom.com/api/public_addr"
 )
 
 func init() {
@@ -41,7 +44,10 @@ type Afk_req struct {
 }
 
 func (self *Afk_req) init() {
-	t := s2t(self.Date)
+	t := time.Now()
+	if self.Type != "周补" && self.Type != "事补" {
+		t = s2t(self.Date)
+	}
 	self.Year, self.Week = t.ISOWeek()
 	self.Month = int(t.Month())
 }
@@ -61,25 +67,27 @@ func Http_afk(w http.ResponseWriter, r *http.Request) {
 	if err := req.check(); err == "" {
 		req.ID = dbmgo.GetNextIncId("AfkId")
 		if dbmgo.InsertSync(kDBTable, &req) {
-			ack = req.print() //TODO:通知qq群
+			ack = req.print()
+			qqmsg.G.Add(ack)
 		}
 	} else {
 		ack = err
 	}
 }
 func Http_del(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
-	id1 := q.Get("id")
-	id, _ := strconv.Atoi(id1)
-	ack := "失败，无此信息"
+	r.ParseForm()
+	id, _ := strconv.Atoi(r.Form.Get("id"))
+	ack := fmt.Sprintf("失败，无此信息 id(%d)", id)
 	defer func() {
 		w.Write(common.S2B(ack))
 	}()
 	var v Afk_req
-	dbmgo.Find(kDBTable, "_id", id, &v)
-	if dbmgo.RemoveOneSync(kDBTable, bson.M{"_id": id}) {
-		ack = "删除：\n    "
-		ack += v.print() //TODO:通知qq群
+	if ok, _ := dbmgo.Find(kDBTable, "_id", id, &v); ok {
+		if dbmgo.RemoveOneSync(kDBTable, bson.M{"_id": id}) {
+			ack = "删除：\n    "
+			ack += v.print()
+			qqmsg.G.Add(ack)
+		}
 	}
 }
 func Http_my_afk(w http.ResponseWriter, r *http.Request) {
@@ -99,7 +107,12 @@ func Http_my_afk(w http.ResponseWriter, r *http.Request) {
 {{range $_, $v := .}}
         <tr>
             <td>{{$v.Type}}</td><td>{{$v.Reason}}</td><td>{{$v.Date}}</td><td>{{$v.Hour}}</td>
-			<td> <a href="http://192.168.1.111:7702/del?id={{$v.ID}}">删除</a> </td>
+			<td>
+				<form action="http://www.chillyroom.com/api/del" method="post">
+                	<input type="hidden" name="id" value={{$v.ID}}><br>
+                	<input type="submit" value="删除">
+            	</form>
+			</td>
         </tr>
 {{end}}
     </table>
@@ -136,8 +149,8 @@ func (self *Afk_req) check() (err string) {
 		}
 	case "周补":
 		wday := s2t(self.Date).Weekday()
-		if wday != time.Saturday && wday != time.Sunday {
-			err = "失败：周补，仅在周六周日"
+		if wday != time.Saturday {
+			err = "失败：周补，仅可在周六"
 		}
 	case "事调":
 		if calcMonthCnt(self.Name, self.Year, self.Month) >= 2 {
@@ -182,7 +195,7 @@ func query(name string, begin, end string) string {
 		if curName != v.Name {
 			curName = v.Name
 			curTypeLv = 0
-			buf.WriteString(countPerson(person))
+			countPerson(person, &buf)
 			person = person[:0] //换人后清空
 			buf.WriteString("<br>" + curName + "：<br>")
 		}
@@ -205,13 +218,14 @@ func query(name string, begin, end string) string {
 		}
 	}
 	if len(person) > 0 {
-		buf.WriteString(countPerson(person))
+		countPerson(person, &buf)
 	}
 	buf.WriteString(countNoneAfk(list))
 	return buf.String()
 }
-func countPerson(person infoSlice) string {
+func countPerson(person infoSlice, buf *bytes.Buffer) {
 	weekHour1, weekHour2, monthHour1, monthHour2 := 0, 0, 0, 0
+	yearHour := 0
 	for _, v := range person {
 		switch v.Type {
 		case "周调":
@@ -222,13 +236,17 @@ func countPerson(person infoSlice) string {
 			monthHour1 += v.Hour
 		case "事补":
 			monthHour2 += v.Hour
+		case "年假":
+			yearHour += v.Hour
 		}
 	}
-	if weekHour1-weekHour2 == 0 && monthHour1-monthHour2 == 0 {
-		return ""
-	} else {
-		return fmt.Sprintf("<br>&nbsp;&nbsp;&nbsp;&nbsp;<font color=#FF0000>周调未补(%dh)，事调未补(%dh)</font><br>",
-			weekHour1-weekHour2, monthHour1-monthHour2)
+	if weekHour1-weekHour2 != 0 || monthHour1-monthHour2 != 0 {
+		buf.WriteString(fmt.Sprintf("<br>&nbsp;&nbsp;&nbsp;&nbsp;<font color=#FF0000>周调未补(%dh)，事调未补(%dh)</font><br>",
+			weekHour1-weekHour2, monthHour1-monthHour2))
+	}
+	if yearHour != 0 {
+		buf.WriteString(fmt.Sprintf("<br>&nbsp;&nbsp;&nbsp;&nbsp;<font color=#FF0000>年假共计(%dd%dh)</font><br>",
+			yearHour/8, yearHour%8))
 	}
 }
 func countNoneAfk(list infoSlice) string {
@@ -285,4 +303,16 @@ func typeLv2(typ string) int {
 		return v[1]
 	}
 	return 0
+}
+
+// ------------------------------------------------------------
+func Init() {
+	nets.RegHttpHandler(map[string]nets.HttpHandle{
+		"/afk":      Http_afk,
+		"/del":      Http_del,
+		"/count":    Http_count,
+		"/my_afk":   Http_my_afk,
+		"/afk_msgs": qqmsg.Http_msgs,
+	})
+	file.TemplateDir(meta.G_Local, kFileDirRoot+"template/", kFileDirRoot, ".html")
 }

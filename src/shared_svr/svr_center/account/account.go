@@ -81,7 +81,7 @@ func Rpc_center_account_login(req, ack *common.NetPack) {
 	gameName := req.ReadString()
 	str := req.ReadString() //账号、邮箱均可登录
 	pwd := req.ReadString()
-	sign.Decode(&pwd)
+	sign.Decode(&str, &pwd)
 	gamelog.Debug("Login: %s %s", str, pwd)
 
 	errcode, p := GetAccount(str, pwd)
@@ -128,7 +128,7 @@ func Rpc_center_reg_check(req, ack *common.NetPack) {
 	str := req.ReadString()
 	pwd := req.ReadString()
 	typ := req.ReadString() //email、name、phone
-	sign.Decode(&pwd)
+	sign.Decode(&str, &pwd)
 
 	if !format.CheckPasswd(pwd) {
 		ack.WriteUInt16(err.Passwd_format_err)

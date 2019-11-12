@@ -75,46 +75,45 @@ func Rpc_save_check_mac(req, ack *common.NetPack) {
 	pf_id := req.ReadString()
 	mac := req.ReadString()
 
-	errCode := checkMac(pf_id, uid, mac)
+	_, errCode := checkMac(pf_id, uid, mac)
 	ack.WriteUInt16(errCode)
 }
-func checkMac(pf_id, uid, mac string) uint16 { //Notice：不可调换错误码判断顺序
+func checkMac(pf_id, uid, mac string) (*TSaveData, uint16) { //Notice：不可调换错误码判断顺序
 	pSave, pMac := &TSaveData{Key: GetSaveKey(pf_id, uid)}, &MacInfo{}
 	oldMac, _ := dbmgo.Find(KDBMac, "_id", mac, pMac)
 	if oldMac && pMac.Key != pSave.Key {
 		gamelog.Info("Record_mac_already_bind: mac(%s) new(%s) old(%s)", mac, pSave.Key, pMac.Key)
-		return err.Record_mac_already_bind
+		return pSave, err.Record_mac_already_bind
 	}
-	if okSave, _ := dbmgo.Find(KDBSave, "_id", pSave.Key, pSave); !okSave {
+	if ok, _ := dbmgo.Find(KDBSave, "_id", pSave.Key, pSave); !ok {
 		gamelog.Track("Record_cannot_find: key(%s)", pSave.Key)
-		return err.Record_cannot_find
+		return pSave, err.Record_cannot_find
 	}
 	if !oldMac /*新设备*/ && pSave.MacCnt >= conf.Const.MacFreeBindMax {
 		now := time.Now().Unix()
 		if now-pSave.ChTime < int64(conf.Const.MacChangePeriod) {
-			gamelog.Track("Record_bind_limit: key(%v)", pSave)
-			return err.Record_bind_limit
+			gamelog.Track("Record_bind_limit: %v", pSave)
+			return pSave, err.Record_bind_limit
 		}
 		if pSave.MacCnt >= conf.Const.MacBindMax {
-			if now-pSave.RaiseTime >= int64(conf.Const.RaiseBindCntPeriod) {
+			if now-pSave.RaiseTime < int64(conf.Const.RaiseBindCntPeriod) {
+				gamelog.Track("Record_bind_max: %v", pSave)
+				return pSave, err.Record_bind_max
+			} else {
 				pSave.MacCnt-- //90天，绑定次数+1
 				pSave.RaiseTime = now
-				return err.Success
-			} else {
-				gamelog.Track("Record_bind_limit: key(%v)", pSave)
-				return err.Record_bind_limit
+				return pSave, err.Success
 			}
 		}
 	}
-	return err.Success
+	return pSave, err.Success
 }
 
 func upload(pf_id, uid, mac string, data []byte, extra, clientVersion string) uint16 {
-	key, now := GetSaveKey(pf_id, uid), time.Now().Unix()
-	switch e := checkMac(pf_id, uid, mac); e {
+	now := time.Now().Unix()
+	pSave, errCode := checkMac(pf_id, uid, mac)
+	switch errCode {
 	case err.Success:
-		pSave := &TSaveData{Key: key}
-		dbmgo.Find(KDBSave, "_id", key, pSave)
 		if clientVersion < pSave.Version { //旧client覆盖新档，报错
 			return err.Version_not_match
 		}
@@ -123,7 +122,7 @@ func upload(pf_id, uid, mac string, data []byte, extra, clientVersion string) ui
 		pSave.UpTime = now
 		pSave.Extra = extra
 		pSave.Version = clientVersion
-		if dbmgo.DB().C(KDBMac).Insert(&MacInfo{mac, key}) == nil {
+		if dbmgo.DB().C(KDBMac).Insert(&MacInfo{mac, pSave.Key}) == nil {
 			pSave.MacCnt++
 			pSave.ChTime = now
 		}
@@ -131,19 +130,23 @@ func upload(pf_id, uid, mac string, data []byte, extra, clientVersion string) ui
 		//fmt.Println("---------------upload: ", len(pSave.Data), pSave)
 		return err.Success
 	case err.Record_cannot_find:
-		dbmgo.Insert(KDBSave, &TSaveData{key, data, now, now,
-			0, 1, extra, clientVersion})
-		dbmgo.Insert(KDBMac, &MacInfo{mac, key})
+		pSave.Data = data
+		pSave.UpTime = now
+		pSave.ChTime = now
+		pSave.RaiseTime = 0
+		pSave.MacCnt = 1
+		pSave.Extra = extra
+		pSave.Version = clientVersion
+		dbmgo.Insert(KDBSave, pSave)
+		dbmgo.Insert(KDBMac, &MacInfo{mac, pSave.Key})
 		//fmt.Println("---------------upload new: ", len(pSave.Data), pSave)
 		return err.Success
 	default:
-		return e
+		return errCode
 	}
 }
 func download(pf_id, uid, mac, clientVersion string) (*TSaveData, uint16) {
-	if errCode := checkMac(pf_id, uid, mac); errCode == err.Success {
-		pSave := &TSaveData{Key: GetSaveKey(pf_id, uid)}
-		dbmgo.Find(KDBSave, "_id", pSave.Key, pSave)
+	if pSave, errCode := checkMac(pf_id, uid, mac); errCode == err.Success {
 		if clientVersion < pSave.Version { //旧client下载新档，报错
 			return nil, err.Version_not_match
 		}

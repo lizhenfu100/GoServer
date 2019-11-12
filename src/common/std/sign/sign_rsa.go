@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -56,8 +57,10 @@ func init() {
 }
 func Decode(s ...*string) {
 	for _, v := range s {
-		if b, e := g_rsa.Decrypt(common.S2B(*v)); e == nil {
-			*v = common.B2S(b)
+		if b, e := base64.StdEncoding.DecodeString(*v); e == nil {
+			if b, e = g_rsa.Decrypt(b); e == nil {
+				*v = common.B2S(b)
+			}
 		}
 	}
 }
