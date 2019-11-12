@@ -1,4 +1,4 @@
-package main
+package web
 
 var (
 	g_common = &TCommon{

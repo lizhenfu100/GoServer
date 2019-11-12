@@ -1,4 +1,4 @@
-package main
+package web
 
 import (
 	"common"
@@ -51,7 +51,7 @@ func Http_bind_info_force(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Http_relay_gm_cmd(w http.ResponseWriter, r *http.Request) {
+func relay_gm_cmd(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	addr := q.Get("addr")
 	cmd := q.Get("cmd")
@@ -68,7 +68,7 @@ func Http_relay_gm_cmd(w http.ResponseWriter, r *http.Request) {
 
 // ------------------------------------------------------------
 // 批量转发
-func Http_relay_to_save(w http.ResponseWriter, r *http.Request) {
+func relay_to_save(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	gameName := q.Get("game")
 
@@ -89,7 +89,7 @@ func Http_relay_to_save(w http.ResponseWriter, r *http.Request) {
 		writeRelayResult(w, acks)
 	}
 }
-func Http_relay_to_login(w http.ResponseWriter, r *http.Request) {
+func relay_to_login(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	gameName := q.Get("game")
 

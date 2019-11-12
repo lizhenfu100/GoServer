@@ -13,7 +13,7 @@ var Client client
 type client struct{}
 
 func (client) PostReq(url string, b []byte) []byte {
-	if ack, e := http.Post(url, "text/HTML", bytes.NewReader(b)); e == nil {
+	if ack, e := http.Post(url, "application/octet-stream", bytes.NewReader(b)); e == nil {
 		//如果Response.Body既没有被完全读取，也没有被关闭，那么这次http事务就没有完成
 		//除非连接因超时终止了，否则相关资源无法被回收
 		return ReadBody(ack.Body)
