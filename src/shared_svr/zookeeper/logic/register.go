@@ -11,21 +11,19 @@ func Rpc_zoo_register(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	//1、提取新节点信息
 	module := req.ReadString()
 	svrId := req.ReadInt()
-	pMeta := meta.GetMeta(module, svrId)
+	pNew := meta.GetMeta(module, svrId)
 
 	posInBuf, count := ack.BodySize(), uint32(0)
 	ack.WriteUInt32(count)
 	tcp.ForeachRegModule(func(v *tcp.TCPConn) {
 		if ptr, ok := v.UserPtr.(*meta.Meta); ok {
-			//2、回复要主动连接哪些节点
-			if pMeta.IsMyServer(ptr) {
+			switch pNew.IsMyServer(ptr) {
+			case meta.CS: //2、新节点是此节点的client，回复节点meta
 				ptr.DataToBuf(ack)
 				count++
-			}
-			//3、通知要连接它的节点
-			if pMeta.IsMyClient(ptr) {
+			case meta.SC: //3、新节点是此节点的server，通知此节点
 				v.CallRpc(enum.Rpc_svr_node_join, func(buf *common.NetPack) {
-					pMeta.DataToBuf(buf)
+					pNew.DataToBuf(buf)
 				}, nil)
 			}
 		}

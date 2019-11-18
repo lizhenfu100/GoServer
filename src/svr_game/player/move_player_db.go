@@ -5,9 +5,6 @@
 	· 若game也是http节点，转发代码就都是同步的，写起来很方便
 	· game(tcp)、long(http)无法实现连续rpc链式调用……不够友好
 
-* @ proxy(tcp)转发
-	· TODO：针对game(tcp)，新增一个proxy(tcp)，统一转发game数据
-
 * @ author zhoumf
 * @ date 2019-4-3
 ***********************************************************************/
@@ -37,29 +34,21 @@ func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
 	newLoginAddr := ""
 	if p, ok := netConfig.GetLoginRpc(); ok {
 		p.CallRpcSafe(enum.Rpc_login_relay_to_center, func(buf *common.NetPack) {
-			buf.WriteUInt16(enum.Rpc_meta_list)
+			buf.WriteUInt16(enum.Rpc_get_meta)
 			buf.WriteString("login")
-			buf.WriteString(meta.G_Local.Version)
+			buf.WriteInt(newLoginId)
 		}, func(recvBuf *common.NetPack) {
-			cnt := recvBuf.ReadByte()
-			for i := byte(0); i < cnt; i++ {
-				id := recvBuf.ReadInt()
-				ip := recvBuf.ReadString()
-				port := recvBuf.ReadUInt16()
-				recvBuf.ReadString() //svrName
-				if id == newLoginId {
-					newLoginAddr = http.Addr(ip, port)
-					return
-				}
-			}
+			ip := recvBuf.ReadString()
+			port := recvBuf.ReadUInt16()
+			recvBuf.ReadString() //svrName
+			newLoginAddr = http.Addr(ip, port)
 		})
 	}
 	if newLoginAddr == "" {
 		errCode = err.Svr_not_working
 		return
 	}
-
-	//3、角色数据，转发至新大区
+	//2、角色数据，转发至新大区
 	http.CallRpc(newLoginAddr, enum.Rpc_login_move_player_db, func(buf *common.NetPack) {
 		buf.WriteString(conf.GameName)
 		buf.WriteString(meta.G_Local.Version)
@@ -71,11 +60,13 @@ func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
 		errCode = recvBuf.ReadUInt16()
 	})
 
-	//4、新大区选取空闲svr_game，创建角色
+	//3、新大区选空闲game
 
-	//5、向game问询save地址，存档写入新区
+	//4、向game问询save，存档写入新区
 
-	//6、更改center中的longSvrid、gameSvrid
+	//5、game创建角色，覆写（最后写角色，先写角色后写若失败，玩家能登录进新区，但数据缺损）
+
+	//6、更新center中的longSvrid、gameSvrid
 
 	//7、迁移完成前，玩家不应向新区写数据，有脏写风险（“玩家上传存档”先于“后台节点传来的”，那玩家的新存档会被旧的覆盖掉~）
 }

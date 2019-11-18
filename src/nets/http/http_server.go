@@ -70,13 +70,13 @@ func Reg_to_svr(w io.Writer, req []byte) {
 	if p := meta.GetMeta(pMeta.Module, pMeta.SvrID); p != nil {
 		if p.IP != pMeta.IP || p.OutIP != pMeta.OutIP {
 			errCode = err.Data_repeat //防止配置错误，出现外网节点顶替
-			gamelog.Warn("RegistToSvr repeat: %v", pMeta)
+			gamelog.Warn("Regist repeat: %v", pMeta)
 			return
 		}
 	}
 	meta.AddMeta(pMeta)
 	appendNetMeta(pMeta)
-	fmt.Println("RegistToSvr: ", pMeta)
+	gamelog.Debug("Regist: %v", pMeta)
 }
 
 // ------------------------------------------------------------

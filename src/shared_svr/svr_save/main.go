@@ -1,13 +1,16 @@
 package main
 
 import (
+	"common"
 	"common/console"
 	"common/console/shutdown"
 	"common/file"
 	"common/tool/email"
 	"conf"
 	"dbmgo"
+	"encoding/json"
 	"flag"
+	"fmt"
 	"gamelog"
 	_ "generate_out/rpc/shared_svr/svr_save"
 	"netConfig"
@@ -50,4 +53,8 @@ func InitConf() {
 	meta.InitConf(metaCfg)
 	console.Init()
 	console.RegShutdown(shutdown.Default)
+
+	//展示重要配置数据
+	buf, _ := json.MarshalIndent(&conf2.Const, "", "     ")
+	fmt.Println("conf.Const: ", common.B2S(buf))
 }

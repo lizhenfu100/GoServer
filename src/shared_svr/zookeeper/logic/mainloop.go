@@ -32,7 +32,7 @@ func Rpc_net_error(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		if pMeta.HttpPort > 0 {
 			tcp.ForeachRegModule(func(v *tcp.TCPConn) {
 				if ptr, ok := v.UserPtr.(*meta.Meta); ok {
-					if pMeta.IsMyClient(ptr) || pMeta.IsMyServer(ptr) {
+					if pMeta.IsMyServer(ptr) != meta.None {
 						v.CallRpc(enum.Rpc_http_node_quit, func(buf *common.NetPack) {
 							buf.WriteString(pMeta.Module)
 							buf.WriteInt(pMeta.SvrID)

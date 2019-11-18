@@ -17,13 +17,14 @@ type TCPClient struct {
 	connId    uint32
 	Conn      *TCPConn
 	onConnect func(*TCPConn)
-	_isLoop   int32
+	_isClose  int32
 }
 
 func Addr(ip string, port uint16) string { return fmt.Sprintf("%s:%d", ip, port) }
 
 func (self *TCPClient) ConnectToSvr(addr string, cb func(*TCPConn)) {
-	if atomic.LoadInt32(&self._isLoop) == 0 {
+	if self.addr != addr {
+		self.Close()
 		self.addr = addr
 		self.onConnect = cb
 		go self.connectRoutine() //会断线后自动重连
@@ -41,9 +42,7 @@ func (self *TCPClient) connectRoutine() {
 		binary.LittleEndian.PutUint16(firstMsg[kfirstMsgLen:], uint16(regMsg.Size()))
 		copy(firstMsg[kfirstMsgLen+2:], regMsg.Data())
 	}
-
-	atomic.StoreInt32(&self._isLoop, 1)
-	for {
+	for atomic.LoadInt32(&self._isClose) == 0 {
 		if self.connect() {
 			binary.LittleEndian.PutUint32(firstMsg, self.connId)
 			self.Conn.WriteBuf(firstMsg) //Notice: 不能用CallRpc，非线程安全的
@@ -53,14 +52,8 @@ func (self *TCPClient) connectRoutine() {
 			go self.Conn.readLoop()
 			self.Conn.writeLoop() //goroutine会阻塞在这里
 		}
-
-		//有zookeeper管理节点连接，无需自动重连
-		if meta.GetMeta("zookeeper", 0) != nil {
-			break
-		}
 		time.Sleep(3 * time.Second)
 	}
-	atomic.StoreInt32(&self._isLoop, 0)
 }
 func (self *TCPClient) connect() bool {
 	conn, err := net.Dial("tcp", self.addr)
@@ -78,8 +71,11 @@ func (self *TCPClient) connect() bool {
 	return true
 }
 func (self *TCPClient) Close() {
-	self.Conn.Close()
-	self.Conn = nil
+	atomic.StoreInt32(&self._isClose, 0)
+	if self.Conn != nil {
+		self.Conn.Close()
+		self.Conn = nil
+	}
 }
 func _Rpc_svr_accept(req, ack *common.NetPack, conn *TCPConn) {
 	self := conn.UserPtr.(*TCPClient)

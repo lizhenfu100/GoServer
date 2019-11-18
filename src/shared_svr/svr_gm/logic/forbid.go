@@ -46,7 +46,7 @@ func Http_names_del(w http.ResponseWriter, r *http.Request) { //GM 删黑、白�
 	gamelog.Info("names_del: %v", r.URL.String())
 }
 
-func Rpc_forbid_check(req, ack *common.NetPack) {
+func Rpc_gm_forbid_check(req, ack *common.NetPack) {
 	table := req.ReadString() //哪张表
 	key := req.ReadString()
 
@@ -57,7 +57,7 @@ func Rpc_forbid_check(req, ack *common.NetPack) {
 		ack.WriteByte(0)
 	}
 }
-func Rpc_forbid_add(req, ack *common.NetPack) {
+func Rpc_gm_forbid_add(req, ack *common.NetPack) {
 	table := req.ReadString()
 	key := req.ReadString()
 
@@ -66,7 +66,7 @@ func Rpc_forbid_add(req, ack *common.NetPack) {
 		dbmgo.Insert(table, ptr)
 	}
 }
-func Rpc_forbid_del(req, ack common.NetPack) {
+func Rpc_gm_forbid_del(req, ack *common.NetPack) {
 	table := req.ReadString()
 	key := req.ReadString()
 	dbmgo.Remove(table, bson.M{"_id": key})

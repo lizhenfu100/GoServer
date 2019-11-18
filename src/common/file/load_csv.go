@@ -71,8 +71,6 @@ func LoadAllCsv() {
 func ReloadCsv(fullName string) {
 	if ptr, ok := G_Csv_Map[fullName]; ok {
 		LoadCsv(fullName, ptr)
-	} else {
-		fmt.Println(fullName, "not regist in G_Csv_Map")
 	}
 }
 func LoadCsv(fullName string, ptr interface{}) {
@@ -191,61 +189,41 @@ func SetField(field reflect.Value, s string) {
 		return
 	}
 	switch field.Kind() {
+	case reflect.String:
+		field.SetString(s)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		{
-			if v, err := strconv.ParseInt(s, 0, field.Type().Bits()); err == nil {
-				field.SetInt(v)
-			}
+		if v, err := strconv.ParseInt(s, 0, field.Type().Bits()); err == nil {
+			field.SetInt(v)
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		{
-			if v, err := strconv.ParseUint(s, 0, field.Type().Bits()); err == nil {
-				field.SetUint(v)
-			}
+		if v, err := strconv.ParseUint(s, 0, field.Type().Bits()); err == nil {
+			field.SetUint(v)
 		}
 	case reflect.Float32, reflect.Float64:
-		{
-			if v, err := strconv.ParseFloat(s, field.Type().Bits()); err == nil {
-				field.SetFloat(v)
-			}
+		if v, err := strconv.ParseFloat(s, field.Type().Bits()); err == nil {
+			field.SetFloat(v)
 		}
 	case reflect.Bool:
-		{
-			if v, err := strconv.ParseBool(s); err == nil {
-				field.SetBool(v)
-			}
-		}
-	case reflect.String:
-		{
-			field.SetString(s)
+		if v, err := strconv.ParseBool(s); err == nil {
+			field.SetBool(v)
 		}
 	case reflect.Struct, reflect.Map:
-		{
-			if e := json.Unmarshal(common.S2B(s), field.Addr().Interface()); e != nil {
-				fmt.Println("Field Parse Error: ", s, e.Error())
-			}
+		if e := json.Unmarshal(common.S2B(s), field.Addr().Interface()); e != nil {
+			fmt.Println("Field Parse Error: ", s, e.Error())
 		}
 	case reflect.Slice:
-		{
-			switch field.Type().Elem().Kind() {
-			case reflect.String:
-				{ //JsonString 须额外标注字符串双引号，比如：["a", "b"]，自定义格式方便点
-					vec := strings.Split(strings.Trim(s, "[]"), ",")
-					for k, v := range vec {
-						vec[k] = strings.TrimSpace(v)
-					}
-					field.Set(reflect.ValueOf(vec))
+		switch field.Type().Elem().Kind() {
+		case reflect.String:
+			{ //JsonString 须额外标注字符串双引号，比如：["a", "b"]，自定义格式方便点
+				vec := strings.Split(strings.Trim(s, "[]"), ",")
+				for k, v := range vec {
+					vec[k] = strings.TrimSpace(v)
 				}
-			case reflect.Int, reflect.Uint32, reflect.Float32, reflect.Struct, reflect.Slice:
-				{
-					if e := json.Unmarshal(common.S2B(s), field.Addr().Interface()); e != nil {
-						fmt.Println("Field Parse Error: ", s, e.Error())
-					}
-				}
-			default:
-				{
-					fmt.Println("Field Type Error: ", field.Type().String())
-				}
+				field.Set(reflect.ValueOf(vec))
+			}
+		default:
+			if e := json.Unmarshal(common.S2B(s), field.Addr().Interface()); e != nil {
+				fmt.Println("Field Parse Error: ", s, e.Error())
 			}
 		}
 	default:

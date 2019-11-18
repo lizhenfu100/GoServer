@@ -47,23 +47,23 @@ func NewTcpServer(port uint16, maxconn int32) { //"ip:port"，ip可缺省
 func CloseServer() { _svr.Close() }
 
 func (self *TCPServer) run() {
-	var tempDelay time.Duration
+	delay := 0
 	for {
 		if conn, err := self.listener.Accept(); err == nil {
-			tempDelay = 0
+			delay = 0
 			go self._HandleAcceptConn(conn)
 		} else {
 			if ne, ok := err.(net.Error); ok && ne.Temporary() {
-				if tempDelay == 0 {
-					tempDelay = 5 * time.Millisecond
+				if delay == 0 {
+					delay = 5
 				} else {
-					tempDelay *= 2
+					delay *= 2
 				}
-				if tempDelay > time.Second {
-					tempDelay = time.Second
+				if delay > 1000 {
+					delay = 1000
 				}
-				gamelog.Error("accept error: %s retrying in %d", err.Error(), tempDelay)
-				time.Sleep(tempDelay)
+				gamelog.Error("accept error: %s retrying in %d", err.Error(), delay)
+				time.Sleep(time.Duration(delay) * time.Millisecond)
 				continue
 			}
 			gamelog.Error("accept closed: " + err.Error())
@@ -137,16 +137,16 @@ func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
 	if v, ok := self.connmap.Load(oldId); ok {
 		oldconn := v.(*TCPConn)
 		if oldconn.IsClose() {
-			gamelog.Debug("_ResetOldConn isClose: %d", oldId)
+			gamelog.Debug("_ResetOldConn(%d) isClose", oldId)
 			oldconn.resetConn(newconn)
 			self._RunConn(oldconn, oldId)
 		} else {
-			gamelog.Debug("_ResetOldConn isOpen: %d", oldId)
+			gamelog.Debug("_ResetOldConn(%d) isOpen", oldId)
 			// newconn.Close()
 			self._AddNewConn(newconn)
 		}
 	} else {
-		gamelog.Debug("_ResetOldConn to _AddNewConn: %d", oldId)
+		gamelog.Debug("_ResetOldConn(%d) to _AddNewConn", oldId)
 		self._AddNewConn(newconn)
 	}
 }
@@ -208,19 +208,19 @@ func _Rpc_regist(req, _ *common.NetPack, conn *TCPConn) {
 	if p := meta.GetMeta(pMeta.Module, pMeta.SvrID); p != nil {
 		if p.IP != pMeta.IP || p.OutIP != pMeta.OutIP {
 			conn.Close() //防止配置错误，出现外网节点顶替
-			gamelog.Warn("RegistToSvr repeat: %v", pMeta)
+			gamelog.Warn("Regist repeat: %v", pMeta)
 			return
 		}
 	}
 	conn.UserPtr = pMeta
 	meta.AddMeta(pMeta)
 	g_reg_conn_map.Store(std.KeyPair{pMeta.Module, pMeta.SvrID}, conn)
-	fmt.Println("RegistToSvr: ", pMeta)
+	gamelog.Debug("Regist: %v", pMeta)
 }
 func _Rpc_unregist(req, _ *common.NetPack, conn *TCPConn) {
 	if pMeta, ok := conn.UserPtr.(*meta.Meta); ok {
 		if pConn := FindRegModule(pMeta.Module, pMeta.SvrID); pConn == nil || pConn.IsClose() {
-			fmt.Println("UnRegist Svr: ", pMeta)
+			gamelog.Debug("UnRegist: %v", pMeta)
 			meta.DelMeta(pMeta.Module, pMeta.SvrID)
 			g_reg_conn_map.Delete(std.KeyPair{pMeta.Module, pMeta.SvrID})
 		}

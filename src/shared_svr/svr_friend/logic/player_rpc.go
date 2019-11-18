@@ -30,7 +30,6 @@ func DoPlayerRpc(this *TFriendModule, rpcId uint16, req, ack *common.NetPack) bo
 func Rpc_recv_player_msg(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	rpcId := req.ReadUInt16()
 	accountId := req.ReadUInt32()
-
 	gamelog.Debug("PlayerMsg:%d", rpcId)
 
 	if this := FindWithDB(accountId); this != nil {

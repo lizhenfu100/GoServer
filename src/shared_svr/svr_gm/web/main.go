@@ -1,9 +1,13 @@
 /***********************************************************************
 * @ GM系统
 * @ brief
-	1、先从center拉取所有login地址，再拉login下所有game地址
+	· 先从center拉取所有login地址，再拉login下所有game地址
+	· 填充模板，生成真正的HTML文件，方便查看
 
-	2、填充模板，生成真正的HTML文件，方便查看
+* @ 内网gm工具，得是多进程的（彼此间可能rpc同名不同值）
+	· 每个进程负责一个游戏，各游戏提供index.html作入口
+	· 注册到 GM/index.html
+	· 纯单机性的，业务统一，才可像现在这样放一个进程处理
 
 * @ author zhoumf
 * @ date 2019-2-20
@@ -40,7 +44,7 @@ func Init() {
 	UpdateHtmls("account/", "account/", g_common)
 	UpdateHtml("index", "index", g_common)
 	UpdateHtml("relay_gm_cmd", "relay_gm_cmd", g_common)
-
+	Update_js_css("web", "web", g_common)
 	go qqmsg.LoopMsg()
 }
 func init2() {

@@ -102,7 +102,8 @@ func (self *ByteBuffer) ReadString() (ret string) {
 	if self.readableBytes() >= length {
 		old := self.ReadPos
 		self.ReadPos += length
-		ret = B2S(self.buf[old:self.ReadPos])
+		//ret = B2S(self.buf[old:self.ReadPos]) Bug:须拷贝出去，强转引用的同片内存，数据错乱
+		ret = string(self.buf[old:self.ReadPos])
 	}
 	return
 }

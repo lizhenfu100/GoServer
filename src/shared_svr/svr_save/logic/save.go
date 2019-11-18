@@ -96,7 +96,7 @@ func checkMac(pf_id, uid, mac string) (*TSaveData, uint16) { //Notice：不可�
 			return pSave, err.Record_bind_limit
 		}
 		if pSave.MacCnt >= conf.Const.MacBindMax {
-			if now-pSave.RaiseTime < int64(conf.Const.RaiseBindCntPeriod) {
+			if (now-pSave.RaiseTime)/(3600*24) < int64(conf.Const.RaiseBindCntDay) {
 				gamelog.Track("Record_bind_max: %v", pSave)
 				return pSave, err.Record_bind_max
 			} else {

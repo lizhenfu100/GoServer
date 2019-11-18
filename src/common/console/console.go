@@ -25,6 +25,8 @@ func Init() {
 	http.G_HandleFunc[enum.Rpc_gm_cmd] = _Rpc_gm_cmd2
 	tcp.G_HandleFunc[enum.Rpc_meta_list] = _Rpc_meta_list1
 	http.G_HandleFunc[enum.Rpc_meta_list] = _Rpc_meta_list2
+	tcp.G_HandleFunc[enum.Rpc_get_meta] = _Rpc_get_meta1
+	http.G_HandleFunc[enum.Rpc_get_meta] = _Rpc_get_meta2
 	tcp.G_HandleFunc[enum.Rpc_update_file] = _Rpc_update_file1
 	http.G_HandleFunc[enum.Rpc_update_file] = _Rpc_update_file2
 	tcp.G_HandleFunc[enum.Rpc_reload_csv] = _Rpc_reload_csv1
@@ -51,12 +53,21 @@ func _Rpc_meta_list1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_meta_list2
 func _Rpc_meta_list2(req, ack *common.NetPack) {
 	module := req.ReadString() //game、save、file...
 	version := req.ReadString()
-
 	ids := meta.GetModuleIDs(module, version)
 	ack.WriteByte(byte(len(ids)))
 	for _, id := range ids {
 		p := meta.GetMeta(module, id)
 		ack.WriteInt(p.SvrID)
+		ack.WriteString(p.OutIP)
+		ack.WriteUInt16(p.Port())
+		ack.WriteString(p.SvrName)
+	}
+}
+func _Rpc_get_meta1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_get_meta2(req, ack) }
+func _Rpc_get_meta2(req, ack *common.NetPack) {
+	module := req.ReadString() //game、save、file...
+	svrId := req.ReadInt()
+	if p := meta.GetMeta(module, svrId); p != nil {
 		ack.WriteString(p.OutIP)
 		ack.WriteUInt16(p.Port())
 		ack.WriteString(p.SvrName)

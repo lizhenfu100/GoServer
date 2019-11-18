@@ -71,7 +71,6 @@ func main() {
 		"shared_svr/svr_gateway",
 		"shared_svr/svr_gm",
 		"shared_svr/svr_login",
-		"shared_svr/svr_relay",
 		"shared_svr/svr_save",
 		"shared_svr/svr_sdk",
 		"shared_svr/svr_stats",

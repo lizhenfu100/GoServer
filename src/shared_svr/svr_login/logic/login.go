@@ -61,14 +61,13 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 	if !assert.IsDebug && gameName != conf.GameName {
 		ack.WriteUInt16(err.LoginSvr_not_match)
 		wechat.SendMsg("登录服不匹配：" + conf.GameName + account)
-		//} else if timer.G_Freq.NetError {
-		//	ack.WriteUInt16(err.Svr_net_exception)
+	} else if centerId := netConfig.HashCenterID(account); centerId < 0 {
+		ack.WriteUInt16(err.None_center_server)
 	} else {
 		//2、同步转至center验证账号信息，取得accountId、gameInfo
-		centerSvrId := netConfig.HashCenterID(account)
-		if ok, _1, _2 := accountLogin1(centerSvrId, req, ack); ok {
+		if ok, _1, _2 := accountLogin1(centerId, req, ack); ok {
 			//3、确定gameSvrId，处理gameInfo
-			errCode := accountLogin2(_1.AccountID, &gameSvrId, &_2, version, gameName, centerSvrId)
+			errCode := accountLogin2(_1.AccountID, &gameSvrId, &_2, version, gameName, centerId)
 			if errCode == err.Success {
 				//4、登录成功，设置各类信息，回复client待连接的节点(gateway或game)
 				accountLogin3(&_1, gameSvrId, ack)
@@ -78,12 +77,12 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 		}
 	}
 }
-func accountLogin1(centerSvrId int, req, ack *common.NetPack) (
+func accountLogin1(centerId int, req, ack *common.NetPack) (
 	_ok bool,
 	_1 info.TAccountClient,
 	_2 info.TGameInfo) {
 	//同步至center验证账号信息，取得accountId、gameInfo
-	netConfig.SyncRelayToCenter(centerSvrId, enum.Rpc_center_account_login, req, ack)
+	netConfig.SyncRelayToCenter(centerId, enum.Rpc_center_account_login, req, ack)
 
 	//临时读取buffer数据
 	oldPos := ack.ReadPos
@@ -110,7 +109,7 @@ func accountLogin2(
 	gameSvrId *int,
 	pInfo *info.TGameInfo,
 	version, gameName string,
-	centerSvrId int) (errCode uint16) {
+	centerId int) (errCode uint16) {
 	gamelog.Track("GameInfo:%v, version:%s gameName:%s", pInfo, version, gameName)
 	if !conf.HandPick_GameSvr {
 		//选取gameSvrId：若账户未绑定游戏服，自动选取空闲节点，并绑定到账号上
@@ -119,7 +118,7 @@ func accountLogin2(
 				errCode = err.None_free_game_server
 			} else {
 				errCode = err.None_center_server
-				netConfig.CallRpcCenter(centerSvrId, enum.Rpc_center_set_game_info,
+				netConfig.CallRpcCenter(centerId, enum.Rpc_center_set_game_info,
 					func(buf *common.NetPack) {
 						buf.WriteUInt32(accountId)
 						buf.WriteString(gameName)

@@ -39,7 +39,6 @@ import (
 	"gamelog"
 	"netConfig/meta"
 	"nets/tcp"
-	"svr_game/player/version"
 	"sync/atomic"
 	"time"
 )
@@ -125,9 +124,6 @@ func NewPlayerInDB(accountId uint32, name string) *TPlayer {
 func LoadPlayerFromDB(key string, val uint32) *TPlayer {
 	player := _NewPlayer()
 	if ok, _ := dbmgo.Find(kDBPlayer, key, val, &player.TPlayerBase); ok {
-		if player.Version != meta.G_Local.Version {
-			version.Upgrade(player.PlayerID, player.Version, meta.G_Local.Version)
-		}
 		for _, v := range player.modules {
 			v.LoadFromDB(player)
 		}

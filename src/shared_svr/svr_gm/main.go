@@ -8,7 +8,7 @@ import (
 	"dbmgo"
 	"flag"
 	"gamelog"
-	_ "generate_out/rpc/shared_svr/svr_stats"
+	_ "generate_out/rpc/shared_svr/svr_gm"
 	"netConfig"
 	"netConfig/meta"
 	"shared_svr/svr_gm/logic"

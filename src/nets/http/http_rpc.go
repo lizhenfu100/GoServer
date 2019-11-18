@@ -3,13 +3,11 @@ package http
 import (
 	"common"
 	"common/std/compress"
-	"common/timer"
 	"conf"
 	"gamelog"
 	"generate_out/rpc/enum"
 	"io"
 	"svr_client/test/qps"
-	"time"
 )
 
 var (
@@ -26,9 +24,6 @@ func CallRpc(addr string, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 		if ack := common.NewNetPack(compress.Decompress(buf)); ack != nil {
 			recvFun(ack)
 		}
-	}
-	if buf == nil {
-		timer.G_Freq.NetError = !timer.G_Freq.NetFreq.Check(time.Now().Unix())
 	}
 	req.Free()
 }

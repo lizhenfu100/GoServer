@@ -27,7 +27,7 @@ func init() {
 	tcp.G_HandleFunc[enum.Rpc_http_node_quit] = _Rpc_http_node_quit
 }
 func RegisterToZookeeper() {
-	// 初始化同zookeeper的连接，并注册
+	// 连接zookeeper并注册，须防止多次调用本接口
 	if pZoo := meta.GetMeta("zookeeper", 0); pZoo != nil && g_cache_zoo_conn == nil {
 		netConfig.ConnectModuleTcp(pZoo, func(*tcp.TCPConn) {
 			CallRpcZoo(enum.Rpc_zoo_register, func(buf *common.NetPack) {

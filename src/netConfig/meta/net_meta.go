@@ -109,12 +109,15 @@ func InitConf(list []Meta) {
 //Notice：ptr必须是堆上的，且指向不同内存
 func AddMeta(pNew *Meta) {
 	key := std.KeyPair{pNew.Module, pNew.SvrID}
-	if v, ok := G_Metas.Load(key); ok {
-		*v.(*Meta) = *pNew
-	} else {
-		G_Metas.Store(key, pNew)
-	}
+	G_Metas.Store(key, pNew)
+	//if v, ok := G_Metas.Load(key); ok {
+	//	*v.(*Meta) = *pNew //Bug：非线程安全的
+	//} else {
+	//	G_Metas.Store(key, pNew)
+	//}
 }
+
+//Notice：禁止缓存指针，G_Metas会被多线程改写
 func GetMeta(module string, svrID int) *Meta {
 	if v, ok := G_Metas.Load(std.KeyPair{module, svrID}); ok && !v.(*Meta).IsClosed {
 		return v.(*Meta)
@@ -152,14 +155,28 @@ func GetModuleIDs(module, version string) (ret []int) {
 }
 
 // -------------------------------------
-//! logic
-func (self *Meta) IsMyServer(dst *Meta) bool {
-	for _, v := range self.ConnectLst {
-		if v == dst.Module && !dst.IsSame(self) {
-			return true
+const (
+	None = iota
+	CS
+	SC
+)
+
+func (src *Meta) IsMyServer(dst *Meta) byte {
+	if !dst.IsSame(src) {
+		if std.Strings(src.ConnectLst).Index(dst.Module) >= 0 {
+			if src.TcpPort > 0 && dst.HttpPort > 0 {
+				return SC //tcp连http，改为http连tcp（保障双向通信）
+			} else {
+				return CS //src客户端，dst服务器
+			}
+		} else if std.Strings(dst.ConnectLst).Index(src.Module) >= 0 {
+			if dst.TcpPort > 0 && src.HttpPort > 0 {
+				return CS //tcp连http，改为http连tcp（保障双向通信）
+			} else {
+				return SC //src服务器，dst客户端
+			}
 		}
 	}
-	return false
+	return None
 }
-func (self *Meta) IsMyClient(dst *Meta) bool { return dst.IsMyServer(self) }
-func (self *Meta) IsSame(dst *Meta) bool     { return self.Module == dst.Module && self.SvrID == dst.SvrID }
+func (src *Meta) IsSame(dst *Meta) bool { return src.Module == dst.Module && src.SvrID == dst.SvrID }

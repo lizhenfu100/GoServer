@@ -8,7 +8,7 @@
 
 	3、【业务节点动态扩展】
 		、游戏服，在账号上绑定区服编号（自动分服）/ 本地缓存（玩家手选区服）：确定玩家-服务器匹配关系
-		、战斗服，无持久性状态数据，扩展方便；GameSvr将玩家数据通过Cross转至某Battle（hash取模路由）
+		、战斗服，无持久性状态数据，扩展方便；GameSvr将玩家数据通过Cross转至某Battle
 		、其它服务节点，如邮件、好友...设计成无状态的(redis缓存)，彼此一致，直接hash取模即可
 
 	4、【gatew采用hash取模方式路由玩家，无法动态扩展，部署上需预留盈余，性能不够时可将同机器上其它节点迁移】
@@ -41,20 +41,15 @@ var g_clients sync.Map //<{module,svrId}, *tcp.TCPClient> //本模块主动连�
 func RunNetSvr() {
 	//1、找到当前的配置信息
 	assert.True(meta.G_Local != nil)
-
 	//2、连接并注册到其它模块
 	if nil == meta.GetMeta("zookeeper", 0) { //没有zookeeper节点，才依赖配置，否则依赖zookeeper的通知
-		for _, connModule := range meta.G_Local.ConnectLst {
-			meta.G_Metas.Range(func(k, v interface{}) bool {
-				dest := v.(*meta.Meta)
-				if dest.Module == connModule && !dest.IsSame(meta.G_Local) {
-					ConnectModule(dest)
-				}
-				return true
-			})
-		}
+		meta.G_Metas.Range(func(_, v interface{}) bool {
+			if p := v.(*meta.Meta); p.IsMyServer(meta.G_Local) == meta.SC {
+				ConnectModule(p)
+			}
+			return true
+		})
 	}
-
 	//3、开启本模块网络服务(Busy Loop)
 	fmt.Printf("-------%s(%d %d) start-------\n", meta.G_Local.Module, meta.G_Local.SvrID, meta.G_Local.Port())
 	if meta.G_Local.HttpPort > 0 {

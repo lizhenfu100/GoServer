@@ -100,15 +100,17 @@ func _PlayerRpcHttp(w http.ResponseWriter, r *http.Request) {
 // - 网关转发的玩家消息
 func Rpc_recv_player_msg(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	rpcId := req.ReadUInt16()
+	oldPos := req.ReadPos
 	accountId := req.ReadUInt32()
 	gamelog.Debug("PlayerMsg:%d", rpcId)
 
-	if player := FindAccountId(accountId); player != nil {
+	if rpcId == enum.Rpc_game_login || rpcId == enum.Rpc_game_create_player {
+		req.ReadPos = oldPos //回置buffer
+		tcp.G_HandleFunc[rpcId](req, ack, conn)
+	} else if player := FindAccountId(accountId); player != nil {
 		if !DoPlayerRpc(player, rpcId, req, ack) {
 			gamelog.Error("PlayerMsg(%d) Not Regist", rpcId)
 		}
-	} else if rpcId == enum.Rpc_game_login || rpcId == enum.Rpc_game_create_player {
-		tcp.G_HandleFunc[rpcId](req, ack, conn)
 	} else {
 		gamelog.Debug("Player(%d) isn't online", accountId)
 	}

@@ -6,9 +6,6 @@
 		、center比较特殊，它本身是无状态的
 			玩家分到错误节点也能重新从数据库读到自己数据
 
-	2、无zookeeper的架构，只能重启扩容
-		、节点间的meta信息，须保持一致性
-
 * @ FIXME：一些hash取模定位的节点，依赖了节点总数；节点陆续连接，中途玩家就上来通信，会分配至错误节点
 	gateway，带状态的，一旦分配错误，影响很大
 	friend，若联了不同的db_friend，会找不到数据
@@ -48,8 +45,7 @@ func (p *rpcHttp) CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	http.CallRpc(addr, rid, sendFun, recvFun)
 }
 func (p *rpcHttp) CallRpcSafe(rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	addr := http.Addr(p.IP, p.HttpPort)
-	http.CallRpc(addr, rid, sendFun, recvFun)
+	p.CallRpc(rid, sendFun, recvFun)
 }
 func GetRpc(module string, svrId int) (Rpc, bool) { //interface无法"!= nil"判别有效
 	if p := meta.GetMeta(module, svrId); p == nil {
@@ -103,7 +99,7 @@ func GetLoginRpc() (Rpc, bool) {
 //! gateway tcp|http -- 账号hash取模
 var g_cache_gate sync.Map //<int, Rpc>
 
-func HashGatewayID(accountId uint32) int { //Optimize：考虑用一致性hash，取模方式导致gateway无法动态扩展
+func HashGatewayID(accountId uint32) int { //TODO：用一致性hash，取模方式gateway无法动态扩展
 	ids := meta.GetModuleIDs("gateway", meta.G_Local.Version)
 	if length := uint32(len(ids)); length > 0 {
 		return ids[accountId%length]

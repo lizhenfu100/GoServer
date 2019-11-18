@@ -29,13 +29,3 @@ func (self *OpFreq) Check(t int64) bool {
 	self.Unlock()
 	return true
 }
-
-// ------------------------------------------------------------
-// 网络持续性timeout
-var G_Freq struct {
-	NetError bool
-	NetFreq  *OpFreq
-}
-func init() {
-	G_Freq.NetFreq = NewOpFreq(10, 600)
-}
