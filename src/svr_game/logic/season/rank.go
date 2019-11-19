@@ -23,8 +23,8 @@ import (
 
 var (
 	KRankNeedScore int //入排行榜所需积分
-	g_ranker       rank.TRanker
-	g_rank_map     map[uint32]*RankItem //<pid, >
+	g_rank         rank.TRank
+	g_items        map[uint32]*RankItem //<pid, >
 )
 
 // ------------------------------------------------------------
@@ -40,11 +40,11 @@ type RankItem struct {
 func (self *RankItem) GetRank() uint { return uint(self.Rank) }
 func (self *RankItem) SetRank(i uint) {
 	if self.Rank = uint8(i); i == 0 {
-		delete(g_rank_map, self.PlayerID) //被挤出排行榜
+		delete(g_items, self.PlayerID) //被挤出排行榜
 	}
 }
 func (self *RankItem) Less(obj rank.IRankItem) bool { return self.Score < obj.(*RankItem).Score }
-func (self *RankItem) OnValueChange() bool          { return g_ranker.OnValueChange(self) }
+func (self *RankItem) OnValueChange() bool          { return g_rank.OnValueChange(self) }
 
 // ------------------------------------------------------------
 //
@@ -53,18 +53,18 @@ func InitRankList() {
 	KRankNeedScore = conf.Const.Season_Score[kLen-1]
 	//初始化排行榜
 	var list []RankItem
-	g_ranker.Init("SeasonRank", 100, &list)
-	g_rank_map = make(map[uint32]*RankItem, 100)
+	g_rank.Init("SeasonRank", 100, &list)
+	g_items = make(map[uint32]*RankItem, 100)
 	for i := 0; i < len(list); i++ {
 		ptr := &list[i]
-		g_rank_map[ptr.PlayerID] = ptr
-		g_ranker.InsertToIndex(ptr.GetRank(), ptr)
+		g_items[ptr.PlayerID] = ptr
+		g_rank.InsertToIndex(ptr.GetRank(), ptr)
 	}
 }
 func GetRankItem(pid uint32) *RankItem {
-	if v, ok := g_rank_map[pid]; ok {
+	if v, ok := g_items[pid]; ok {
 		return v
 	}
 	return nil
 }
-func AddRankItem(p *RankItem) { g_rank_map[p.PlayerID] = p }
+func AddRankItem(p *RankItem) { g_items[p.PlayerID] = p }

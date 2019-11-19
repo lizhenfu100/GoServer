@@ -17,6 +17,7 @@ package gm
 import (
 	"common"
 	"common/copy"
+	"common/timer"
 	"dbmgo"
 	"encoding/json"
 	"gamelog"
@@ -24,6 +25,7 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
+	"time"
 )
 
 const (
@@ -32,17 +34,19 @@ const (
 )
 
 type Bulletin struct {
-	En      string //告示内容，按国家划分
-	Zh      string
-	Zh_Hant string
-	Jp      string
-	Ru      string //俄语
-	Kr      string //韩语
-	Es      string //西班牙语
-	Pt_Br   string //葡萄牙语
-	Fr      string //法语
-	Id      string //印尼语
-	De      string //德语
+	Starttime int64
+	Endtime   int64
+	En        string //告示内容，按国家划分
+	Zh        string
+	Zh_Hant   string
+	Jp        string
+	Ru        string //俄语
+	Kr        string //韩语
+	Es        string //西班牙语
+	Pt_Br     string //葡萄牙语
+	Fr        string //法语
+	Id        string //印尼语
+	De        string //德语
 }
 type Bulletins struct {
 	DBKey string `bson:"_id"`
@@ -52,15 +56,18 @@ type Bulletins struct {
 func Rpc_login_bulletin(req, ack *common.NetPack) {
 	area := req.ReadString()
 	pf_id := req.ReadString()
-
-	pAll, ret := &Bulletins{}, ""
+	pAll, ret, timenow := &Bulletins{}, "", time.Now().Unix()
 	if ok, _ := dbmgo.Find(dbmgo.KTableArgs, "_id", kDBKey, pAll); ok {
 		if v, ok := pAll.Pf[pf_id]; ok { //优先找本平台的
-			ret = v.Get(area)
+			if timenow >= v.Starttime && timenow < v.Endtime {
+				ret = v.Get(area)
+			}
 		}
 		if ret == "" {
 			if v, ok := pAll.Pf[kAllPf]; ok { //再找全平台的
-				ret = v.Get(area)
+				if timenow >= v.Starttime && timenow < v.Endtime {
+					ret = v.Get(area)
+				}
 			}
 		}
 	}
@@ -68,28 +75,25 @@ func Rpc_login_bulletin(req, ack *common.NetPack) {
 }
 func Http_bulletin(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-
 	pf_id := q.Get("pf_id")
 	if pf_id == "" {
 		pf_id = kAllPf
 	}
-
 	pVal, pAll := &Bulletin{}, &Bulletins{}
 	copy.CopyForm(pVal, q)
+	pVal.Starttime = timer.S2T(q.Get("starttime"))
+	pVal.Endtime = timer.S2T(q.Get("endtime"))
 	pAll.setPlatform(pf_id, pVal)
-
 	ack, _ := json.MarshalIndent(pAll, "", "     ")
 	w.Write(ack)
 	gamelog.Info("Http_bulletin: %v", q)
 }
 func Http_view_bulletin(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-
 	pf_id := q.Get("pf_id")
 	if pf_id == "" {
 		pf_id = kAllPf
 	}
-
 	pAll := &Bulletins{}
 	dbmgo.Find(dbmgo.KTableArgs, "_id", kDBKey, pAll)
 	ack, _ := json.MarshalIndent(pAll.Pf[pf_id], "", "     ")
@@ -119,7 +123,6 @@ func (self *Bulletin) Get(area string) string {
 // 运营用自增id
 func Http_get_inc_id(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-
 	if key := q.Get("key"); key != "" {
 		id := dbmgo.GetNextIncId(key)
 		w.Write(common.S2B(strconv.FormatInt(int64(id), 10)))

@@ -21,6 +21,7 @@ const (
 	DB_Update_All
 	DB_Remove_One
 	DB_Remove_All
+	DB_Upsert_Id
 )
 
 type action struct {
@@ -49,12 +50,18 @@ func _loop() {
 			err = coll.Update(v.search, v.pData)
 		case DB_Update_Id:
 			err = coll.UpdateId(v.search, v.pData)
+		case DB_Upsert_Id:
+			_, err = coll.UpsertId(v.search, v.pData)
 		case DB_Update_All:
 			_, err = coll.UpdateAll(v.search, v.pData)
 		case DB_Remove_One:
 			err = coll.Remove(v.search)
 		case DB_Remove_All:
-			_, err = coll.RemoveAll(v.search)
+			if v.search == nil {
+				err = coll.DropCollection()
+			} else {
+				_, err = coll.RemoveAll(v.search)
+			}
 		}
 		if err != nil {
 			gamelog.Error("DBLoop: op[%d] table[%s] search[%v], data[%v], Error[%v]",
@@ -81,6 +88,14 @@ func Update(table string, search, update bson.M) {
 func UpdateId(table string, id, pData interface{}) {
 	_actions <- &action{
 		optype: DB_Update_Id,
+		table:  table,
+		search: id,
+		pData:  pData,
+	}
+}
+func UpsertId(table string, id, pData interface{}) {
+	_actions <- &action{
+		optype: DB_Upsert_Id,
 		table:  table,
 		search: id,
 		pData:  pData,

@@ -29,9 +29,9 @@ func TodayRunSec() int {
 func TodayLeftSec() int { return OneDaySec - TodayRunSec() }
 
 // 时间戳--日期
-const kTimeLayout = "2006/01/02 15:04:05"
+const kTimeLayout = "2006-01-02 15:04:05"
 
-func Str2Time(date string) int64 {
+func S2T(date string) int64 {
 	if v, e := time.ParseInLocation(kTimeLayout, date, time.Local); e == nil {
 		return v.Unix()
 	} else {
@@ -39,4 +39,4 @@ func Str2Time(date string) int64 {
 		return 0
 	}
 }
-func Time2Str(sec int64) string { return time.Unix(sec, 0).Format(kTimeLayout) }
+func T2S(sec int64) string { return time.Unix(sec, 0).Format(kTimeLayout) }

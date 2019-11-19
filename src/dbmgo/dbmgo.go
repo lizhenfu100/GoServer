@@ -91,6 +91,15 @@ func UpdateIdSync(table string, id, pData interface{}) bool {
 	}
 	return true
 }
+func UpsertIdSync(table string, id, pData interface{}) bool {
+	coll := DB().C(table)
+	if _, err := coll.UpsertId(id, pData); err != nil {
+		gamelog.Error("UpsertSync table[%s] id[%v] data[%v] Error[%v]", table, id, pData, err)
+		wechat.SendMsg("数据库Upsert：" + err.Error())
+		return false
+	}
+	return true
+}
 func RemoveOneSync(table string, search bson.M) bool {
 	coll := DB().C(table)
 	if err := coll.Remove(search); err != nil && err != mgo.ErrNotFound {
@@ -101,7 +110,12 @@ func RemoveOneSync(table string, search bson.M) bool {
 }
 func RemoveAllSync(table string, search bson.M) bool {
 	coll := DB().C(table)
-	if _, err := coll.RemoveAll(search); err != nil && err != mgo.ErrNotFound {
+	if search == nil {
+		if e := coll.DropCollection(); e != nil {
+			gamelog.Error("Drop table[%s] Error[%v]", table, e)
+			return false
+		}
+	} else if _, err := coll.RemoveAll(search); err != nil && err != mgo.ErrNotFound {
 		gamelog.Error("RemoveAllSync table[%s] search[%v] Error[%v]", table, search, err)
 		return false
 	}

@@ -150,8 +150,7 @@ func (self *TPlayer) Login(conn *tcp.TCPConn) {
 	}
 	atomic.StoreUint32(&self._idleMin, 0)
 	atomic.StoreInt64(&self.LoginTime, time.Now().Unix())
-	self.conn = conn
-	if conn != nil && conn.UserPtr == nil { //链接可能是gateway节点
+	if self.conn = conn; conn != nil && conn.UserPtr == nil { //链接可能是gateway节点
 		conn.UserPtr = self
 	}
 	for _, v := range self.modules {

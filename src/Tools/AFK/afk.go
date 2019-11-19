@@ -22,7 +22,6 @@ import (
 const (
 	kDBTable     = "afk"
 	kFileDirRoot = "html/AFK/"
-	kTimeLayout  = "2006-01-02"
 )
 
 func init() {
@@ -160,6 +159,7 @@ func (self *Afk_req) check() (err string) {
 	return
 }
 func s2t(s string) time.Time {
+	const kTimeLayout = "2006-01-02"
 	t, _ := time.ParseInLocation(kTimeLayout, s, time.Local)
 	return t
 }

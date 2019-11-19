@@ -49,9 +49,9 @@ func OnEnterNextDay() {
 	if t := GetBeginTime(); t > G_Args.TimeBgein {
 		G_Args.TimeBgein = t
 		G_Args.UpdateDB()
-		g_ranker.Clear()
-		for k := range g_rank_map {
-			delete(g_rank_map, k)
+		g_rank.Clear()
+		for k := range g_items {
+			delete(g_items, k)
 		}
 	}
 }

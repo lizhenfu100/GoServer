@@ -78,7 +78,7 @@ func GetOrderInfo(addr string, orderIds []string) {
 					vec[i].Item_name = recvBuf.ReadString()
 					vec[i].Item_count = recvBuf.ReadInt()
 					vec[i].Total_price = recvBuf.ReadInt()
-					vec[i].Extra = timer.Time2Str(recvBuf.ReadInt64()) //临时用于时间戳转日期
+					vec[i].Extra = timer.T2S(recvBuf.ReadInt64()) //临时用于时间戳转日期
 					vec[i].Status = recvBuf.ReadInt()
 					vec[i].Can_send = recvBuf.ReadInt()
 				} else {
