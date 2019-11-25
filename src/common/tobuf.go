@@ -10,7 +10,7 @@ import (
 // bytes.Buffer > string + > fmt.Sprintf > strings.Join
 
 // ------------------------------------------------------------
-//【仅限只读数据】
+//【临时转换，原内存须保持有效，且只读的】
 func S2B(s string) []byte {
 	sh := (*[2]uintptr)(unsafe.Pointer(&s)) //reflect.StringHeader
 	bh := [3]uintptr{sh[0], sh[1], sh[1]}   //reflect.SliceHeader

@@ -32,7 +32,7 @@ func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
 
 	//1、向center查询新大区地址
 	newLoginAddr := ""
-	if p, ok := netConfig.GetLoginRpc(); ok {
+	if p, ok := netConfig.GetRpcRand("login"); ok {
 		p.CallRpcSafe(enum.Rpc_login_relay_to_center, func(buf *common.NetPack) {
 			buf.WriteUInt16(enum.Rpc_get_meta)
 			buf.WriteString("login")

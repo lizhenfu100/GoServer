@@ -2,14 +2,14 @@
 // Don't edit !
 package rpc
 import (
-	"netConfig/register"
+	"nets"
 	"generate_out/rpc/enum"
 	"shared_svr/zookeeper/logic"
 	
 )
 func init() {
 	
-		register.RegTcpRpc(map[uint16]register.TcpRpc{
+		nets.RegTcpRpc(map[uint16]nets.TcpRpc{
 			enum.Rpc_net_error: logic.Rpc_net_error,
 			enum.Rpc_zoo_register: logic.Rpc_zoo_register,
 			

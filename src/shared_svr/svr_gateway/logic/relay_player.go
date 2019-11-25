@@ -45,7 +45,7 @@ func RelayPlayerMsg(rpcId uint16, accountId uint32, reqData []byte, recvFun func
 				buf.WriteBuf(reqData)
 			}, recvFun)
 		} else {
-			//【系统缺陷】丢失了玩家的game路由，没通知调用者，也没重试
+			//FIXME：丢失了玩家的game路由，没通知调用者，也没重试；所有rpc都需回复错误码，才能统一通知到
 			gamelog.Error("rid(%d) accountId(%d) svr conn nil", rpcId, accountId)
 		}
 	}

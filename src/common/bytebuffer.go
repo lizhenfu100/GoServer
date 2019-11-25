@@ -73,12 +73,6 @@ func (self *ByteBuffer) WriteString(v string) {
 	self.WriteBuf(buf)
 }
 func (self *ByteBuffer) WriteBuf(v []byte) { self.buf = append(self.buf, v...) }
-func (self *ByteBuffer) ReadLenBuf2() []byte { //TODO:zhoumf:待删除
-	cnt := self.ReadUInt16()
-	old := self.ReadPos
-	self.ReadPos += int(cnt)
-	return self.buf[old:self.ReadPos]
-}
 func (self *ByteBuffer) WriteLenBuf(v []byte) {
 	self.WriteUInt32(uint32(len(v)))
 	self.buf = append(self.buf, v...)

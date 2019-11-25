@@ -172,7 +172,12 @@ func Rpc_save_upload_binary2(req, ack *common.NetPack) {
 	mac := req.ReadString()
 	req.ReadString() //sign签名：不必要的，底层对消息加密
 	extra := req.ReadString()
-	data := req.ReadLenBuf2()
+	//存档
+	cnt := req.ReadUInt16()
+	old := req.ReadPos
+	req.ReadPos += int(cnt)
+	data := req.Data()[old:req.ReadPos]
+
 	clientVersion := req.ReadString()
 
 	errcode := upload(pf_id, uid, mac, data, extra, clientVersion)

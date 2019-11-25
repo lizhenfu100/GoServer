@@ -53,7 +53,7 @@ func HandleFunc(path string, f http.RequestHandler) { _map[path] = f }
 func _HandleRpc(ctx *http.RequestCtx) {
 	//TODO: 检查是否需要recover()
 	ip := ""
-	if mhttp.G_Intercept != nil {
+	if mhttp.Intercept() != nil {
 		ip = ctx.RemoteIP().String()
 	}
 	mhttp.HandleRpc(ctx.Request.Body(), ctx, ip)

@@ -19,8 +19,7 @@ import (
 )
 
 func AccountRegLimit() {
-	//拦截器启动流程中初始化的，实际不会有竞态
-	http.G_Intercept = func(req, ack *common.NetPack, ip string) bool {
+	http.SetIntercept(func(req, ack *common.NetPack, ip string) bool {
 		msgId := req.GetOpCode()
 		oldPos := req.ReadPos //临时读取buffer数据
 		switch msgId {
@@ -43,7 +42,7 @@ func AccountRegLimit() {
 		}
 		req.ReadPos = oldPos
 		return false
-	}
+	})
 }
 
 // ------------------------------------------------------------

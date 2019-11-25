@@ -70,9 +70,7 @@ func InitRouteGame() {
 func AddRouteGame(aid uint32, svrId int) {
 	g_route_game.Store(aid, svrId)
 	v := RouteGame{aid, svrId, time.Now().Unix()}
-	if coll := dbmgo.DB().C(kDBRoute); coll.Insert(&v) != nil {
-		coll.UpsertId(aid, &v)
-	}
+	dbmgo.UpsertId(kDBRoute, aid, &v)
 }
 func DelRouteGame(aid uint32) { g_route_game.Delete(aid) }
 

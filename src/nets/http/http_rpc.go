@@ -8,12 +8,10 @@ import (
 	"generate_out/rpc/enum"
 	"io"
 	"svr_client/test/qps"
+	"sync/atomic"
 )
 
-var (
-	G_HandleFunc [enum.RpcEnumCnt]func(req, ack *common.NetPack)
-	G_Intercept  func(req, ack *common.NetPack, clientIp string) bool
-)
+var G_HandleFunc [enum.RpcEnumCnt]func(req, ack *common.NetPack)
 
 func CallRpc(addr string, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	req := common.NewNetPackCap(64)
@@ -49,7 +47,7 @@ func HandleRpc(request []byte, w io.Writer, clientIp string) { //G_Intercept==ni
 	if conf.TestFlag_CalcQPS {
 		qps.AddQps()
 	}
-	if G_Intercept != nil && G_Intercept(req, ack, clientIp) { //拦截器
+	if p := Intercept(); p != nil && p(req, ack, clientIp) { //拦截器
 		return
 	}
 	if handler := G_HandleFunc[msgId]; handler != nil {
@@ -58,3 +56,12 @@ func HandleRpc(request []byte, w io.Writer, clientIp string) { //G_Intercept==ni
 		gamelog.Error("Msg(%d) Not Regist", msgId)
 	}
 }
+
+// ------------------------------------------------------------
+// -- 拦截器
+type intercept func(req, ack *common.NetPack, clientIp string) bool
+
+var g_intercept atomic.Value
+
+func SetIntercept(f intercept) { g_intercept.Store(f) }
+func Intercept() intercept     { v, _ := g_intercept.Load().(intercept); return v }

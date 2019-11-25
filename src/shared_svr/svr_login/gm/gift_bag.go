@@ -45,7 +45,7 @@ const (
 	KDBGiftCode   = "giftcode"
 	KDBGiftPlayer = "giftuid"
 	KGiftCodeDir  = "log/gift/"
-	KGiftCodeTemp  = "temp.csv"
+	KGiftCodeTemp = "temp.csv"
 )
 
 type TGiftBag struct {
@@ -82,7 +82,7 @@ func Rpc_login_gift_get(req, ack *common.NetPack) {
 		ack.WriteUInt16(err.Version_not_match)
 	} else if p.Pf_id != "" && p.Pf_id != pf_id {
 		ack.WriteUInt16(err.Pf_id_not_match) //非此平台玩家
-	} else if (p.Begin > 0 && timenow < p.Begin) || (p.End > 0 && timenow > p.End) {
+	} else if !common.InTime(timenow, p.Begin, p.End) {
 		ack.WriteUInt16(err.Not_in_the_time_zone) //时间不对，无法领取
 	} else if ok, _ := dbmgo.Find(KDBGiftCode, "_id", code, &TGiftCode{}); ok { //礼包码数据库找到代表被领取
 		ack.WriteUInt16(err.Already_get_it) //已领过

@@ -40,17 +40,12 @@ func GetNextIncId(key string) uint32 {
 		ret := g_inc_id_map[key] + 1
 		g_inc_id_map[key] = ret
 		g_inc_id_mutex.Unlock()
-		if ret == 1 {
-			Insert(kDBIncTable, &nameId{key, 1})
-		} else {
-			UpdateId(kDBIncTable, key, bson.M{"$inc": bson.M{"id": 1}}) //$set在多进程架构中有脏写风险
-		}
+		UpsertId(kDBIncTable, key, bson.M{"$inc": bson.M{"id": 1}}) //$set在多进程架构中有脏写风险
 		return ret
 	} else {
 		v := &nameId{key, 0}
 		g_inc_id_mutex.Lock()
 		//FIXME：两进程同时读，返回同样结果，其中一个后续操作会失败
-		//tcp连同个dbproxy，单线程取
 		if ok, _ := Find(kDBIncTable, "_id", key, v); ok {
 			v.ID++
 			UpdateIdSync(kDBIncTable, key, bson.M{"$inc": bson.M{"id": 1}})

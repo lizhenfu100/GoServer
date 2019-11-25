@@ -21,7 +21,6 @@ import (
 	"common/std/hash"
 	"gamelog"
 	"generate_out/rpc/enum"
-	"math/rand"
 	"netConfig/meta"
 	"nets/http"
 	"nets/tcp"
@@ -61,6 +60,15 @@ func GetRpc(module string, svrId int) (Rpc, bool) { //interface无法"!= nil"判
 }
 
 // ------------------------------------------------------------
+//! 无状态节点，随机取 -- login friend sdk save gm
+func GetRpcRand(module string) (Rpc, bool) {
+	if id := meta.RandModuleID(module); id >= 0 {
+		return GetRpc(module, id)
+	}
+	return nil, false
+}
+
+// ------------------------------------------------------------
 //! center http -- 账号名hash取模
 func HashCenterID(key string) int {
 	ids := meta.GetModuleIDs("center", meta.G_Local.Version)
@@ -82,17 +90,6 @@ func CallRpcCenter(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)
 	} else {
 		gamelog.Error("center nil: svrId(%d) rpcId(%d)", svrId, rid)
 	}
-}
-
-// ------------------------------------------------------------
-//! login tcp|http -- 随机节点
-func GetLoginRpc() (Rpc, bool) {
-	ids := meta.GetModuleIDs("login", meta.G_Local.Version)
-	if length := len(ids); length > 0 {
-		id := ids[rand.Intn(length)]
-		return GetRpc("login", id)
-	}
-	return nil, false
 }
 
 // ------------------------------------------------------------
@@ -124,7 +121,7 @@ func GetGatewayRpc(svrId int) (ret Rpc, ok bool) {
 		if ret, ok = GetRpc("gateway", svrId); ok {
 			g_cache_gate.Store(svrId, ret)
 		}
-	} else if ret, ok = v.(Rpc); ok && ret.IsClose() {
+	} else if ret, ok = v.(Rpc); !ok || ret.IsClose() {
 		if ret, ok = GetRpc("gateway", svrId); ok {
 			g_cache_gate.Store(svrId, ret)
 		}
@@ -142,7 +139,7 @@ func GetGameRpc(svrId int) (ret Rpc, ok bool) {
 		if ret, ok = GetRpc("game", svrId); ok {
 			g_cache_game.Store(svrId, ret)
 		}
-	} else if ret, ok = v.(Rpc); ok && ret.IsClose() {
+	} else if ret, ok = v.(Rpc); !ok || ret.IsClose() {
 		if ret, ok = GetRpc("game", svrId); ok {
 			g_cache_game.Store(svrId, ret)
 		}
@@ -151,40 +148,25 @@ func GetGameRpc(svrId int) (ret Rpc, ok bool) {
 }
 
 // ------------------------------------------------------------
-//! friend http -- 账号hash取模
-func HashFriendID(accountId uint32) int {
-	ids := meta.GetModuleIDs("friend", meta.G_Local.Version)
-	if length := uint32(len(ids)); length > 0 {
-		return ids[accountId%length]
-	}
-	return -1
-}
-func CallRpcFriend(accountId uint32, rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	svrId := HashFriendID(accountId)
-	if addr := GetHttpAddr("friend", svrId); addr != "" {
-		http.CallRpc(addr, rid, func(buf *common.NetPack) {
-			buf.WriteUInt32(accountId)
-			sendFun(buf)
-		}, recvFun)
-	} else {
-		gamelog.Error("friend nil: svrId(%d) rpcId(%d)", svrId, rid)
-	}
-}
-
-// ------------------------------------------------------------
-//! cross tcp -- 随机节点，非线程安全
+//! cross & battle -- 非线程安全
 var g_cache_cross = make(map[int]*tcp.TCPConn)
+var g_cache_battle = make(map[int]*tcp.TCPConn)
 
 func CallRpcCross(rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	ids := meta.GetModuleIDs("cross", meta.G_Local.Version)
-	if length := len(ids); length > 0 {
-		id := ids[rand.Intn(length)]
+	if id := meta.RandModuleID("cross"); id >= 0 {
 		if conn := GetCrossConn(id); conn != nil {
 			conn.CallRpc(rid, sendFun, recvFun)
 			return
 		}
 	}
 	gamelog.Error("cross nil: rpcId(%d)", rid)
+}
+func CallRpcBattle(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)) {
+	if conn := GetBattleConn(svrId); conn != nil {
+		conn.CallRpc(rid, sendFun, recvFun)
+	} else {
+		gamelog.Error("battle nil: svrId(%d) rpcId(%d)", svrId, rid)
+	}
 }
 func GetCrossConn(svrId int) *tcp.TCPConn {
 	conn, _ := g_cache_cross[svrId]
@@ -193,18 +175,6 @@ func GetCrossConn(svrId int) *tcp.TCPConn {
 		g_cache_cross[svrId] = conn
 	}
 	return conn
-}
-
-// ------------------------------------------------------------
-//! battle tcp -- 非线程安全
-var g_cache_battle = make(map[int]*tcp.TCPConn)
-
-func CallRpcBattle(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	if conn := GetBattleConn(svrId); conn != nil {
-		conn.CallRpc(rid, sendFun, recvFun)
-	} else {
-		gamelog.Error("battle nil: svrId(%d) rpcId(%d)", svrId, rid)
-	}
 }
 func GetBattleConn(svrId int) *tcp.TCPConn {
 	conn, _ := g_cache_battle[svrId]

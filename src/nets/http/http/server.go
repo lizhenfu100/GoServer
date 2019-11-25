@@ -62,7 +62,7 @@ func HandleRpc(w http.ResponseWriter, r *http.Request) {
 	//}()
 	if buf := ReadBody(r.Body); buf != nil {
 		ip := ""
-		if mhttp.G_Intercept != nil {
+		if mhttp.Intercept() != nil {
 			ip = strings.Split(r.RemoteAddr, ":")[0]
 		}
 		mhttp.HandleRpc(buf, w, ip)

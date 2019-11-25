@@ -16,3 +16,7 @@ func IsMatchVersion(a, b string) bool {
 
 func SwapBuf(a, b *[]byte) { *a, *b = *b, *a }
 func ClearBuf(p *[]byte)   { *p = (*p)[:0] } //len(0), cap(old), 旧数据不会修改
+
+func InTime(now, begin, end int64) bool {
+	return (begin <= 0 || now >= begin) && (end <= 0 || now <= end)
+}

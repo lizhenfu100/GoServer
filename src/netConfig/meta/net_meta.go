@@ -29,6 +29,7 @@ import (
 	"common"
 	"common/std"
 	"gamelog"
+	"math/rand"
 	"sort"
 	"sync"
 )
@@ -152,6 +153,13 @@ func GetModuleIDs(module, version string) (ret []int) {
 	})
 	sort.Ints(ret)
 	return
+}
+func RandModuleID(module string) int {
+	ids := GetModuleIDs(module, G_Local.Version)
+	if n := len(ids); n > 0 {
+		return ids[rand.Intn(n)]
+	}
+	return -1
 }
 
 // -------------------------------------

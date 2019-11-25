@@ -5,6 +5,8 @@
 	2、数组缓存Top N，变动时上下移动
 	3、整个排行榜系统包括两部分，本模块负责排序，具体业务模块需单独结构负责存储
 
+* @ 边界条件过多，很不健壮
+
 * @ 全服排行榜：redis zset
 
 * @ author zhoumf
@@ -13,7 +15,6 @@
 package rank
 
 import (
-	"common/assert"
 	"dbmgo"
 	"sort"
 )
@@ -40,7 +41,7 @@ func (self *TRank) OnValueChange(obj IRankItem) bool {
 	oldRank := obj.GetRank()
 	newIdx := self.SearchIndex(obj)
 	if oldRank > 0 { //已上榜
-		self.move(newIdx, oldRank)
+		self._move(newIdx, oldRank)
 	} else if newIdx > 0 { //之前未上榜
 		self.InsertToIndex(newIdx, obj)
 	}
@@ -67,6 +68,9 @@ func (self *TRank) WriteDB(obj IRankItem) {
 }
 
 func (self *TRank) SearchIndex(obj IRankItem) uint {
+	if obj.Less(self.GetLastRanker()) {
+		return 0
+	}
 	//返回f(i)=true的最小i；找不到返回n，而不是-1
 	idx := sort.Search(len(self._arr), func(i int) bool {
 		return i > 0 && (self._arr[i] == nil || self._arr[i].Less(obj))
@@ -77,22 +81,30 @@ func (self *TRank) SearchIndex(obj IRankItem) uint {
 		return uint(idx)
 	}
 }
-func (self *TRank) move(dst, src uint) {
-	assert.True(dst <= self._last && src <= self._last)
-	tmp := self._arr[src]
-	if src > dst {
-		copy(self._arr[dst+1:], self._arr[dst:src]) //dst后移一步
-		self._arr[dst] = tmp
-		for i := dst; i <= src; i++ {
+func (self *TRank) _move(dst, src uint) {
+	if dst == 0 { //下榜
+		self._arr[src].SetRank(0)
+		self._last--
+		self._arr = append(self._arr[:src], self._arr[src+1:]...)
+		for i := src; i <= self._last; i++ {
 			self._arr[i].SetRank(i)
 			self.WriteDB(self._arr[i])
 		}
-	} else if src < dst {
-		copy(self._arr[src:dst], self._arr[src+1:]) //src+1前移一步
-		self._arr[dst] = tmp
-		for i := src; i <= dst; i++ {
-			self._arr[i].SetRank(i)
-			self.WriteDB(self._arr[i])
+	} else if tmp := self._arr[src]; tmp != nil {
+		if src > dst {
+			copy(self._arr[dst+1:], self._arr[dst:src]) //dst后移一步
+			self._arr[dst] = tmp
+			for i := dst; i <= src; i++ {
+				self._arr[i].SetRank(i)
+				self.WriteDB(self._arr[i])
+			}
+		} else if src < dst {
+			copy(self._arr[src:dst], self._arr[src+1:]) //src+1前移一步
+			self._arr[dst] = tmp
+			for i := src; i <= dst; i++ {
+				self._arr[i].SetRank(i)
+				self.WriteDB(self._arr[i])
+			}
 		}
 	}
 }

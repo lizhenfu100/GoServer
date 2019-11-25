@@ -34,19 +34,19 @@ const (
 )
 
 type Bulletin struct {
-	Starttime int64
-	Endtime   int64
-	En        string //告示内容，按国家划分
-	Zh        string
-	Zh_Hant   string
-	Jp        string
-	Ru        string //俄语
-	Kr        string //韩语
-	Es        string //西班牙语
-	Pt_Br     string //葡萄牙语
-	Fr        string //法语
-	Id        string //印尼语
-	De        string //德语
+	Begin   int64
+	End     int64
+	En      string //告示内容，按国家划分
+	Zh      string
+	Zh_Hant string
+	Jp      string
+	Ru      string //俄语
+	Kr      string //韩语
+	Es      string //西班牙语
+	Pt_Br   string //葡萄牙语
+	Fr      string //法语
+	Id      string //印尼语
+	De      string //德语
 }
 type Bulletins struct {
 	DBKey string `bson:"_id"`
@@ -59,13 +59,13 @@ func Rpc_login_bulletin(req, ack *common.NetPack) {
 	pAll, ret, timenow := &Bulletins{}, "", time.Now().Unix()
 	if ok, _ := dbmgo.Find(dbmgo.KTableArgs, "_id", kDBKey, pAll); ok {
 		if v, ok := pAll.Pf[pf_id]; ok { //优先找本平台的
-			if timenow >= v.Starttime && timenow < v.Endtime {
+			if common.InTime(timenow, v.Begin, v.End) {
 				ret = v.Get(area)
 			}
 		}
 		if ret == "" {
 			if v, ok := pAll.Pf[kAllPf]; ok { //再找全平台的
-				if timenow >= v.Starttime && timenow < v.Endtime {
+				if common.InTime(timenow, v.Begin, v.End) {
 					ret = v.Get(area)
 				}
 			}
@@ -79,10 +79,11 @@ func Http_bulletin(w http.ResponseWriter, r *http.Request) {
 	if pf_id == "" {
 		pf_id = kAllPf
 	}
-	pVal, pAll := &Bulletin{}, &Bulletins{}
+	pVal := &Bulletin{}
 	copy.CopyForm(pVal, q)
-	pVal.Starttime = timer.S2T(q.Get("starttime"))
-	pVal.Endtime = timer.S2T(q.Get("endtime"))
+	pVal.Begin = timer.S2T(q.Get("begin"))
+	pVal.End = timer.S2T(q.Get("end"))
+	pAll := &Bulletins{}
 	pAll.setPlatform(pf_id, pVal)
 	ack, _ := json.MarshalIndent(pAll, "", "     ")
 	w.Write(ack)
@@ -103,8 +104,10 @@ func Http_view_bulletin(w http.ResponseWriter, r *http.Request) {
 // ------------------------------------------------------------
 func (self *Bulletins) setPlatform(pf_id string, pVal *Bulletin) {
 	if ok, _ := dbmgo.Find(dbmgo.KTableArgs, "_id", kDBKey, self); ok {
+		self.Pf[pf_id] = *pVal
 		dbmgo.UpdateId(dbmgo.KTableArgs, kDBKey, bson.M{"$set": bson.M{"pf." + pf_id: pVal}})
 	} else {
+		self.DBKey = kDBKey
 		self.Pf[pf_id] = *pVal
 		dbmgo.Insert(dbmgo.KTableArgs, self)
 	}

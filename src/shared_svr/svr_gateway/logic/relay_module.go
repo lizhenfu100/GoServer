@@ -3,7 +3,6 @@ package logic
 import (
 	"common"
 	"generate_out/rpc/enum"
-	"math/rand"
 	"netConfig"
 	"netConfig/meta"
 )
@@ -18,10 +17,7 @@ func Rpc_gateway_relay_module(req *common.NetPack, recvFun func(*common.NetPack)
 	*/
 	module := enum.GetRpcModule(rpcId)
 	if svrId == -1 { //随机节点
-		ids := meta.GetModuleIDs(module, meta.G_Local.Version)
-		if n := len(ids); n > 0 {
-			svrId = ids[rand.Intn(n)]
-		}
+		svrId = meta.RandModuleID(module)
 	}
 	if p, ok := netConfig.GetRpc(module, svrId); ok {
 		p.CallRpcSafe(rpcId, func(buf *common.NetPack) {
