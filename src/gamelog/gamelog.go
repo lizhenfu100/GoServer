@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -16,8 +17,7 @@ func InitLogger(name string) {
 		return
 	}
 	SetLevel(Lv_Info)
-	//InitFileLog(name)
-	p := NewAsyncLog(10240, getFile(name))
+	p := NewAsyncLog(10240, newFile(name))
 	g_log.SetOutput(p)
 	go AutoChangeFile(name, p)
 }
@@ -30,6 +30,7 @@ const (
 	Lv_Warn
 	Lv_Error
 	Lv_Fatal
+	Flush_Interval = 180 * time.Second //隔几秒刷次log
 )
 
 var (
@@ -71,16 +72,13 @@ func Fatal(format string, v ...interface{}) {
 }
 
 // ------------------------------------------------------------
-// 异步日志
-const Flush_Interval = 180 * time.Second //隔几秒刷次log
-
 type AsyncLog struct {
 	sync.Mutex
 	cond    sync.Cond
 	curBuf  []byte
 	nextBuf []byte
 	bufs    [][]byte
-	wr      Writer
+	wr      atomic.Value //io.Writer
 	isStop  bool
 }
 
@@ -89,7 +87,7 @@ func NewAsyncLog(cap int, wr io.Writer) *AsyncLog {
 		curBuf:  make([]byte, 0, cap),
 		nextBuf: make([]byte, 0, cap),
 	}
-	self.wr.Set(wr)
+	self.wr.Store(wr)
 	self.cond.L = &self.Mutex
 	go self._writeLoop(cap)
 	go func() {
@@ -132,7 +130,7 @@ func (self *AsyncLog) _writeLoop(cap int) {
 		}
 		self.Unlock()
 
-		wr := self.wr.Get() //copy to stack
+		wr := self.wr.Load().(io.Writer) //copy to stack
 		for _, v := range bufs {
 			wr.Write(v)
 		}
@@ -147,36 +145,15 @@ func (self *AsyncLog) _writeLoop(cap int) {
 		bufs = bufs[:0]
 	}
 }
-func _move(rhs, lhs *[]byte) {
-	*rhs = *lhs
-	*lhs = nil
-}
-func _swap(rhs, lhs *[][]byte) {
-	temp := *rhs
-	*rhs = *lhs
-	*lhs = temp
-}
+func _move(rhs, lhs *[]byte)   { *rhs = *lhs; *lhs = nil }
+func _swap(rhs, lhs *[][]byte) { temp := *rhs; *rhs = *lhs; *lhs = temp }
 func (self *AsyncLog) Stop() {
 	self.isStop = true
 	self.cond.Signal()
 }
-func (self *AsyncLog) isNil() bool { return len(self.curBuf) == 0 && len(self.bufs) == 0 }
-
-// ------------------------------------------------------------
-// 原子修改内部 wr
-type Writer struct {
-	sync.Mutex
-	wr io.Writer
-}
-
-func (self *Writer) Get() (ret io.Writer) {
+func (self *AsyncLog) isNil() bool {
 	self.Lock()
-	ret = self.wr
+	ret := len(self.curBuf) == 0 && len(self.bufs) == 0
 	self.Unlock()
-	return
-}
-func (self *Writer) Set(wr io.Writer) {
-	self.Lock()
-	self.wr = wr
-	self.Unlock()
+	return ret
 }

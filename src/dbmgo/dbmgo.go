@@ -121,6 +121,8 @@ func RemoveAllSync(table string, search bson.M) bool {
 	}
 	return true
 }
+
+// false && err == nil，才表示db中没有
 func Find(table, key string, value, pData interface{}) (bool, error) {
 	coll := DB().C(table)
 	err := coll.Find(bson.M{key: value}).One(pData)

@@ -38,24 +38,27 @@ func (self *Team) OnLogout()              {}
 
 // ------------------------------------------------------------
 // -- 队伍数据
-func (self *Team) Clear()             { self.list = self.list[:0] }
-func (self *Team) IsEmpty() bool      { return len(self.list) == 0 }
-func (self *TPlayer) IsCaptain() bool { return self.team.list[0].aid == self.AccountID }
+func (self *Team) Clear()        { self.list = self.list[:0] }
+func (self *Team) IsEmpty() bool { return len(self.list) == 0 }
 
 func (self *Team) DataToBuf(buf *common.NetPack) {
 	buf.WriteByte(byte(len(self.list)))
 	for i := 0; i < len(self.list); i++ {
-		ptr := &self.list[i]
-		ptr.DataToBuf(buf)
+		self.list[i].DataToBuf(buf)
 	}
 }
 func (self *Team) BufToData(buf *common.NetPack) {
 	var v TBattleModule
-	length := buf.ReadByte()
 	self.list = self.list[:0]
-	for i := byte(0); i < length; i++ {
+	for cnt, i := buf.ReadByte(), byte(0); i < cnt; i++ {
 		v.BufToData(buf)
 		self.list = append(self.list, v)
+	}
+}
+func (self *Team) ShowInfoToBuf(buf *common.NetPack) {
+	buf.WriteByte(byte(len(self.list)))
+	for i := 0; i < len(self.list); i++ {
+		self.list[i].show.DataToBuf(buf)
 	}
 }
 
@@ -90,7 +93,7 @@ func Rpc_game_battle_begin(req, ack *common.NetPack, this *TPlayer) {
 	// 通知队员，开等待界面
 	for i := 0; i < len(this.team.list); i++ {
 		ptr := &this.team.list[i]
-		CallRpcPlayer(ptr.aid, enum.Rpc_client_show_wait_ui, func(buf *common.NetPack) {}, nil)
+		CallRpcPlayer(ptr.show.AccountId, enum.Rpc_client_show_wait_ui, func(buf *common.NetPack) {}, nil)
 	}
 }
 func Rpc_game_exit_team(req, ack *common.NetPack, this *TPlayer) {
@@ -114,30 +117,25 @@ func Rpc_game_agree_invite(req, ack *common.NetPack, this *TPlayer) {
 		CallRpcPlayer(captainId, enum.Rpc_game_join_team, func(buf *common.NetPack) {
 			this.battle.DataToBuf(buf)
 		}, nil)
+	} else {
+		gamelog.Error("Aid(%d) is in team", this.AccountID)
 	}
 }
 func Rpc_game_become_captain(req, ack *common.NetPack, this *TPlayer) {
 	this.team.BufToData(req)
 }
-func Rpc_game_get_team_info(req, ack *common.NetPack, this *TPlayer) {
+func Rpc_game_get_team_show_info(req, ack *common.NetPack, this *TPlayer) {
 	gamelog.Debug("Team_Info: %v", this.team)
-	this.team.DataToBuf(ack)
+	this.team.ShowInfoToBuf(ack)
 }
 func Rpc_game_team_chat(req, ack *common.NetPack, this *TPlayer) {
 	srcId := req.ReadUInt32()
+	srcName := req.ReadString()
 	content := req.ReadString()
 
-	srcName := ""
 	for i := 0; i < len(this.team.list); i++ {
-		ptr := &this.team.list[i]
-		if ptr.aid == srcId {
-			srcName = ptr.name
-		}
-	}
-	for i := 0; i < len(this.team.list); i++ {
-		ptr := &this.team.list[i]
-		if ptr.aid != srcId {
-			CallRpcPlayer(ptr.aid, enum.Rpc_client_team_chat, func(buf *common.NetPack) {
+		if p := &this.team.list[i]; p.show.AccountId != srcId {
+			CallRpcPlayer(p.show.AccountId, enum.Rpc_client_team_chat, func(buf *common.NetPack) {
 				buf.WriteString(srcName)
 				buf.WriteString(content)
 			}, nil)
@@ -148,38 +146,38 @@ func Rpc_game_team_chat(req, ack *common.NetPack, this *TPlayer) {
 // ------------------------------------------------------------
 // 玩家组队
 func (self *TPlayer) JoinMyTeam(dest *TBattleModule) {
-	gamelog.Debug("JoinTeam: %v", self.team)
+	gamelog.Debug("JoinMyTeam: %v", self.team)
 
 	// 队内广播加入事件 -- 后台队伍数据，仅队长持有即可，同步到队员客户端，队员后台不必有
 	for i := 0; i < len(self.team.list); i++ {
 		ptr := &self.team.list[i]
-		CallRpcPlayer(ptr.aid, enum.Rpc_client_on_other_join_team, func(buf *common.NetPack) {
-			dest.DataToBuf(buf)
+		CallRpcPlayer(ptr.show.AccountId, enum.Rpc_client_on_other_join_team, func(buf *common.NetPack) {
+			dest.show.DataToBuf(buf)
 		}, nil)
 	}
 
 	self.team.list = append(self.team.list, *dest)
-	CallRpcPlayer(dest.aid, enum.Rpc_client_on_self_join_team, func(buf *common.NetPack) {
-		self.team.DataToBuf(buf)
+	CallRpcPlayer(dest.show.AccountId, enum.Rpc_client_on_self_join_team, func(buf *common.NetPack) {
+		self.team.ShowInfoToBuf(buf)
+		gamelog.Debug("%v", self.team)
 	}, nil)
 }
 func (self *TPlayer) ExitMyTeam(accountId uint32) {
-	gamelog.Debug("ExitTeam: %v", self.team)
+	gamelog.Debug("ExitMyTeam: %v", self.team)
 
 	for i := len(self.team.list) - 1; i >= 0; i-- { //倒序遍历，删除更安全的
-		ptr := self.team.list[i]
-		if ptr.aid == accountId {
+		if p := self.team.list[i]; p.show.AccountId == accountId {
 			self.team.list = append(self.team.list[:i], self.team.list[i+1:]...)
 		} else {
 			// 队内广播给离开事件
-			CallRpcPlayer(ptr.aid, enum.Rpc_client_on_exit_team, func(buf *common.NetPack) {
+			CallRpcPlayer(p.show.AccountId, enum.Rpc_client_on_exit_team, func(buf *common.NetPack) {
 				buf.WriteUInt32(accountId)
 			}, nil)
 		}
 	}
 	if self.AccountID == accountId { //自己离队，转移数据
 		if len(self.team.list) > 0 {
-			CallRpcPlayer(self.team.list[0].aid, enum.Rpc_game_become_captain, func(buf *common.NetPack) {
+			CallRpcPlayer(self.team.list[0].show.AccountId, enum.Rpc_game_become_captain, func(buf *common.NetPack) {
 				self.team.DataToBuf(buf)
 			}, nil)
 			self.team.Clear()

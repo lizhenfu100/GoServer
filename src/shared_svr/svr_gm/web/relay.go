@@ -15,6 +15,26 @@ import (
 	"time"
 )
 
+func writeRelayResult(w http.ResponseWriter, acks [][]byte) {
+	//检查回复是否一致
+	isSame := true
+	for i := 0; i < len(acks); i++ {
+		for j := i + 1; j < len(acks); j++ {
+			if common.B2S(acks[i]) != common.B2S(acks[j]) {
+				isSame = false
+			}
+		}
+	}
+	if isSame {
+		w.Write(acks[0])
+	} else {
+		w.Write(common.S2B("Different result !!!\n\n"))
+		for i := 0; i < len(acks); i++ {
+			w.Write(acks[i])
+		}
+	}
+}
+
 func Http_reset_password(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	//1、追加参数
@@ -23,15 +43,17 @@ func Http_reset_password(w http.ResponseWriter, r *http.Request) {
 	flag := strconv.FormatInt(time.Now().Unix(), 10)
 	q.Set("flag", flag)
 	q.Set("sign", sign.CalcSign(k+v+pwd+flag))
+	var acks [][]byte
 	for i := 0; i < len(g_common.CenterList); i++ {
 		//2、创建url
 		u, _ := url.Parse(g_common.CenterList[i] + "/reset_password")
 		//3、生成完整url
 		u.RawQuery = q.Encode()
 		if buf := mhttp.Client.Get(u.String()); buf != nil && i == 0 {
-			w.Write(buf)
+			acks = append(acks, buf)
 		}
 	}
+	writeRelayResult(w, acks)
 }
 func Http_bind_info_force(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
@@ -40,15 +62,17 @@ func Http_bind_info_force(w http.ResponseWriter, r *http.Request) {
 	flag := strconv.FormatInt(time.Now().Unix(), 10)
 	q.Set("flag", flag)
 	q.Set("sign", sign.CalcSign(aid+k+v+flag))
+	var acks [][]byte
 	for i := 0; i < len(g_common.CenterList); i++ {
 		//2、创建url
 		u, _ := url.Parse(g_common.CenterList[i] + "/bind_info_force")
 		//3、生成完整url
 		u.RawQuery = q.Encode()
 		if buf := mhttp.Client.Get(u.String()); buf != nil && i == 0 {
-			w.Write(buf)
+			acks = append(acks, buf)
 		}
 	}
+	writeRelayResult(w, acks)
 }
 
 func relay_gm_cmd(w http.ResponseWriter, r *http.Request) {
@@ -106,25 +130,6 @@ func relay_to_login(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		writeRelayResult(w, acks)
-	}
-}
-func writeRelayResult(w http.ResponseWriter, acks [][]byte) {
-	//检查回复是否一致
-	isSame := true
-	for i := 0; i < len(acks); i++ {
-		for j := i + 1; j < len(acks); j++ {
-			if common.B2S(acks[i]) != common.B2S(acks[j]) {
-				isSame = false
-			}
-		}
-	}
-	if isSame {
-		w.Write(acks[0])
-	} else {
-		w.Write(common.S2B("Different result !!!\n\n"))
-		for i := 0; i < len(acks); i++ {
-			w.Write(acks[i])
-		}
 	}
 }
 

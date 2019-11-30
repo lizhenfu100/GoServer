@@ -74,11 +74,16 @@ func AddRouteGame(aid uint32, svrId int) {
 }
 func DelRouteGame(aid uint32) { g_route_game.Delete(aid) }
 
-var g_clients = make(map[uint32]*tcp.TCPConn) //accountId-clientConn
+var g_clients sync.Map //accountId-clientConn
 
-func AddClientConn(aid uint32, conn *tcp.TCPConn) { g_clients[aid] = conn }
-func DelClientConn(aid uint32)                    { delete(g_clients, aid) }
-func GetClientConn(aid uint32) *tcp.TCPConn       { return g_clients[aid] }
+func AddClientConn(aid uint32, conn *tcp.TCPConn) { g_clients.Store(aid, conn) }
+func DelClientConn(aid uint32)                    { g_clients.Delete(aid) }
+func GetClientConn(aid uint32) *tcp.TCPConn {
+	if v, ok := g_clients.Load(aid); ok {
+		return v.(*tcp.TCPConn)
+	}
+	return nil
+}
 
 // ------------------------------------------------------------
 // 辅助函数

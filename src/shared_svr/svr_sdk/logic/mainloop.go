@@ -39,5 +39,5 @@ func updateEnterNextDay() {
 	timer.G_TimerMgr.AddTimerSec(onEnterNextDay, delay, timer.OneDaySec, -1)
 }
 func onEnterNextDay() {
-	ClearIpOrder()
+	ClearMacOrder()
 }

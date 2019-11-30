@@ -222,7 +222,7 @@ func (self *TCPConn) readLoop() {
 		}
 		_, err = io.ReadFull(self.reader, msgHeader)
 		if err != nil {
-			gamelog.Error("(%p)ReadFull msgHeader error: %s", self.conn, err.Error())
+			gamelog.Debug("pConn(%p): %s", self.conn, err.Error())
 			break
 		}
 		msgLen = int(binary.LittleEndian.Uint16(msgHeader))
@@ -238,7 +238,7 @@ func (self *TCPConn) readLoop() {
 		}
 		_, err = io.ReadFull(self.reader, packet.Data())
 		if err != nil {
-			gamelog.Error("(%p)ReadFull msgData error: %s", self.conn, err.Error())
+			gamelog.Debug("pConn(%p): %s", self.conn, err.Error())
 			break
 		}
 		if conf.TestFlag_CalcQPS {

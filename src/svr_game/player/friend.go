@@ -18,14 +18,14 @@ func (self *TFriendModule) WriteToDB()               {}
 func (self *TFriendModule) OnLogin() {
 	if p, ok := netConfig.GetRpcRand("friend"); ok {
 		p.CallRpc(enum.Rpc_friend_get_friend_list, func(buf *common.NetPack) {
+			buf.WriteUInt32(self.owner.AccountID)
 		}, func(recvBuf *common.NetPack) {
-			cnt := recvBuf.ReadByte()
-			for i := byte(0); i < cnt; i++ {
+			for cnt, i := recvBuf.ReadUInt16(), uint16(0); i < cnt; i++ {
 				friendId := recvBuf.ReadUInt32()
 
-				//通告好友我上线了
+				//通告好友我上线了 TODO:zhoumf:只需通知在线好友
 				netConfig.CallRpcGateway(friendId, enum.Rpc_client_friend_login, func(buf *common.NetPack) {
-					buf.WriteUInt32(self.owner.AccountID)
+					self.owner.GetShowInfo().DataToBuf(buf)
 				}, nil)
 
 				//收集在线好友信息
@@ -42,12 +42,12 @@ func (self *TFriendModule) OnLogin() {
 func (self *TFriendModule) OnLogout() {
 	if p, ok := netConfig.GetRpcRand("friend"); ok {
 		p.CallRpc(enum.Rpc_friend_get_friend_list, func(buf *common.NetPack) {
+			buf.WriteUInt32(self.owner.AccountID)
 		}, func(recvBuf *common.NetPack) {
-			cnt := recvBuf.ReadByte()
-			for i := byte(0); i < cnt; i++ {
+			for cnt, i := recvBuf.ReadUInt16(), uint16(0); i < cnt; i++ {
 				friendId := recvBuf.ReadUInt32()
 
-				//通告好友我下线了
+				//通告好友我下线了 TODO:zhoumf:只需通知在线好友
 				netConfig.CallRpcGateway(friendId, enum.Rpc_client_friend_logout, func(buf *common.NetPack) {
 					buf.WriteUInt32(self.owner.AccountID)
 				}, nil)

@@ -83,7 +83,6 @@ func (self *TCPServer) _HandleAcceptConn(conn net.Conn) {
 	}
 	connId := binary.LittleEndian.Uint32(buf)
 	gamelog.Debug("_HandleAcceptConn: %d", connId)
-	//FIXME：IP黑/白名单
 	conn.SetReadDeadline(time.Time{}) //后续无超时限制
 
 	if connId > 0 {
@@ -101,16 +100,15 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 
 	connId := atomic.AddUint32(&self.autoConnId, 1)
 
-	self.wgConns.Add(1)
 	tcpConn := newTCPConn(conn)
 	self.connmap.Store(connId, tcpConn)
 	atomic.AddInt32(&self.connCnt, 1)
-	gamelog.Debug("Connect From: %s, AddConnId: %d", conn.RemoteAddr().String(), connId)
+	gamelog.Debug("Connect From: %s, AddConnId(%d)", conn.RemoteAddr().String(), connId)
 
 	tcpConn.onDisConnect = func(conn *TCPConn) { //Notice:回调函数须线程安全
 		self.connmap.Delete(connId)
 		atomic.AddInt32(&self.connCnt, -1)
-		gamelog.Debug("DelConnId: %d %v", connId, conn.UserPtr)
+		gamelog.Debug("DelConnId(%d) %v", connId, conn.UserPtr)
 
 		//通知逻辑线程，连接断开
 		packet := common.NewNetPackCap(16)
@@ -137,12 +135,11 @@ func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
 	if v, ok := self.connmap.Load(oldId); ok {
 		oldconn := v.(*TCPConn)
 		if oldconn.IsClose() {
-			gamelog.Debug("_ResetOldConn(%d) isClose", oldId)
+			gamelog.Debug("_ResetOldConn(%d) isClose, %v", oldId, oldconn.UserPtr)
 			oldconn.resetConn(newconn)
 			self._RunConn(oldconn, oldId)
 		} else {
 			gamelog.Debug("_ResetOldConn(%d) isOpen", oldId)
-			// newconn.Close()
 			self._AddNewConn(newconn)
 		}
 	} else {
@@ -151,13 +148,16 @@ func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
 	}
 }
 func (self *TCPServer) _RunConn(conn *TCPConn, connId uint32) {
-	go conn.readLoop()
-	conn.writeLoop() //block
+	self.wgConns.Add(1)
+
+	go conn.writeLoop()
+	conn.readLoop() //block 留read线程，保证消息响应、连接回收，都是同一线程处理的
 
 	//针对玩家链接，延时删除，以待断线重连
 	if _, ok := conn.UserPtr.(*meta.Meta); ok {
 		conn.onDisConnect(conn)
 	} else {
+		gamelog.Debug("RunEnd(%d) %v", connId, conn.UserPtr)
 		//if conn.delayDel == nil {
 		//	conn.delayDel = time.AfterFunc(Delay_Delete_Conn, func() {
 		//		if tcpConn.IsClose() {

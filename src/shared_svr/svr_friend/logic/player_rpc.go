@@ -35,6 +35,6 @@ func Rpc_recv_player_msg(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	if this := FindWithDB(accountId); this != nil {
 		DoPlayerRpc(this, rpcId, req, ack)
 	} else {
-		gamelog.Debug("Player(%d) isn't online", accountId)
+		gamelog.Debug("AccountId(%d) none", accountId)
 	}
 }

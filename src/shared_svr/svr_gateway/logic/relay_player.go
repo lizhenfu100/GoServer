@@ -45,7 +45,8 @@ func RelayPlayerMsg(rpcId uint16, accountId uint32, reqData []byte, recvFun func
 				buf.WriteBuf(reqData)
 			}, recvFun)
 		} else {
-			//FIXME：丢失了玩家的game路由，没通知调用者，也没重试；所有rpc都需回复错误码，才能统一通知到
+			//FIXME：丢失了玩家的game路由，没通知调用者，也没重试
+			//FIXME：将第一个字节设成 255 表示内网转发失败
 			gamelog.Error("rid(%d) accountId(%d) svr conn nil", rpcId, accountId)
 		}
 	}

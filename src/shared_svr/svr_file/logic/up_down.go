@@ -125,6 +125,15 @@ func Rpc_file_update_list(req, ack *common.NetPack) {
 		ack.WriteUInt32(0)
 	}
 }
+func Rpc_file_delete(req, ack *common.NetPack) {
+	if cnt := req.ReadInt(); cnt > 0 {
+		for i := 0; i < cnt; i++ {
+			name := kFileDirPatch + req.ReadString()
+			g_file_md5.Delete(name)
+			os.Remove(name)
+		}
+	}
+}
 
 // ------------------------------------------------------------
 // 细粒度的文件读写锁

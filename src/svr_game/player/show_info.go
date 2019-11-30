@@ -22,16 +22,16 @@ func (self *TShowInfo) DataToBuf(buf *common.NetPack) {
 	buf.WriteString(self.Name)
 	buf.WriteString(self.Head)
 }
-func (self *TPlayer) GetShowInfo() (ret TShowInfo) {
-	ret.AccountId = self.AccountID
-	ret.Name = self.Name
-	ret.Head = self.Head
-	return
+func (self *TPlayer) GetShowInfo() *TShowInfo {
+	return &TShowInfo{
+		self.AccountID,
+		self.Name,
+		self.Head,
+	}
 }
 
 // ------------------------------------------------------------
 // -- rpc
 func Rpc_game_get_show_info(req, ack *common.NetPack, this *TPlayer) {
-	info := this.GetShowInfo()
-	info.DataToBuf(ack)
+	this.GetShowInfo().DataToBuf(ack)
 }

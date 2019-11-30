@@ -49,8 +49,8 @@ func (self *TCPClient) connectRoutine() {
 			//if self.onConnect != nil { //Notice：放这里，回调就是多线程执行的了，健壮性低
 			//	self.onConnect(self.Conn)
 			//}
-			go self.Conn.readLoop()
-			self.Conn.writeLoop() //goroutine会阻塞在这里
+			go self.Conn.writeLoop()
+			self.Conn.readLoop() //goroutine会阻塞在这里
 		}
 		time.Sleep(3 * time.Second)
 	}

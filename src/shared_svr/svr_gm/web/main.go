@@ -44,7 +44,6 @@ func Init() {
 	UpdateHtmls("account/", "account/", g_common)
 	UpdateHtml("index", "index", g_common)
 	UpdateHtml("relay_gm_cmd", "relay_gm_cmd", g_common)
-	Update_js_css("web", "web", g_common)
 	go qqmsg.LoopMsg()
 }
 func init2() {

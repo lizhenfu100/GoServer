@@ -1,22 +1,23 @@
 <html>
 
 <head>
-    <title>改邮箱</title>
+    <title>改绑定</title>
     <link rel="stylesheet" href="main.css">
     <script src="app.js"></script>
 </head>
 
 <body bgcolor="white">
     <div class="all-wrapper">
-        <h1>强制改邮箱</h1>
+        <h1>强制改绑定</h1>
         <div class="form-wrapper">
             <form action="{{.LocalAddr}}/bind_info_force" method="get">
                 <label>账号ID:</label>
                 <input type="text" name="aid"><br>
-                <label>绑定类型:</label>
+                <label>类型:</label>
                 <select name="k">
                     <option value="email">邮箱</option>
                     <option value="name">账号名</option>
+                    <option value="phone">手机号</option>
                 </select>
                 <label>值:</label>
                 <input type="text" name="v"><br>

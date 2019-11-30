@@ -11,15 +11,14 @@ const KDBBattle = "battle"
 
 type TBattleModule struct {
 	PlayerID uint32 `bson:"_id"`
-	Heros    map[uint8]THero
-	Guns     map[uint16]TGun
+	Heros    []THero
+	Guns     []TGun
 
 	//TODO:zhoumf:玩家抽到的武器池子
 
 	//小写私有数据，不入库
 	owner *TPlayer //可能是nil
-	aid   uint32
-	name  string
+	show  TShowInfo
 	svrId int
 }
 type THero struct {
@@ -50,33 +49,28 @@ func (self *TBattleModule) WriteToDB() { dbmgo.UpdateId(KDBBattle, self.PlayerID
 func (self *TBattleModule) OnLogin()   {}
 func (self *TBattleModule) OnLogout()  {}
 func (self *TBattleModule) _InitTempData(player *TPlayer) {
-	if self.Heros == nil {
-		self.Heros = make(map[uint8]THero)
-	}
 	self.owner = player
-	self.aid = player.AccountID
-	self.name = player.Name
+	self.show = *player.GetShowInfo()
 	self.svrId = meta.G_Local.SvrID
 }
 
 // ------------------------------------------------------------
+// 客户端：ShowInfo.cs  战斗服：CrossAgent.56
 func (self *TBattleModule) BufToData(buf *common.NetPack) {
-	self.aid = buf.ReadUInt32()
-	self.name = buf.ReadString()
+	self.show.BufToData(buf)
 	self.svrId = buf.ReadInt()
-
 	self._BufToData(buf)
 }
 func (self *TBattleModule) DataToBuf(buf *common.NetPack) {
+	//1. show info
 	if self.owner != nil {
-		buf.WriteUInt32(self.owner.AccountID)
-		buf.WriteString(self.owner.Name)
+		self.owner.GetShowInfo().DataToBuf(buf)
 	} else {
-		buf.WriteUInt32(self.aid)
-		buf.WriteString(self.name)
+		self.show.DataToBuf(buf)
 	}
+	//2. svr_game id
 	buf.WriteInt(self.svrId)
-
+	//3. battle data
 	self._DataToBuf(buf)
 }
 func (self *TBattleModule) _BufToData(buf *common.NetPack) {
@@ -131,22 +125,28 @@ func Rpc_game_on_battle_end(req, ack *common.NetPack, this *TPlayer) {
 
 // ------------------------------------------------------------
 // -- 英雄
+func (self *TBattleModule) GetHero(id uint8) *THero {
+	for i := 0; i < len(self.Heros); i++ {
+		if self.Heros[i].ID == id {
+			return &self.Heros[i]
+		}
+	}
+	return nil
+}
 func (self *TBattleModule) AddHero(id uint8) bool {
-	if _, ok := self.Heros[id]; ok {
-		return false
-	} else {
-		self.Heros[id] = THero{ID: id}
+	if self.GetHero(id) == nil {
+		self.Heros = append(self.Heros, THero{ID: id})
 		return true
 	}
+	return false
 }
 func (self *TBattleModule) AddHeroExp(id uint8, exp uint16) bool {
 	kConf := conf.Const.Hero_LvUp
-	if v, ok := self.Heros[id]; ok {
-		if v.Level < uint8(len(kConf)) {
-			if v.Exp += exp; v.Exp >= kConf[v.Level] {
-				v.Exp -= kConf[v.Level]
-				v.Level++
-				self.Heros[id] = v
+	if p := self.GetHero(id); p != nil {
+		if p.Level < uint8(len(kConf)) {
+			if p.Exp += exp; p.Exp >= kConf[p.Level] {
+				p.Exp -= kConf[p.Level]
+				p.Level++
 			}
 			return true
 		}
@@ -155,22 +155,28 @@ func (self *TBattleModule) AddHeroExp(id uint8, exp uint16) bool {
 }
 
 // -- 武器
+func (self *TBattleModule) GetGun(id uint16) *TGun {
+	for i := 0; i < len(self.Guns); i++ {
+		if self.Guns[i].ID == id {
+			return &self.Guns[i]
+		}
+	}
+	return nil
+}
 func (self *TBattleModule) AddGun(id uint16) bool {
-	if _, ok := self.Guns[id]; ok {
-		return false
-	} else {
-		self.Guns[id] = TGun{ID: id}
+	if self.GetGun(id) == nil {
+		self.Guns = append(self.Guns, TGun{ID: id})
 		return true
 	}
+	return false
 }
 func (self *TBattleModule) AddGunExp(id uint16, exp uint16) bool {
 	kConf := conf.Const.Gun_LvUp
-	if v, ok := self.Guns[id]; ok {
-		if v.Level < uint8(len(kConf)) {
-			if v.Exp += exp; v.Exp >= kConf[v.Level] {
-				v.Exp -= kConf[v.Level]
-				v.Level++
-				self.Guns[id] = v
+	if p := self.GetGun(id); p != nil {
+		if p.Level < uint8(len(kConf)) {
+			if p.Exp += exp; p.Exp >= kConf[p.Level] {
+				p.Exp -= kConf[p.Level]
+				p.Level++
 			}
 			return true
 		}

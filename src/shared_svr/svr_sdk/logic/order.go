@@ -17,6 +17,7 @@
 package logic
 
 import (
+	"common"
 	"common/assert"
 	"common/copy"
 	"common/safe"
@@ -25,13 +26,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"gamelog"
+	"generate_out/rpc/enum"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
+	"netConfig"
+	"shared_svr/svr_gm/conf"
 	"shared_svr/svr_sdk/msg"
 	"shared_svr/svr_sdk/platform"
-	"strings"
 	"sync"
-	"time"
 )
 
 func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
@@ -60,9 +62,8 @@ func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//是否被封
-	order.Ip = strings.Split(r.RemoteAddr, ":")[0]
-	if !CheckIp(order.Ip) {
-		ack.SetRetcode(-4, "ip is banned")
+	if !CheckMac(order.Mac) {
+		ack.SetRetcode(-4, "Mac is banned")
 		return
 	}
 	//生成订单
@@ -75,7 +76,7 @@ func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 	if ack.HandleOrder(&order) {
 		ack.SetOrderId(order.Order_id)
 		ack.SetRetcode(0, "")
-		AddIpOrder(order.Ip, order.Order_id) //统计ip下的无效订单
+		AddMacOrder(order.Mac, order.Order_id) //统计Mac下的无效订单
 	}
 }
 
@@ -133,7 +134,7 @@ func Http_confirm_order(w http.ResponseWriter, r *http.Request) {
 	} else {
 		ack.Retcode = 0
 		platform.ConfirmOrder(order)
-		DelIpOrder(order.Ip, order.Order_id) //统计ip下的无效订单
+		DelMacOrder(order.Mac, order.Order_id) //统计Mac下的无效订单
 	}
 }
 
@@ -172,42 +173,50 @@ func CheckSign(_sign, s, gameid string) bool {
 }
 
 // ------------------------------------------------------------
-// 封ip //TODO:zhoumf: 待新包覆盖后，改成封mac
-var (
-	g_ip_order sync.Map //<ip, *safe.Strings>
-	g_ban_ip   sync.Map //<ip, time>
-)
+// 封Mac
+var g_mac_order sync.Map //<mac, orderIds> //设备下的订单
 
-func CheckIp(ip string) bool {
-	if t, ok := g_ban_ip.Load(ip); ok && !assert.IsDebug {
-		if time.Now().Unix()-t.(int64) < 3600*1 {
-			return false
-		} else {
-			g_ban_ip.Delete(ip)
-		}
+func CheckMac(mac string) bool {
+	ret := byte(1)
+	if p, ok := netConfig.GetRpcRand("gm"); ok {
+		isSyncCall := true
+		p.CallRpc(enum.Rpc_gm_forbid_check, func(buf *common.NetPack) {
+			isSyncCall = false
+			buf.WriteString(conf.Order_Mac)
+			buf.WriteString(mac)
+		}, func(recvbuf *common.NetPack) {
+			isSyncCall = true
+			ret = recvbuf.ReadByte()
+		})
+		assert.True(isSyncCall)
 	}
-	return true
+	return ret > 0
 }
-func AddIpOrder(ip, id string) {
-	if ids, ok := g_ip_order.Load(ip); ok {
+func AddMacOrder(mac, id string) {
+	if ids, ok := g_mac_order.Load(mac); ok {
 		ids.(*safe.Strings).Add(id)
 		if n := ids.(*safe.Strings).Size(); n > 5 {
-			gamelog.Info("invalid order cnt: %s(%d)", ip, n)
-			g_ban_ip.Store(ip, time.Now().Unix())
+			gamelog.Info("invalid order cnt: %s(%d)", mac, n)
+			if p, ok := netConfig.GetRpcRand("gm"); ok {
+				p.CallRpc(enum.Rpc_gm_forbid_add, func(buf *common.NetPack) {
+					buf.WriteString(conf.Order_Mac)
+					buf.WriteString(mac)
+				}, nil)
+			}
 		}
 	} else {
 		p := &safe.Strings{}
 		p.Add(id)
-		g_ip_order.Store(ip, p)
+		g_mac_order.Store(mac, p)
 	}
 }
-func DelIpOrder(ip, id string) {
-	if ids, ok := g_ip_order.Load(ip); ok {
+func DelMacOrder(mac, id string) {
+	if ids, ok := g_mac_order.Load(mac); ok {
 		if i := ids.(*safe.Strings).Index(id); i >= 0 {
 			ids.(*safe.Strings).Del(i)
 		}
 	}
 }
-func ClearIpOrder() {
-	g_ip_order = sync.Map{}
+func ClearMacOrder() {
+	g_mac_order = sync.Map{}
 }

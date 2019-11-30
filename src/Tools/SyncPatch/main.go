@@ -35,30 +35,42 @@ func main() {
 
 	//本地文件列表
 	localMap := make(map[string]uint32, 32)
-	for _, dir := range strings.Split(dirList, " ") {
+	localDirs := strings.Split(dirList, " ")
+	for _, dir := range localDirs {
 		readDir(dir, localMap)
 	}
 	for _, addr := range strings.Split(addrList, " ") {
-		SyncServerPatch("http://"+addr, localMap)
+		SyncServerPatch("http://"+addr, localMap, localDirs)
 	}
 	if fmt.Println("\n...finish..."); sleep > 0 {
 		time.Sleep(time.Hour)
 	}
 }
+func InDirs(name string, dirs []string) bool {
+	for _, v := range dirs {
+		if strings.HasPrefix(name, v) {
+			return true
+		}
+	}
+	return false
+}
 
 // ------------------------------------------------------------
-func SyncServerPatch(addr string, localMap map[string]uint32) {
+func SyncServerPatch(addr string, localMap map[string]uint32, localDirs []string) {
 	http.CallRpc(addr, enum.Rpc_file_update_list, func(buf *common.NetPack) {
 		buf.WriteString("") //version
 		buf.WriteString("")
 	}, func(backBuf *common.NetPack) {
 		svrMap := make(map[string]uint32, 32)
 		if cnt := backBuf.ReadUInt32(); cnt > 0 {
-			//服务器文件列表
 			for i := uint32(0); i < cnt; i++ {
 				name := backBuf.ReadString()
 				md5hash := backBuf.ReadUInt32()
-				svrMap[name] = md5hash //记录远端文件名、MD5
+
+				//记录同路径下，远端文件名、MD5
+				if InDirs(name, localDirs) {
+					svrMap[name] = md5hash
+				}
 			}
 		}
 
@@ -77,12 +89,25 @@ func SyncServerPatch(addr string, localMap map[string]uint32) {
 				} else {
 					notSyncList = append(notSyncList, k)
 				}
+				delete(svrMap, k) //删除本地有的，剩余即服务器上待删除的
 			} else { //新增文件
 				if http.UploadFile(addr+"/upload_patch_file", k) == nil {
 					cdnUrls = append(cdnUrls, kCDNUrl+k)
 					fmt.Println("    ", k)
 				}
 			}
+		}
+		//删除服务器旧文件
+		if len(svrMap) > 0 {
+			fmt.Println("\nDelete Old File: ")
+			http.CallRpc(addr, enum.Rpc_file_delete, func(buf *common.NetPack) {
+				buf.WriteInt(len(svrMap))
+				for k := range svrMap {
+					fmt.Println("    ", k)
+					buf.WriteString(k)
+					cdnUrls = append(cdnUrls, kCDNUrl+k)
+				}
+			}, nil)
 		}
 		//刷新官网文件的cdn
 		if addr == kCDNAddr && len(cdnUrls) > 0 {

@@ -44,7 +44,7 @@ import (
 )
 
 const (
-	kIdleMinuteMax  = 3 //须客户端心跳包
+	kIdleMinuteMax  = 300 //须客户端心跳包
 	kReLoginWaitSec = 300
 	kActiveTime     = 24 * 3600
 	kDBPlayer       = "Player"
@@ -109,6 +109,7 @@ func NewPlayerInDB(accountId uint32, name string) *TPlayer {
 	player.Name = name
 	player.AccountID = accountId
 	player.PlayerID = accountId //一个账户下仅一个角色的游戏，可令pid=aid
+	//TODO:zhoumf:按格式生成pid，比如前几位是gameSvrId，方便提取信息
 	//player.PlayerID = dbmgo.GetNextIncId("PlayerId")
 	player.Version = meta.G_Local.Version
 
@@ -139,6 +140,7 @@ func (self *TPlayer) WriteAllToDB() {
 	}
 }
 func (self *TPlayer) Login(conn *tcp.TCPConn) {
+	gamelog.Debug("Login: aid(%d), %s", self.AccountID, self.Name)
 	if atomic.SwapInt32(&self._isOnlnie, 1) == 0 {
 		atomic.AddInt32(&g_online_cnt, 1)
 
@@ -158,6 +160,7 @@ func (self *TPlayer) Login(conn *tcp.TCPConn) {
 	}
 }
 func (self *TPlayer) Logout() {
+	gamelog.Debug("Logout: aid(%d)", self.Name, self.AccountID)
 	if atomic.SwapInt32(&self._isOnlnie, 0) > 0 {
 		atomic.AddInt32(&g_online_cnt, -1)
 	}

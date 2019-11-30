@@ -45,17 +45,6 @@ func (self *RpcQueue) Init(cap uint32) {
 	self.queue = make(chan objMsg, cap)
 	self.sendBuffer = common.NewNetPackCap(128)
 	self.backBuffer = common.NewNetPackCap(128)
-	//self.response = make(map[uint64]func(*common.NetPack))
-}
-
-func (self *RpcQueue) Insert(conn *TCPConn, msg *common.NetPack) {
-	//self.queue.Put(objMsg{conn, msg})
-	select {
-	case self.queue <- objMsg{conn, msg}:
-	default:
-		gamelog.Error("RpcQueue Insert: channel full")
-		conn.Close()
-	}
 }
 
 func (self *RpcQueue) Update() { //主循环，每帧调一次
@@ -66,8 +55,7 @@ func (self *RpcQueue) Update() { //主循环，每帧调一次
 	for {
 		select {
 		case v := <-self.queue:
-			self._Handle(v.conn, v.msg)
-			v.msg.Free()
+			self._Handle(v.conn, v.msg, self.backBuffer)
 		default:
 			return
 		}
@@ -76,42 +64,41 @@ func (self *RpcQueue) Update() { //主循环，每帧调一次
 func (self *RpcQueue) Loop() { //死循环，阻塞等待
 	for {
 		v := <-self.queue
-		self._Handle(v.conn, v.msg)
-		v.msg.Free()
+		self._Handle(v.conn, v.msg, self.backBuffer)
 	}
 }
 
-//Notice：非线程安全的，安全改造：backBuffer每次new
-func (self *RpcQueue) _Handle(conn *TCPConn, msg *common.NetPack) {
+// 单线程用self.backBuffe，多线程每次new新的
+func (self *RpcQueue) _Handle(conn *TCPConn, msg, backBuf *common.NetPack) {
 	msgId := msg.GetOpCode()
 	defer func() {
 		if r := recover(); r != nil {
 			gamelog.Error("recover msgId:%d\n%v: %s", msgId, r, debug.Stack())
 		}
 	}()
-	self.backBuffer.ResetHead(msg)
-
+	backBuf.ResetHead(msg)
 	//1、先处理玩家rpc(与player指针强关联)
-	if self._handlePlayerRpc != nil && self._handlePlayerRpc(msg, self.backBuffer, conn) {
-		gamelog.Debug("PlayerMsg:%d, len:%d", msgId, msg.Size())
-		if self.backBuffer.BodySize() > 0 {
-			conn.WriteMsg(self.backBuffer)
+	if self._handlePlayerRpc != nil && self._handlePlayerRpc(msg, backBuf, conn) {
+		gamelog.Debug("PlayerMsg:%d, len:%d", msgId, msg.BodySize())
+		if backBuf.BodySize() > 0 {
+			conn.WriteMsg(backBuf)
 		}
 		//2、普通类型rpc(与连接关联的)
 	} else if msgFunc := G_HandleFunc[msgId]; msgFunc != nil {
-		gamelog.Debug("TcpMsg:%d, len:%d", msgId, msg.Size())
-		msgFunc(msg, self.backBuffer, conn)
-		if self.backBuffer.BodySize() > 0 {
-			conn.WriteMsg(self.backBuffer)
+		gamelog.Debug("TcpMsg:%d, len:%d", msgId, msg.BodySize())
+		msgFunc(msg, backBuf, conn)
+		if backBuf.BodySize() > 0 {
+			conn.WriteMsg(backBuf)
 		}
 		//3、rpc回复(自己发起的调用，对方回复的数据)
 	} else if rpcRecv, ok := self.response.Load(msg.GetReqKey()); ok {
-		gamelog.Debug("ResponseMsg:%d, len:%d", msgId, msg.Size())
+		gamelog.Debug("ResponseMsg:%d, len:%d", msgId, msg.BodySize())
 		rpcRecv.(func(*common.NetPack))(msg)
 		self.response.Delete(msg.GetReqKey())
 	} else {
 		gamelog.Error("Msg(%d) Not Regist", msgId)
 	}
+	msg.Free()
 }
 func RegHandlePlayerRpc(cb func(req, ack *common.NetPack, conn *TCPConn) bool) {
 	G_RpcQueue._handlePlayerRpc = cb // 与玩家强绑定的rpc
@@ -120,7 +107,7 @@ func RegHandlePlayerRpc(cb func(req, ack *common.NetPack, conn *TCPConn) bool) {
 //Notice：非线程安全的，仅供主逻辑线程调用，内部操作的同个sendBuffer，多线程下须每次new新的
 func (self *TCPConn) CallRpc(msgId uint16, sendFun, recvFun func(*common.NetPack)) {
 	g := &G_RpcQueue
-	assert.True((msgId < 100 || G_HandleFunc[msgId] == nil) && g.sendBuffer.GetOpCode() == 0)
+	assert.True(G_HandleFunc[msgId] == nil && g.sendBuffer.GetOpCode() == 0)
 	//CallRpc中途不能再CallRpc
 	//gamelog.Error("[%d] Server and Client have the same Rpc or Repeat CallRpc", msgID)
 	g.sendBuffer.SetOpCode(msgId)
@@ -134,7 +121,7 @@ func (self *TCPConn) CallRpc(msgId uint16, sendFun, recvFun func(*common.NetPack
 }
 func (self *TCPConn) CallRpcSafe(msgId uint16, sendFun, recvFun func(*common.NetPack)) {
 	g := &G_RpcQueue
-	assert.True(msgId < 100 || G_HandleFunc[msgId] == nil)
+	assert.True(G_HandleFunc[msgId] == nil)
 	req := common.NewNetPackCap(64)
 	req.SetOpCode(msgId)
 	req.SetReqIdx(atomic.AddUint32(&g._reqIdx, 1))

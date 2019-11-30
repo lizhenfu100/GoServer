@@ -86,3 +86,14 @@ func Rpc_gm_forbid_del(req, ack *common.NetPack) {
 	key := req.ReadString()
 	dbmgo.Remove(table, bson.M{"_id": key})
 }
+func Rpc_gm_is_white(req, ack *common.NetPack) {
+	table := req.ReadString()
+	key := req.ReadString()
+
+	ptr := &Info{}
+	if ok, _ := dbmgo.Find(table, "_id", key, ptr); ok && ptr.IsWhite {
+		ack.WriteByte(1)
+	} else {
+		ack.WriteByte(0)
+	}
+}

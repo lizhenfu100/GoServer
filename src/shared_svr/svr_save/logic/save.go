@@ -28,7 +28,10 @@ import (
 	"dbmgo"
 	"gamelog"
 	"generate_out/err"
+	"generate_out/rpc/enum"
 	"gopkg.in/mgo.v2/bson"
+	"netConfig"
+	conf2 "shared_svr/svr_gm/conf"
 	"shared_svr/svr_save/conf"
 	"time"
 )
@@ -80,6 +83,11 @@ func Rpc_save_check_mac(req, ack *common.NetPack) {
 }
 func checkMac(pf_id, uid, mac string) (*TSaveData, uint16) { //Notice：不可调换错误码判断顺序
 	pSave, pMac := &TSaveData{Key: GetSaveKey(pf_id, uid)}, &MacInfo{}
+	if isWhite(mac) { //白名单，直接放过
+		if ok, _ := dbmgo.Find(KDBSave, "_id", pSave.Key, pSave); ok {
+			return pSave, err.Success
+		}
+	}
 	oldMac, _ := dbmgo.Find(KDBMac, "_id", mac, pMac)
 	if oldMac && pMac.Key != pSave.Key {
 		gamelog.Info("Record_mac_already_bind: mac(%s) new(%s) old(%s)", mac, pSave.Key, pMac.Key)
@@ -107,6 +115,18 @@ func checkMac(pf_id, uid, mac string) (*TSaveData, uint16) { //Notice：不可�
 		}
 	}
 	return pSave, err.Success
+}
+func isWhite(mac string) bool {
+	ret := byte(0)
+	if p, ok := netConfig.GetRpcRand("gm"); ok {
+		p.CallRpcSafe(enum.Rpc_gm_is_white, func(buf *common.NetPack) {
+			buf.WriteString(conf2.Save_Mac)
+			buf.WriteString(mac)
+		}, func(recvbuf *common.NetPack) {
+			ret = recvbuf.ReadByte()
+		})
+	}
+	return ret > 0
 }
 
 func upload(pf_id, uid, mac string, data []byte, extra, clientVersion string) uint16 {

@@ -40,7 +40,6 @@ func Rpc_game_login(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		ack.WriteUInt16(err.Account_forbidden)
 	} else {
 		this.Login(conn)
-		gamelog.Debug("Player Login: %s, accountId(%d)", this.Name, this.PlayerID)
 		ack.WriteUInt16(err.Success)
 		ack.WriteUInt32(this.PlayerID)
 		ack.WriteString(this.Name)

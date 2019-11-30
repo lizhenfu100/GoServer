@@ -23,7 +23,6 @@ var (
 // - 将svr_game中的玩家属性数据发到svr_battle
 func Rpc_cross_join_battle(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	version := req.ReadString()
-
 	svrId := _SelectBattleSvrId(version)
 	if svrId == -1 {
 		//TODO:zhoumf: 通报client战斗服已满
@@ -46,6 +45,8 @@ func Rpc_cross_join_battle(req, ack *common.NetPack, conn *tcp.TCPConn) {
 func _SelectBattleSvrId(version string) int {
 	//moba类的，应该有个专门的匹配服，供自由玩家【快速】组房间
 	//io向的，允许中途加入，应尽量分配到人多的战斗服
+	//战斗服的选取，还需考虑队伍的网络延时均值 …… 仅客户端知道延时信息，比较麻烦
+	//客户端-战斗服，延时发往特定db，组队后去那个db找均值最低的svr_battle
 	ids := meta.GetModuleIDs("battle", version)
 	//1、优先在各个服务器分配一定人数
 	for _, id := range ids {
