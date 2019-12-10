@@ -11,7 +11,6 @@
 		1、验证账号，若账号中无绑定区服信息，进入创建角色流程
 		2、选择最空闲gamesvr节点，创建角色成功，将区服编号绑账号上
 		3、下次登录，验证账号后即定位具体gamesvr节点
-	TODO：redis 验证账号密码，需考虑过期
 
 * @ 分流节点（game连接同个db）
 	、常规节点的svrId四位数以内，分流节点是svrId+10000
@@ -40,7 +39,8 @@ import (
 	"generate_out/rpc/enum"
 	"netConfig"
 	"netConfig/meta"
-	info "shared_svr/svr_center/account/gameInfo"
+	"shared_svr/svr_center/account/gameInfo"
+	"shared_svr/svr_login/logic/cache"
 	"sync"
 	"sync/atomic"
 )
@@ -50,7 +50,7 @@ var g_login_token uint32
 func Rpc_login_account_login(req, ack *common.NetPack) {
 	version := req.ReadString()
 	gameSvrId := 0
-	if conf.HandPick_GameSvr {
+	if !conf.Auto_GameSvr {
 		gameSvrId = req.ReadInt() //若手选区服则由客户端上报
 	}
 	//1、临时读取buffer数据，将数据转发center
@@ -66,9 +66,9 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 		ack.WriteUInt16(err.None_center_server)
 	} else {
 		//2、同步转至center验证账号信息，取得accountId、gameInfo
-		if ok, _1, _2 := accountLogin1(centerId, req, ack); ok {
+		if ok, _1 := accountLogin1(centerId, &gameSvrId, req, ack); ok {
 			//3、确定gameSvrId，处理gameInfo
-			errCode := accountLogin2(_1.AccountID, &gameSvrId, &_2, version, gameName, centerId)
+			errCode := accountLogin2(_1.AccountID, &gameSvrId, version, gameName, centerId)
 			if errCode == err.Success {
 				//4、登录成功，设置各类信息，回复client待连接的节点(gateway或game)
 				accountLogin3(&_1, gameSvrId, ack)
@@ -78,62 +78,51 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 		}
 	}
 }
-func accountLogin1(centerId int, req, ack *common.NetPack) (
+func accountLogin1(centerId int, gameSvrId *int, req, ack *common.NetPack) (
 	_ok bool,
-	_1 info.TAccountClient,
-	_2 info.TGameInfo) {
-	//同步至center验证账号信息，取得accountId、gameInfo
-	netConfig.SyncRelayToCenter(centerId, enum.Rpc_center_account_login, req, ack)
-
-	//临时读取buffer数据
-	oldPos := ack.ReadPos
+	_1 gameInfo.TAccountClient) {
+	if ok, key, pwd := cache.AccountLogin(req, ack); !ok {
+		//同步至center验证账号信息，取得accountId、gameInfo
+		netConfig.SyncRelayToCenter(centerId, enum.Rpc_center_account_login, req, ack)
+		cache.Add(key, pwd, ack)
+	}
+	oldPos := ack.ReadPos //临时读取
 	if ack.ReadUInt16() != err.Success {
 		ack.ReadPos = oldPos
-		_ok = false
 	} else {
 		_1.BufToData(ack)
-		_2.BufToData(ack)
+		loginId := ack.ReadInt()
+		gameId := ack.ReadInt()
 		ack.Clear()
-
-		//Notice: 玩家不是这个大区的，更换大区再登录
-		if _2.LoginSvrId > 0 && _2.LoginSvrId != meta.G_Local.SvrID {
-			ack.WriteUInt16(err.LoginSvr_not_match)
-			_ok = false
-		} else {
-			_ok = true
+		_ok = true
+		if conf.Auto_GameSvr {
+			if *gameSvrId = gameId; loginId > 0 && loginId != meta.G_Local.SvrID {
+				ack.WriteUInt16(err.LoginSvr_not_match)
+				_ok = false
+			}
 		}
 	}
 	return
 }
-func accountLogin2(
-	accountId uint32,
-	gameSvrId *int,
-	pInfo *info.TGameInfo,
-	version, gameName string,
-	centerId int) (errCode uint16) {
-	gamelog.Track("GameInfo:%v, version:%s gameName:%s", pInfo, version, gameName)
-	if !conf.HandPick_GameSvr {
-		//选取gameSvrId：若账户未绑定游戏服，自动选取空闲节点，并绑定到账号上
-		if *gameSvrId = pInfo.GameSvrId; *gameSvrId <= 0 {
-			if *gameSvrId = GetFreeGameSvr(version); *gameSvrId <= 0 {
-				errCode = err.None_free_game_server
-			} else {
-				errCode = err.None_center_server
-				netConfig.CallRpcCenter(centerId, enum.Rpc_center_set_game_info,
-					func(buf *common.NetPack) {
-						buf.WriteUInt32(accountId)
-						buf.WriteString(gameName)
-						pInfo.GameSvrId = *gameSvrId % 10000
-						pInfo.LoginSvrId = meta.G_Local.SvrID % 10000
-						pInfo.DataToBuf(buf)
-					}, func(backBuf *common.NetPack) {
-						errCode = backBuf.ReadUInt16()
-					})
-			}
-			return
+func accountLogin2(aid uint32, gameSvrId *int, version, gameName string, centerId int) (errCode uint16) {
+	gamelog.Track("GameId:%v, version:%s gameName:%s", *gameSvrId, version, gameName)
+	//选取gameSvrId：若账户未绑定游戏服，自动选取空闲节点，并绑定到账号上
+	if *gameSvrId <= 0 {
+		if *gameSvrId = GetFreeGameSvr(version); *gameSvrId <= 0 {
+			errCode = err.None_free_game_server
+		} else if conf.Auto_GameSvr {
+			errCode = err.None_center_server
+			netConfig.CallRpcCenter(centerId, enum.Rpc_center_set_game_route, func(buf *common.NetPack) {
+				buf.WriteUInt32(aid)
+				buf.WriteString(gameName)
+				buf.WriteInt(meta.G_Local.SvrID % 10000) //loginId
+				buf.WriteInt(*gameSvrId % 10000)
+			}, func(backBuf *common.NetPack) {
+				errCode = backBuf.ReadUInt16()
+				cache.Rpc_login_del_account_cache(backBuf, nil)
+			})
 		}
-	}
-	if !info.ShuntSvr(meta.GetModuleIDs("game", version), gameSvrId, accountId) {
+	} else if !gameInfo.ShuntSvr(meta.GetModuleIDs("game", version), gameSvrId, aid) {
 		errCode = err.None_free_game_server
 	} else {
 		errCode = err.Success
@@ -141,7 +130,7 @@ func accountLogin2(
 	}
 	return
 }
-func accountLogin3(pInfo *info.TAccountClient, gameSvrId int, ack *common.NetPack) {
+func accountLogin3(pInfo *gameInfo.TAccountClient, gameSvrId int, ack *common.NetPack) {
 	//生成一个临时token，发给gamesvr、client用以登录验证
 	token := atomic.AddUint32(&g_login_token, 1)
 

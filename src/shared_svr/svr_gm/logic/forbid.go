@@ -4,6 +4,7 @@ import (
 	"common"
 	"conf"
 	"dbmgo"
+	"encoding/json"
 	"gamelog"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
@@ -40,6 +41,8 @@ func Http_names_add(w http.ResponseWriter, r *http.Request) { //GM 加黑、白�
 	} else {
 		dbmgo.Insert(table, ptr)
 	}
+	ack, _ := json.Marshal(ptr)
+	w.Write(ack)
 	gamelog.Info("names_add: %s", r.URL.String())
 }
 func Http_names_del(w http.ResponseWriter, r *http.Request) { //GM 删黑、白名单
@@ -52,6 +55,7 @@ func Http_names_del(w http.ResponseWriter, r *http.Request) { //GM 删黑、白�
 	key := q.Get("key")
 
 	dbmgo.Remove(table, bson.M{"_id": key})
+	w.Write(common.S2B("delete " + key + ":\n	ok"))
 	gamelog.Info("names_del: %v", r.URL.String())
 }
 

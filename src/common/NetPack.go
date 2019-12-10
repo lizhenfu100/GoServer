@@ -5,6 +5,9 @@ const (
 	TYPE_INDEX       = 0 //uint8
 	OPCODE_INDEX     = 1 //uint16
 	REQ_IDX_INDEX    = 3 //uint32
+
+	// TYPE_INDEX：写通用错误码
+	Err_not_found = 255
 )
 
 type NetPack struct {
@@ -63,18 +66,14 @@ func (self *NetPack) ResetHead(other *NetPack) {
 }
 
 //! head
+func (self *NetPack) SetType(v uint8) { self.buf[TYPE_INDEX] = v }
+func (self *NetPack) GetType() uint8  { return self.buf[TYPE_INDEX] }
 func (self *NetPack) SetOpCode(id uint16) {
 	self.buf[OPCODE_INDEX] = byte(id)
 	self.buf[OPCODE_INDEX+1] = byte(id >> 8)
 }
-func (self *NetPack) GetOpCode() (ret uint16) {
+func (self *NetPack) GetOpCode() uint16 {
 	return uint16(self.buf[OPCODE_INDEX+1])<<8 | uint16(self.buf[OPCODE_INDEX])
-}
-func (self *NetPack) SetFromTyp(typ uint8) {
-	self.buf[TYPE_INDEX] = typ
-}
-func (self *NetPack) GetFromTyp() uint8 {
-	return self.buf[TYPE_INDEX]
 }
 func (self *NetPack) SetReqIdx(idx uint32) {
 	self.buf[REQ_IDX_INDEX] = byte(idx)

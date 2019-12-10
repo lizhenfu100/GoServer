@@ -22,19 +22,6 @@ type TGameInfo struct {
 	JsonData string //各游戏独有的数据
 }
 
-func (self *TGameInfo) DataToBuf(buf *common.NetPack) {
-	buf.WriteInt(self.LoginSvrId)
-	buf.WriteInt(self.GameSvrId)
-	buf.WriteString(self.JsonData)
-}
-func (self *TGameInfo) BufToData(buf *common.NetPack) {
-	self.LoginSvrId = buf.ReadInt()
-	self.GameSvrId = buf.ReadInt()
-	if data := buf.ReadString(); data != "" {
-		self.JsonData = data
-	}
-}
-
 // game的分流节点，【须保证玩家分配到的节点不变】，不能动态增删
 func ShuntSvr(all []int, svrId *int, accountId uint32) bool {
 	var ids []int

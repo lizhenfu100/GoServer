@@ -10,7 +10,6 @@ import (
 	"generate_out/rpc/enum"
 	"io"
 	"nets/http"
-	http2 "nets/http/http"
 	"os"
 	"path"
 	"strings"
@@ -25,7 +24,6 @@ func main() {
 		"本地文件列表,空格隔开,可重定向成后台路径")
 	flag.Parse()
 	gamelog.InitLogger("UpdateCsv")
-	http.InitClient(http2.Client)
 
 	addrList = format.MergeNearSpace(addrList)
 	fileList = format.MergeNearSpace(fileList)

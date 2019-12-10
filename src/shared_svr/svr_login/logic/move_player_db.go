@@ -19,7 +19,7 @@ import (
 	"netConfig"
 	"netConfig/meta"
 	"nets/http"
-	"shared_svr/svr_center/account/gameInfo"
+	"shared_svr/svr_login/logic/cache"
 	"strconv"
 	"time"
 )
@@ -61,18 +61,18 @@ func Rpc_login_move_player_db(req, ack *common.NetPack) {
 			errCode = e
 			return
 		}
-		//6、更新center中的游戏信息
-		netConfig.CallRpcCenter(1, enum.Rpc_center_set_game_info, func(buf *common.NetPack) {
-			buf.WriteUInt32(accountId)
-			buf.WriteString(conf.GameName)
-			info := gameInfo.TGameInfo{
-				GameSvrId:  gameSvrId % 10000,
-				LoginSvrId: meta.G_Local.SvrID % 10000,
-			}
-			info.DataToBuf(buf)
-		}, func(recvBuf *common.NetPack) {
-			errCode = recvBuf.ReadUInt16()
-		})
+		//6、更新center中的游戏路由
+		if conf.Auto_GameSvr {
+			netConfig.CallRpcCenter(1, enum.Rpc_center_set_game_route, func(buf *common.NetPack) {
+				buf.WriteUInt32(accountId)
+				buf.WriteString(conf.GameName)
+				buf.WriteInt(meta.G_Local.SvrID % 10000) //loginId
+				buf.WriteInt(gameSvrId % 10000)
+			}, func(recvBuf *common.NetPack) {
+				errCode = recvBuf.ReadUInt16()
+				cache.Rpc_login_del_account_cache(recvBuf, nil)
+			})
+		}
 	}
 }
 func _MovePlayer(pGame netConfig.Rpc, accountId uint32, data []byte) uint16 {

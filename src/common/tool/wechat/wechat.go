@@ -20,14 +20,17 @@ import (
 	"gamelog"
 	"netConfig/meta"
 	"nets/http"
+	"sync"
+	"time"
 )
 
 var (
 	g_corpId  string
 	g_secret  string
-	g_agentId int    //企业微信中的应用id
-	g_touser  string //消息接收者，多个用‘|’分隔，可指定为@all
-	g_token   string //有过期时间
+	g_agentId int      //企业微信中的应用id
+	g_touser  string   //消息接收者，多个用‘|’分隔，可指定为@all
+	g_token   string   //有过期时间
+	g_freq    sync.Map //<string, int64>
 )
 
 func Init(corpId, secret, touser string, agentId int) {
@@ -41,7 +44,7 @@ func Init(corpId, secret, touser string, agentId int) {
 	}
 }
 func SendMsg(text string) {
-	if assert.IsDebug {
+	if assert.IsDebug || !checkFreq(text) {
 		return
 	}
 	buf, _ := json.Marshal(&msgWechat{
@@ -68,6 +71,14 @@ func format(text string) string {
 		meta.G_Local.SvrName,
 		meta.G_Local.OutIP) +
 		"\n--------------------------\n" + text
+}
+func checkFreq(key string) bool { //同内容的，限制发送频率
+	timenow, timeOld := time.Now().Unix(), int64(0)
+	if v, ok := g_freq.Load(key); ok {
+		timeOld = v.(int64)
+	}
+	g_freq.Store(key, timenow)
+	return timenow-timeOld >= 60
 }
 
 // ------------------------------------------------------------

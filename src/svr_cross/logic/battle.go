@@ -68,9 +68,8 @@ func _SelectBattleSvrId(version string) int {
 	return -1
 }
 
-// ------------------------------------------------------------
-// - 转至svr_game
-func Rpc_cross_relay_to_game(req, ack *common.NetPack, conn *tcp.TCPConn) {
+// 头部参数必须是：svrId、rid、pid
+func Rpc_cross_to_player(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	svrId := req.ReadInt()
 	if p, ok := netConfig.GetGameRpc(svrId); ok {
 		p.CallRpc(enum.Rpc_recv_player_msg, func(buf *common.NetPack) {

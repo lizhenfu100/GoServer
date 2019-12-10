@@ -29,6 +29,11 @@ import (
 	"strings"
 )
 
+func init() {
+	// 默认用原生http实现底层通信，可替换成https、fasthttp
+	mhttp.Client = Client
+}
+
 var _svr http.Server
 
 func NewHttpServer(port uint16, module string, svrId int) error {

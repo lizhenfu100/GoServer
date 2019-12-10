@@ -3,7 +3,6 @@ package tcp
 import (
 	"common"
 	"generate_out/err"
-	"generate_out/rpc/enum"
 	"netConfig/meta"
 	"nets/tcp"
 	"shared_svr/svr_gateway/logic"
@@ -27,15 +26,13 @@ func Rpc_gateway_login_token(req, ack *common.NetPack, conn *tcp.TCPConn) {
 
 func Rpc_net_error(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	if accountId, ok := conn.UserPtr.(uint32); ok { //玩家断线，且没重连
-		if c := logic.GetClientConn(accountId); c == nil || c.IsClose() {
-			if p, ok := logic.GetGameRpc(accountId); ok { //通知游戏服
-				p.CallRpcSafe(enum.Rpc_recv_player_msg, func(buf *common.NetPack) {
-					buf.WriteUInt16(enum.Rpc_game_logout)
-					buf.WriteUInt32(accountId)
-				}, nil)
-			}
-			//清空缓存
-			logic.DelClientConn(accountId)
+		if logic.TryDelClientConn(accountId) {
+			//if p, ok := logic.GetGameRpc(accountId); ok { //通知游戏服
+			//	p.CallRpcSafe(enum.Rpc_recv_player_msg, func(buf *common.NetPack) {
+			//		buf.WriteUInt16(enum.Rpc_game_logout)
+			//		buf.WriteUInt32(accountId)
+			//	}, nil)
+			//}
 			logic.DelRouteGame(accountId)
 		}
 	} else if ptr, ok := conn.UserPtr.(*meta.Meta); ok {

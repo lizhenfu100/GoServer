@@ -14,7 +14,6 @@
 package https
 
 import (
-	"common"
 	"fmt"
 	"net/http"
 	mhttp "nets/http"
@@ -33,9 +32,6 @@ var _svr http.Server
 func NewHttpServer(port uint16, module string, svrId int) error {
 	mhttp.InitSvr(module, svrId)
 	http.HandleFunc("/client_rpc", http2.HandleRpc)
-	http.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
-		w.Write(common.S2B("---------------- test ----------------"))
-	})
 	http.HandleFunc("/reg_to_svr", func(w http.ResponseWriter, r *http.Request) {
 		mhttp.Reg_to_svr(w, http2.ReadBody(r.Body))
 	})
@@ -43,9 +39,3 @@ func NewHttpServer(port uint16, module string, svrId int) error {
 	return _svr.ListenAndServeTLS(k_svr_crt, k_svr_key)
 }
 func CloseServer() { _svr.Close() }
-
-// ------------------------------------------------------------
-// -- rpc
-func RegHandlePlayerRpc(cb func(http.ResponseWriter, *http.Request)) {
-	http.HandleFunc("/player_rpc", cb)
-}

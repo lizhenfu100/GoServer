@@ -2,7 +2,6 @@ package dbmgo
 
 import (
 	"gamelog"
-	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"strings"
 	"sync"
@@ -35,15 +34,9 @@ func WaitStop() { close(_actions); _finished.Wait() }
 
 func _loop() {
 	_finished.Add(1)
-	var err error
-	var lastTable string
-	var coll *mgo.Collection
 	for v := range _actions {
-		if v.table != lastTable {
-			coll = DB().C(v.table)
-			lastTable = v.table
-		}
-		switch v.optype {
+		var err error
+		switch coll := DB().C(v.table); v.optype {
 		case DB_Insert:
 			err = coll.Insert(v.pData)
 		case DB_Update_Field:
@@ -66,15 +59,18 @@ func _loop() {
 		if err != nil {
 			gamelog.Error("DBLoop: op[%d] table[%s] search[%v], data[%v], Error[%v]",
 				v.optype, v.table, v.search, v.pData, err)
-			//FIXME：Mongodb会极低概率忽然断开，所有操作均超时~囧
-			if strings.LastIndex(err.Error(), "timeout") >= 0 {
+			if isClosedErr(err) { //Mongodb会极低概率忽然断开，所有操作均超时~囧
 				_default.Connect()
-				coll = DB().C(v.table) //重连后缓存须更新
 				_actions <- v
 			}
 		}
 	}
 	_finished.Done()
+}
+func isClosedErr(e error) bool {
+	err := e.Error()
+	return strings.LastIndex(err, "timeout") >= 0 ||
+		strings.Index(err, "Closed") >= 0
 }
 
 func Update(table string, search, update bson.M) {

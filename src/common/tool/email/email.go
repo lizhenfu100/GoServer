@@ -43,7 +43,7 @@ import (
 )
 
 func SendByLogin(subject, addr, body, language string) (errcode uint16) {
-	if p, ok := netConfig.GetLoginRpc(); ok {
+	if p, ok := netConfig.GetRpcRand("login"); ok {
 		p.CallRpcSafe(enum.Rpc_login_send_email, func(buf *common.NetPack) {
 			buf.WriteString(subject)
 			buf.WriteString(addr)
@@ -67,7 +67,7 @@ func SendMail(subject, addr, body, language string) (errcode uint16) {
 		//TODO:return err.Is_forbidden
 	}
 	if !assert.IsDebug && !checkFreq(subject, addr) { //同内容的，限制发送频率
-		return err.Operate_too_often
+		return err.Success
 		//TODO:return err.Email_try_send_please_check
 	}
 	packBody(&subject, &body, language) //嵌入模板，并本地化
@@ -82,7 +82,7 @@ func SendMail(subject, addr, body, language string) (errcode uint16) {
 	//msg.Attach("我是附件")
 
 	if e := dialer.DialAndSend(msg); e != nil {
-		gamelog.Warn("%s: %s", addr, e.Error())
+		gamelog.Warn("%s:%s: %s", addr, subject, e.Error())
 		return err.Invalid
 		//TODO:return err.Email_unreachable
 	}
@@ -118,7 +118,7 @@ func checkFreq(subject, addr string) bool {
 		timeOld = v.(int64)
 	}
 	g_freq.Store(key, timenow)
-	return timenow-timeOld >= 60
+	return timenow-timeOld >= 60*15
 }
 func packBody(subject, body *string, language string) {
 	if body2, ok := Translate(*subject, language); ok {

@@ -57,7 +57,11 @@ func (self *DBInfo) Init(ip string, port uint16, dbname, user, pwd string) {
 }
 func (self *DBInfo) Connect() {
 	if session, e := mgo.DialWithInfo(&self.DialInfo); e != nil {
-		panic(fmt.Sprintf("Mongodb Init: %v", self.DialInfo))
+		if self.DB == nil {
+			panic(fmt.Sprintf("Mongodb Connect: %v", self.DialInfo))
+		} else {
+			wechat.SendMsg("数据库连接：" + e.Error())
+		}
 	} else {
 		if self.DB == nil {
 			self.DB = session.DB(self.Database)
@@ -65,19 +69,14 @@ func (self *DBInfo) Connect() {
 			self.DB.Session.Refresh()
 		}
 	}
-	//FIXME：测试db连接可用性（小概率db初始化成功，但后续读写操作均超时）
-	e := self.DB.C(kDBIncTable).Find(bson.M{"_id": ""}).One(&nameId{})
-	if e != nil && e != mgo.ErrNotFound {
-		panic("Mongodb Run Failed:" + e.Error())
-	}
 }
-func DB() (ret *mgo.Database) { return _default.DB }
+func DB() *mgo.Database { return _default.DB }
 
 func InsertSync(table string, pData interface{}) bool {
 	coll := DB().C(table)
 	if err := coll.Insert(pData); err != nil {
 		gamelog.Error("InsertSync table[%s] data[%v] Error[%v]", table, pData, err)
-		wechat.SendMsg("数据库插入失败：" + err.Error())
+		wechat.SendMsg("数据库插入：" + err.Error())
 		return false
 	}
 	return true
@@ -86,7 +85,7 @@ func UpdateIdSync(table string, id, pData interface{}) bool {
 	coll := DB().C(table)
 	if err := coll.UpdateId(id, pData); err != nil {
 		gamelog.Error("UpdateSync table[%s] id[%v] data[%v] Error[%v]", table, id, pData, err)
-		wechat.SendMsg("数据库更新失败：" + err.Error())
+		wechat.SendMsg("数据库更新：" + err.Error())
 		return false
 	}
 	return true
@@ -95,7 +94,7 @@ func UpsertIdSync(table string, id, pData interface{}) bool {
 	coll := DB().C(table)
 	if _, err := coll.UpsertId(id, pData); err != nil {
 		gamelog.Error("UpsertSync table[%s] id[%v] data[%v] Error[%v]", table, id, pData, err)
-		wechat.SendMsg("数据库Upsert：" + err.Error())
+		wechat.SendMsg("数据库更新：" + err.Error())
 		return false
 	}
 	return true
@@ -132,7 +131,11 @@ func Find(table, key string, value, pData interface{}) (bool, error) {
 			return false, nil
 		} else {
 			gamelog.Error("Find table[%s] key[%s] val[%v] Error[%v]", table, key, value, err)
-			wechat.SendMsg("数据库查询失败：" + err.Error())
+			if isClosedErr(err) {
+				_default.Connect()
+			} else {
+				wechat.SendMsg("数据库查询：" + err.Error())
+			}
 			return false, err
 		}
 	}
@@ -146,7 +149,11 @@ func FindEx(table string, search bson.M, pData interface{}) (bool, error) {
 			return false, nil
 		} else {
 			gamelog.Error("FindEx table[%s] search[%v] Error[%v]", table, search, err)
-			wechat.SendMsg("数据库查询失败：" + err.Error())
+			if isClosedErr(err) {
+				_default.Connect()
+			} else {
+				wechat.SendMsg("数据库查询：" + err.Error())
+			}
 			return false, err
 		}
 	}

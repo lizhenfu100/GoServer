@@ -18,7 +18,6 @@ package logic
 
 import (
 	"common"
-	"common/assert"
 	"common/copy"
 	"common/safe"
 	"common/std/sign"
@@ -177,30 +176,30 @@ func CheckSign(_sign, s, gameid string) bool {
 var g_mac_order sync.Map //<mac, orderIds> //设备下的订单
 
 func CheckMac(mac string) bool {
-	ret := byte(1)
+	if mac == "" {
+		return true
+	}
+	isForbid := byte(0)
 	if p, ok := netConfig.GetRpcRand("gm"); ok {
-		isSyncCall := true
 		p.CallRpc(enum.Rpc_gm_forbid_check, func(buf *common.NetPack) {
-			isSyncCall = false
 			buf.WriteString(conf.Order_Mac)
 			buf.WriteString(mac)
 		}, func(recvbuf *common.NetPack) {
-			isSyncCall = true
-			ret = recvbuf.ReadByte()
+			isForbid = recvbuf.ReadByte()
 		})
-		assert.True(isSyncCall)
 	}
-	return ret > 0
+	return isForbid == 0
 }
 func AddMacOrder(mac, id string) {
 	if ids, ok := g_mac_order.Load(mac); ok {
 		ids.(*safe.Strings).Add(id)
-		if n := ids.(*safe.Strings).Size(); n > 5 {
-			gamelog.Info("invalid order cnt: %s(%d)", mac, n)
+		if n := ids.(*safe.Strings).Size(); n > 7 {
+			gamelog.Info("forbid mac: %s", mac)
 			if p, ok := netConfig.GetRpcRand("gm"); ok {
 				p.CallRpc(enum.Rpc_gm_forbid_add, func(buf *common.NetPack) {
 					buf.WriteString(conf.Order_Mac)
 					buf.WriteString(mac)
+					buf.WriteUInt16(7) //封几天
 				}, nil)
 			}
 		}

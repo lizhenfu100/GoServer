@@ -51,7 +51,7 @@ type TAccount struct {
 	CreateTime int64
 	LoginTime  int64
 
-	BindInfo     map[string]string //email、phone
+	BindInfo     map[string]string //email、phone、name
 	IsValidEmail uint8
 	IsValidPhone uint8
 
@@ -108,7 +108,8 @@ func Rpc_center_account_login(req, ack *common.NetPack) {
 		v.DataToBuf(ack)
 		//2、再回复，附带的游戏数据，可能有的游戏空的
 		if v, ok := p.GameInfo[gameName]; ok {
-			v.DataToBuf(ack)
+			ack.WriteInt(v.LoginSvrId)
+			ack.WriteInt(v.GameSvrId)
 		}
 	}
 }
@@ -116,7 +117,7 @@ func Rpc_center_account_reg(req, ack *common.NetPack) {
 	str := req.ReadString()
 	pwd := req.ReadString()
 	typ := req.ReadString() //email、name、phone
-	sign.Decode(&pwd)
+	sign.Decode(&str, &pwd)
 	gamelog.Track("account_reg: %s %s %s", typ, str, pwd)
 
 	if !format.CheckPasswd(pwd) {
@@ -195,29 +196,36 @@ func Rpc_center_create_visitor(req, ack *common.NetPack) {
 
 // ------------------------------------------------------------
 // 记录于账号上面的游戏信息，一套账号系统可关联多个游戏
-func Rpc_center_set_game_info(req, ack *common.NetPack) {
+func Rpc_center_set_game_route(req, ack *common.NetPack) {
 	accountId := req.ReadUInt32()
 	gameName := req.ReadString()
-	info := gameInfo.TGameInfo{}
-	info.BufToData(req)
-
+	loginId := req.ReadInt()
+	gameId := req.ReadInt()
 	if p := GetAccountById(accountId); p == nil {
 		ack.WriteUInt16(err.Account_not_found)
-	} else if dbmgo.UpdateIdSync(KDBTable, accountId, bson.M{"$set": bson.M{
-		fmt.Sprintf("gameinfo.%s", gameName): info}}) {
-		p.GameInfo[gameName] = info
-		ack.WriteUInt16(err.Success)
 	} else {
-		ack.WriteUInt16(err.GameInfo_set_fail)
+		v, ok := p.GameInfo[gameName]
+		v.LoginSvrId = loginId
+		v.GameSvrId = gameId
+		if dbmgo.UpdateIdSync(KDBTable, accountId, bson.M{"$set": bson.M{
+			fmt.Sprintf("gameinfo.%s", gameName): v}}) {
+			p.GameInfo[gameName] = v
+			ack.WriteUInt16(err.Success)
+			if ok { //转服了，通知调用者删缓存
+				p.writeCacheKey(ack)
+			}
+		} else {
+			ack.WriteUInt16(err.GameInfo_set_fail)
+		}
 	}
 }
-func Rpc_center_get_game_info(req, ack *common.NetPack) {
+func Rpc_center_get_game_route(req, ack *common.NetPack) {
 	accountId := req.ReadUInt32()
 	gameName := req.ReadString()
-
 	if p := GetAccountById(accountId); p != nil {
 		if v, ok := p.GameInfo[gameName]; ok {
-			v.DataToBuf(ack)
+			ack.WriteInt(v.LoginSvrId)
+			ack.WriteInt(v.GameSvrId)
 		}
 	}
 }
@@ -319,5 +327,26 @@ func (self *TAccount) WriteLoginAddr(gameName string, ack *common.NetPack) {
 				ack.WriteUInt16(metas[info.GameSvrId].TcpPort)
 			}
 		})
+	}
+}
+
+// ------------------------------------------------------------
+// 先更db，再删缓存
+func (self *TAccount) cacheRefresh() {
+	gamelog.Debug("cacheRefresh")
+	go meta.G_Metas.Range(func(k, v interface{}) bool {
+		if p := v.(*meta.Meta); p.Module == "login" && !p.IsClosed {
+			http.CallRpc(http.Addr(p.OutIP, p.Port()), enum.Rpc_login_del_account_cache,
+				func(buf *common.NetPack) {
+					self.writeCacheKey(buf)
+				}, nil)
+		}
+		return true
+	})
+}
+func (self *TAccount) writeCacheKey(buf *common.NetPack) {
+	buf.WriteByte(byte(len(self.BindInfo)))
+	for _, v := range self.BindInfo {
+		buf.WriteString(v)
 	}
 }

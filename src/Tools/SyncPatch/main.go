@@ -10,7 +10,6 @@ import (
 	"gamelog"
 	"generate_out/rpc/enum"
 	"nets/http"
-	http2 "nets/http/http"
 	"strings"
 	"time"
 )
@@ -28,7 +27,6 @@ func main() {
 	flag.IntVar(&sleep, "sleep", 1, "")
 	flag.Parse()
 	gamelog.InitLogger("SyncPatch")
-	http.InitClient(http2.Client)
 
 	addrList = format.MergeNearSpace(addrList)
 	dirList = format.MergeNearSpace(dirList)

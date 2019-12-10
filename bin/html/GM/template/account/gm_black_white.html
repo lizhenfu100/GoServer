@@ -1,0 +1,48 @@
+<html>
+
+<head>
+    <title>黑白名单</title>
+    <link rel="stylesheet" href="main.css">
+    <script src="app.js"></script>
+</head>
+
+<body bgcolor="white">
+    <div class="all-wrapper">
+        <h1>黑白名单</h1>
+        <div class="form-wrapper">
+            <script>
+                function setActionAddr(form) {
+                    var select = form.getElementsByTagName("select")[0];
+                    var uri = select.options[select.selectedIndex].value;
+                    form.action="http://52.82.35.237:7081"+uri;
+                }
+            </script>
+            <form action="" method="get" onsubmit="setActionAddr(this)">
+                <label>操作类型:</label>
+                <select>
+                    <option value="/names_add">添加</option>
+                    <option value="/names_del">删除</option>
+                </select>
+                <label>名单类型:</label>
+                <select name="table">
+                    <option value="mac_order">订单-设备</option>
+                    <option value="mac_save">云存档-设备</option>
+                </select>
+                <label title="我们自己约定的操作权限密码，一般不会变">权限密码:</label>
+                <input type="password" name="passwd"><br>
+                <label>Key:</label>
+                <input type="text" name="key"><br>
+                <label>封禁天数:</label>
+                <input type="text" name="day" placeholder="不填，永久封禁"><br>
+                <br>
+                <input type="radio" name="white" value="0" checked>黑名单
+                <input type="radio" name="white" value="1">白名单
+                <br>
+                <br>
+                <input type="submit" value="确认">
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

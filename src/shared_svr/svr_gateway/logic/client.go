@@ -74,15 +74,31 @@ func AddRouteGame(aid uint32, svrId int) {
 }
 func DelRouteGame(aid uint32) { g_route_game.Delete(aid) }
 
-var g_clients sync.Map //accountId-clientConn
+var (
+	g_clients = map[uint32]*tcp.TCPConn{}
+	g_mutex   sync.RWMutex
+)
 
-func AddClientConn(aid uint32, conn *tcp.TCPConn) { g_clients.Store(aid, conn) }
-func DelClientConn(aid uint32)                    { g_clients.Delete(aid) }
-func GetClientConn(aid uint32) *tcp.TCPConn {
-	if v, ok := g_clients.Load(aid); ok {
-		return v.(*tcp.TCPConn)
+func TryDelClientConn(aid uint32) bool {
+	g_mutex.Lock()
+	if v, ok := g_clients[aid]; ok && v.IsClose() {
+		delete(g_clients, aid)
+		g_mutex.Unlock()
+		return true
 	}
-	return nil
+	g_mutex.Unlock()
+	return false
+}
+func AddClientConn(aid uint32, conn *tcp.TCPConn) {
+	g_mutex.Lock()
+	g_clients[aid] = conn
+	g_mutex.Unlock()
+}
+func GetClientConn(aid uint32) *tcp.TCPConn {
+	g_mutex.RLock()
+	ret := g_clients[aid]
+	g_mutex.RUnlock()
+	return ret
 }
 
 // ------------------------------------------------------------

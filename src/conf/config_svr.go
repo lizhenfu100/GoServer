@@ -1,11 +1,11 @@
 package conf
 
 const (
-	GameName         = "soulnet"
-	FPS_GameSvr      = 1000 / 20 //游戏服帧率
-	FPS_OtherSvr     = 1000 / 10 //其它服帧率
-	HandPick_GameSvr = false     //玩家手选区服
-	HaveClientSave   = false     //是否启用云存档
+	GameName       = "soulnet"
+	FPS_GameSvr    = 1000 / 20 //游戏服帧率
+	FPS_OtherSvr   = 1000 / 10 //其它服帧率
+	Auto_GameSvr   = true      //自动选区服
+	HaveClientSave = false     //是否启用云存档
 
 	// 特殊标记
 	Flag_Client_ReLogin = 0xFFFFFFFF

@@ -21,6 +21,7 @@ func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) {
 	k, v := "email", q.Get("name")
 	passwd := q.Get("passwd")
 	language := q.Get("language")
+	sign.Decode(&passwd)
 
 	//! 创建回复
 	errCode := err.Unknow_error

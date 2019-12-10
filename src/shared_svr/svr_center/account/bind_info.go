@@ -24,7 +24,7 @@ func Rpc_center_bind_info(req, ack *common.NetPack) {
 	k := req.ReadString()
 	v := req.ReadString()
 	force := req.ReadBool()
-	sign.Decode(&passwd)
+	sign.Decode(&str, &passwd)
 
 	errcode, ptr := GetAccount(str, passwd)
 	if errcode == err.Success {
@@ -134,6 +134,7 @@ func Http_bind_info_force(w http.ResponseWriter, r *http.Request) {
 func (self *TAccount) verifyEmailOK() {
 	self.IsValidEmail = 1
 	dbmgo.UpdateId(KDBTable, self.AccountID, bson.M{"$set": bson.M{"isvalidemail": 1}})
+	self.cacheRefresh()
 }
 func Http_verify_email(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
