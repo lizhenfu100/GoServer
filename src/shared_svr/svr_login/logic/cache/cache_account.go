@@ -23,13 +23,19 @@ import (
 	"generate_out/err"
 	"github.com/go-redis/redis"
 	"shared_svr/svr_center/account/gameInfo"
+	"time"
 )
 
-var g_client = redis.NewClient(&redis.Options{
+var g_redis = redis.NewClient(&redis.Options{
 	Addr:     ":6379",
-	Password: "", // no password set
-	DB:       0,  // use default DB
+	Password: "",
 })
+
+func init() {
+	if _, e := g_redis.Ping().Result(); e != nil {
+		panic(e)
+	}
+}
 
 type TCache struct {
 	gameInfo.TAccountClient
@@ -46,7 +52,7 @@ func AccountLogin(req, ack *common.NetPack) (ok bool, account, pwd string) {
 	pwd = req.ReadString()
 	sign.Decode(&account, &pwd)
 	req.ReadPos = oldPos
-	if ret, e := g_client.Get(account).Result(); e == nil {
+	if ret, e := g_redis.Get(account).Result(); e == nil {
 		var v TCache
 		if common.B2T(common.S2B(ret), &v) == nil && v.Password == pwd {
 			ok = true
@@ -56,7 +62,7 @@ func AccountLogin(req, ack *common.NetPack) (ok bool, account, pwd string) {
 			ack.WriteInt(v.GameSvrId)
 		}
 	}
-	gamelog.Debug("Cache Login: %v", ok)
+	gamelog.Track("Cache Login: %s %v", account, ok)
 	return
 }
 func Add(account, pwd string, ack *common.NetPack) {
@@ -70,13 +76,13 @@ func Add(account, pwd string, ack *common.NetPack) {
 		//有效的登录信息，才缓存
 		if v.LoginSvrId > 0 && v.GameSvrId > 0 {
 			buf, _ := common.T2B(&v)
-			g_client.Set(account, buf, 0)
+			g_redis.Set(account, buf, 24*time.Hour)
 		}
 	}
 	ack.ReadPos = oldPos
 }
 func Rpc_login_del_account_cache(req, ack *common.NetPack) {
 	for cnt, i := req.ReadByte(), byte(0); i < cnt; i++ {
-		g_client.Del(req.ReadString())
+		g_redis.Del(req.ReadString())
 	}
 }

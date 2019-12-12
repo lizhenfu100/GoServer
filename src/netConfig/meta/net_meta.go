@@ -52,7 +52,8 @@ type Meta struct {
 	ConnectLst []string //待连接的模块名
 
 	//需动态同步的数据
-	IsClosed bool
+	IsClosed bool //TODO:zhoumf:如何检测节点失效？rpc连续5次失败？
+	//如何检测节点恢复了？指数退避，rpc探查？
 }
 
 func (self *Meta) Port() uint16 {

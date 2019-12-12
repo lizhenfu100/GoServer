@@ -25,6 +25,7 @@ package logic
 
 import (
 	"common"
+	"common/assert"
 	"dbmgo"
 	"gamelog"
 	"generate_out/err"
@@ -83,7 +84,7 @@ func Rpc_save_check_mac(req, ack *common.NetPack) {
 }
 func checkMac(pf_id, uid, mac string) (*TSaveData, uint16) { //Notice：不可调换错误码判断顺序
 	pSave, pMac := &TSaveData{Key: GetSaveKey(pf_id, uid)}, &MacInfo{}
-	if isWhite(mac) { //白名单，直接放过
+	if assert.IsDebug || isWhite(mac) { //白名单，直接放过
 		if ok, _ := dbmgo.Find(KDBSave, "_id", pSave.Key, pSave); ok {
 			return pSave, err.Success
 		}
@@ -91,7 +92,7 @@ func checkMac(pf_id, uid, mac string) (*TSaveData, uint16) { //Notice：不可�
 	oldMac, _ := dbmgo.Find(KDBMac, "_id", mac, pMac)
 	if oldMac && pMac.Key != pSave.Key {
 		gamelog.Info("Record_mac_already_bind: mac(%s) new(%s) old(%s)", mac, pSave.Key, pMac.Key)
-		return pSave, err.Record_mac_already_bind
+		return pSave, err.Record_mac_already_bind //设备被别人占用，得解绑
 	}
 	if ok, _ := dbmgo.Find(KDBSave, "_id", pSave.Key, pSave); !ok {
 		gamelog.Track("Record_cannot_find: key(%s)", pSave.Key)
@@ -101,12 +102,12 @@ func checkMac(pf_id, uid, mac string) (*TSaveData, uint16) { //Notice：不可�
 		now := time.Now().Unix()
 		if now-pSave.ChTime < int64(conf.Const.MacChangePeriod) {
 			gamelog.Track("Record_bind_limit: %v", pSave)
-			return pSave, err.Record_bind_limit
+			return pSave, err.Record_bind_limit //等几天才能换设备
 		}
 		if pSave.MacCnt >= conf.Const.MacBindMax {
 			if (now-pSave.RaiseTime)/(3600*24) < int64(conf.Const.RaiseBindCntDay) {
 				gamelog.Track("Record_bind_max: %v", pSave)
-				return pSave, err.Record_bind_max
+				return pSave, err.Record_bind_max //绑定次数用尽，月余后才会增加次数
 			} else {
 				pSave.MacCnt-- //90天，绑定次数+1
 				pSave.RaiseTime = now

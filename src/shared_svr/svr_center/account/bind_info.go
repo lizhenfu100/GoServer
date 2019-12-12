@@ -132,9 +132,11 @@ func Http_bind_info_force(w http.ResponseWriter, r *http.Request) {
 // ------------------------------------------------------------
 // 邮箱验证
 func (self *TAccount) verifyEmailOK() {
-	self.IsValidEmail = 1
-	dbmgo.UpdateId(KDBTable, self.AccountID, bson.M{"$set": bson.M{"isvalidemail": 1}})
-	self.cacheRefresh()
+	if self.IsValidEmail == 0 {
+		self.IsValidEmail = 1
+		dbmgo.UpdateId(KDBTable, self.AccountID, bson.M{"$set": bson.M{"isvalidemail": 1}})
+		self.cacheRefresh()
+	}
 }
 func Http_verify_email(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()

@@ -6,6 +6,7 @@ import (
 	"netConfig/meta"
 	"nets/tcp"
 	"shared_svr/svr_gateway/logic"
+	"time"
 )
 
 func Rpc_gateway_login(req, ack *common.NetPack, client *tcp.TCPConn) {
@@ -40,6 +41,9 @@ func Rpc_net_error(req, ack *common.NetPack, conn *tcp.TCPConn) {
 
 		}
 	}
+}
+func Rpc_timestamp(req, ack *common.NetPack, conn *tcp.TCPConn) {
+	ack.WriteInt64(time.Now().Unix())
 }
 
 func Rpc_gateway_relay_module(req, ack *common.NetPack, conn *tcp.TCPConn) {

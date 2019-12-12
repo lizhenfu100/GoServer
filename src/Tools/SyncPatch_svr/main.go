@@ -7,6 +7,7 @@ import (
 	"conf"
 	"dbmgo"
 	"gamelog"
+	"generate_out/rpc/enum"
 	"netConfig"
 	"netConfig/meta"
 	"nets"
@@ -42,8 +43,9 @@ func InitConf() {
 	console.Init()
 
 	nets.RegHttpRpc(map[uint16]nets.HttpRpc{
-		116: Rpc_file_update_list, //enum.Rpc_file_update_list
-		119: Rpc_file_update_list, //enum.Rpc_file_update_list
+		116:                  Rpc_file_update_list, //enum.Rpc_file_update_list
+		119:                  Rpc_file_update_list, //enum.Rpc_file_update_list
+		enum.Rpc_file_delete: Rpc_file_delete,
 	})
 	nets.RegHttpHandler(map[string]nets.HttpHandle{
 		"/upload_patch_file": Http_upload_patch_file,
