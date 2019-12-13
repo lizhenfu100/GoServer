@@ -15,7 +15,7 @@ var G_HandleFunc [enum.RpcEnumCnt]func(req, ack *common.NetPack)
 
 func CallRpc(addr string, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	req := common.NewNetPackCap(64)
-	req.SetOpCode(rid)
+	req.SetMsgId(rid)
 	sendFun(req)
 	buf := Client.PostReq(addr+"/client_rpc", req.Data())
 	if buf != nil && recvFun != nil {
@@ -37,7 +37,7 @@ func HandleRpc(request []byte, w io.Writer, clientIp string) { //G_Intercept==ni
 		ack.Free()
 		req.Free()
 	}()
-	msgId := req.GetOpCode()
+	msgId := req.GetMsgId()
 	if msgId >= enum.RpcEnumCnt {
 		gamelog.Error("Msg(%d) Not Regist", msgId)
 		return

@@ -34,7 +34,7 @@ func (self *TCPClient) connectRoutine() {
 	firstMsg := make([]byte, 4) //connId
 	if meta.G_Local != nil {    //后台节点间的连接，发起注册
 		regMsg := common.NewNetPackCap(128)
-		regMsg.SetOpCode(enum.Rpc_regist)
+		regMsg.SetMsgId(enum.Rpc_regist)
 		meta.G_Local.DataToBuf(regMsg)
 		//将regMsg追加到firstMsg之后，须满足tcp包格式
 		kfirstMsgLen := len(firstMsg)

@@ -70,7 +70,7 @@ func (self *RpcQueue) Loop() { //死循环，阻塞等待
 
 // 单线程用self.backBuffe，多线程每次new新的
 func (self *RpcQueue) _Handle(conn *TCPConn, msg, backBuf *common.NetPack) {
-	msgId := msg.GetOpCode()
+	msgId := msg.GetMsgId()
 	defer func() {
 		if r := recover(); r != nil {
 			gamelog.Error("recover msgId:%d\n%v: %s", msgId, r, debug.Stack())
@@ -107,10 +107,10 @@ func RegHandlePlayerRpc(cb func(req, ack *common.NetPack, conn *TCPConn) bool) {
 //Notice：非线程安全的，仅供主逻辑线程调用，内部操作的同个sendBuffer，多线程下须每次new新的
 func (self *TCPConn) CallRpc(msgId uint16, sendFun, recvFun func(*common.NetPack)) {
 	g := &G_RpcQueue
-	assert.True(G_HandleFunc[msgId] == nil && g.sendBuffer.GetOpCode() == 0)
+	assert.True(G_HandleFunc[msgId] == nil && g.sendBuffer.GetMsgId() == 0)
 	//CallRpc中途不能再CallRpc
 	//gamelog.Error("[%d] Server and Client have the same Rpc or Repeat CallRpc", msgID)
-	g.sendBuffer.SetOpCode(msgId)
+	g.sendBuffer.SetMsgId(msgId)
 	g.sendBuffer.SetReqIdx(atomic.AddUint32(&g._reqIdx, 1))
 	if recvFun != nil {
 		g.response.Store(g.sendBuffer.GetReqKey(), recvFun)
@@ -123,7 +123,7 @@ func (self *TCPConn) CallRpcSafe(msgId uint16, sendFun, recvFun func(*common.Net
 	g := &G_RpcQueue
 	assert.True(G_HandleFunc[msgId] == nil)
 	req := common.NewNetPackCap(64)
-	req.SetOpCode(msgId)
+	req.SetMsgId(msgId)
 	req.SetReqIdx(atomic.AddUint32(&g._reqIdx, 1))
 	if recvFun != nil {
 		g.response.Store(req.GetReqKey(), recvFun)

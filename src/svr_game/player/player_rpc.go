@@ -46,7 +46,7 @@ func DoPlayerRpc(this *TPlayer, rpcId uint16, req, ack *common.NetPack) bool {
 // ------------------------------------------------------------
 // - 将原生tcpRpc的 "conn *tcp.TCPConn" 参数转换为 "player *TPlayer"
 func _PlayerRpcTcp(req, ack *common.NetPack, conn *tcp.TCPConn) bool {
-	rpcId := req.GetOpCode()
+	rpcId := req.GetMsgId()
 	if player, ok := conn.UserPtr.(*TPlayer); ok {
 		DoPlayerRpc(player, rpcId, req, ack)
 	}
@@ -62,7 +62,7 @@ func _PlayerRpcHttp(w http.ResponseWriter, r *http.Request) {
 		gamelog.Error("invalid req: %v", buf)
 		return
 	}
-	msgId := req.GetOpCode()
+	msgId := req.GetMsgId()
 	if msgId >= enum.RpcEnumCnt {
 		gamelog.Error("PlayerMsg(%d) Not Regist", msgId)
 		req.Free()
@@ -125,7 +125,7 @@ func CallRpcPlayer(accountId uint32, msgId uint16, sendFun, recvFun func(*common
 		if player := FindAccountId(accountId); player != nil {
 			req := common.NewNetPackCap(64)
 			ack := common.NewNetPackCap(64)
-			req.SetOpCode(msgId)
+			req.SetMsgId(msgId)
 			sendFun(req)
 			msgFunc(req, ack, player)
 			if recvFun != nil {

@@ -245,8 +245,8 @@ func (self *TCPConn) readLoop() {
 			qps.AddQps()
 		}
 		//FIXME: 消息加密、验证有效性，不通过即踢掉，放到逻辑线程做，io线程只管io
-		if packet.GetOpCode() >= enum.RpcEnumCnt {
-			gamelog.Error("Msg(%d) Not Regist", packet.GetOpCode())
+		if packet.GetMsgId() >= enum.RpcEnumCnt {
+			gamelog.Error("Msg(%d) Not Regist", packet.GetMsgId())
 		} else {
 			//在io线程直接调消息响应函数(多线程处理玩家操作)，玩家之间互改数据须考虑竞态问题(可用actor模式解决)
 			//若友好支持玩家强交互，可将packet放入主逻辑循环的消息队列(SafeQueue)

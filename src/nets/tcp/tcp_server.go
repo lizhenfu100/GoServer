@@ -112,20 +112,20 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 
 		//通知逻辑线程，连接断开
 		packet := common.NewNetPackCap(16)
-		packet.SetOpCode(enum.Rpc_net_error)
+		packet.SetMsgId(enum.Rpc_net_error)
 		G_RpcQueue.Insert(conn, packet)
 
 		//连接的后台节点断开，注销之
 		if _, ok := conn.UserPtr.(*meta.Meta); ok {
 			packet := common.NewNetPackCap(16)
-			packet.SetOpCode(enum.Rpc_unregist)
+			packet.SetMsgId(enum.Rpc_unregist)
 			G_RpcQueue.Insert(conn, packet)
 		}
 	}
 
 	//通知client，连接被接收，下发connId、密钥等
 	acceptMsg := common.NewNetPackCap(32)
-	acceptMsg.SetOpCode(enum.Rpc_svr_accept)
+	acceptMsg.SetMsgId(enum.Rpc_svr_accept)
 	acceptMsg.WriteUInt32(connId)
 	tcpConn.WriteMsg(acceptMsg)
 	acceptMsg.Free()

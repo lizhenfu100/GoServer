@@ -20,7 +20,7 @@ import (
 
 func AccountRegLimit() {
 	http.SetIntercept(func(req, ack *common.NetPack, ip string) bool {
-		msgId := req.GetOpCode()
+		msgId := req.GetMsgId()
 		oldPos := req.ReadPos //临时读取buffer数据
 		switch msgId {
 		case enum.Rpc_login_relay_to_center:

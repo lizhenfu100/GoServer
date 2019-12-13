@@ -191,6 +191,9 @@ func CheckMac(mac string) bool {
 	return isForbid == 0
 }
 func AddMacOrder(mac, id string) {
+	if mac == "" {
+		return
+	}
 	if ids, ok := g_mac_order.Load(mac); ok {
 		ids.(*safe.Strings).Add(id)
 		if n := ids.(*safe.Strings).Size(); n > 7 {
@@ -210,6 +213,9 @@ func AddMacOrder(mac, id string) {
 	}
 }
 func DelMacOrder(mac, id string) {
+	if mac == "" {
+		return
+	}
 	if ids, ok := g_mac_order.Load(mac); ok {
 		if i := ids.(*safe.Strings).Index(id); i >= 0 {
 			ids.(*safe.Strings).Del(i)

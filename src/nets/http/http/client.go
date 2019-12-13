@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"common"
 	"gamelog"
 	"io"
 	"net/http"
@@ -18,7 +19,11 @@ func (client) PostReq(url string, b []byte) []byte {
 		//除非连接因超时终止了，否则相关资源无法被回收
 		return ReadBody(ack.Body)
 	} else {
-		gamelog.Error(e.Error())
+		if msg := common.NewNetPack(b); msg != nil {
+			gamelog.Error("(%s) %s", msg.GetMsgId(), e.Error())
+		} else {
+			gamelog.Error(e.Error())
+		}
 		return nil
 	}
 }

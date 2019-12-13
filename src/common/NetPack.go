@@ -2,11 +2,11 @@ package common
 
 const (
 	PACK_HEADER_SIZE = 7 //packetType & Opcode & reqIdx
-	TYPE_INDEX       = 0 //uint8
-	OPCODE_INDEX     = 1 //uint16
-	REQ_IDX_INDEX    = 3 //uint32
+	INDEX_TYPE       = 0 //uint8
+	INDEX_MSG_ID     = 1 //uint16
+	INDEX_REQ_IDX    = 3 //uint32
 
-	// TYPE_INDEX：写通用错误码
+	// INDEX_TYPE：写通用错误码
 	Err_not_found = 255
 )
 
@@ -47,7 +47,7 @@ func (self *NetPack) BodySize() int { return len(self.buf) - PACK_HEADER_SIZE }
 func (self *NetPack) Clear() {
 	self.buf = self.buf[:PACK_HEADER_SIZE]
 	self.ReadPos = PACK_HEADER_SIZE
-	self.SetOpCode(0)
+	self.SetMsgId(0)
 }
 func (self *NetPack) Reset(data []byte) bool {
 	if len(data) < PACK_HEADER_SIZE {
@@ -66,32 +66,32 @@ func (self *NetPack) ResetHead(other *NetPack) {
 }
 
 //! head
-func (self *NetPack) SetType(v uint8) { self.buf[TYPE_INDEX] = v }
-func (self *NetPack) GetType() uint8  { return self.buf[TYPE_INDEX] }
-func (self *NetPack) SetOpCode(id uint16) {
-	self.buf[OPCODE_INDEX] = byte(id)
-	self.buf[OPCODE_INDEX+1] = byte(id >> 8)
+func (self *NetPack) SetType(v uint8) { self.buf[INDEX_TYPE] = v }
+func (self *NetPack) GetType() uint8  { return self.buf[INDEX_TYPE] }
+func (self *NetPack) SetMsgId(id uint16) {
+	self.buf[INDEX_MSG_ID] = byte(id)
+	self.buf[INDEX_MSG_ID+1] = byte(id >> 8)
 }
-func (self *NetPack) GetOpCode() uint16 {
-	return uint16(self.buf[OPCODE_INDEX+1])<<8 | uint16(self.buf[OPCODE_INDEX])
+func (self *NetPack) GetMsgId() uint16 {
+	return uint16(self.buf[INDEX_MSG_ID+1])<<8 | uint16(self.buf[INDEX_MSG_ID])
 }
 func (self *NetPack) SetReqIdx(idx uint32) {
-	self.buf[REQ_IDX_INDEX] = byte(idx)
-	self.buf[REQ_IDX_INDEX+1] = byte(idx >> 8)
-	self.buf[REQ_IDX_INDEX+2] = byte(idx >> 16)
-	self.buf[REQ_IDX_INDEX+3] = byte(idx >> 24)
+	self.buf[INDEX_REQ_IDX] = byte(idx)
+	self.buf[INDEX_REQ_IDX+1] = byte(idx >> 8)
+	self.buf[INDEX_REQ_IDX+2] = byte(idx >> 16)
+	self.buf[INDEX_REQ_IDX+3] = byte(idx >> 24)
 }
 func (self *NetPack) GetReqIdx() (ret uint32) {
 	for i := 0; i < 4; i++ {
-		ret |= uint32(self.buf[REQ_IDX_INDEX+i]) << uint(i*8)
+		ret |= uint32(self.buf[INDEX_REQ_IDX+i]) << uint(i*8)
 	}
 	return
 }
 func (self *NetPack) GetReqKey() uint64 {
-	return uint64(self.GetOpCode())<<32 | uint64(self.GetReqIdx())
+	return uint64(self.GetMsgId())<<32 | uint64(self.GetReqIdx())
 }
 func (self *NetPack) SetReqKey(key uint64) {
-	self.SetOpCode(uint16(key >> 32))
+	self.SetMsgId(uint16(key >> 32))
 	self.SetReqIdx(uint32(0xFFFFFFFF & key))
 }
 
