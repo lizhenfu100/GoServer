@@ -34,6 +34,3 @@ func MainLoop() {
 }
 func Rpc_net_error(req, ack *common.NetPack, conn *tcp.TCPConn) {
 }
-func Rpc_timestamp(req, ack *common.NetPack, conn *tcp.TCPConn) {
-	ack.WriteInt64(time.Now().Unix())
-}

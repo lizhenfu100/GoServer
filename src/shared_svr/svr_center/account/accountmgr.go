@@ -1,16 +1,13 @@
 package account
 
 import (
+	"common/format"
 	"dbmgo"
+	"gamelog"
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
-	"sync"
+	"strconv"
 	"time"
-)
-
-var (
-	g_aid_cache  sync.Map //map[uint32]*TAccount
-	g_bind_cache sync.Map //map[string]*TAccount
 )
 
 // 账号活跃量很大，预加载内存占用过大
@@ -23,75 +20,82 @@ func NewAccountInDB(passwd, bindKey, bindVal string) (uint16, *TAccount) {
 	}}, &TAccount{}); ok {
 		return err.Account_repeat, nil
 	} else if e == nil {
-		account := _NewAccount()
-		account.BindInfo[bindKey] = bindVal
-		account.SetPasswd(passwd)
-		account.CreateTime = time.Now().Unix()
-		account.AccountID = dbmgo.GetNextIncId("AccountId")
-		if dbmgo.DB().C(KDBTable).Insert(account) == nil {
-			AddCache(account)
-			return err.Success, account
+		p := _NewAccount()
+		p.BindInfo[bindKey] = bindVal
+		p.SetPasswd(passwd)
+		p.CreateTime = time.Now().Unix()
+		p.AccountID = dbmgo.GetNextIncId("AccountId")
+		if dbmgo.DB().C(KDBTable).Insert(p) == nil {
+			CacheAdd(bindKey+bindVal, p)
+			return err.Success, p
 		}
 	}
 	return err.Unknow_error, nil
 }
 func GetAccountByBindInfo(k, v string) *TAccount { //email、name、phone
-	if p, ok := g_bind_cache.Load("bindinfo." + k + v); ok {
-		return p.(*TAccount)
+	if p := CacheGet(k + v); p != nil {
+		return p
 	} else {
-		account := _NewAccount()
-		if ok, _ := dbmgo.Find(KDBTable, "bindinfo."+k, v, account); ok {
-			AddCache(account)
-			return account
+		p := _NewAccount()
+		if ok, _ := dbmgo.Find(KDBTable, "bindinfo."+k, v, p); ok {
+			CacheAdd(k+v, p)
+			return p
 		}
 	}
 	return nil
 }
 func GetAccountById(accountId uint32) *TAccount {
-	if v, ok := g_aid_cache.Load(accountId); ok {
-		return v.(*TAccount)
+	aid := strconv.FormatInt(int64(accountId), 10)
+	if p := CacheGet(aid); p != nil {
+		return p
 	} else {
-		account := _NewAccount()
-		if ok, _ := dbmgo.Find(KDBTable, "_id", accountId, account); ok {
-			AddCache(account)
-			return account
+		p := _NewAccount()
+		if ok, _ := dbmgo.Find(KDBTable, "_id", accountId, p); ok {
+			CacheAdd(aid, p)
+			return p
 		}
 	}
 	return nil
 }
 func GetAccount(v, passwd string) (uint16, *TAccount) {
 	//1、优先当邮箱处理
-	p1 := GetAccountByBindInfo("email", v)
-	if p1 != nil && p1.CheckPasswd(passwd) {
-		return err.Success, p1
+	if format.CheckBindValue("email", v) {
+		p := GetAccountByBindInfo("email", v)
+		if p != nil && p.CheckPasswd(passwd) {
+			delAccountName(p) //FIXME：删name、bindinfo.name字段
+			return err.Success, p
+		}
 	}
 	//2、再当账号名处理
-	p2 := GetAccountByBindInfo("name", v)
-	if p2 != nil && p2.CheckPasswd(passwd) {
-		return err.Success, p2
+	p := GetAccountByBindInfo("name", v)
+	if p != nil && p.CheckPasswd(passwd) {
+		moveAccountName(p) //FIXME：删name、bindinfo.name字段，移至bindinfo.email
+		return err.Success, p
 	}
-	if p1 == nil && p2 == nil {
-		return err.Not_found, nil
-	} else {
-		return err.Account_mismatch_passwd, nil
-	}
+	return err.Account_mismatch_passwd, nil
 }
 
 // ------------------------------------------------------------
-//! 辅助函数
-func AddCache(p *TAccount) {
-	if p.Name != "" && p.BindInfo["name"] == "" { //TODO:待删除
-		p.BindInfo["name"] = p.Name
-		dbmgo.UpdateId(KDBTable, p.AccountID, bson.M{"$set": bson.M{"bindinfo.name": p.Name}})
-	}
-	g_aid_cache.Store(p.AccountID, p)
-	for k, v := range p.BindInfo {
-		g_bind_cache.Store("bindinfo."+k+v, p)
+// FIXME：修补上古遗祸~囧 2019.12.25
+func delAccountName(p *TAccount) {
+	if format.CheckBindValue("email", p.BindInfo["name"]) {
+		gamelog.Info("delAccountName: %s %s", p.Name, p.BindInfo["name"])
+		p.Name = ""
+		p.BindInfo["name"] = ""
+		dbmgo.UpdateId(KDBTable, p.AccountID, bson.M{"$unset": bson.M{"name": 1, "bindinfo.name": 1}})
 	}
 }
-func DelCache(p *TAccount) {
-	g_aid_cache.Delete(p.AccountID)
-	for k, v := range p.BindInfo {
-		g_bind_cache.Delete("bindinfo." + k + v)
+func moveAccountName(p *TAccount) {
+	if format.CheckBindValue("email", p.BindInfo["name"]) {
+		if GetAccountByBindInfo("email", p.BindInfo["name"]) == nil {
+			gamelog.Info("moveAccountName: %s %s %s", p.Name, p.BindInfo["name"], p.BindInfo["email"])
+			p.Name = ""
+			p.BindInfo["email"] = p.BindInfo["name"]
+			p.BindInfo["name"] = ""
+			dbmgo.UpdateId(KDBTable, p.AccountID, bson.M{
+				"$unset": bson.M{"name": 1, "bindinfo.name": 1},
+				"$set":   bson.M{"bindinfo.email": p.BindInfo["email"]},
+			})
+		}
 	}
 }

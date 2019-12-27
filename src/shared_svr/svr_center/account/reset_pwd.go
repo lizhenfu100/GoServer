@@ -35,7 +35,7 @@ func Http_reset_password(w http.ResponseWriter, r *http.Request) {
 	} else {
 		p.SetPasswd(passwd)
 		dbmgo.UpdateId(KDBTable, p.AccountID, bson.M{"$set": bson.M{"password": p.Password}})
-		p.verifyEmailOK()
 		ack, _ = email.Translate("Reset password ok", language)
+		CacheDel(p)
 	}
 }

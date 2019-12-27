@@ -105,7 +105,7 @@ func accountLogin1(centerId int, gameSvrId *int, req, ack *common.NetPack) (
 	return
 }
 func accountLogin2(aid uint32, gameSvrId *int, version, gameName string, centerId int) (errCode uint16) {
-	gamelog.Track("GameId:%v, version:%s gameName:%s", *gameSvrId, version, gameName)
+	gamelog.Debug("GameId:%v, version:%s", *gameSvrId, version)
 	//选取gameSvrId：若账户未绑定游戏服，自动选取空闲节点，并绑定到账号上
 	if *gameSvrId <= 0 {
 		if *gameSvrId = GetFreeGameSvr(version); *gameSvrId <= 0 {
@@ -126,7 +126,7 @@ func accountLogin2(aid uint32, gameSvrId *int, version, gameName string, centerI
 		errCode = err.None_free_game_server
 	} else {
 		errCode = err.Success
-		gamelog.Track("Login game svrId: %d", *gameSvrId)
+		gamelog.Debug("Login game svrId: %d", *gameSvrId)
 	}
 	return
 }
@@ -181,8 +181,15 @@ func Rpc_login_relay_to_center(req, ack *common.NetPack) {
 	strKey := req.ReadString() //accountName/bindVal
 	req.ReadPos = oldPos
 
+	if rpcId == enum.Rpc_center_reg_if { //渠道号登录都会先调这个，蛋疼~坑啊
+		if cache.IsExist(strKey) {
+			ack.WriteUInt16(err.Success)
+			return
+		}
+	}
 	svrId := netConfig.HashCenterID(strKey)
 	netConfig.SyncRelayToCenter(svrId, rpcId, req, ack)
+	gamelog.Track("relay center: %d, %s, %d", rpcId, strKey, svrId)
 }
 
 // ------------------------------------------------------------

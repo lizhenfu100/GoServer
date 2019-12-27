@@ -95,9 +95,10 @@ func UnbindMac(mac string) (uint16, int64) {
 			g_unbindTime2.Store(ptr.Mac, timeNow)
 			dbmgo.RemoveOneSync(KDBMac, bson.M{"_id": mac})
 			dbmgo.Log("UnbindMac", ptr.Mac, ptr.Key)
+			return err.Success, 0
 		}
 	}
-	return err.Success, 0
+	return err.Not_found, 0
 }
 func canUnbindMac(key, mac string, timeNow int64) (bool, int64) {
 	if v, ok := g_unbindTime1.Load(key); ok {

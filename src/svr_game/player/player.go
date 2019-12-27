@@ -44,7 +44,7 @@ import (
 )
 
 const (
-	kIdleMinuteMax  = 300 //须客户端心跳包
+	kIdleMinuteMax  = 5 //须客户端心跳包
 	kReLoginWaitSec = 300
 	kActiveTime     = 24 * 3600
 	kDBPlayer       = "Player"
@@ -113,7 +113,7 @@ func NewPlayerInDB(accountId uint32, name string) *TPlayer {
 	//player.PlayerID = dbmgo.GetNextIncId("PlayerId")
 	player.Version = meta.G_Local.Version
 
-	if dbmgo.InsertSync(kDBPlayer, &player.TPlayerBase) {
+	if dbmgo.DB().C(kDBPlayer).Insert(&player.TPlayerBase) == nil {
 		for _, v := range player.modules {
 			v.InitAndInsert(player)
 		}
@@ -144,6 +144,7 @@ func (self *TPlayer) Login(conn *tcp.TCPConn) {
 	if atomic.SwapInt32(&self._isOnlnie, 1) == 0 {
 		atomic.AddInt32(&g_online_cnt, 1)
 
+		//TODO:zhoumf:在线必须得在Service队列中，且唯一，如何debug？
 		if !G_ServiceMgr.Register(Service_Write_DB, self) || //防止多次登录的重复注册
 			!G_ServiceMgr.Register(Service_Check_AFK, self) {
 			gamelog.Error("Login Service cap(%d)", G_ServiceMgr.Cap())

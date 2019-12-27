@@ -88,10 +88,9 @@ func _PlayerRpcHttp(w http.ResponseWriter, r *http.Request) {
 			gamelog.Error("PlayerMsg(%d) Not Regist", msgId)
 		}
 	} else {
-		ack.SetType(common.Err_not_found)
+		ack.SetType(common.Err_offline)
 		gamelog.Debug("Player(%d) isn't online", accountId)
 	}
-
 	compress.CompressTo(ack.Data(), w)
 	ack.Free()
 	req.Free()
@@ -113,7 +112,7 @@ func Rpc_recv_player_msg(req, ack *common.NetPack, conn *tcp.TCPConn) {
 			gamelog.Error("PlayerMsg(%d) Not Regist", rpcId)
 		}
 	} else {
-		ack.SetType(common.Err_not_found)
+		ack.SetType(common.Err_offline)
 		gamelog.Debug("Player(%d) isn't online", accountId)
 	}
 }

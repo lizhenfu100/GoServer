@@ -18,7 +18,7 @@ func (client) PostReq(url string, b []byte) []byte {
 		return body
 	} else {
 		if msg := common.NewNetPack(b); msg != nil {
-			gamelog.Error("(%s) %s", msg.GetMsgId(), e.Error())
+			gamelog.Error("(%d) %s", msg.GetMsgId(), e.Error())
 		} else {
 			gamelog.Error(e.Error())
 		}

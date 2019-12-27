@@ -66,10 +66,10 @@ func (self *TAccount) bind(k, newVal string) uint16 {
 	if GetAccountByBindInfo(k, newVal) != nil {
 		return err.BindInfo_already_in_use
 	}
-	DelCache(self) //更新缓存
+	CacheDel(self)
 	dbmgo.Log("Change_"+k, self.BindInfo[k], newVal)
 	self.BindInfo[k] = newVal
-	AddCache(self)
+	CacheAdd(k+newVal, self)
 	dbmgo.UpdateId(KDBTable, self.AccountID, bson.M{"$set": bson.M{"bindinfo." + k: newVal}})
 	return err.Success
 }
@@ -130,12 +130,21 @@ func Http_bind_info_force(w http.ResponseWriter, r *http.Request) {
 }
 
 // ------------------------------------------------------------
-// 邮箱验证
+// 邮箱、手机验证
 func (self *TAccount) verifyEmailOK() {
 	if self.IsValidEmail == 0 {
 		self.IsValidEmail = 1
 		dbmgo.UpdateId(KDBTable, self.AccountID, bson.M{"$set": bson.M{"isvalidemail": 1}})
-		self.cacheRefresh()
+		self.refreshLoginCache()
+		CacheDel(self)
+	}
+}
+func (self *TAccount) verifyPhoneOK() {
+	if self.IsValidPhone == 0 {
+		self.IsValidPhone = 1
+		dbmgo.UpdateId(KDBTable, self.AccountID, bson.M{"$set": bson.M{"isvalidphone": 1}})
+		self.refreshLoginCache()
+		CacheDel(self)
 	}
 }
 func Http_verify_email(w http.ResponseWriter, r *http.Request) {

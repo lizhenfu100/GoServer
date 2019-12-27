@@ -152,16 +152,13 @@ func MakeGiftCodeCsv(dbkey string, kAddNum int) {
 	for _, v := range records {
 		all[v[0]] = true
 	}
-	for {
+	for len(news) < kAddNum {
 		v := MakeGiftCode(dbkey)
 		if _, ok := all[v]; !ok {
 			all[v] = true
 			news = append(news, v)
 		}
 		fmt.Println("MakeGiftCode: ", len(all), v)
-		if len(news) == kAddNum {
-			break
-		}
 	}
 
 	wr := func(f *os.File) {

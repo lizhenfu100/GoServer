@@ -13,7 +13,6 @@ import (
 	"netConfig"
 	"netConfig/meta"
 	"shared_svr/svr_center/logic"
-	"shared_svr/zookeeper/component"
 )
 
 const kModuleName = "center"
@@ -34,8 +33,6 @@ func main() {
 	pMeta := meta.GetMeta("db_account", svrId)
 	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName,
 		conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
-
-	component.RegisterToZookeeper()
 
 	go netConfig.RunNetSvr()
 	logic.MainLoop()

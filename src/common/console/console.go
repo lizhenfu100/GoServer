@@ -29,6 +29,8 @@ func Init() {
 	http.G_HandleFunc[enum.Rpc_update_file] = _Rpc_update_file2
 	tcp.G_HandleFunc[enum.Rpc_reload_csv] = _Rpc_reload_csv1
 	http.G_HandleFunc[enum.Rpc_reload_csv] = _Rpc_reload_csv2
+	tcp.G_HandleFunc[enum.Rpc_timestamp] = _Rpc_timestamp1
+	http.G_HandleFunc[enum.Rpc_timestamp] = _Rpc_timestamp2
 	go sigTerm() //监控进程终止信号
 
 	wechat.Init( //启动微信通知
@@ -70,6 +72,10 @@ func _Rpc_get_meta2(req, ack *common.NetPack) {
 		ack.WriteUInt16(p.Port())
 		ack.WriteString(p.SvrName)
 	}
+}
+func _Rpc_timestamp1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_timestamp2(req, ack) }
+func _Rpc_timestamp2(req, ack *common.NetPack) {
+	ack.WriteInt64(time.Now().Unix())
 }
 
 //TODO:动态加载配置文件，有多线程访问竞态，竞态木问题，写完最终一致的，关键是会不会宕机？配表里头有map~囧

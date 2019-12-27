@@ -59,7 +59,7 @@ func AfterRecvHttpMsg(self *TPlayer, buf *common.NetPack) {
 
 	//! 先写位标记
 	buf.WriteUInt8(0xFF)
-	bit, bitPosInBody := uint32(0), buf.BodySize()
+	bit, bitPos := uint32(0), buf.Size()
 	buf.WriteUInt32(bit)
 
 	//! 再写数据块
@@ -101,7 +101,7 @@ func AfterRecvHttpMsg(self *TPlayer, buf *common.NetPack) {
 		}
 	*/
 	//! 最后重置位标记
-	buf.SetPos(bitPosInBody, bit)
+	buf.SetUInt32(bitPos, bit)
 	if bit > 0 {
 		gamelog.Debug("aid(%d), PackSendBit(%b) %v", accountId, bit, buf)
 	}

@@ -13,8 +13,8 @@ func Rpc_zoo_register(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	svrId := req.ReadInt()
 	pNew := meta.GetMeta(module, svrId)
 
-	posInBuf, count := ack.BodySize(), uint32(0)
-	ack.WriteUInt32(count)
+	posInBuf, count := ack.Size(), uint16(0)
+	ack.WriteUInt16(count)
 	tcp.ForeachRegModule(func(v *tcp.TCPConn) {
 		if ptr, ok := v.UserPtr.(*meta.Meta); ok {
 			switch pNew.IsMyServer(ptr) {
@@ -28,5 +28,5 @@ func Rpc_zoo_register(req, ack *common.NetPack, conn *tcp.TCPConn) {
 			}
 		}
 	})
-	ack.SetPos(posInBuf, count)
+	ack.SetUInt16(posInBuf, count)
 }

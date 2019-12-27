@@ -95,18 +95,18 @@ func checkMac(pf_id, uid, mac string) (*TSaveData, uint16) { //Notice：不可�
 		return pSave, err.Record_mac_already_bind //设备被别人占用，得解绑
 	}
 	if ok, _ := dbmgo.Find(KDBSave, "_id", pSave.Key, pSave); !ok {
-		gamelog.Track("Record_cannot_find: key(%s)", pSave.Key)
+		gamelog.Track("Record_cannot_find: %s", pSave.Key)
 		return pSave, err.Record_cannot_find
 	}
 	if !oldMac /*新设备*/ && pSave.MacCnt >= conf.Const.MacFreeBindMax {
 		now := time.Now().Unix()
 		if now-pSave.ChTime < int64(conf.Const.MacChangePeriod) {
-			gamelog.Track("Record_bind_limit: %v", pSave)
+			gamelog.Track("Record_bind_limit: %s", pSave.Key)
 			return pSave, err.Record_bind_limit //等几天才能换设备
 		}
 		if pSave.MacCnt >= conf.Const.MacBindMax {
 			if (now-pSave.RaiseTime)/(3600*24) < int64(conf.Const.RaiseBindCntDay) {
-				gamelog.Track("Record_bind_max: %v", pSave)
+				gamelog.Track("Record_bind_max: %s", pSave.Key)
 				return pSave, err.Record_bind_max //绑定次数用尽，月余后才会增加次数
 			} else {
 				pSave.MacCnt-- //90天，绑定次数+1

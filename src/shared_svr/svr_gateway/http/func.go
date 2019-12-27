@@ -4,7 +4,6 @@ import (
 	"common"
 	"generate_out/err"
 	"shared_svr/svr_gateway/logic"
-	"time"
 )
 
 func Rpc_gateway_login(req, ack *common.NetPack) {
@@ -35,7 +34,4 @@ func Rpc_gateway_relay_player_msg(req, ack *common.NetPack) {
 	logic.Rpc_gateway_relay_player_msg(req, func(backBuf *common.NetPack) {
 		ack.WriteBuf(backBuf.LeftBuf())
 	})
-}
-func Rpc_timestamp(req, ack *common.NetPack) {
-	ack.WriteInt64(time.Now().Unix())
 }

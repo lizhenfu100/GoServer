@@ -8,12 +8,12 @@
 	· 分段：新玩家集中，单点压力大 …… 倾向于JumpHash方式
 	· 玩家分别用 “账号名、邮箱、手机号” 登录，如何快速定位节点？
 		· <字符串,ID>映射，哈希字符串，同样存到多个db
-		· 须保证注册、改名、改邮箱...事务性修改映射表
+		· 须保证注册、改名、改邮箱...事务性修改映射表~囧~研究下saga模式
 		· 先查映射表，再查账号数据
 
 * @ 要服务全球玩家，访问账号必须加速，各登录节点得有账号redis
 	· 读，先读缓存，没有再读center，成功后写缓存（缓存会过期）
-	· 写，先删缓存，再写库，成功后写缓存
+	· 写，先更db，再删缓存
 
 * @ author zhoumf
 * @ date 2019-8-23
@@ -25,7 +25,6 @@ import (
 	"common/format"
 	"common/std/random"
 	"common/std/sign"
-	"common/timer"
 	"crypto/md5"
 	"dbmgo"
 	"fmt"
@@ -51,6 +50,7 @@ type TAccount struct {
 	CreateTime int64
 	LoginTime  int64
 
+	//TODO：手机号客户端就做加密，整个流转中途都是加密的
 	BindInfo     map[string]string //email、phone、name
 	IsValidEmail uint8
 	IsValidPhone uint8
@@ -66,7 +66,7 @@ func _NewAccount() *TAccount {
 }
 func (self *TAccount) init() {
 	if self.BindInfo == nil {
-		self.BindInfo = make(map[string]string, 5)
+		self.BindInfo = make(map[string]string, 3)
 	}
 	if self.GameInfo == nil {
 		self.GameInfo = make(map[string]gameInfo.TGameInfo)
@@ -93,12 +93,6 @@ func Rpc_center_account_login(req, ack *common.NetPack) {
 		timeNow := time.Now().Unix()
 		atomic.StoreInt64(&p.LoginTime, timeNow)
 		dbmgo.UpdateId(KDBTable, p.AccountID, bson.M{"$set": bson.M{"logintime": timeNow}})
-		timer.G_TimerMgr.AddTimerSec(func() {
-			if time.Now().Unix()-atomic.LoadInt64(&p.LoginTime) >= 15*60 {
-				DelCache(p)
-			}
-		}, 15*60, 0, 0)
-
 		//1、先回复，Client账号信息
 		v := gameInfo.TAccountClient{
 			p.AccountID,
@@ -180,6 +174,7 @@ func Rpc_center_change_password(req, ack *common.NetPack) {
 		dbmgo.UpdateId(KDBTable, p.AccountID, bson.M{"$set": bson.M{
 			"password": p.Password}})
 		ack.WriteUInt16(err.Success)
+		CacheDel(p)
 	}
 }
 func Rpc_center_create_visitor(req, ack *common.NetPack) {
@@ -212,8 +207,9 @@ func Rpc_center_set_game_route(req, ack *common.NetPack) {
 			p.GameInfo[gameName] = v
 			ack.WriteUInt16(err.Success)
 			if ok { //转服了，通知调用者删缓存
-				p.writeCacheKey(ack)
+				p.writeLoginCacheKey(ack)
 			}
+			CacheDel(p) //先更db，再删缓存
 		} else {
 			ack.WriteUInt16(err.GameInfo_set_fail)
 		}
@@ -245,6 +241,7 @@ func Rpc_center_set_game_json(req, ack *common.NetPack) { //TODO:zhoumf:换accou
 			fmt.Sprintf("gameinfo.%s", gameName): v}}) {
 			p.GameInfo[gameName] = v
 			ack.WriteUInt16(err.Success)
+			CacheDel(p) //先更db，再删缓存
 		} else {
 			ack.WriteUInt16(err.GameInfo_set_fail)
 		}
@@ -297,6 +294,13 @@ func (self *TAccount) WriteLoginAddr(gameName string, ack *common.NetPack) {
 		ack.WriteUInt16(err.Not_found)
 	} else if p := meta.GetMeta("login", info.LoginSvrId); p == nil {
 		ack.WriteUInt16(err.Svr_not_working) //玩家有对应的登录服，但该服未启动
+		/*
+			新center只加到华北
+			华南玩家，客户端删包重装，会问询自己哪个大区的
+			正好，他测速跑到华北区问
+			又正好，他被路由到了新center节点
+			新center没有华南信息，err.Svr_not_working
+		*/
 	} else {
 		ack.WriteUInt16(err.Success)
 		ack.WriteString(p.OutIP)
@@ -331,20 +335,19 @@ func (self *TAccount) WriteLoginAddr(gameName string, ack *common.NetPack) {
 }
 
 // ------------------------------------------------------------
-// 先更db，再删缓存
-func (self *TAccount) cacheRefresh() {
-	gamelog.Debug("cacheRefresh")
+// 登录服缓存了部分账号信息，用以加速登录
+func (self *TAccount) refreshLoginCache() {
 	go meta.G_Metas.Range(func(k, v interface{}) bool {
 		if p := v.(*meta.Meta); p.Module == "login" && !p.IsClosed {
 			http.CallRpc(http.Addr(p.OutIP, p.Port()), enum.Rpc_login_del_account_cache,
 				func(buf *common.NetPack) {
-					self.writeCacheKey(buf)
+					self.writeLoginCacheKey(buf)
 				}, nil)
 		}
 		return true
 	})
 }
-func (self *TAccount) writeCacheKey(buf *common.NetPack) {
+func (self *TAccount) writeLoginCacheKey(buf *common.NetPack) {
 	buf.WriteByte(byte(len(self.BindInfo)))
 	for _, v := range self.BindInfo {
 		buf.WriteString(v)

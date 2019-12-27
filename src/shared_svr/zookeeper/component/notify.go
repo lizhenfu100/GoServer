@@ -34,8 +34,7 @@ func RegisterToZookeeper() {
 				buf.WriteString(meta.G_Local.Module)
 				buf.WriteInt(meta.G_Local.SvrID)
 			}, func(recvBuf *common.NetPack) { //主动连接zoo通告的服务节点
-				count := recvBuf.ReadInt()
-				for i := 0; i < count; i++ {
+				for cnt, i := recvBuf.ReadUInt16(), uint16(0); i < cnt; i++ {
 					pMeta := new(meta.Meta) //Notice：须每次new新的，供ConnectToModule中的闭包引用
 					pMeta.BufToData(recvBuf)
 					netConfig.ConnectModule(pMeta)

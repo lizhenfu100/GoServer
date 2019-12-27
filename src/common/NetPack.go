@@ -7,7 +7,9 @@ const (
 	INDEX_REQ_IDX    = 3 //uint32
 
 	// INDEX_TYPE：写通用错误码
-	Err_not_found = 255
+	Err_offline   = 255
+	Err_too_often = 254
+	Err_end_flag  = 200
 )
 
 type NetPack struct {
@@ -94,7 +96,3 @@ func (self *NetPack) SetReqKey(key uint64) {
 	self.SetMsgId(uint16(key >> 32))
 	self.SetReqIdx(uint32(0xFFFFFFFF & key))
 }
-
-//! Set
-func (self *NetPack) SetPos(pos int, v uint32) { self.ByteBuffer.SetPos(PACK_HEADER_SIZE+pos, v) }
-func (self *NetPack) GetPos(pos int) uint32    { return self.ByteBuffer.GetPos(PACK_HEADER_SIZE + pos) }

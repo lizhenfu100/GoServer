@@ -12,6 +12,7 @@ package msg
 
 import (
 	"dbmgo"
+	"errors"
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
 	"time"
@@ -53,12 +54,15 @@ type TOrderInfo struct {
 }
 
 func CreateOrderInDB(ptr *TOrderInfo) error {
-	ptr.Order_id = fmt.Sprintf("%03d%s%06d", //生成订单号
-		ptr.Pay_id,
-		time.Now().Format("060102"),
-		dbmgo.GetNextIncId("OrderId"))
-	ptr.Time = time.Now().Unix()
-	return dbmgo.DB().C(KDBTable).Insert(ptr)
+	if incId := dbmgo.GetNextIncId("OrderId"); incId > 0 {
+		ptr.Order_id = fmt.Sprintf("%03d%s%06d", //生成订单号
+			ptr.Pay_id,
+			time.Now().Format("060102"),
+			incId)
+		ptr.Time = time.Now().Unix()
+		return dbmgo.DB().C(KDBTable).Insert(ptr)
+	}
+	return errors.New("GetNextIncId")
 }
 func FindOrder(orderId string) *TOrderInfo {
 	if orderId != "" && orderId != "0" {

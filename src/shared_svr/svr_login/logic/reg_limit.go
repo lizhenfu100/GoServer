@@ -14,7 +14,6 @@ import (
 	"netConfig"
 	"nets/http"
 	"strconv"
-	"sync"
 	"time"
 )
 
@@ -24,20 +23,23 @@ func AccountRegLimit() {
 		oldPos := req.ReadPos //临时读取buffer数据
 		switch msgId {
 		case enum.Rpc_login_relay_to_center:
-			{
-				rpcId := req.ReadUInt16() //目标rpc
-
-				if rpcId == enum.Rpc_center_account_reg {
-					if _banReg(req, ack, ip) {
-						return true
-					}
+			switch rpcId := req.ReadUInt16(); rpcId { //目标rpc
+			case enum.Rpc_center_account_reg:
+				if _banReg(req, ack, ip) {
+					return true
+				}
+			case enum.Rpc_center_reg_if:
+				if _banRegif(ack, ip) {
+					return true
+				}
+			default:
+				if _banToCenter(ack, ip) {
+					return true
 				}
 			}
 		case enum.Rpc_login_account_login:
-			{
-				if _banLogin(req, ack, ip) {
-					return true
-				}
+			if _banLogin(req, ack, ip) {
+				return true
 			}
 		}
 		req.ReadPos = oldPos
@@ -46,28 +48,26 @@ func AccountRegLimit() {
 }
 
 // ------------------------------------------------------------
-// -- 注册拦截
-var g_regFreq sync.Map //<ip, *timer.OpFreq>
+// -- 拦截高频调用
+var (
+	//10秒超5次，封5分钟
+	g_regFreq    = timer.NewFreq(5, 10, 5)
+	g_loginFreq  = timer.NewFreq(5, 10, 5)
+	g_regifFreq  = timer.NewFreq(3, 10, 5)
+	g_centerFreq = timer.NewFreq(30, 1, 5)
 
-func _banReg(req, ack *common.NetPack, ip string) bool {
+	G_banLogin = true
+)
+
+func _banReg(req, ack *common.NetPack, ip string) bool { //注册
 	emailAddr := req.ReadString()
 	passwd := req.ReadString()
 	req.WriteString("email") //TODO:目前只邮箱注册
 
-	if !assert.IsDebug {
-		freq, _ := g_regFreq.Load(ip)
-		if freq == nil {
-			freq = timer.NewOpFreq(5, 10) //10秒超5次
-			g_regFreq.Store(ip, freq)
-		}
-		if !freq.(*timer.OpFreq).Check(time.Now().Unix()) {
-			timer.G_TimerMgr.AddTimerSec(func() {
-				g_regFreq.Delete(ip)
-			}, 300, 0, 0)
-			gamelog.Info("Ban ip:%s", ip)
-			ack.WriteUInt16(err.Operate_too_often) //Notice：回复内容须与原rpc一致
-			return true                            //拦截，原rpc函数不会调用了
-		}
+	if !assert.IsDebug && !g_regFreq.Check(ip) {
+		gamelog.Info("Ban ip:%s", ip)
+		ack.WriteUInt16(err.Operate_too_often) //Notice：回复内容须与原rpc一致
+		return true                            //拦截，原rpc函数不会调用了
 	}
 	if false { //要求验证邮箱
 		errcode := _NeedVerifyEmail(emailAddr, passwd)
@@ -76,26 +76,27 @@ func _banReg(req, ack *common.NetPack, ip string) bool {
 	}
 	return false
 }
-
-// ------------------------------------------------------------
-// -- 登录拦截
-var g_loginFreq sync.Map //<ip, *timer.OpFreq>
-
-func _banLogin(req, ack *common.NetPack, ip string) bool {
-	if !assert.IsDebug {
-		freq, _ := g_loginFreq.Load(ip)
-		if freq == nil {
-			freq = timer.NewOpFreq(5, 10) //10秒超5次
-			g_loginFreq.Store(ip, freq)
-		}
-		if !freq.(*timer.OpFreq).Check(time.Now().Unix()) {
-			timer.G_TimerMgr.AddTimerSec(func() {
-				g_loginFreq.Delete(ip)
-			}, 300, 0, 0)
-			gamelog.Info("Ban ip:%s", ip)
-			ack.WriteUInt16(err.Operate_too_often) //Notice：回复内容须与原rpc一致
-			return true                            //拦截，原rpc函数不会调用了
-		}
+func _banLogin(req, ack *common.NetPack, ip string) bool { //登录
+	if !assert.IsDebug && G_banLogin && !g_loginFreq.Check(ip) {
+		gamelog.Info("Ban ip:%s", ip)
+		ack.WriteUInt16(err.Operate_too_often) //Notice：回复内容须与原rpc一致
+		return true                            //拦截，原rpc函数不会调用了
+	}
+	return false
+}
+func _banRegif(ack *common.NetPack, ip string) bool {
+	if !assert.IsDebug && !g_regifFreq.Check(ip) {
+		gamelog.Info("Ban reg_if:%s", ip)
+		ack.WriteUInt16(err.Operate_too_often) //Notice：回复内容须与原rpc一致
+		return true                            //拦截，原rpc函数不会调用了
+	}
+	return false
+}
+func _banToCenter(ack *common.NetPack, ip string) bool {
+	if !assert.IsDebug && !g_centerFreq.Check(ip) {
+		gamelog.Info("Ban to center:%s", ip)
+		ack.SetType(common.Err_too_often) //不是所有消息都返回错误码的~囧
+		return true
 	}
 	return false
 }

@@ -61,9 +61,6 @@ var (
 )
 
 func do1() {
-	g_db1.Connect()
-	g_db2.Connect()
-
 	//TODO: 合服工具
 	/*
 		1、把各个大区的子db合到一块，一个大区一个db
@@ -82,8 +79,8 @@ func do1() {
 
 func merge() { //读数据，写入主节点
 	p1, p2 := &logic.TSaveData{}, &logic.TSaveData{}
-	iter1 := g_db1.DB.C(logic.KDBSave).Find(nil).Iter()
-	coll2 := g_db2.DB.C(logic.KDBSave)
+	iter1 := g_db1.DB().C(logic.KDBSave).Find(nil).Iter()
+	coll2 := g_db2.DB().C(logic.KDBSave)
 	for {
 		if !iter1.Next(p1) {
 			break
@@ -99,7 +96,7 @@ func merge() { //读数据，写入主节点
 }
 func resetCenterGameInfo() {
 	p := &account.TAccount{}
-	coll := g_db1.DB.C(account.KDBTable)
+	coll := g_db1.DB().C(account.KDBTable)
 	iter := coll.Find(nil).Iter()
 	for {
 		if !iter.Next(p) {
@@ -116,7 +113,7 @@ func resetCenterGameInfo() {
 }
 func delGameInfo() {
 	p := &account.TAccount{}
-	coll := g_db1.DB.C(account.KDBTable)
+	coll := g_db1.DB().C(account.KDBTable)
 	iter := coll.Find(nil).Iter()
 	for {
 		if !iter.Next(p) {
@@ -131,8 +128,8 @@ func delGameInfo() {
 }
 func moveCenterDB() {
 	p1 := &account.TAccount{}
-	iter := g_db1.DB.C(account.KDBTable).Find(nil).Iter()
-	coll2 := g_db2.DB.C(account.KDBTable)
+	iter := g_db1.DB().C(account.KDBTable).Find(nil).Iter()
+	coll2 := g_db2.DB().C(account.KDBTable)
 	for {
 		if !iter.Next(p1) {
 			break
@@ -144,7 +141,7 @@ func moveCenterDB() {
 }
 func cutSaveMacCnt() {
 	p := &logic.TSaveData{}
-	coll := g_db1.DB.C(logic.KDBSave)
+	coll := g_db1.DB().C(logic.KDBSave)
 	iter := coll.Find(nil).Iter()
 	for {
 		if !iter.Next(p) {

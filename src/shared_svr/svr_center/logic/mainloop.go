@@ -5,10 +5,13 @@ import (
 	"common/timer"
 	"conf"
 	"nets/tcp"
+	"shared_svr/svr_center/account"
 	"time"
 )
 
 func MainLoop() {
+	account.Init()
+
 	timeNow, timeOld, timeElapse := time.Now().UnixNano()/int64(time.Millisecond), int64(0), 0
 	for {
 		timeOld = timeNow

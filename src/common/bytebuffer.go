@@ -174,7 +174,7 @@ func (self *ByteBuffer) ReadFloat() (ret float32) {
 }
 
 //! Set
-func (self *ByteBuffer) SetPos(pos int, v uint32) {
+func (self *ByteBuffer) SetUInt32(pos int, v uint32) {
 	if len(self.buf) >= pos+4 {
 		self.buf[pos] = byte(v)
 		self.buf[pos+1] = byte(v >> 8)
@@ -182,10 +182,24 @@ func (self *ByteBuffer) SetPos(pos int, v uint32) {
 		self.buf[pos+3] = byte(v >> 24)
 	}
 }
-func (self *ByteBuffer) GetPos(pos int) (ret uint32) {
+func (self *ByteBuffer) GetUInt32(pos int) (ret uint32) {
 	if len(self.buf) >= pos+4 {
 		for i := 0; i < 4; i++ {
 			ret |= uint32(self.buf[pos+i]) << uint(i*8)
+		}
+	}
+	return
+}
+func (self *ByteBuffer) SetUInt16(pos int, v uint16) {
+	if len(self.buf) >= pos+2 {
+		self.buf[pos] = byte(v)
+		self.buf[pos+1] = byte(v >> 8)
+	}
+}
+func (self *ByteBuffer) GetUInt16(pos int) (ret uint16) {
+	if len(self.buf) >= pos+2 {
+		for i := 0; i < 2; i++ {
+			ret |= uint16(self.buf[pos+i]) << uint(i*8)
 		}
 	}
 	return

@@ -80,14 +80,14 @@ func (self *RpcQueue) _Handle(conn *TCPConn, msg, backBuf *common.NetPack) {
 	//1、先处理玩家rpc(与player指针强关联)
 	if self._handlePlayerRpc != nil && self._handlePlayerRpc(msg, backBuf, conn) {
 		gamelog.Debug("PlayerMsg:%d, len:%d", msgId, msg.BodySize())
-		if backBuf.BodySize() > 0 || backBuf.GetType() > 0 {
+		if backBuf.BodySize() > 0 || backBuf.GetType() > common.Err_end_flag {
 			conn.WriteMsg(backBuf)
 		}
 		//2、普通类型rpc(与连接关联的)
 	} else if msgFunc := G_HandleFunc[msgId]; msgFunc != nil {
 		gamelog.Debug("TcpMsg:%d, len:%d", msgId, msg.BodySize())
 		msgFunc(msg, backBuf, conn)
-		if backBuf.BodySize() > 0 || backBuf.GetType() > 0 {
+		if backBuf.BodySize() > 0 || backBuf.GetType() > common.Err_end_flag {
 			conn.WriteMsg(backBuf)
 		}
 		//3、rpc回复(自己发起的调用，对方回复的数据)

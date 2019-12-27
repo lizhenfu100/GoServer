@@ -75,7 +75,7 @@ func Rpc_file_update_list(req, ack *common.NetPack) {
 	destFolder := req.ReadString()
 	if common.IsMatchVersion(meta.G_Local.Version, version) {
 		//下发patch目录下的文件列表
-		posInBuf, count := ack.BodySize(), uint32(0)
+		posInBuf, count := ack.Size(), uint32(0)
 		ack.WriteUInt32(count)
 		g_file_md5.Range(func(k, v interface{}) bool {
 			name := strings.TrimPrefix(k.(string), kFileDirPatch) //patch后的文件路径
@@ -87,7 +87,7 @@ func Rpc_file_update_list(req, ack *common.NetPack) {
 			}
 			return true
 		})
-		ack.SetPos(posInBuf, count)
+		ack.SetUInt32(posInBuf, count)
 	} else {
 		ack.WriteUInt32(0)
 	}

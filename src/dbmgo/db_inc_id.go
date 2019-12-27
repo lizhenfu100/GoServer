@@ -46,10 +46,10 @@ func GetNextIncId(key string) uint32 {
 		v := &nameId{key, 0}
 		g_inc_id_mutex.Lock()
 		//FIXME：两进程同时读，返回同样结果，其中一个后续操作会失败
-		if ok, _ := Find(kDBIncTable, "_id", key, v); ok {
+		if ok, e := Find(kDBIncTable, "_id", key, v); ok {
 			v.ID++
 			UpdateIdSync(kDBIncTable, key, bson.M{"$inc": bson.M{"id": 1}})
-		} else {
+		} else if e == nil {
 			v.ID++
 			InsertSync(kDBIncTable, v)
 		}

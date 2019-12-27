@@ -32,19 +32,22 @@ import (
 	"gamelog"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
 var _default DBInfo
 
 type DBInfo struct {
+	_pending int32
+	sync.RWMutex
 	mgo.DialInfo
-	DB *mgo.Database
+	db *mgo.Database
 }
 
 func InitWithUser(ip string, port uint16, dbname, user, pwd string) {
 	_default.Init(ip, port, dbname, user, pwd)
-	_default.Connect()
 	_init_inc_ids()
 	go _loop()
 }
@@ -54,23 +57,31 @@ func (self *DBInfo) Init(ip string, port uint16, dbname, user, pwd string) {
 	self.Username = user
 	self.Password = pwd
 	self.Timeout = 10 * time.Second
+	self.Connect()
 }
 func (self *DBInfo) Connect() {
-	if session, e := mgo.DialWithInfo(&self.DialInfo); e != nil {
-		if self.DB == nil {
-			panic(fmt.Sprintf("Mongodb Connect: %v", self.DialInfo))
+	if atomic.CompareAndSwapInt32(&self._pending, 0, 1) {
+		if session, e := mgo.DialWithInfo(&self.DialInfo); e != nil {
+			if self.db == nil {
+				panic(fmt.Sprintf("Mongodb Connect: %v", self.DialInfo))
+			} else {
+				wechat.SendMsg("数据库连接：" + e.Error())
+			}
 		} else {
-			wechat.SendMsg("数据库连接：" + e.Error())
+			self.Lock()
+			self.db = session.DB(self.Database)
+			self.Unlock()
 		}
-	} else {
-		if self.DB == nil {
-			self.DB = session.DB(self.Database)
-		} else {
-			self.DB.Session.Refresh()
-		}
+		atomic.StoreInt32(&self._pending, 0)
 	}
 }
-func DB() *mgo.Database { return _default.DB }
+func (self *DBInfo) DB() *mgo.Database {
+	self.RLock()
+	ret := self.db //copy to stack
+	self.RUnlock()
+	return ret
+}
+func DB() *mgo.Database { return _default.DB() }
 
 func InsertSync(table string, pData interface{}) bool {
 	coll := DB().C(table)
