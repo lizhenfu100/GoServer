@@ -1,0 +1,38 @@
+<html>
+
+<head>
+    <title>功能开关</title>
+    <link rel="stylesheet" href="main.css">
+    <script src="app.js"></script>
+</head>
+</head>
+
+<body bgcolor="white">
+    <div class="all-wrapper">
+        <h1>功能开关</h1>
+        <div class="form-wrapper">
+            <form action="" method="get" onsubmit="SetSelectAddr(this)">
+                <label>大区:</label>
+                <select>
+                    {{range .Logins}}<option value="{{index .Addrs 0}}/flag_switch">{{.Name}}</option>
+                    {{end}}
+                </select>
+                <label>权限密码:</label>
+                <input type="password" name="passwd"><br>
+                <label>功能:</label>
+                <select name="flag">
+                    <option value="banLogin">登录封ip</option>
+                </select>
+                <label>Value:</label>
+                <select name="v">
+                    <option value="0">false</option>
+                    <option value="1">true</option>
+                </select>
+                <br>
+                <input type="submit" value="确认">
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

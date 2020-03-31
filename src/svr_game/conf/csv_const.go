@@ -1,6 +1,8 @@
 package conf
 
 var Const struct {
+	LoginSvrId int //所在区服
+
 	// 赛季
 	Season_Begin_Month []int //开始月份
 	Season_Score       []int //赛季，各档次积分门槛
@@ -11,5 +13,6 @@ var Const struct {
 	Score_Revive       uint8   //拉起队友得分
 	Score_Revive_Max   uint8   //拉队友得分上限
 
-	Hero_LvUp []uint16 //升级经验分布，0位留空
+	Hero_LvUp []uint16 //升级经验分布
+	Gun_LvUp  []uint16 //升级经验分布
 }

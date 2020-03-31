@@ -10,12 +10,10 @@
     <div class="all-wrapper">
         <h1>查询绑定过的账号</h1>
         <div class="form-wrapper">
-            <form action="" method="get" onsubmit="SetSelectAddr(this)">
-                <label>区服:</label>
-                <select>
-                    <option value="{{.AddrSave 6 1}}/find_aid_in_mac">华南一</option>
-                    <option value="{{.AddrSave 6 2}}/find_aid_in_mac">华南二</option>
-                    <option value="{{.AddrSave 5 1}}/find_aid_in_mac">华北一</option>
+            <form action="{{.LocalAddr}}/find_aid_in_mac" method="get">
+                <label>大区:</label>
+                <select name="_list">
+                    <option value="{{.AddrSave 0 1}} {{.AddrSave 0 2}} {{.AddrSave 1 1}}">China</option>
                 </select>
                 <label>设备码:</label>
                 <input type="text" name="mac"><br>

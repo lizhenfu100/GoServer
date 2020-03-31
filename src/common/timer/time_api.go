@@ -1,7 +1,6 @@
 package timer
 
 import (
-	"gamelog"
 	"time"
 )
 
@@ -20,9 +19,7 @@ func TodayBeginSec() int64 {
 	todayTime := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	return todayTime.Unix()
 }
-func TodayEndSec() int64 {
-	return TodayBeginSec() + OneDaySec
-}
+func TodayEndSec() int64 { return TodayBeginSec() + OneDaySec }
 func TodayRunSec() int {
 	now := time.Now()
 	return now.Hour()*3600 + now.Minute()*60 + now.Second()
@@ -32,9 +29,7 @@ func TodayLeftSec() int { return OneDaySec - TodayRunSec() }
 func S2T(date string) int64 {
 	if v, e := time.ParseInLocation(Layout, date, time.Local); e == nil {
 		return v.Unix()
-	} else {
-		gamelog.Error(e.Error())
-		return 0
 	}
+	return 0
 }
 func T2S(sec int64) string { return time.Unix(sec, 0).Format(Layout) }

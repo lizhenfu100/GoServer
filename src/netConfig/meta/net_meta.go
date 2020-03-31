@@ -36,6 +36,7 @@ import (
 
 var (
 	G_Metas sync.Map //<{module,svrId}, pMeta>
+	//G_Metas []Meta //Notice：对象数组，外界持有指针后，删除导致内存移动，所指内容改变
 	G_Local *Meta
 )
 
@@ -50,11 +51,13 @@ type Meta struct {
 	HttpPort   uint16
 	Maxconn    int32
 	ConnectLst []string //待连接的模块名
-
-	//需动态同步的数据
-	IsClosed bool //TODO:zhoumf:如何检测节点失效？rpc连续5次失败？
-	//如何检测节点恢复了？指数退避，rpc探查？
+	IsClosed   bool     //TODO:如何检测节点失效？通信失败或超时
 }
+type metas []*Meta
+
+func (p metas) Len() int           { return len(p) }
+func (p metas) Less(i, j int) bool { return p[i].SvrID < p[j].SvrID }
+func (p metas) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 func (self *Meta) Port() uint16 {
 	if self.HttpPort > 0 {
@@ -118,49 +121,63 @@ func AddMeta(pNew *Meta) {
 	//	G_Metas.Store(key, pNew)
 	//}
 }
+func DelMeta(module string, svrID int) {
+	gamelog.Debug("DelMeta: %s:%d", module, svrID)
+	key := std.KeyPair{module, svrID}
+	if v, ok := G_Metas.Load(key); ok && !v.(*Meta).IsClosed {
+		v.(*Meta).IsClosed = true
+		G_Metas.Delete(key)
+	}
+}
 
 //Notice：禁止缓存指针，G_Metas会被多线程改写
 func GetMeta(module string, svrID int) *Meta {
 	if v, ok := G_Metas.Load(std.KeyPair{module, svrID}); ok && !v.(*Meta).IsClosed {
 		return v.(*Meta)
 	}
-	gamelog.Debug("{%s %d}: have none meta", module, svrID)
+	gamelog.Debug("{%s %d}: none meta", module, svrID)
 	return nil
 }
-
-//{
-//	for i := len(G_Metas) - 1; i >= 0; i-- {
-//		v := &G_Metas[i]
-//		if v.Module == module && v.SvrID == svrID {
-//			//Notice：防止内存移动，不删元素，仅改状态
-//			//G_Metas = append(G_Metas[:i], G_Metas[i+1:]...)
-//			v.IsClosed = true
-//			return
-//		}
-//	}
-//}
-func DelMeta(module string, svrID int) {
-	gamelog.Debug("DelMeta: %s:%d", module, svrID)
-	G_Metas.Delete(std.KeyPair{module, svrID})
-}
-
-func GetModuleIDs(module, version string) (ret []int) {
+func GetMetas(module, version string) (ret []*Meta) {
 	G_Metas.Range(func(k, v interface{}) bool {
-		if ptr := v.(*Meta); ptr.Module == module && !ptr.IsClosed &&
-			common.IsMatchVersion(ptr.Version, version) {
-			ret = append(ret, ptr.SvrID)
+		if p := v.(*Meta); p.Module == module && !p.IsClosed &&
+			common.IsMatchVersion(p.Version, version) {
+			ret = append(ret, p)
 		}
 		return true
 	})
-	sort.Ints(ret)
+	sort.Sort(metas(ret))
 	return
 }
-func RandModuleID(module string) int {
-	ids := GetModuleIDs(module, G_Local.Version)
-	if n := len(ids); n > 0 {
-		return ids[rand.Intn(n)]
+func GetByRand(module string) *Meta {
+	ret := GetMetas(module, G_Local.Version)
+	if n := len(ret); n > 0 {
+		return ret[rand.Intn(n)]
 	}
-	return -1
+	return nil
+}
+func GetByMod(module string, key uint32) *Meta {
+	ret := GetMetas(module, G_Local.Version)
+	if n := uint32(len(ret)); n > 0 {
+		return ret[key%n]
+	}
+	return nil
+}
+
+//分流节点【svr_game类带状态的，须保证玩家分配到的节点不变，不能动态增删】
+func ShuntSvr(svrId *int, all []*Meta, key uint32) *Meta {
+	var ret []*Meta
+	for _, p := range all {
+		if p.SvrID%common.KIdMod == *svrId%common.KIdMod {
+			ret = append(ret, p)
+		}
+	}
+	if n := uint32(len(ret)); n > 0 {
+		ptr := ret[key%n]
+		*svrId = ptr.SvrID
+		return ptr
+	}
+	return nil
 }
 
 // -------------------------------------
@@ -168,6 +185,7 @@ const (
 	None = iota
 	CS
 	SC
+	KSavePort = 7090 //固定云存档端口，便于随游戏服动态扩增
 )
 
 func (src *Meta) IsMyServer(dst *Meta) byte {

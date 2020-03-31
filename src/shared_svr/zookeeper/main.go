@@ -25,10 +25,9 @@ import (
 	_ "generate_out/rpc/shared_svr/zookeeper"
 	"netConfig"
 	"netConfig/meta"
-	"shared_svr/zookeeper/logic"
 )
 
-const kModuleName = "zookeeper"
+const kModuleName = "zookeeper" //tcp_multi
 
 func main() {
 	//初始化日志系统
@@ -38,8 +37,7 @@ func main() {
 	//设置本节点meta信息
 	meta.G_Local = meta.GetMeta(kModuleName, 0)
 
-	go netConfig.RunNetSvr()
-	logic.MainLoop()
+	netConfig.RunNetSvr(true)
 }
 func InitConf() {
 	var metaCfg []meta.Meta

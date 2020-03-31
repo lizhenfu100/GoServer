@@ -42,9 +42,6 @@ const (
 //! 需要主动发给玩家的数据，每回通信时捎带过去
 func BeforeRecvHttpMsg(accountId uint32) *TPlayer {
 	if player := FindAccountId(accountId); player != nil {
-		if !player.IsOnline() {
-			player.Login(nil)
-		}
 		//player._HandleAsyncNotify()
 		//player.mail.SendSvrMailAll()
 		return player

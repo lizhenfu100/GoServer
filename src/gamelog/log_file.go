@@ -26,7 +26,7 @@ func newFile(name string) *os.File {
 // 每隔一段时间，更换输出文件
 func AutoChangeFile(name string, p *AsyncLog) {
 	for range time.Tick(24 * time.Hour) {
-		file.DelExpired(g_logDir, name, 30) //删除30天前的记录
+		file.DelExpired(g_logDir, name, 30)
 		if f := newFile(name); f != nil {
 			p.wr.Store(f)
 		}

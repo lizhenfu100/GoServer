@@ -20,21 +20,20 @@ import (
 	"netConfig/meta"
 	"nets/http"
 	"shared_svr/svr_login/logic/cache"
-	"strconv"
 	"time"
 )
 
 func Rpc_login_move_player_db(req, ack *common.NetPack) {
 	gameName := req.ReadString()
 	version := req.ReadString()
+	accountName := req.ReadString()
 	//读取玩家数据
 	accountId := req.ReadUInt32()
 	playerBuf := req.ReadLenBuf()
-	pf_id, mac, clientVersion, saveData := "", "", "", []byte(nil)
+	uid, pf_id, saveData := "", "", []byte(nil)
 	if conf.HaveClientSave { //读取存档数据
+		uid = req.ReadString()
 		pf_id = req.ReadString()
-		mac = req.ReadString()
-		clientVersion = req.ReadString()
 		saveData = req.ReadLenBuf()
 	}
 	//3、新大区选空闲game
@@ -51,7 +50,7 @@ func Rpc_login_move_player_db(req, ack *common.NetPack) {
 		}()
 		//4、向game问询save，存档写入新区
 		if conf.HaveClientSave {
-			if e := _MoveSave(pGame, accountId, version, pf_id, mac, clientVersion, saveData); e != err.Success {
+			if e := _MoveSave(pGame, version, uid, pf_id, saveData); e != err.Success {
 				errCode = e
 				return
 			}
@@ -63,11 +62,12 @@ func Rpc_login_move_player_db(req, ack *common.NetPack) {
 		}
 		//6、更新center中的游戏路由
 		if conf.Auto_GameSvr {
-			netConfig.CallRpcCenter(1, enum.Rpc_center_set_game_route, func(buf *common.NetPack) {
+			centerId := netConfig.HashCenterID(accountName)
+			netConfig.CallRpcCenter(centerId, enum.Rpc_center_set_game_route2, func(buf *common.NetPack) {
 				buf.WriteUInt32(accountId)
 				buf.WriteString(conf.GameName)
-				buf.WriteInt(meta.G_Local.SvrID % 10000) //loginId
-				buf.WriteInt(gameSvrId % 10000)
+				buf.WriteInt(meta.G_Local.SvrID) //loginId
+				buf.WriteInt(gameSvrId)
 			}, func(recvBuf *common.NetPack) {
 				errCode = recvBuf.ReadUInt16()
 				cache.Rpc_login_del_account_cache(recvBuf, nil)
@@ -85,27 +85,22 @@ func _MovePlayer(pGame netConfig.Rpc, accountId uint32, data []byte) uint16 {
 	})
 	return _Wait(c, err.None_game_server)
 }
-func _MoveSave(pGame netConfig.Rpc, accountId uint32, version, pf_id, mac, clientVersion string, data []byte) uint16 {
+func _MoveSave(pGame netConfig.Rpc, version, uid, pf_id string, data []byte) uint16 {
 	c := make(chan uint16, 1)
-	pGame.CallRpcSafe(enum.Rpc_meta_list, func(buf *common.NetPack) {
+	pGame.CallRpcSafe(enum.Rpc_get_meta, func(buf *common.NetPack) {
 		buf.WriteString("save")
 		buf.WriteString(version)
+		buf.WriteByte(common.Core)
 	}, func(recvBuf *common.NetPack) {
 		errCode := err.None_save_server
-		if cnt := recvBuf.ReadByte(); cnt > 0 {
-			recvBuf.ReadInt() //svrId
+		if svrId := recvBuf.ReadInt(); svrId > 0 {
 			ip := recvBuf.ReadString()
 			port := recvBuf.ReadUInt16()
-			recvBuf.ReadString() //svrName
-			saveAddr, uid := http.Addr(ip, port), strconv.Itoa(int(accountId))
-			http.CallRpc(saveAddr, enum.Rpc_save_upload_binary, func(buf *common.NetPack) {
+			http.CallRpc(http.Addr(ip, port), enum.Rpc_save_gm_up, func(buf *common.NetPack) {
 				buf.WriteString(uid)
 				buf.WriteString(pf_id)
-				buf.WriteString(mac)
-				buf.WriteString("") //sign
 				buf.WriteString("") //extra
 				buf.WriteLenBuf(data)
-				buf.WriteString(clientVersion)
 			}, func(recvBuf *common.NetPack) {
 				errCode = recvBuf.ReadUInt16()
 			})

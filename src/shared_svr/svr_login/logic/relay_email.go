@@ -36,6 +36,7 @@ func Http_verify_email(w http.ResponseWriter, r *http.Request) {
 		binary.LittleEndian.PutUint16(ack, errCode)
 		w.Write(ack)
 	}()
+	return
 
 	centerAddr := netConfig.GetHttpAddr("center", netConfig.HashCenterID(addr))
 	//1、增加参数

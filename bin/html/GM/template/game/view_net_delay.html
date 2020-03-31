@@ -13,12 +13,8 @@
             <form action="{{.LocalAddr}}/view_net_delay" method="get">
                 <label>大区:</label>
                 <select name="idx">
-                    <option value="1">北美</option>
-                    <option value="2">亚洲</option>
-                    <option value="3">欧洲</option>
-                    <option value="4">南美</option>
-                    <option value="5">中国华北</option>
-                    <option value="6">中国华南</option>
+                    {{range $k, $v := .Logins}}<option value="{{$k}}">{{$v.Name}}</option>
+                    {{end}}
                 </select>
                 <label>游戏:</label>
                 <select name="game">

@@ -2,11 +2,13 @@
 * @ Mongodb的API
 * @ brief
 	1、考虑加个异步读接口，传入callback，读到数据后执行
-			支持轻量线程的架构里
-			是否比“同步读-处理-再写回”的方式好呢？
+		支持轻量线程的架构里
+		是否比“同步读-处理-再写回”的方式好呢？
 
 * @ 研究学习
 	· Mongo批量查询，比如查一天内的活跃数据，效率很高，即便time字段没建索引
+	· 缓存穿透(恶意请求db中没有的数据)：布隆过滤器(一定不存在或可能存在)，快速判断是否无效
+	· 缓存击穿(热点失效)：互斥锁，避免怼到db
 
 * @ 几种更新方式
 	UpdateToDB("Player", bson.M{"_id": playerID}, bson.M{"$set": bson.M{
@@ -48,7 +50,6 @@ type DBInfo struct {
 
 func InitWithUser(ip string, port uint16, dbname, user, pwd string) {
 	_default.Init(ip, port, dbname, user, pwd)
-	_init_inc_ids()
 	go _loop()
 }
 func (self *DBInfo) Init(ip string, port uint16, dbname, user, pwd string) {
@@ -59,7 +60,7 @@ func (self *DBInfo) Init(ip string, port uint16, dbname, user, pwd string) {
 	self.Timeout = 10 * time.Second
 	self.Connect()
 }
-func (self *DBInfo) Connect() {
+func (self *DBInfo) Connect() (ret bool) {
 	if atomic.CompareAndSwapInt32(&self._pending, 0, 1) {
 		if session, e := mgo.DialWithInfo(&self.DialInfo); e != nil {
 			if self.db == nil {
@@ -71,9 +72,11 @@ func (self *DBInfo) Connect() {
 			self.Lock()
 			self.db = session.DB(self.Database)
 			self.Unlock()
+			ret = true
 		}
 		atomic.StoreInt32(&self._pending, 0)
 	}
+	return
 }
 func (self *DBInfo) DB() *mgo.Database {
 	self.RLock()
@@ -121,10 +124,11 @@ func RemoveOneSync(table string, search bson.M) bool {
 func RemoveAllSync(table string, search bson.M) bool {
 	coll := DB().C(table)
 	if search == nil {
-		if e := coll.DropCollection(); e != nil {
-			gamelog.Error("Drop table[%s] Error[%v]", table, e)
-			return false
-		}
+		return false
+		//if e := coll.DropCollection(); e != nil {
+		//	gamelog.Error("Drop table[%s] Error[%v]", table, e)
+		//	return false
+		//}
 	} else if _, err := coll.RemoveAll(search); err != nil && err != mgo.ErrNotFound {
 		gamelog.Error("RemoveAllSync table[%s] search[%v] Error[%v]", table, search, err)
 		return false
@@ -135,10 +139,8 @@ func RemoveAllSync(table string, search bson.M) bool {
 // false && err == nil，才表示db中没有
 func Find(table, key string, value, pData interface{}) (bool, error) {
 	coll := DB().C(table)
-	err := coll.Find(bson.M{key: value}).One(pData)
-	if err != nil {
+	if err := coll.Find(bson.M{key: value}).One(pData); err != nil {
 		if err == mgo.ErrNotFound {
-			gamelog.Debug("None table[%s] key[%s] val[%v]", table, key, value)
 			return false, nil
 		} else {
 			gamelog.Error("Find table[%s] key[%s] val[%v] Error[%v]", table, key, value, err)
@@ -156,7 +158,6 @@ func FindEx(table string, search bson.M, pData interface{}) (bool, error) {
 	coll := DB().C(table)
 	if err := coll.Find(search).One(pData); err != nil {
 		if err == mgo.ErrNotFound {
-			gamelog.Debug("None table[%s] search[%v]", table, search)
 			return false, nil
 		} else {
 			gamelog.Error("FindEx table[%s] search[%v] Error[%v]", table, search, err)
@@ -186,13 +187,9 @@ $exists		bson.M{"bindinfo.email": bson.M{ "$exists": false }]
 //【学习研究】Mongo批量查询，比如查一天内的活跃数据，效率很高，即便time字段没建索引
 func FindAll(table string, search bson.M, pSlice interface{}) error {
 	coll := DB().C(table)
-	if err := coll.Find(search).All(pSlice); err != nil {
-		if err == mgo.ErrNotFound {
-			gamelog.Debug("None table[%s] search[%v]", table, search)
-		} else {
-			gamelog.Error("FindAll table[%s] search[%v] Error[%v]", table, search, err)
-			return err
-		}
+	if err := coll.Find(search).All(pSlice); err != nil && err != mgo.ErrNotFound {
+		gamelog.Error("FindAll table[%s] search[%v] Error[%v]", table, search, err)
+		return err
 	}
 	return nil
 }
@@ -207,13 +204,9 @@ func Find_Desc(table, key string, cnt int, pList interface{}) error { //降序
 func _find_sort(table, sortKey string, cnt int, pList interface{}) error {
 	coll := DB().C(table)
 	query := coll.Find(nil).Sort(sortKey).Limit(cnt)
-	if err := query.All(pList); err != nil {
-		if err == mgo.ErrNotFound {
-			gamelog.Debug("None table[%s] sortKey[%s]", table, sortKey)
-		} else {
-			gamelog.Error("FindSort table[%s] sortKey[%s] limit[%d] Error[%v]", table, sortKey, cnt, err)
-			return err
-		}
+	if err := query.All(pList); err != nil && err != mgo.ErrNotFound {
+		gamelog.Error("FindSort table[%s] sortKey[%s] limit[%d] Error[%v]", table, sortKey, cnt, err)
+		return err
 	}
 	return nil
 }

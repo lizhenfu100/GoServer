@@ -2,57 +2,41 @@ package service
 
 import (
 	"common/safe"
-	"gamelog"
 )
 
 type IService interface {
-	UnRegister(pObj interface{})
-	Register(pObj interface{})
+	UnRegister(p interface{})
+	Register(p interface{})
 	RunSevice(timelapse int, timenow int64)
 }
-type obj struct {
-	ptr   interface{}
-	enum  int
-	isReg bool //注册或注销对象
-}
 type ServiceMgr struct {
-	list  []IService
-	queue safe.SafeQueue
+	safe.Pipe
+	list []IService
 }
 
 func (self *ServiceMgr) Init(cap uint32, list []IService) {
-	self.queue.Init(cap)
+	self.Pipe.Init(cap)
 	self.list = list
 }
-func (self *ServiceMgr) Cap() uint32 { return self.queue.Cap() }
-
 func (self *ServiceMgr) RunAllService(timelapse int, timenow int64) {
-	for {
-		if v, ok, _ := self.queue.Get(); ok {
-			if v := v.(obj); v.isReg {
-				self.list[v.enum].Register(v.ptr)
-			} else {
-				self.list[v.enum].UnRegister(v.ptr)
-			}
+	for _, v := range self.Get() {
+		if v := v.(obj); v.isReg {
+			self.list[v.enum].Register(v.ptr)
 		} else {
-			break
+			self.list[v.enum].UnRegister(v.ptr)
 		}
 	}
 	for _, v := range self.list {
 		v.RunSevice(timelapse, timenow)
 	}
 }
-func (self *ServiceMgr) UnRegister(enum int, p interface{}) bool {
-	ok, _ := self.queue.Put(obj{p, enum, false})
-	if !ok {
-		gamelog.Error("UnRegister fail")
-	}
-	return ok
-}
-func (self *ServiceMgr) Register(enum int, p interface{}) bool { //【防止多次注册】
-	ok, _ := self.queue.Put(obj{p, enum, true})
-	if !ok {
-		gamelog.Error("Register fail")
-	}
-	return ok
+
+//【防止多次注册】
+func (self *ServiceMgr) Register(enum int, p interface{})   { self.Add(obj{p, enum, true}) }
+func (self *ServiceMgr) UnRegister(enum int, p interface{}) { self.Add(obj{p, enum, false}) }
+
+type obj struct {
+	ptr   interface{}
+	enum  int
+	isReg bool
 }

@@ -11,9 +11,12 @@
         <h1>礼包码 - 批量清除</h1>
         <div class="form-wrapper">
             <form action="{{.LocalAddr}}/gift_bag_clear" method="get">
-                <label>游戏名称:</label>
-                <select name="game">
-                    <option value="{{.GameName}}">{{.GameName}}</option>
+                <label>大区:</label>
+                <select name="_list">
+                    <option value="{{.SplitLogin1}}">China</option>
+                    {{range .SplitLogin2}}
+                        <option value="{{index .Addrs 0}}">{{.Name}}</option>
+                    {{end}}
                 </select>
                 <label>权限密码:</label>
                 <input type="password" name="passwd"><br>

@@ -29,8 +29,7 @@ func CompressTo(b []byte, w io.Writer) {
 		w.Write(flag)
 		w.Write(Compress(b))
 	} else {
-		n, e := w.Write(b)
-		if n != len(b) || e != nil {
+		if n, e := w.Write(b); n != len(b) || e != nil {
 			gamelog.Error("Http ShortWrite: " + e.Error())
 		}
 	}

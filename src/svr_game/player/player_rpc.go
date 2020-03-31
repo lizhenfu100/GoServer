@@ -22,7 +22,7 @@ import (
 	"sync/atomic"
 )
 
-type PlayerRpc func(req, ack *common.NetPack, this *TPlayer)
+type PlayerRpc func(r, w *common.NetPack, this *TPlayer)
 
 var G_PlayerHandleFunc [enum.RpcEnumCnt]PlayerRpc
 
@@ -36,7 +36,11 @@ func RegPlayerRpc(list map[uint16]PlayerRpc) {
 }
 func DoPlayerRpc(this *TPlayer, rpcId uint16, req, ack *common.NetPack) bool {
 	if msgFunc := G_PlayerHandleFunc[rpcId]; msgFunc != nil {
-		atomic.StoreUint32(&this._idleMin, 0)
+		if this.IsOnline() {
+			atomic.StoreUint32(&this._idleMin, 0)
+		} else {
+			this.Login(this.conn) //节点重启
+		}
 		msgFunc(req, ack, this)
 		return true
 	}
@@ -47,7 +51,7 @@ func DoPlayerRpc(this *TPlayer, rpcId uint16, req, ack *common.NetPack) bool {
 // - 将原生tcpRpc的 "conn *tcp.TCPConn" 参数转换为 "player *TPlayer"
 func _PlayerRpcTcp(req, ack *common.NetPack, conn *tcp.TCPConn) bool {
 	rpcId := req.GetMsgId()
-	if player, ok := conn.UserPtr.(*TPlayer); ok {
+	if player, ok := conn.GetUser().(*TPlayer); ok {
 		DoPlayerRpc(player, rpcId, req, ack)
 	}
 	return G_PlayerHandleFunc[rpcId] != nil
@@ -57,42 +61,36 @@ func _PlayerRpcHttp(w http.ResponseWriter, r *http.Request) {
 	if buf == nil {
 		return
 	}
-	req := common.NewNetPack(buf)
+	req := common.ToNetPack(buf)
 	if req == nil {
 		gamelog.Error("invalid req: %v", buf)
 		return
 	}
-	msgId := req.GetMsgId()
-	if msgId >= enum.RpcEnumCnt {
-		gamelog.Error("PlayerMsg(%d) Not Regist", msgId)
-		req.Free()
-		return
-	}
-	if msgId != enum.Rpc_game_heart_beat {
-		gamelog.Debug("HttpMsg:%d, len:%d", msgId, req.Size())
-	}
-	//defer func() {//库已经有recover了，见net/http/server.go:1918
-	//	if r := recover(); r != nil {
-	//		gamelog.Error("recover msgId:%d\n%v: %s", msgId, r, debug.Stack())
-	//	}
-	//	ack.Free()
-	//}()
-	ack := common.NewNetPackCap(128) //! 创建回复
-	accountId := req.GetReqIdx()
-	//TODO:通信中途安全性不够，能修改client net pack里的uid，进而操作别人数据
-	//TODO:账号服登录验证后下发给client的token，client应该保留，附在每个HttpReq里，防止恶意窜改他人数据
-	if player := BeforeRecvHttpMsg(accountId); player != nil {
-		if DoPlayerRpc(player, msgId, req, ack) {
-			AfterRecvHttpMsg(player, ack)
-		} else {
-			gamelog.Error("PlayerMsg(%d) Not Regist", msgId)
+	if msgId := req.GetMsgId(); msgId < enum.RpcEnumCnt {
+		if msgId != enum.Rpc_game_heart_beat {
+			gamelog.Debug("HttpMsg:%d, len:%d", msgId, req.Size())
 		}
-	} else {
-		ack.SetType(common.Err_offline)
-		gamelog.Debug("Player(%d) isn't online", accountId)
+		//recover见net/http/server.go:1918
+		ack := common.NewNetPackCap(128)
+		accountId := req.GetReqIdx()
+		//TODO:通信安全性不够，能修改client net pack里的uid，进而操作别人数据
+		//TODO:下发client的token，client应保留，附在每个HttpReq里，防恶意窜改他人数据
+		//if msgId == enum.Rpc_game_login || msgId == enum.Rpc_game_create_player {
+		//	http.G_HandleFunc[msgId](req, ack)
+		//} else
+		if player := BeforeRecvHttpMsg(accountId); player != nil {
+			if DoPlayerRpc(player, msgId, req, ack) {
+				AfterRecvHttpMsg(player, ack)
+			} else {
+				gamelog.Error("PlayerMsg(%d) Not Regist", msgId)
+			}
+		} else {
+			ack.SetType(common.Err_offline)
+			gamelog.Debug("Player(%d) isn't online", accountId)
+		}
+		compress.CompressTo(ack.Data(), w)
+		ack.Free()
 	}
-	compress.CompressTo(ack.Data(), w)
-	ack.Free()
 	req.Free()
 }
 
@@ -100,31 +98,29 @@ func _PlayerRpcHttp(w http.ResponseWriter, r *http.Request) {
 // - 网关转发的玩家消息
 func Rpc_recv_player_msg(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	rpcId := req.ReadUInt16()
-	oldPos := req.ReadPos
 	accountId := req.ReadUInt32()
 	gamelog.Debug("PlayerMsg:%d", rpcId)
-
-	if rpcId == enum.Rpc_game_login || rpcId == enum.Rpc_game_create_player {
-		req.ReadPos = oldPos //回置buffer
-		tcp.G_HandleFunc[rpcId](req, ack, conn)
-	} else if player := FindAccountId(accountId); player != nil {
-		if !DoPlayerRpc(player, rpcId, req, ack) {
-			gamelog.Error("PlayerMsg(%d) Not Regist", rpcId)
+	if G_PlayerHandleFunc[rpcId] != nil {
+		if p := FindWithDB(accountId); p != nil {
+			DoPlayerRpc(p, rpcId, req, ack)
+		} else {
+			ack.SetType(common.Err_offline)
 		}
+	} else if msgFunc := tcp.G_HandleFunc[rpcId]; msgFunc != nil {
+		msgFunc(req, ack, conn)
 	} else {
-		ack.SetType(common.Err_offline)
-		gamelog.Debug("Player(%d) isn't online", accountId)
+		gamelog.Error("PlayerMsg(%d) Not Regist", rpcId)
 	}
 }
 
 // ------------------------------------------------------------
 // - 与其它玩家交互(可能位于其它节点，能通知到别人客户端)
-func CallRpcPlayer(accountId uint32, msgId uint16, sendFun, recvFun func(*common.NetPack)) {
-	if msgFunc := G_PlayerHandleFunc[msgId]; msgFunc != nil {
+func CallRpcPlayer(accountId uint32, rpcId uint16, sendFun, recvFun func(*common.NetPack)) {
+	if msgFunc := G_PlayerHandleFunc[rpcId]; msgFunc != nil {
 		if player := FindAccountId(accountId); player != nil {
-			req := common.NewNetPackCap(64)
-			ack := common.NewNetPackCap(64)
-			req.SetMsgId(msgId)
+			req := common.NewNetPackCap(32)
+			ack := common.NewNetPackCap(32)
+			req.SetMsgId(rpcId)
 			sendFun(req)
 			msgFunc(req, ack, player)
 			if recvFun != nil {
@@ -135,5 +131,5 @@ func CallRpcPlayer(accountId uint32, msgId uint16, sendFun, recvFun func(*common
 			return
 		}
 	}
-	netConfig.CallRpcGateway(accountId, msgId, sendFun, recvFun)
+	netConfig.CallRpcGateway(accountId, rpcId, sendFun, recvFun)
 }

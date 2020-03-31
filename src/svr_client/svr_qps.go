@@ -32,7 +32,7 @@ func test1() {
 	http2.HandleFunc("/echo", func(w http2.ResponseWriter, r *http2.Request) {
 		qps.AddQps()
 	})
-	go http.NewHttpServer(7777, kModuleName, 1)
+	go http.NewHttpServer(7777)
 }
 func test2() {
 	fasthttp.HandleFunc("/echo", func(ctx *fasthttp2.RequestCtx) {
@@ -40,7 +40,7 @@ func test2() {
 		//fmt.Println("body: ", common.B2S(ctx.Request.Body()))
 		ctx.Write(ctx.Request.Body())
 	})
-	go fasthttp.NewHttpServer(7777, kModuleName, 1)
+	go fasthttp.NewHttpServer(7777)
 }
 
 // ------------------------------------------------------------

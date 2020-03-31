@@ -13,15 +13,15 @@ func InitTimeUpdate() {
 }
 func updateEnterNextDay() {
 	delay := float32(timer.TodayLeftSec())
-	timer.G_TimerMgr.AddTimerSec(onEnterNextDay, delay, timer.OneDaySec, -1)
+	timer.AddTimer(onEnterNextDay, delay, timer.OneDaySec, -1)
 }
 func updateEnterNextHour() {
 	now := time.Now()
 	delay := float32(3600 - now.Minute()*60 - now.Second())
-	timer.G_TimerMgr.AddTimerSec(onEnterNextHour, delay, 3600, -1)
+	timer.AddTimer(onEnterNextHour, delay, 3600, -1)
 }
 func updatePerMinute() {
-	timer.G_TimerMgr.AddTimerSec(perMinute, 60, 60, -1)
+	timer.AddTimer(perMinute, 60, 60, -1)
 }
 
 // ------------------------------------------------------------

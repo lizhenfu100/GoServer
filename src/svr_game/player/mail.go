@@ -15,8 +15,8 @@ const (
 
 type TMailModule struct {
 	PlayerID  uint32 `bson:"_id"`
-	MailLst   []TMail
 	SvrMailId uint32 //已收到的全服邮件索引位
+	Mails     []TMail
 
 	/* OverWatch ECS ---- Component只含数据，System只有操作
 	、按照ECS思路，TMailModule视作邮件数据，下面的函数是一个MailSystem
@@ -53,9 +53,9 @@ func (self *TMailModule) WriteToDB() { dbmgo.UpdateId(kDBMail, self.PlayerID, se
 func (self *TMailModule) OnLogin() {
 	// 删除过期已读邮件
 	timenow := time.Now().Unix()
-	for i := len(self.MailLst) - 1; i >= 0; i-- { //倒过来遍历，删除就安全的
-		if self.MailLst[i].IsRead == 1 && timenow >= self.MailLst[i].Time+Read_Mail_Delete_Time {
-			self.MailLst = append(self.MailLst[:i], self.MailLst[i+1:]...)
+	for i := len(self.Mails) - 1; i >= 0; i-- { //倒过来遍历，删除就安全的
+		if self.Mails[i].IsRead == 1 && timenow >= self.Mails[i].Time+Read_Mail_Delete_Time {
+			self.Mails = append(self.Mails[:i], self.Mails[i+1:]...)
 		}
 	}
 	self.clientMailId = 0
@@ -68,14 +68,14 @@ func (self *TMailModule) OnLogout() {
 func (self *TMailModule) CreateMail(title, from, content string, items ...std.IntPair) *TMail {
 	id := dbmgo.GetNextIncId("MailId")
 	pMail := &TMail{id, time.Now().Unix(), title, from, content, 0, items}
-	self.MailLst = append(self.MailLst, *pMail)
+	self.Mails = append(self.Mails, *pMail)
 	//dbmgo.Update("mail", bson.M{"_id": self.PlayerID}, bson.M{"$push": bson.M{"maillst": pMail}})
 	return pMail
 }
 func (self *TMailModule) DelMailRead() {
-	for i := len(self.MailLst) - 1; i >= 0; i-- { //倒过来遍历，删除就安全的
-		if self.MailLst[i].IsRead == 1 {
-			self.MailLst = append(self.MailLst[:i], self.MailLst[i+1:]...)
+	for i := len(self.Mails) - 1; i >= 0; i-- { //倒过来遍历，删除就安全的
+		if self.Mails[i].IsRead == 1 {
+			self.Mails = append(self.Mails[:i], self.Mails[i+1:]...)
 		}
 	}
 	//dbmgo.Update("mail", bson.M{"_id": self.PlayerID}, bson.M{"$pull": bson.M{
@@ -115,18 +115,18 @@ func (self *TMail) BufToData(buf *common.NetPack) {
 	}
 }
 func (self *TMailModule) DataToBuf(buf *common.NetPack, pos int) {
-	length := len(self.MailLst)
+	length := len(self.Mails)
 	buf.WriteUInt16(uint16(length - pos))
 	for i := pos; i < length; i++ {
-		mail := &self.MailLst[i]
+		mail := &self.Mails[i]
 		mail.DataToBuf(buf)
 		self.clientMailId = mail.ID
 	}
 }
 func (self *TMailModule) GetNoSendIdx() int {
-	length := len(self.MailLst)
+	length := len(self.Mails)
 	for i := 0; i < length; i++ {
-		if self.MailLst[i].ID > self.clientMailId {
+		if self.Mails[i].ID > self.clientMailId {
 			return i
 		}
 	}
@@ -148,8 +148,8 @@ func Rpc_game_read_mail(req, ack *common.NetPack, this *TPlayer) {
 	id := req.ReadUInt32()
 
 	self := this.mail
-	for i := 0; i < len(self.MailLst); i++ {
-		mail := &self.MailLst[i]
+	for i := 0; i < len(self.Mails); i++ {
+		mail := &self.Mails[i]
 		if mail.ID == id {
 			if len(mail.Items) > 0 {
 				//TODO: 给奖励
@@ -163,13 +163,13 @@ func Rpc_game_del_mail(req, ack *common.NetPack, this *TPlayer) {
 	id := req.ReadUInt32()
 
 	self := this.mail
-	for i := len(self.MailLst) - 1; i >= 0; i-- { //倒过来遍历，删除就安全的
-		mail := &self.MailLst[i]
+	for i := len(self.Mails) - 1; i >= 0; i-- { //倒过来遍历，删除就安全的
+		mail := &self.Mails[i]
 		if mail.ID == id {
 			if mail.IsRead == 0 && len(mail.Items) > 0 {
 				//TODO: 给奖励
 			}
-			self.MailLst = append(self.MailLst[:i], self.MailLst[i+1:]...)
+			self.Mails = append(self.Mails[:i], self.Mails[i+1:]...)
 			return
 		}
 	}
@@ -177,11 +177,11 @@ func Rpc_game_del_mail(req, ack *common.NetPack, this *TPlayer) {
 func Rpc_game_take_all_mail_item(req, ack *common.NetPack, this *TPlayer) {
 	self := this.mail
 	//self.mail.CreateMail(0, "测试", "zhoumf", "content")
-	for i := len(self.MailLst) - 1; i >= 0; i-- { //倒过来遍历，删除就安全的
-		mail := &self.MailLst[i]
+	for i := len(self.Mails) - 1; i >= 0; i-- { //倒过来遍历，删除就安全的
+		mail := &self.Mails[i]
 		if len(mail.Items) > 0 {
 			//TODO: 给奖励
-			self.MailLst = append(self.MailLst[:i], self.MailLst[i+1:]...)
+			self.Mails = append(self.Mails[:i], self.Mails[i+1:]...)
 		}
 	}
 	self.DataToBuf(ack, 0)

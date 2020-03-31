@@ -1,9 +1,9 @@
 /***********************************************************************
 * @ HTTP
 * @ http.Request
-	r.RequestURI	除去域名或ip的url
+	r.RequestURI 除去域名或ip的url
 		/backup_conf?passwd=&weekdays=&onlintlimit=&auto=&force=
-	r.URL.RawQuery 	加密后的参数，不含?
+	r.URL.RawQuery 加密后的参数，不含?
 		passwd=&weekdays=&onlintlimit=&auto=&force=
 	r.URL.Path
 		/backup_conf
@@ -36,8 +36,7 @@ func init() {
 
 var _svr http.Server
 
-func NewHttpServer(port uint16, module string, svrId int) error {
-	mhttp.InitSvr(module, svrId)
+func NewHttpServer(port uint16) error {
 	http.HandleFunc("/client_rpc", HandleRpc)
 	http.HandleFunc("/reg_to_svr", func(w http.ResponseWriter, r *http.Request) {
 		mhttp.Reg_to_svr(w, ReadBody(r.Body))

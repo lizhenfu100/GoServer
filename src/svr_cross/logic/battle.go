@@ -21,8 +21,9 @@ var (
 
 // ------------------------------------------------------------
 // - 将svr_game中的玩家属性数据发到svr_battle
-func Rpc_cross_join_battle(req, ack *common.NetPack, conn *tcp.TCPConn) {
+func Rpc_cross_relay_battle_data(req, _ *common.NetPack, conn *tcp.TCPConn) {
 	version := req.ReadString()
+	args := req.LeftBuf()
 	svrId := _SelectBattleSvrId(version)
 	if svrId == -1 {
 		//TODO:zhoumf: 通报client战斗服已满
@@ -33,7 +34,7 @@ func Rpc_cross_join_battle(req, ack *common.NetPack, conn *tcp.TCPConn) {
 
 	oldReqKey := req.GetReqKey()
 	netConfig.CallRpcBattle(svrId, enum.Rpc_battle_handle_player_data, func(buf *common.NetPack) {
-		buf.WriteBuf(req.LeftBuf())
+		buf.WriteBuf(args)
 	}, func(backBuf *common.NetPack) {
 		playerCnt := backBuf.ReadUInt32() //选中战斗服的已有人数
 		g_battle_player_cnt[svrId] = playerCnt
@@ -45,37 +46,35 @@ func Rpc_cross_join_battle(req, ack *common.NetPack, conn *tcp.TCPConn) {
 func _SelectBattleSvrId(version string) int {
 	//moba类的，应该有个专门的匹配服，供自由玩家【快速】组房间
 	//io向的，允许中途加入，应尽量分配到人多的战斗服
-	//战斗服的选取，还需考虑队伍的网络延时均值 …… 仅客户端知道延时信息，比较麻烦
-	//客户端-战斗服，延时发往特定db，组队后去那个db找均值最低的svr_battle
-	ids := meta.GetModuleIDs("battle", version)
+	vs := meta.GetMetas("battle", version)
 	//1、优先在各个服务器分配一定人数
-	for _, id := range ids {
-		if g_battle_player_cnt[id] < K_Player_Base {
-			return id
+	for _, v := range vs {
+		if g_battle_player_cnt[v.SvrID] < K_Player_Base {
+			return v.SvrID
 		}
 	}
 	//2、基础人数够了，再各服均分
-	for i := 0; i < len(ids); i++ {
+	for i := 0; i < len(vs); i++ {
 		//先自增判断越界，防止中途有战斗服宕机
-		if g_cur_select_idx++; g_cur_select_idx >= len(ids) {
+		if g_cur_select_idx++; g_cur_select_idx >= len(vs) {
 			g_cur_select_idx = 0
 		}
-		svrId := ids[g_cur_select_idx]
-		if g_battle_player_cnt[svrId] < K_Player_Max {
-			return svrId
+		v := vs[g_cur_select_idx]
+		if g_battle_player_cnt[v.SvrID] < K_Player_Max {
+			return v.SvrID
 		}
 	}
 	return -1
 }
 
-// 头部参数必须是：svrId、rid、pid
-func Rpc_cross_to_player(req, ack *common.NetPack, conn *tcp.TCPConn) {
+// ------------------------------------------------------------
+// - 转至svr_game
+func Rpc_cross_relay_to_game(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	svrId := req.ReadInt()
+	args := req.LeftBuf() //头两字段须是：rid、aid
 	if p, ok := netConfig.GetGameRpc(svrId); ok {
 		p.CallRpc(enum.Rpc_recv_player_msg, func(buf *common.NetPack) {
-			buf.WriteBuf(req.LeftBuf()) //头两字段须是：rid、aid
+			buf.WriteBuf(args)
 		}, nil)
-	} else {
-		gamelog.Error("game nil: svrId(%d)", svrId)
 	}
 }

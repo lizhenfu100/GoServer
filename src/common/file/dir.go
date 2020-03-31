@@ -77,9 +77,8 @@ func ReadLine(filename string, cb func(string)) error {
 	if err != nil {
 		return err
 	}
-	rd := bufio.NewScanner(f)
-	for rd.Scan() {
-		cb(rd.Text())
+	for s := bufio.NewScanner(f); s.Scan(); {
+		cb(s.Text())
 	}
 	f.Close()
 	return nil

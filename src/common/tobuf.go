@@ -12,9 +12,21 @@ import (
 // ------------------------------------------------------------
 //【临时转换，原内存须保持有效，且只读的】
 func S2B(s string) []byte {
-	sh := (*[2]uintptr)(unsafe.Pointer(&s)) //reflect.StringHeader
-	bh := [3]uintptr{sh[0], sh[1], sh[1]}   //reflect.SliceHeader
-	return *(*[]byte)(unsafe.Pointer(&bh))
+	//type StringHeader struct { //传子串也不新分配，仅偏移
+	//	Data uintptr
+	//	Len  int
+	//}
+	//type SliceHeader struct {
+	//	Data uintptr
+	//	Len  int
+	//	Cap  int
+	//}
+	return *(*[]byte)(unsafe.Pointer(
+		&struct {
+			string
+			int
+		}{s, len(s)},
+	))
 }
 func B2S(b []byte) string { return *(*string)(unsafe.Pointer(&b)) }
 
@@ -32,4 +44,13 @@ func B2T(b []byte, pStruct interface{}) error {
 	buf := bytes.NewBuffer(b)
 	dec := gob.NewDecoder(buf)
 	return dec.Decode(pStruct)
+}
+func DeepCopy(a, b interface{}) error {
+	buf := new(bytes.Buffer)
+	enc := gob.NewEncoder(buf)
+	dec := gob.NewDecoder(buf)
+	if err := enc.Encode(a); err != nil {
+		return err
+	}
+	return dec.Decode(b)
 }

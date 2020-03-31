@@ -16,13 +16,13 @@ type Info struct {
 	Key     string `bson:"_id"`
 	Time    int64
 	Day     uint16 //封多少天，0永久
-	IsWhite bool
+	IsWhite bool   //非白即黑
 }
 
 func Http_names_add(w http.ResponseWriter, r *http.Request) { //GM 加黑、白名单
 	q := r.URL.Query()
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.S2B("passwd error"))
+		w.Write([]byte("passwd error"))
 		return
 	}
 	table := q.Get("table") //哪张表
@@ -49,7 +49,7 @@ func Http_names_add(w http.ResponseWriter, r *http.Request) { //GM 加黑、白�
 func Http_names_del(w http.ResponseWriter, r *http.Request) { //GM 删黑、白名单
 	q := r.URL.Query()
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.S2B("passwd error"))
+		w.Write([]byte("passwd error"))
 		return
 	}
 	table := q.Get("table")
@@ -57,6 +57,17 @@ func Http_names_del(w http.ResponseWriter, r *http.Request) { //GM 删黑、白�
 	dbmgo.Remove(table, bson.M{"_id": key})
 	w.Write(common.S2B("delete " + key + ":\n	ok"))
 	gamelog.Info("names_del: %v", r.URL.String())
+}
+func Http_names_view(w http.ResponseWriter, r *http.Request) {
+	q, ptr := r.URL.Query(), &Info{}
+	table := q.Get("table")
+	key := q.Get("key")
+	if ok, _ := dbmgo.Find(table, "_id", key, ptr); ok {
+		ack, _ := json.MarshalIndent(ptr, "", "     ")
+		w.Write(ack)
+	} else {
+		w.Write([]byte("not found"))
+	}
 }
 
 func Rpc_gm_forbid_check(req, ack *common.NetPack) {
@@ -90,13 +101,19 @@ func Rpc_gm_forbid_del(req, ack *common.NetPack) {
 	key := req.ReadString()
 	dbmgo.Remove(table, bson.M{"_id": key})
 }
-func Rpc_gm_is_white(req, ack *common.NetPack) {
-	table := req.ReadString()
-	key := req.ReadString()
-	ptr := &Info{}
-	if ok, _ := dbmgo.Find(table, "_id", key, ptr); ok && ptr.IsWhite {
-		ack.WriteByte(1)
-	} else {
-		ack.WriteByte(0)
+func Rpc_gm_white_black(req, ack *common.NetPack) {
+	var v Info
+	for len(req.LeftBuf()) > 0 {
+		table := req.ReadString()
+		key := req.ReadString()
+		if ok, _ := dbmgo.Find(table, "_id", key, &v); ok {
+			if v.IsWhite {
+				ack.WriteInt8(1) //白名单
+			} else {
+				ack.WriteInt8(-1) //黑名单
+			}
+		} else {
+			ack.WriteInt8(0) //平常玩家
+		}
 	}
 }

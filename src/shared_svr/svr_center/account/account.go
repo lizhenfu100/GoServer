@@ -1,7 +1,8 @@
 /***********************************************************************
-* @ 账号管理
+* @ 账号管理 【 center的rpc都须返回错误码 】
 
 * @ 目前，所有center同质化的，连一个db
+	· client尽量少调center，许多接口结果可缓存
 
 * @ 若注册数量到亿级，必须分库，“哈希id”或“id分段”至多个db TODO:optimize
 	· 哈希：每次扩容须迁移部分账号
@@ -23,7 +24,6 @@ package account
 import (
 	"common"
 	"common/format"
-	"common/std/random"
 	"common/std/sign"
 	"crypto/md5"
 	"dbmgo"
@@ -39,38 +39,24 @@ import (
 	"time"
 )
 
-const (
-	KDBTable = "Account"
-)
+const KDBTable = "Account"
 
 type TAccount struct {
-	AccountID  uint32 `bson:"_id"`
-	Name       string //TODO:待删除
-	Password   string //FIXME:可以StrHash后存成uint32，省不少字节
-	CreateTime int64
-	LoginTime  int64
-
-	//TODO：手机号客户端就做加密，整个流转中途都是加密的
-	BindInfo     map[string]string //email、phone、name
+	AccountID    uint32 `bson:"_id"`
+	Name         string //TODO:待删除
+	Password     string //FIXME:可以StrHash后存成uint32，省不少字节
+	CreateTime   int64
+	LoginTime    int64
 	IsValidEmail uint8
-	IsValidPhone uint8
-
-	// 有需要可参考player的iModule改写
-	GameInfo map[string]gameInfo.TGameInfo
+	BindInfo     map[string]string //email、phone、name
+	GameInfo     map[string]gameInfo.TGameInfo
 }
 
 func _NewAccount() *TAccount {
 	self := new(TAccount)
-	self.init()
+	self.BindInfo = make(map[string]string, 3)
+	self.GameInfo = make(map[string]gameInfo.TGameInfo)
 	return self
-}
-func (self *TAccount) init() {
-	if self.BindInfo == nil {
-		self.BindInfo = make(map[string]string, 3)
-	}
-	if self.GameInfo == nil {
-		self.GameInfo = make(map[string]gameInfo.TGameInfo)
-	}
 }
 func (self *TAccount) CheckPasswd(passwd string) bool {
 	return self.Password == fmt.Sprintf("%x", md5.Sum(common.S2B(passwd)))
@@ -83,13 +69,11 @@ func (self *TAccount) SetPasswd(passwd string) {
 // 注册、登录
 func Rpc_center_account_login(req, ack *common.NetPack) {
 	gameName := req.ReadString()
-	str := req.ReadString() //账号、邮箱均可登录
+	str := req.ReadString()
 	pwd := req.ReadString()
-	sign.Decode(&str, &pwd)
 	gamelog.Debug("Login: %s %s", str, pwd)
-
 	errcode, p := GetAccount(str, pwd)
-	if ack.WriteUInt16(errcode); errcode == err.Success {
+	if ack.WriteUInt16(errcode); p != nil {
 		timeNow := time.Now().Unix()
 		atomic.StoreInt64(&p.LoginTime, timeNow)
 		dbmgo.UpdateId(KDBTable, p.AccountID, bson.M{"$set": bson.M{"logintime": timeNow}})
@@ -97,7 +81,6 @@ func Rpc_center_account_login(req, ack *common.NetPack) {
 		v := gameInfo.TAccountClient{
 			p.AccountID,
 			p.IsValidEmail,
-			p.IsValidPhone,
 		}
 		v.DataToBuf(ack)
 		//2、再回复，附带的游戏数据，可能有的游戏空的
@@ -113,7 +96,6 @@ func Rpc_center_account_reg(req, ack *common.NetPack) {
 	typ := req.ReadString() //email、name、phone
 	sign.Decode(&str, &pwd)
 	gamelog.Track("account_reg: %s %s %s", typ, str, pwd)
-
 	if !format.CheckPasswd(pwd) {
 		ack.WriteUInt16(err.Passwd_format_err)
 	} else if !format.CheckBindValue(typ, str) {
@@ -123,70 +105,44 @@ func Rpc_center_account_reg(req, ack *common.NetPack) {
 		ack.WriteUInt16(errcode)
 	}
 }
-func Rpc_center_reg_check(req, ack *common.NetPack) {
-	str := req.ReadString()
-	pwd := req.ReadString()
-	typ := req.ReadString() //email、name、phone
-	sign.Decode(&str, &pwd)
-
-	if !format.CheckPasswd(pwd) {
-		ack.WriteUInt16(err.Passwd_format_err)
-	} else if !format.CheckBindValue(typ, str) {
-		ack.WriteUInt16(err.BindInfo_format_err)
-	} else if GetAccountByBindInfo(typ, str) != nil {
-		ack.WriteUInt16(err.Account_repeat)
-	} else {
-		ack.WriteUInt16(err.Success)
-	}
-}
-func Rpc_center_reg_if(req, ack *common.NetPack) {
-	str := req.ReadString()
-	typ := req.ReadString() //email、name、phone
-	sign.Decode(&str)
-
-	if GetAccountByBindInfo(typ, str) == nil {
-		ack.WriteUInt16(err.Account_not_found)
-	} else {
-		ack.WriteUInt16(err.Success)
-	}
-}
 func Rpc_center_account_reg_force(req, ack *common.NetPack) {
 	uuid := req.ReadString()
 	if sign.Decode(&uuid); uuid == "" {
 		ack.WriteUInt16(err.BindInfo_format_err)
 	} else {
-		errcode, _ := NewAccountInDB("", "name", uuid)
-		ack.WriteUInt16(errcode)
+		e, _ := NewAccountInDB("", "name", uuid)
+		ack.WriteUInt16(e)
 	}
 }
-func Rpc_center_change_password(req, ack *common.NetPack) {
+func Rpc_center_reg_if(req, ack *common.NetPack) {
 	str := req.ReadString()
+	typ := req.ReadString()
+	sign.Decode(&str)
+	e, _ := GetAccountByBindInfo(typ, str)
+	if e == err.Not_found {
+		e = err.Account_not_found
+	}
+	ack.WriteUInt16(e)
+}
+func Rpc_center_change_password2(req, ack *common.NetPack) {
+	str := req.ReadString()
+	typ := req.ReadString()
 	oldpwd := req.ReadString()
 	newpwd := req.ReadString()
-	sign.Decode(&oldpwd, &newpwd)
-
+	sign.Decode(&str, &oldpwd, &newpwd)
 	if !format.CheckPasswd(newpwd) {
 		ack.WriteUInt16(err.Passwd_format_err)
-	} else if e, p := GetAccount(str, oldpwd); p == nil {
+	} else if e, p := GetAccountByBindInfo(typ, str); p == nil {
 		ack.WriteUInt16(e)
+	} else if !p.CheckPasswd(oldpwd) {
+		ack.WriteUInt16(err.Account_mismatch_passwd)
 	} else {
+		ack.WriteUInt16(err.Success)
 		p.SetPasswd(newpwd)
 		dbmgo.UpdateId(KDBTable, p.AccountID, bson.M{"$set": bson.M{
 			"password": p.Password}})
-		ack.WriteUInt16(err.Success)
 		CacheDel(p)
 	}
-}
-func Rpc_center_create_visitor(req, ack *common.NetPack) {
-	name := fmt.Sprintf("%s%d%s",
-		random.String(3),
-		dbmgo.GetNextIncId("VisitorId"),
-		random.String(3))
-
-	if _, p := NewAccountInDB("", "name", name); p == nil {
-		name = "" //failed
-	}
-	ack.WriteString(name)
 }
 
 // ------------------------------------------------------------
@@ -196,12 +152,12 @@ func Rpc_center_set_game_route(req, ack *common.NetPack) {
 	gameName := req.ReadString()
 	loginId := req.ReadInt()
 	gameId := req.ReadInt()
-	if p := GetAccountById(accountId); p == nil {
-		ack.WriteUInt16(err.Account_not_found)
+	if e, p := GetAccountById(accountId); p == nil {
+		ack.WriteUInt16(e)
 	} else {
 		v, ok := p.GameInfo[gameName]
-		v.LoginSvrId = loginId
-		v.GameSvrId = gameId
+		v.LoginSvrId = loginId % common.KIdMod
+		v.GameSvrId = gameId % common.KIdMod
 		if dbmgo.UpdateIdSync(KDBTable, accountId, bson.M{"$set": bson.M{
 			fmt.Sprintf("gameinfo.%s", gameName): v}}) {
 			p.GameInfo[gameName] = v
@@ -215,25 +171,14 @@ func Rpc_center_set_game_route(req, ack *common.NetPack) {
 		}
 	}
 }
-func Rpc_center_get_game_route(req, ack *common.NetPack) {
-	accountId := req.ReadUInt32()
-	gameName := req.ReadString()
-	if p := GetAccountById(accountId); p != nil {
-		if v, ok := p.GameInfo[gameName]; ok {
-			ack.WriteInt(v.LoginSvrId)
-			ack.WriteInt(v.GameSvrId)
-		}
-	}
-}
-func Rpc_center_set_game_json(req, ack *common.NetPack) { //TODO:zhoumf:换accountId + pwd
+func Rpc_center_set_game_json(req, ack *common.NetPack) {
 	str := req.ReadString()
-	typ := req.ReadString() //email、name、phone
+	typ := req.ReadString()
 	gameName := req.ReadString()
 	json := req.ReadString()
 	sign.Decode(&str)
-
-	if p := GetAccountByBindInfo(typ, str); p == nil {
-		ack.WriteUInt16(err.Account_not_found)
+	if e, p := GetAccountByBindInfo(typ, str); p == nil {
+		ack.WriteUInt16(e)
 	} else {
 		v := p.GameInfo[gameName]
 		v.JsonData = json
@@ -247,13 +192,12 @@ func Rpc_center_set_game_json(req, ack *common.NetPack) { //TODO:zhoumf:换accou
 		}
 	}
 }
-func Rpc_center_get_game_json(req, ack *common.NetPack) {
+func Rpc_center_get_game_json(req, ack *common.NetPack) { //TODO:待删除
 	str := req.ReadString()
-	typ := req.ReadString() //email、name、phone
+	typ := req.ReadString()
 	gameName := req.ReadString()
 	sign.Decode(&str)
-
-	if p := GetAccountByBindInfo(typ, str); p != nil {
+	if _, p := GetAccountByBindInfo(typ, str); p != nil {
 		if v, ok := p.GameInfo[gameName]; ok {
 			ack.WriteString(v.JsonData)
 		}
@@ -262,13 +206,13 @@ func Rpc_center_get_game_json(req, ack *common.NetPack) {
 
 // ------------------------------------------------------------
 // 玩家在哪个大区登录的
-func Rpc_center_player_login_addr_2(req, ack *common.NetPack) { //TODO:zhoumf:待删除
+func Rpc_center_player_login_addr_2(req, ack *common.NetPack) { //TODO:待删除
 	gameName := req.ReadString()
 	str := req.ReadString()
 
 	var p *TAccount
-	if p = GetAccountByBindInfo("email", str); p == nil {
-		if p = GetAccountByBindInfo("name", str); p == nil {
+	if _, p = GetAccountByBindInfo("email", str); p == nil {
+		if _, p = GetAccountByBindInfo("name", str); p == nil {
 		}
 	}
 	if p == nil {
@@ -282,71 +226,51 @@ func Rpc_center_player_login_addr(req, ack *common.NetPack) {
 	typ := req.ReadString() //email、name、phone
 	gameName := req.ReadString()
 	sign.Decode(&str)
-
-	if p := GetAccountByBindInfo(typ, str); p == nil {
-		ack.WriteUInt16(err.Account_not_found)
+	if e, p := GetAccountByBindInfo(typ, str); p == nil {
+		ack.WriteUInt16(e)
 	} else {
 		p.WriteLoginAddr(gameName, ack)
 	}
 }
 func (self *TAccount) WriteLoginAddr(gameName string, ack *common.NetPack) {
-	if info, ok := self.GameInfo[gameName]; !ok {
-		ack.WriteUInt16(err.Not_found)
-	} else if p := meta.GetMeta("login", info.LoginSvrId); p == nil {
-		ack.WriteUInt16(err.Svr_not_working) //玩家有对应的登录服，但该服未启动
-		/*
-			新center只加到华北
-			华南玩家，客户端删包重装，会问询自己哪个大区的
-			正好，他测速跑到华北区问
-			又正好，他被路由到了新center节点
-			新center没有华南信息，err.Svr_not_working
-		*/
-	} else {
-		ack.WriteUInt16(err.Success)
-		ack.WriteString(p.OutIP)
-		ack.WriteUInt16(p.Port())
-
+	errcode, gameSvrId := err.Success, 0
+	var pLogin *meta.Meta
+	if info, ok := self.GameInfo[gameName]; ok {
+		gameSvrId = info.GameSvrId
+		if pLogin = meta.GetMeta(gameName, info.LoginSvrId); pLogin == nil {
+			errcode = err.Svr_not_working
+			/*
+				新center只加到华北
+				华南玩家，客户端删包重装，会问询自己哪个大区的
+				正好，他测速跑到华北区问
+				又正好，他被路由到了新center节点
+				新center没有华南信息，err.Svr_not_working
+			*/
+		}
+	}
+	if ack.WriteUInt16(errcode); pLogin != nil {
+		ack.WriteString(pLogin.OutIP)
+		ack.WriteUInt16(pLogin.HttpPort)
 		// 向login查询game的地址，一并回给client
-		http.CallRpc(http.Addr(p.OutIP, p.Port()), enum.Rpc_meta_list, func(buf *common.NetPack) {
+		http.CallRpc(http.Addr(pLogin.OutIP, pLogin.HttpPort), enum.Rpc_get_meta, func(buf *common.NetPack) {
 			buf.WriteString("game")
 			buf.WriteString(meta.G_Local.Version)
+			buf.WriteByte(common.KeyShuntInt)
+			buf.WriteInt(gameSvrId)
+			buf.WriteUInt32(self.AccountID)
 		}, func(recvBuf *common.NetPack) {
-			ids, metas := []int{}, map[int]meta.Meta{}
-			for cnt, i := recvBuf.ReadByte(), byte(0); i < cnt; i++ {
-				svrId := recvBuf.ReadInt()
-				outip := recvBuf.ReadString()
+			if svrId := recvBuf.ReadInt(); svrId > 0 {
+				ip := recvBuf.ReadString()
 				port := recvBuf.ReadUInt16()
-				svrName := recvBuf.ReadString()
-
-				ids = append(ids, svrId) //收集game节点信息，确定具体哪个分流节点
-				metas[svrId] = meta.Meta{
-					SvrID:   svrId,
-					OutIP:   outip,
-					TcpPort: port,
-					SvrName: svrName,
-				}
-			}
-			if gameInfo.ShuntSvr(ids, &info.GameSvrId, self.AccountID) {
-				ack.WriteString(metas[info.GameSvrId].OutIP)
-				ack.WriteUInt16(metas[info.GameSvrId].TcpPort)
+				ack.WriteString(ip)
+				ack.WriteUInt16(port)
 			}
 		})
 	}
 }
 
 // ------------------------------------------------------------
-// 登录服缓存了部分账号信息，用以加速登录
-func (self *TAccount) refreshLoginCache() {
-	go meta.G_Metas.Range(func(k, v interface{}) bool {
-		if p := v.(*meta.Meta); p.Module == "login" && !p.IsClosed {
-			http.CallRpc(http.Addr(p.OutIP, p.Port()), enum.Rpc_login_del_account_cache,
-				func(buf *common.NetPack) {
-					self.writeLoginCacheKey(buf)
-				}, nil)
-		}
-		return true
-	})
-}
+// 登录服缓存了部分账号信息，用以加速登录 ---- 遍历登录服，太挫了
 func (self *TAccount) writeLoginCacheKey(buf *common.NetPack) {
 	buf.WriteByte(byte(len(self.BindInfo)))
 	for _, v := range self.BindInfo {

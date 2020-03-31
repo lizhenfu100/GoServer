@@ -44,9 +44,9 @@ func Addr(ip string, port uint16) string { return fmt.Sprintf("http://%s:%d", ip
 
 func InitSvr(module string, svrId int) {
 	if conf.TestFlag_CalcQPS {
-		go qps.WatchLoop()
+		qps.Watch()
 	}
-	g_svraddr_path = fmt.Sprintf("%s/%s/%d/reg_addr.csv", file.GetExeDir(), module, svrId)
+	_cache_path = fmt.Sprintf("%s/%s/%d/reg_addr.csv", file.GetExeDir(), module, svrId)
 	loadCacheNetMeta()
 }
 
@@ -83,12 +83,12 @@ func Reg_to_svr(w io.Writer, req []byte) {
 //! 不似tcp，对端不知道这边傻逼了( ▔___▔)y
 //! 采用追加方式，同个“远程服务”的地址，会被最新追加的覆盖掉
 var (
-	g_svraddr_path string
-	_mutex         sync.Mutex
+	_cache_path string
+	_mutex      sync.Mutex
 )
 
 func loadCacheNetMeta() {
-	if records, e := file.ReadCsv(g_svraddr_path); e == nil {
+	if records, e := file.ReadCsv(_cache_path); e == nil {
 		metas := make([]meta.Meta, len(records))
 		for i := 0; i < len(records); i++ {
 			json.Unmarshal(common.S2B(records[i][0]), &metas[i])
@@ -102,7 +102,7 @@ func appendNetMeta(pMeta *meta.Meta) {
 		return //有zookeeper实现重启恢复，不必本地缓存
 	}
 	_mutex.Lock()
-	records, e := file.ReadCsv(g_svraddr_path)
+	records, e := file.ReadCsv(_cache_path)
 	_mutex.Unlock()
 	if e == nil {
 		pMeta2 := new(meta.Meta)
@@ -114,7 +114,7 @@ func appendNetMeta(pMeta *meta.Meta) {
 		}
 	}
 	b, _ := json.Marshal(pMeta)
-	dir, name := path.Split(g_svraddr_path)
+	dir, name := path.Split(_cache_path)
 	_mutex.Lock()
 	e = file.AppendCsv(dir, name, []string{common.B2S(b)})
 	_mutex.Unlock()

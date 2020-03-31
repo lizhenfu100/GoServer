@@ -1,65 +1,109 @@
+/***********************************************************************
+* @ 好友系统
+
+* @ 可像微信，玩家查看好友个人信息时，才更新；允许显示旧信息
+	· 致力于将数据只保存在本地
+	· 牺牲及时性，免去大部分的好友状态同步，如改名、改头像
+
+* @ 账号下有多个角色的，如何处理？
+	· 可同大区的，都算好友
+
+* @ 跨大区社交，得做套单独的rpc，以playerId为key
+	· playerId夹带路由信息
+
+* @ 好友列表同步
+	· 好友数据分为三层
+		· svr_center中的accountIdList
+		· svr_game中的playerIdList（aid+pid）
+		· client中的friendList（aid+pid+showInfo）
+	· 用svr_center数据初始化svr_game好友
+		· 难以甄别svr_center多出的好友，是svr_game主动删的还是其它途径加的
+	· client无好友数据，才向svr_game拉取
+		· svr_game负责收集名字、头像...回给client
+
+* @ author zhoumf
+* @ date 2019-12-30
+***********************************************************************/
 package logic
 
 import (
 	"common"
+	"common/std"
 	"dbmgo"
 	"gopkg.in/mgo.v2/bson"
-	"nets/tcp"
 )
 
 const kDBTable = "Friend"
 
-type TFriendModule struct {
+type TFriend struct { //Optimize：hash aid分表分库
 	AccountId uint32 `bson:"_id"`
-	FriendIDs []uint32
-	//TODO：双向好友系统
+	Friends   std.UInt32s
 }
 
 // ------------------------------------------------------------
 // - rpc
-func Rpc_friend_add(req, ack *common.NetPack, this *TFriendModule) {
-	aid := req.ReadUInt32()
-
-	if i := this.InFriends(aid); i < 0 && aid != this.AccountId {
-		this.FriendIDs = append(this.FriendIDs, aid)
-		dbmgo.UpdateId(kDBTable, this.AccountId, bson.M{"$push": bson.M{
-			"friendids": aid}})
-	}
+func Rpc_friend_add(req, ack *common.NetPack) {
+	myId := req.ReadUInt32()
+	dstId := req.ReadUInt32()
+	AddFriend(myId, dstId)
+	AddFriend(dstId, myId)
 }
-func Rpc_friend_del(req, ack *common.NetPack, this *TFriendModule) {
-	aid := req.ReadUInt32()
-
-	if i := this.InFriends(aid); i >= 0 {
-		this.FriendIDs = append(this.FriendIDs[:i], this.FriendIDs[i+1:]...)
-		dbmgo.UpdateId(kDBTable, this.AccountId, bson.M{"$pull": bson.M{
-			"friendids": aid}})
-	}
+func Rpc_friend_del(req, ack *common.NetPack) {
+	myId := req.ReadUInt32()
+	dstId := req.ReadUInt32()
+	DelFriend(myId, dstId)
+	DelFriend(dstId, myId)
 }
-func Rpc_friend_get_friend_list(req, ack *common.NetPack, conn *tcp.TCPConn) {
-	aid := req.ReadUInt32()
-
-	if self := FindWithDB(aid); self != nil {
-		ack.WriteUInt16(uint16(len(self.FriendIDs)))
-		for _, id := range self.FriendIDs {
-			ack.WriteUInt32(id)
+func Rpc_friend_list(req, ack *common.NetPack) {
+	myId := req.ReadUInt32()
+	if this := FindWithDB(myId); this != nil {
+		list := make(std.UInt32s, len(this.Friends))
+		copy(list, this.Friends)
+		//删除上报的，剩余即新增
+		for cnt, i := req.ReadUInt16(), uint16(0); i < cnt; i++ {
+			aid := req.ReadUInt32()
+			if j := list.Index(aid); j >= 0 {
+				list.Del(j)
+			}
 		}
+		//返回新增好友
+		posInBuf, count := ack.Size(), uint16(0)
+		ack.WriteUInt16(count)
+		for _, aid := range list {
+			ack.WriteUInt32(aid)
+			count++
+		}
+		ack.SetUInt16(posInBuf, count)
 	}
 }
 
 // ------------------------------------------------------------
 // - 辅助函数
-func FindWithDB(aid uint32) *TFriendModule {
-	ptr := &TFriendModule{AccountId: aid}
-	if ok, _ := dbmgo.Find(kDBTable, "_id", aid, ptr); !ok {
-		dbmgo.Insert(kDBTable, ptr)
+func FindWithDB(aid uint32) *TFriend {
+	p := &TFriend{AccountId: aid}
+	if ok, _ := dbmgo.Find(kDBTable, "_id", aid, p); ok {
+		return p
 	}
-	return ptr
+	return nil
 }
-func (self *TFriendModule) InFriends(aid uint32) int {
-	for i := 0; i < len(self.FriendIDs); i++ {
-		if aid == self.FriendIDs[i] {
-			return i
+func AddFriend(aid, dst uint32) {
+	if this := FindWithDB(aid); this == nil {
+		dbmgo.Insert(kDBTable, &TFriend{
+			AccountId: aid,
+			Friends:   []uint32{dst},
+		})
+	} else if i := this.Friends.Index(dst); i < 0 && dst != this.AccountId {
+		this.Friends.Add(dst)
+		dbmgo.UpdateId(kDBTable, this.AccountId, bson.M{"$push": bson.M{
+			"friends": dst}})
+	}
+}
+func DelFriend(aid, dst uint32) {
+	if this := FindWithDB(aid); this != nil {
+		if i := this.Friends.Index(dst); i >= 0 {
+			this.Friends.Del(i)
+			dbmgo.UpdateId(kDBTable, this.AccountId, bson.M{"$pull": bson.M{
+				"friends": dst}})
 		}
 	}
-	return -1
 }

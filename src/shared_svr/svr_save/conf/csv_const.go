@@ -7,4 +7,6 @@ var Const struct {
 	RaiseBindCntDay byte //提升绑定次数上限，90天
 	MacChangePeriod int  //切换设备的周期，两周：3600*24*14
 	MacUnbindPeriod int  //解绑设备的周期，一周：3600*24*7
+
+	IpNew2Old map[string]string //新旧节点ip
 }

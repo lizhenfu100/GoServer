@@ -27,7 +27,7 @@ func Http_order_success(w http.ResponseWriter, r *http.Request) {
 	orderId := q.Get("orderid")
 
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.S2B("passwd error"))
+		w.Write([]byte("passwd error"))
 	} else if order := msg.FindOrder(orderId); order == nil {
 		w.Write(common.S2B(orderId + ": order not exists"))
 	} else if order.Status == 1 {
@@ -37,7 +37,7 @@ func Http_order_success(w http.ResponseWriter, r *http.Request) {
 		order.Can_send = 1
 		dbmgo.UpdateIdSync(msg.KDBTable, order.Order_id, bson.M{"$set": bson.M{
 			"status": 1, "can_send": 1}})
-		w.Write(common.S2B("ok"))
+		w.Write([]byte("ok"))
 	}
 	gamelog.Info("Http_order_success: %s", r.URL.String())
 }
@@ -46,7 +46,7 @@ func Http_order_set_force(w http.ResponseWriter, r *http.Request) {
 	orderId := q.Get("orderid")
 
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.S2B("passwd error"))
+		w.Write([]byte("passwd error"))
 	} else if order := msg.FindOrder(orderId); order == nil {
 		w.Write(common.S2B(orderId + ": order not exists"))
 	} else {
@@ -54,7 +54,7 @@ func Http_order_set_force(w http.ResponseWriter, r *http.Request) {
 		order.Can_send = 1
 		dbmgo.UpdateIdSync(msg.KDBTable, order.Order_id, bson.M{"$set": bson.M{
 			"status": 1, "can_send": 1}})
-		w.Write(common.S2B("ok"))
+		w.Write([]byte("ok"))
 	}
 	gamelog.Info("Http_order_set_force: %s", r.URL.String())
 }

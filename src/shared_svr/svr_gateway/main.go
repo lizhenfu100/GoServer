@@ -5,17 +5,15 @@ import (
 	"common/console/shutdown"
 	"common/file"
 	"conf"
-	"dbmgo"
 	"flag"
 	"gamelog"
 	_ "generate_out/rpc/shared_svr/svr_gateway"
 	"netConfig"
 	"netConfig/meta"
-	"shared_svr/svr_gateway/logic"
 	"shared_svr/zookeeper/component"
 )
 
-const kModuleName = "gateway"
+const kModuleName = "gateway" //tcp_multi
 
 func main() {
 	var svrId int
@@ -29,15 +27,9 @@ func main() {
 	//设置本节点meta信息
 	meta.G_Local = meta.GetMeta(kModuleName, svrId)
 
-	//设置mongodb的服务器地址
-	pMeta := meta.GetMeta("db_gateway", svrId)
-	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName,
-		conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
-
 	component.RegisterToZookeeper()
 
-	go netConfig.RunNetSvr()
-	logic.MainLoop()
+	netConfig.RunNetSvr(true) //FIXME:考虑fasthttp
 }
 func InitConf() {
 	var metaCfg []meta.Meta

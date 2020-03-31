@@ -22,20 +22,26 @@ func Http_reset_password(w http.ResponseWriter, r *http.Request) {
 
 	ack := "Error: unknown"
 	defer func() {
+		if k == "email" {
+			ack, _ = email.Translate(ack, language)
+		}
 		w.Write(common.S2B(ack))
 	}()
 	if sign.CalcSign(k+v+passwd+flag) != q.Get("sign") {
-		ack, _ = email.Translate("Error: sign failed", language)
+		ack = "Error: sign failed"
 	} else if time.Now().Unix()-timeFlag > 3600 {
-		ack, _ = email.Translate("Error: url expire", language)
+		ack = "Error: url expire"
 	} else if !format.CheckPasswd(passwd) {
-		ack, _ = email.Translate("Error: Passwd_format_err", language)
-	} else if p := GetAccountByBindInfo(k, v); p == nil {
-		ack, _ = email.Translate("Error: Account_none", language)
+		ack = "Error: Passwd_format_err"
+	} else if _, p := GetAccountByBindInfo(k, v); p == nil {
+		ack = "Error: Account_none"
 	} else {
+		ack = "Reset password ok"
 		p.SetPasswd(passwd)
 		dbmgo.UpdateId(KDBTable, p.AccountID, bson.M{"$set": bson.M{"password": p.Password}})
-		ack, _ = email.Translate("Reset password ok", language)
+		if k == "email" {
+			p.verifyEmailOK()
+		}
 		CacheDel(p)
 	}
 }

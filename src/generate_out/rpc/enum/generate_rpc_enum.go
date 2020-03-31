@@ -14,6 +14,26 @@ const ( //the top 100 are reserved for system
 	Rpc_meta_list uint16 = 10
 	Rpc_update_file uint16 = 11
 	Rpc_reload_csv uint16 = 12
+	Rpc_get_meta uint16 = 13
+	Rpc_timestamp uint16 = 14
+	Rpc_center_account_login2 uint16 = 15
+	Rpc_center_account_reg2 uint16 = 16
+	Rpc_center_account_reg_force2 uint16 = 17
+	Rpc_center_reg_if2 uint16 = 18
+	Rpc_center_change_password2 uint16 = 19
+	Rpc_center_set_game_route2 uint16 = 20
+	Rpc_center_set_game_json2 uint16 = 21
+	Rpc_center_game_info2 uint16 = 22
+	Rpc_center_player_login_addr2 uint16 = 23
+	Rpc_center_bind_info2 uint16 = 24
+	Rpc_center_isvalid_bind_info2 uint16 = 25
+	Rpc_nric_set2 uint16 = 26
+	Rpc_nric_birthday2 uint16 = 27
+	Rpc_nric_copy_to2 uint16 = 28
+	Rpc_nric_online_time_get2 uint16 = 29
+	Rpc_nric_online_time_set2 uint16 = 30
+	Rpc_set_identity uint16 = 31
+	Rpc_check_identity uint16 = 32
 	Rpc_zoo_register uint16 = 100
 	Rpc_center_account_login uint16 = 101
 	Rpc_center_account_reg uint16 = 102
@@ -27,16 +47,16 @@ const ( //the top 100 are reserved for system
 	Rpc_gateway_relay_game_create_player uint16 = 110
 	Rpc_login_get_meta_list uint16 = 111
 	Rpc_login_relay_to_center uint16 = 112
-	Rpc_gateway_relay_player_msg uint16 = 113
+	Rpc_gateway_relay uint16 = 113
 	Rpc_center_create_visitor uint16 = 114
 	Rpc_center_ask_reset_password uint16 = 115
 	Rpc_file_update_list uint16 = 116
-	Rpc_friend_get_friend_list uint16 = 117
+	Rpc_friend_list uint16 = 117
 	Rpc_friend_add uint16 = 118
 	Rpc_friend_del uint16 = 119
 	Rpc_gateway_login uint16 = 120
 	Rpc_gateway_login_token uint16 = 121
-	Rpc_gateway_relay_module uint16 = 122
+	Rpc_gateway_to_svr uint16 = 122
 	Rpc_gateway_relay_modules uint16 = 123
 	Rpc_save_get_meta_info uint16 = 125
 	Rpc_save_upload_binary2 uint16 = 126
@@ -46,7 +66,7 @@ const ( //the top 100 are reserved for system
 	Rpc_cross_relay_battle_data uint16 = 130
 	Rpc_cross_relay_to_game uint16 = 131
 	Rpc_game_login uint16 = 132
-	Rpc_game_create_player uint16 = 133
+	Rpc_game_player_set_name uint16 = 133
 	Rpc_game_login_token uint16 = 134
 	Rpc_game_write_db_battle_info uint16 = 135
 	Rpc_game_on_battle_end uint16 = 136
@@ -143,7 +163,7 @@ const ( //the top 100 are reserved for system
 	Rpc_game_move_player_db uint16 = 227
 	Rpc_game_move_player_db2 uint16 = 228
 	Rpc_save_check_mac uint16 = 229
-	Rpc_save_unbind_mac_by_email uint16 = 230
+	Rpc_save_ask_unbind_mac uint16 = 230
 	Rpc_game_show_player_award uint16 = 231
 	Rpc_game_get_player_award_ok uint16 = 232
 	Rpc_game_gm_add_award uint16 = 233
@@ -153,141 +173,228 @@ const ( //the top 100 are reserved for system
 	Rpc_client_sync_pickup_armor uint16 = 237
 	Rpc_client_sync_drop_armor uint16 = 238
 	Rpc_center_get_bind_info uint16 = 239
-	Rpc_save_unbind_mac uint16 = 240
-	Rpc_battle_add_weapon_unit uint16 = 241
-	Rpc_battle_del_weapon_unit uint16 = 242
-	Rpc_client_sync_add_weapon_unit uint16 = 243
-	Rpc_client_sync_del_weapon_unit uint16 = 244
-	Rpc_login_relay_email uint16 = 245
-	Rpc_game_permit_player uint16 = 246
-	Rpc_game_whitelist_add uint16 = 247
-	Rpc_game_whitelist_del uint16 = 248
-	RpcEnumCnt uint16 = 249
+	Rpc_center_account_reg_force uint16 = 240
+	Rpc_center_friend_add uint16 = 241
+	Rpc_center_friend_del uint16 = 242
+	Rpc_center_friend_list uint16 = 243
+	Rpc_center_game_info uint16 = 244
+	Rpc_center_get_game_json uint16 = 245
+	Rpc_center_isvalid_bind_info uint16 = 246
+	Rpc_center_player_login_addr_2 uint16 = 247
+	Rpc_center_account_222 uint16 = 248
+	Rpc_center_reg_if uint16 = 249
+	Rpc_center_set_game_json uint16 = 250
+	Rpc_center_set_game_route uint16 = 251
+	Rpc_file_delete uint16 = 252
+	Rpc_game_friend_add uint16 = 253
+	Rpc_game_friend_del uint16 = 254
+	Rpc_game_friend_list uint16 = 255
+	Rpc_game_get_team_show_info uint16 = 256
+	Rpc_game_permit_player uint16 = 257
+	Rpc_game_ui_guns uint16 = 258
+	Rpc_game_ui_heros uint16 = 259
+	Rpc_game_whitelist_add uint16 = 260
+	Rpc_game_whitelist_del uint16 = 261
+	Rpc_gm_forbid_add uint16 = 262
+	Rpc_gm_forbid_check uint16 = 263
+	Rpc_gm_forbid_del uint16 = 264
+	Rpc_gm_is_white uint16 = 265
+	Rpc_login_del_account_cache uint16 = 266
+	Rpc_login_gift_get uint16 = 267
+	Rpc_login_send_email uint16 = 268
+	Rpc_login_to_center_by_id uint16 = 269
+	Rpc_login_to_center_by_str uint16 = 270
+	Rpc_nric_birthday uint16 = 271
+	Rpc_nric_copy_to uint16 = 272
+	Rpc_nric_online_time_get uint16 = 273
+	Rpc_nric_online_time_set uint16 = 274
+	Rpc_nric_set uint16 = 275
+	Rpc_relay_exit_room uint16 = 276
+	Rpc_relay_join_room uint16 = 277
+	Rpc_relay_login uint16 = 278
+	Rpc_relay_new_room uint16 = 279
+	Rpc_relay_report_input uint16 = 280
+	Rpc_relay_to_other uint16 = 281
+	Rpc_relay_to_others uint16 = 282
+	Rpc_center_player_addr2 uint16 = 283
+	Rpc_gm_white_black uint16 = 284
+	Rpc_battle_change_hero uint16 = 285
+	Rpc_battle_debug_moba_begin uint16 = 286
+	Rpc_battle_drop_from_inventory uint16 = 287
+	Rpc_battle_gm_command uint16 = 288
+	Rpc_battle_gun_aim_break uint16 = 289
+	Rpc_battle_hit_by_shield uint16 = 290
+	Rpc_battle_hit_by_skill uint16 = 291
+	Rpc_battle_inventory_drop_all uint16 = 292
+	Rpc_battle_inventory_swap_items uint16 = 293
+	Rpc_battle_pick_item uint16 = 294
+	Rpc_battle_pull_teammate uint16 = 295
+	Rpc_battle_restore_client_room uint16 = 296
+	Rpc_battle_revive_all_teammate uint16 = 297
+	Rpc_battle_use_potion uint16 = 298
+	Rpc_client_battle_end uint16 = 299
+	Rpc_client_call_obj_method uint16 = 300
+	Rpc_client_moba_on_player_join uint16 = 301
+	Rpc_client_safe_area_next_pos_radius uint16 = 302
+	Rpc_client_safe_area_next_time uint16 = 303
+	Rpc_client_sync_add_weapon_unit uint16 = 304
+	Rpc_client_sync_del_weapon_unit uint16 = 305
+	Rpc_client_sync_drop_from_inventory uint16 = 306
+	Rpc_client_sync_inventory_drop_all uint16 = 307
+	Rpc_client_sync_inventory_stack_items uint16 = 308
+	Rpc_client_sync_inventory_swap_items uint16 = 309
+	Rpc_client_sync_pick_to_inventory uint16 = 310
+	Rpc_client_sync_pickup_potion uint16 = 311
+	Rpc_client_sync_pickup_weapon_unit uint16 = 312
+	Rpc_client_use_skill uint16 = 313
+	Rpc_Samurai_sword_complete uint16 = 314
+	Rpc_client_sync_sword_complete uint16 = 315
+	RpcEnumCnt uint16 = 316
 	
 )
 func GetRpcModule(rpcEnum uint16) string {
 switch rpcEnum {
 case
-	Rpc_client_sync_player_join_info,
-	Rpc_client_spawn_player,
-	Rpc_client_notify_player_exit_room,
-	Rpc_client_stop_wait_and_select_hero,
-	Rpc_client_stop_wait_and_select_boss,
-	Rpc_client_sync_map,
-	Rpc_client_sync_predict_objs_position,
-	Rpc_client_sync_objs_position_facing,
-	Rpc_client_sync_objs_position_rotation,
-	Rpc_client_sync_generic_attrs,
-	Rpc_client_handle_spawn_attrs,
-	Rpc_client_spawn_object,
-	Rpc_client_sync_anim_state,
-	Rpc_client_sync_pickup_weapon,
-	Rpc_client_sync_drop_weapon,
-	Rpc_client_sync_change_weapon,
-	Rpc_client_sync_pickup_armor,
-	Rpc_client_sync_drop_armor,
-	Rpc_client_sync_add_weapon_unit,
-	Rpc_client_sync_del_weapon_unit,
-	Rpc_client_sync_trigger_enter,
-	Rpc_client_sync_trigger_exit,
-	Rpc_client_sync_buff_add,
-	Rpc_client_sync_buff_del,
-	Rpc_client_passive_skill_select,
-	Rpc_client_destroy_object,
-	Rpc_client_destroy_room,
-	Rpc_client_use_skill_double_gun,
-	Rpc_client_skill_double_gun_break,
-	Rpc_client_use_skill_turret,
-	Rpc_client_use_skill_roll,
-	Rpc_client_use_skill_shadow_blade,
-	Rpc_client_boss_skill_event,
-	Rpc_client_weapon_fire,
-	Rpc_client_show_wait_ui,
-	Rpc_client_login_battle,
-	Rpc_client_bullet_netid,
-	Rpc_client_on_other_join_team,
-	Rpc_client_on_self_join_team,
-	Rpc_client_on_exit_team,
+	Rpc_client_battle_end,
 	Rpc_client_be_invited,
-	Rpc_client_team_chat,
+	Rpc_client_boss_skill_event,
+	Rpc_client_call_obj_method,
+	Rpc_client_destroy_object,
+	Rpc_client_friend_add,
+	Rpc_client_friend_apply,
+	Rpc_client_friend_del,
 	Rpc_client_friend_login,
 	Rpc_client_friend_logout,
-	Rpc_client_friend_add,
-	Rpc_client_friend_del,
-	Rpc_client_friend_apply: return "client"
+	Rpc_client_handle_spawn_attrs,
+	Rpc_client_login_battle,
+	Rpc_client_moba_on_player_join,
+	Rpc_client_notify_player_exit_room,
+	Rpc_client_on_exit_team,
+	Rpc_client_on_other_join_team,
+	Rpc_client_on_self_join_team,
+	Rpc_client_passive_skill_select,
+	Rpc_client_safe_area_next_pos_radius,
+	Rpc_client_safe_area_next_time,
+	Rpc_client_show_wait_ui,
+	Rpc_client_skill_double_gun_break,
+	Rpc_client_spawn_object,
+	Rpc_client_spawn_player,
+	Rpc_client_stop_wait_and_select_boss,
+	Rpc_client_stop_wait_and_select_hero,
+	Rpc_client_sync_add_weapon_unit,
+	Rpc_client_sync_anim_state,
+	Rpc_client_sync_buff_add,
+	Rpc_client_sync_buff_del,
+	Rpc_client_sync_change_weapon,
+	Rpc_client_sync_del_weapon_unit,
+	Rpc_client_sync_drop_from_inventory,
+	Rpc_client_sync_generic_attrs,
+	Rpc_client_sync_inventory_drop_all,
+	Rpc_client_sync_inventory_stack_items,
+	Rpc_client_sync_inventory_swap_items,
+	Rpc_client_sync_map,
+	Rpc_client_sync_objs_position_facing,
+	Rpc_client_sync_objs_position_rotation,
+	Rpc_client_sync_pick_to_inventory,
+	Rpc_client_sync_pickup_armor,
+	Rpc_client_sync_pickup_potion,
+	Rpc_client_sync_pickup_weapon,
+	Rpc_client_sync_pickup_weapon_unit,
+	Rpc_client_sync_player_join_info,
+	Rpc_client_sync_predict_objs_position,
+	Rpc_client_sync_sword_complete,
+	Rpc_client_sync_trigger_enter,
+	Rpc_client_sync_trigger_exit,
+	Rpc_client_team_chat,
+	Rpc_client_use_skill,
+	Rpc_client_weapon_fire: return "client"
 case
 	Rpc_center_account_login,
 	Rpc_center_account_reg,
-	Rpc_center_account_check,
-	Rpc_center_change_password,
-	Rpc_center_create_visitor,
-	Rpc_center_set_game_info,
-	Rpc_center_player_login_addr,
+	Rpc_center_account_reg2,
+	Rpc_center_account_reg_force,
+	Rpc_center_account_reg_force2,
 	Rpc_center_bind_info,
-	Rpc_center_get_account_by_bind_info,
-	Rpc_center_get_bind_info: return "center"
+	Rpc_center_bind_info2,
+	Rpc_center_change_password2,
+	Rpc_center_game_info2,
+	Rpc_center_get_game_json,
+	Rpc_center_isvalid_bind_info,
+	Rpc_center_isvalid_bind_info2,
+	Rpc_center_player_addr2,
+	Rpc_center_player_login_addr,
+	Rpc_center_player_login_addr_2,
+	Rpc_center_reg_if,
+	Rpc_center_reg_if2,
+	Rpc_center_set_game_json,
+	Rpc_center_set_game_json2,
+	Rpc_center_set_game_route,
+	Rpc_center_set_game_route2: return "center"
 case
+	Rpc_file_delete,
 	Rpc_file_update_list: return "file"
 case
-	Rpc_friend_get_friend_list,
 	Rpc_friend_add,
-	Rpc_friend_del: return "friend"
+	Rpc_friend_del,
+	Rpc_friend_list: return "friend"
 case
-	Rpc_gateway_login,
-	Rpc_gateway_relay_game_login,
-	Rpc_gateway_relay_game_create_player,
-	Rpc_gateway_login_token,
-	Rpc_gateway_relay_module,
-	Rpc_gateway_relay_modules,
-	Rpc_gateway_relay_player_msg: return "gateway"
+	Rpc_gateway_relay: return "gateway"
 case
-	Rpc_login_bulletin,
-	Rpc_login_get_gift,
+	Rpc_gm_forbid_add,
+	Rpc_gm_forbid_check,
+	Rpc_gm_forbid_del,
+	Rpc_gm_white_black: return "gm"
+case
 	Rpc_login_account_login,
-	Rpc_login_relay_to_center,
+	Rpc_login_bulletin,
+	Rpc_login_del_account_cache,
 	Rpc_login_get_game_list,
+	Rpc_login_gift_get,
 	Rpc_login_move_player_db,
-	Rpc_login_relay_email: return "login"
+	Rpc_login_send_email,
+	Rpc_login_to_center_by_str: return "soulnet"
 case
-	Rpc_save_get_meta_info,
-	Rpc_save_check_mac,
-	Rpc_save_upload_binary,
-	Rpc_save_upload_binary2,
-	Rpc_save_download_binary,
-	Rpc_save_unbind_mac_by_email,
-	Rpc_save_unbind_mac: return "save"
+	Rpc_relay_exit_room,
+	Rpc_relay_join_room,
+	Rpc_relay_new_room,
+	Rpc_relay_report_input,
+	Rpc_relay_to_other,
+	Rpc_relay_to_others: return "relay"
+case
+	Rpc_nric_birthday,
+	Rpc_nric_copy_to,
+	Rpc_nric_online_time_get,
+	Rpc_nric_online_time_set,
+	Rpc_nric_set: return "sdk"
 case
 	Rpc_cross_relay_battle_data,
 	Rpc_cross_relay_to_game: return "cross"
 case
-	Rpc_game_show_player_award,
-	Rpc_game_get_player_award_ok,
-	Rpc_game_gm_add_award,
-	Rpc_game_gm_set_award,
-	Rpc_game_gm_del_award,
+	Rpc_game_agree_invite,
+	Rpc_game_battle_begin,
+	Rpc_game_become_captain,
+	Rpc_game_del_mail,
+	Rpc_game_exit_team,
+	Rpc_game_friend_add,
+	Rpc_game_friend_del,
+	Rpc_game_friend_list,
+	Rpc_game_get_mail,
+	Rpc_game_get_show_info,
+	Rpc_game_get_team_show_info,
+	Rpc_game_heart_beat,
+	Rpc_game_join_team,
+	Rpc_game_move_player_db,
+	Rpc_game_move_player_db2,
+	Rpc_game_on_battle_end,
 	Rpc_game_permit_player,
+	Rpc_game_player_set_name,
+	Rpc_game_read_mail,
+	Rpc_game_season_info,
+	Rpc_game_take_all_mail_item,
+	Rpc_game_team_chat,
+	Rpc_game_ui_guns,
+	Rpc_game_ui_heros,
 	Rpc_game_whitelist_add,
 	Rpc_game_whitelist_del,
-	Rpc_game_login,
-	Rpc_game_create_player,
-	Rpc_game_login_token,
-	Rpc_game_move_player_db2,
-	Rpc_game_write_db_battle_info,
-	Rpc_game_on_battle_end,
-	Rpc_game_heart_beat,
-	Rpc_game_logout,
-	Rpc_game_get_mail,
-	Rpc_game_read_mail,
-	Rpc_game_del_mail,
-	Rpc_game_take_all_mail_item,
-	Rpc_game_move_player_db,
-	Rpc_game_season_info,
-	Rpc_game_get_show_info,
-	Rpc_game_battle_begin,
-	Rpc_game_exit_team,
-	Rpc_game_join_team,
-	Rpc_game_agree_invite,
-	Rpc_game_become_captain,
-	Rpc_game_get_team_info,
-	Rpc_game_team_chat: return "game"}
+	Rpc_game_write_db_battle_info: return "game"}
 return ""}

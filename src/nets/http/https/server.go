@@ -29,8 +29,7 @@ const (
 
 var _svr http.Server
 
-func NewHttpServer(port uint16, module string, svrId int) error {
-	mhttp.InitSvr(module, svrId)
+func NewHttpServer(port uint16) error {
 	http.HandleFunc("/client_rpc", http2.HandleRpc)
 	http.HandleFunc("/reg_to_svr", func(w http.ResponseWriter, r *http.Request) {
 		mhttp.Reg_to_svr(w, http2.ReadBody(r.Body))

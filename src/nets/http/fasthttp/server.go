@@ -28,9 +28,7 @@ var (
 	_map = map[string]http.RequestHandler{}
 )
 
-func NewHttpServer(port uint16, module string, svrId int) error {
-	mhttp.InitSvr(module, svrId)
-
+func NewHttpServer(port uint16) error {
 	_svr.Handler = func(ctx *http.RequestCtx) {
 		if v, ok := _map[common.B2S(ctx.Path())]; ok {
 			v(ctx)

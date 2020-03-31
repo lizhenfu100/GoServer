@@ -1,36 +1,30 @@
 package logic
 
 import (
-	"common"
 	"common/timer"
+	"common/tool/usage"
 	"conf"
 	"nets/tcp"
-	"svr_game/gm"
 	"svr_game/player"
 	"time"
 )
 
 func MainLoop() {
-	gm.InitAwardDB()
 	player.InitDB()
-
 	InitTimeUpdate()
+	timer.AddTimer(usage.Check, 60, 600, -1)
 
-	timeNow, timeOld, timeElapse := time.Now().UnixNano()/int64(time.Millisecond), int64(0), 0
-	for {
+	for timeNow, timeOld, timeElapse := time.Now().UnixNano()/int64(time.Millisecond), int64(0), 0; ; {
 		timeOld = timeNow
 		timeNow = time.Now().UnixNano() / int64(time.Millisecond)
 		timeElapse = int(timeNow - timeOld)
 
 		player.G_ServiceMgr.RunAllService(timeElapse, timeNow)
-		timer.G_TimerMgr.Refresh(timeElapse, timeNow)
-
+		timer.Refresh(timeElapse, timeNow)
 		tcp.G_RpcQueue.Update()
 
 		if timeElapse < conf.FPS_GameSvr {
 			time.Sleep(time.Duration(conf.FPS_GameSvr-timeElapse) * time.Millisecond)
 		}
 	}
-}
-func Rpc_net_error(req, ack *common.NetPack, conn *tcp.TCPConn) {
 }

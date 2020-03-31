@@ -1,6 +1,7 @@
 package main
 
 import (
+	"conf"
 	"flag"
 	"fmt"
 	"runtime/debug"
@@ -63,23 +64,8 @@ func main() {
 	}()
 
 	//1、收集RpcInfo -- 公共服务器、具体某游戏的业务服务器
-	svrList := []string{
-		"shared_svr/svr_center",
-		"shared_svr/svr_chat",
-		"shared_svr/svr_file",
-		"shared_svr/svr_friend",
-		"shared_svr/svr_gateway",
-		"shared_svr/svr_gm",
-		"shared_svr/svr_login",
-		"shared_svr/svr_save",
-		"shared_svr/svr_sdk",
-		"shared_svr/svr_stats",
-		"shared_svr/zookeeper",
-		"svr_cross",
-		"svr_game",
-	}
-	rpcInfos := make([]*RpcInfo, len(svrList))
-	for i, v := range svrList {
+	rpcInfos := make([]*RpcInfo, len(conf.SvrList))
+	for i, v := range conf.SvrList {
 		rpcInfos[i] = gatherRpcInfo(v)
 	}
 
@@ -110,7 +96,7 @@ func main() {
 
 	//5、生成注册代码
 	if isChange || _regist {
-		for i, v := range svrList {
+		for i, v := range conf.SvrList {
 			generateRpcRegist(v, rpcInfos[i])
 		}
 	}

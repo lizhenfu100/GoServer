@@ -11,8 +11,8 @@
 package msg
 
 import (
+	"common"
 	"dbmgo"
-	"errors"
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
 	"time"
@@ -62,7 +62,7 @@ func CreateOrderInDB(ptr *TOrderInfo) error {
 		ptr.Time = time.Now().Unix()
 		return dbmgo.DB().C(KDBTable).Insert(ptr)
 	}
-	return errors.New("GetNextIncId")
+	return common.Err("GetNextIncId")
 }
 func FindOrder(orderId string) *TOrderInfo {
 	if orderId != "" && orderId != "0" {
@@ -78,7 +78,7 @@ func ConfirmOrder(ptr *TOrderInfo) { //确认发货
 	dbmgo.UpdateIdSync(KDBTable, ptr.Order_id, bson.M{"$set": bson.M{"can_send": 0}})
 }
 
-func InitDB() {
+func ClearOldOrder() {
 	now := time.Now().Unix()
 	//删除超过7天的无效订单
 	dbmgo.RemoveAllSync(KDBTable, bson.M{

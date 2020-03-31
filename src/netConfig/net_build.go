@@ -27,6 +27,8 @@ package netConfig
 import (
 	"common/assert"
 	"common/std"
+	"conf"
+	"dbmgo"
 	"fmt"
 	"gamelog"
 	"netConfig/meta"
@@ -36,28 +38,40 @@ import (
 	"sync"
 )
 
-var g_clients sync.Map //<{module,svrId}, *tcp.TCPClient> //本模块主动连其它模块的tcp
-
-func RunNetSvr() {
-	//1、找到当前的配置信息
-	assert.True(meta.G_Local != nil)
+func RunNetSvr(block bool) {
+	//1、找到当前的配置信息，连db
+	local := meta.G_Local
+	assert.True(local != nil)
+	if p := meta.GetMeta("db_"+local.Module, local.SvrID); p != nil {
+		//TODO:支持连多个db，分库分表
+		dbmgo.InitWithUser(p.IP, p.TcpPort, p.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
+	}
 	//2、连接并注册到其它模块
-	if nil == meta.GetMeta("zookeeper", 0) { //没有zookeeper节点，才依赖配置，否则依赖zookeeper的通知
+	if nil == meta.GetMeta("zookeeper", 0) { //没有zoo节点，才依赖配置，否则依赖zoo通知
 		meta.G_Metas.Range(func(_, v interface{}) bool {
-			if p := v.(*meta.Meta); p.IsMyServer(meta.G_Local) == meta.SC {
+			if p := v.(*meta.Meta); p.IsMyServer(local) == meta.SC {
 				ConnectModule(p)
 			}
 			return true
 		})
 	}
 	//3、开启本模块网络服务(Busy Loop)
-	fmt.Printf("-------%s(%d %d) start-------\n", meta.G_Local.Module, meta.G_Local.SvrID, meta.G_Local.Port())
-	if meta.G_Local.HttpPort > 0 {
-		http2.NewHttpServer(meta.G_Local.HttpPort, meta.G_Local.Module, meta.G_Local.SvrID)
-	} else if meta.G_Local.TcpPort > 0 {
-		tcp.NewTcpServer(meta.G_Local.TcpPort, meta.G_Local.Maxconn)
+	fmt.Printf("-------%s(%d %d) start-------\n", local.Module, local.SvrID, local.Port())
+	if local.HttpPort > 0 {
+		http.InitSvr(local.Module, local.SvrID)
+		if block {
+			http2.NewHttpServer(local.HttpPort)
+		} else {
+			go http2.NewHttpServer(local.HttpPort)
+		}
+	} else if local.TcpPort > 0 {
+		if block {
+			tcp.NewTcpServer(local.TcpPort, local.Maxconn)
+		} else {
+			go tcp.NewTcpServer(local.TcpPort, local.Maxconn)
+		}
 	} else {
-		gamelog.Error(meta.G_Local.Module + ": have none HttpPort|TcpPort")
+		gamelog.Error(local.Module + ": have none HttpPort|TcpPort")
 	}
 }
 
@@ -87,6 +101,7 @@ func ConnectModuleTcp(dest *meta.Meta, cb func(*tcp.TCPConn)) {
 	client.ConnectToSvr(tcp.Addr(dest.IP, dest.TcpPort), cb)
 }
 
+var g_clients sync.Map //<{module,svrId}, *tcp.TCPClient> //本模块主动连其它模块的tcp
 // TCPConn是对真正net.Conn的包装，发生断线重连时，会执行tcp.TCPConn.ResetConn()，所以外部缓存的tcp.TCPConn仍有效，无需更新
 func GetTcpConn(module string, svrId int) *tcp.TCPConn {
 	if v, ok := g_clients.Load(std.KeyPair{module, svrId}); ok {

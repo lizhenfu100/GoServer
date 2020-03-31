@@ -16,7 +16,7 @@
 * @ author zhoumf
 * @ date 2018-12-12
 ***********************************************************************/
-package gm
+package gift_bag
 
 import (
 	"common"
@@ -59,7 +59,6 @@ type TGiftBag struct {
 }
 type TGiftCode struct {
 	Code string `bson:"_id"` //已被领的礼包码
-	Key  string //对应的礼包key
 	Uuid string
 	Time int64
 }
@@ -74,11 +73,10 @@ func Rpc_login_gift_get(req, ack *common.NetPack) {
 	uuid := req.ReadString()
 	pf_id := req.ReadString()
 	version := req.ReadString()
-
 	key, timenow := GetDBKey(code), time.Now().Unix() //通过礼包码获得key
 	if p := getGift(key); p == nil {
 		ack.WriteUInt16(err.Not_found)
-	} else if version < p.Version {
+	} else if common.CompareVersion(version, p.Version) < 0 {
 		ack.WriteUInt16(err.Version_not_match)
 	} else if p.Pf_id != "" && p.Pf_id != pf_id {
 		ack.WriteUInt16(err.Pf_id_not_match) //非此平台玩家
@@ -89,7 +87,7 @@ func Rpc_login_gift_get(req, ack *common.NetPack) {
 	} else if _playerGot(key, uuid) {
 		ack.WriteUInt16(err.Already_get_it) //已领过
 	} else {
-		dbmgo.Insert(KDBGiftCode, &TGiftCode{code, key, uuid, timenow})
+		dbmgo.Insert(KDBGiftCode, &TGiftCode{code, uuid, timenow})
 		ack.WriteUInt16(err.Success)
 		ack.WriteString(p.Json)
 	}
@@ -134,19 +132,18 @@ func MakeGiftCode(dbkey string) string {
 	sign := fmt.Sprintf(kSuffixFmt, hash.StrHash(str)%kMod)
 	return str + sign
 }
-func MakeGiftCodeCsv(dbkey string, kAddNum int) {
-	// 读已生成的key
-	f, e := file.CreateFile(KGiftCodeDir, dbkey+".csv", os.O_APPEND|os.O_WRONLY)
+func MakeGiftCodeCsv(gameName, dbkey string, kAddNum int) {
+	dir := KGiftCodeDir + gameName + "/"
+	f, e := file.CreateFile(dir, dbkey+".csv", os.O_APPEND|os.O_RDWR)
 	if e != nil {
 		gamelog.Error("MakeGiftCode: %s", e.Error())
 		return
 	}
-	records, e := file.ReadCsv(KGiftCodeDir + dbkey + ".csv")
+	records, e := csv.NewReader(f).ReadAll() //读已生成的，去重
 	if e != nil {
 		gamelog.Error("MakeGiftCode: %s", e.Error())
 		return
 	}
-
 	all := make(map[string]bool, len(records))
 	news := make([]string, 0, kAddNum)
 	for _, v := range records {
@@ -158,9 +155,7 @@ func MakeGiftCodeCsv(dbkey string, kAddNum int) {
 			all[v] = true
 			news = append(news, v)
 		}
-		fmt.Println("MakeGiftCode: ", len(all), v)
 	}
-
 	wr := func(f *os.File) {
 		w, i := csv.NewWriter(f), 0
 		for _, v := range news {
@@ -178,17 +173,16 @@ func MakeGiftCodeCsv(dbkey string, kAddNum int) {
 	wr(f) //新礼包码写入文件
 
 	// 临时文件，仅含新礼包码
-	if f, e = file.CreateFile(KGiftCodeDir, KGiftCodeTemp, os.O_TRUNC|os.O_WRONLY); e == nil {
+	if f, e = file.CreateFile(dir, KGiftCodeTemp, os.O_TRUNC|os.O_WRONLY); e == nil {
 		wr(f)
 	}
-	fmt.Println("MakeGiftCode End...")
 }
 
 // ------------------------------------------------------------
 func Http_gift_bag_add(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.S2B("passwd error"))
+		w.Write([]byte("passwd error"))
 		return
 	}
 	p := &TGiftBag{Time: time.Now().Unix()}
@@ -198,10 +192,10 @@ func Http_gift_bag_add(w http.ResponseWriter, r *http.Request) {
 		p.Key = strconv.Itoa(int(dbmgo.GetNextIncId("GiftId")))
 	}
 	if !dbmgo.InsertSync(KDBGift, p) {
-		w.Write(common.S2B("gift repeat"))
+		w.Write([]byte("gift repeat"))
 	} else {
 		gamelog.Info("Http_gift_bag_add: %v", q)
-		w.Write(common.S2B("add ok: \n\n"))
+		w.Write([]byte("add ok: \n\n"))
 		ack, _ := json.MarshalIndent(p, "", "     ")
 		w.Write(ack)
 	}
@@ -209,14 +203,14 @@ func Http_gift_bag_add(w http.ResponseWriter, r *http.Request) {
 func Http_gift_bag_set(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.S2B("passwd error"))
+		w.Write([]byte("passwd error"))
 	} else if p := getGift(q.Get("key")); p == nil {
-		w.Write(common.S2B("none gift"))
+		w.Write([]byte("none gift"))
 	} else {
 		gamelog.Info("Http_gift_bag_set: %v\n%v", q, p)
 		copy.CopyForm(p, q)
 		dbmgo.UpdateId(KDBGift, p.Key, p)
-		w.Write(common.S2B("set ok: \n\n"))
+		w.Write([]byte("set ok: \n\n"))
 		ack, _ := json.MarshalIndent(p, "", "     ")
 		w.Write(ack)
 	}
@@ -224,7 +218,7 @@ func Http_gift_bag_set(w http.ResponseWriter, r *http.Request) {
 func Http_gift_bag_view(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	if p := getGift(q.Get("key")); p == nil {
-		w.Write(common.S2B("none gift"))
+		w.Write([]byte("none gift"))
 	} else {
 		ack, _ := json.MarshalIndent(p, "", "     ")
 		w.Write(ack)
@@ -233,13 +227,13 @@ func Http_gift_bag_view(w http.ResponseWriter, r *http.Request) {
 func Http_gift_bag_del(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.S2B("passwd error"))
+		w.Write([]byte("passwd error"))
 	} else if p := getGift(q.Get("key")); p == nil {
-		w.Write(common.S2B("none gift"))
+		w.Write([]byte("none gift"))
 	} else {
 		gamelog.Info("Http_gift_bag_del: %v", p)
 		dbmgo.Remove(KDBGift, bson.M{"_id": p.Key})
-		w.Write(common.S2B("del ok: \n\n"))
+		w.Write([]byte("del ok: \n\n"))
 		ack, _ := json.MarshalIndent(p, "", "     ")
 		w.Write(ack)
 	}
@@ -247,17 +241,17 @@ func Http_gift_bag_del(w http.ResponseWriter, r *http.Request) {
 func Http_gift_bag_clear(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.S2B("passwd error"))
+		w.Write([]byte("passwd error"))
 		return
 	}
 	timestamp, _ := strconv.ParseInt(q.Get("time"), 10, 64)
 
 	if timestamp > time.Now().Unix()-3600*24*30 {
-		w.Write(common.S2B("timestamp error"))
+		w.Write([]byte("timestamp error"))
 	} else {
 		dbmgo.RemoveAll(KDBGift, bson.M{"time": bson.M{"$lt": timestamp}})
 		dbmgo.RemoveAll(KDBGiftCode, bson.M{"time": bson.M{"$lt": timestamp}})
-		w.Write(common.S2B("ok"))
+		w.Write([]byte("ok"))
 	}
 }
 

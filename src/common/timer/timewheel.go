@@ -17,7 +17,6 @@ package timer
 import (
 	"common/assert"
 	"common/safe"
-	"gamelog"
 	"time"
 )
 
@@ -30,30 +29,24 @@ var (
 	kWheelBit  = [...]uint{8, 6, 6, 6, 5} //每一级的槽位数量；用了累计位移，总和不可超32
 	kWheelSize [kWheelNum]uint
 	kWheelCap  [kWheelNum]uint
-	G_TimerMgr SafeMgr
 )
 
-func init() {
-	G_TimerMgr.Init(10240)
-}
-
 // ------------------------------------------------------------
-// node
-type TimeNode struct {
-	prev     *TimeNode
-	next     *TimeNode
+type timeNode struct {
+	prev     *timeNode
+	next     *timeNode
 	timeDead int64
 	interval int
 	total    int
 	callback func()
 }
 
-func (self *TimeNode) init() {
+func (self *timeNode) init() {
 	self.prev = self
 	self.next = self //circle
 }
-func newNode(cb func(), delay, cd, total float32) *TimeNode {
-	p := &TimeNode{
+func newNode(cb func(), delay, cd, total float32) *timeNode {
+	p := &timeNode{
 		timeDead: time.Now().UnixNano()/int64(time.Millisecond) + int64(delay*1000),
 		interval: int(cd * 1000),
 		total:    int(total * 1000),
@@ -62,7 +55,7 @@ func newNode(cb func(), delay, cd, total float32) *TimeNode {
 	p.init()
 	return p
 }
-func (self *TimeNode) _Callback() {
+func (self *timeNode) _Callback() {
 	isJoin := false
 	if self.total < 0 {
 		isJoin = true
@@ -71,28 +64,27 @@ func (self *TimeNode) _Callback() {
 	}
 	if isJoin {
 		self.timeDead += int64(self.interval)
-		G_TimerMgr.timeWheel._AddTimerNode(self.interval, self)
+		_default._AddTimerNode(self.interval, self)
 	}
 	self.callback()
 }
-func (self *TimeNode) Stop() bool { return G_TimerMgr.DelTimer(self) }
 
 // ------------------------------------------------------------
 // wheel
 type stWheel struct {
 	//每个slot维护的node链表为一个环，如此可以简化插入删除的操作
 	//slot.next为node链表中第一个节点，prev为node的最后一个节点
-	slots   []TimeNode
+	slots   []timeNode
 	slotIdx uint
 }
 
 func (self *stWheel) init(size uint) {
-	self.slots = make([]TimeNode, size)
+	self.slots = make([]timeNode, size)
 	for i := uint(0); i < size; i++ {
 		self.slots[i].init()
 	}
 }
-func (self *stWheel) GetCurSlot() *TimeNode {
+func (self *stWheel) GetCurSlot() *timeNode {
 	return &self.slots[self.slotIdx]
 }
 func (self *stWheel) size() uint { return uint(len(self.slots)) }
@@ -100,7 +92,7 @@ func (self *stWheel) size() uint { return uint(len(self.slots)) }
 // ------------------------------------------------------------
 type timeWheel struct {
 	wheels     [kWheelNum]stWheel
-	readyNode  TimeNode
+	readyNode  timeNode
 	timeElapse int
 }
 
@@ -144,13 +136,13 @@ func (self *timeWheel) Refresh(timeElapse int, timenow int64) {
 }
 
 // total：负值表示无限循环
-func (self *timeWheel) AddTimerSec(cb func(), delay, cd, total float32) *TimeNode {
+func (self *timeWheel) AddTimerSec(cb func(), delay, cd, total float32) *timeNode {
 	p := newNode(cb, delay, cd, total)
 	self._AddTimerNode(int(delay*1000), p)
 	return p
 }
-func (self *timeWheel) _AddTimerNode(msec int, node *TimeNode) {
-	var slot *TimeNode
+func (self *timeWheel) _AddTimerNode(msec int, node *timeNode) {
+	var slot *timeNode
 	tickCnt := uint(msec / kTimeTickLen)
 	if tickCnt < kWheelCap[0] {
 		idx := (self.wheels[0].slotIdx + tickCnt) & (kWheelSize[0] - 1) //2的N次幂位操作取余
@@ -170,7 +162,7 @@ func (self *timeWheel) _AddTimerNode(msec int, node *TimeNode) {
 	node.next = slot
 	slot.prev = node
 }
-func (self *timeWheel) DelTimer(node *TimeNode) {
+func (self *timeWheel) DelTimer(node *timeNode) {
 	node.prev.next = node.next
 	node.next.prev = node.prev
 	node.prev, node.next = node, node //circle
@@ -203,7 +195,7 @@ func (self *timeWheel) _Cascade(wheelIdx int, timenow int64) {
 		self._Cascade(wheelIdx+1, timenow)
 	}
 }
-func (self *timeWheel) _AddToReadyNode(node *TimeNode) {
+func (self *timeWheel) _AddToReadyNode(node *timeNode) {
 	node.prev = self.readyNode.prev
 	node.prev.next = node
 	node.next = &self.readyNode
@@ -222,45 +214,39 @@ func (self *timeWheel) _DoTimeOutCallBack() {
 
 // ------------------------------------------------------------
 // 多线程写，单线程读
-type SafeMgr struct {
+var _default TimeWheel
+
+type TimeWheel struct {
+	safe.Pipe
 	timeWheel
-	queue safe.SafeQueue
 }
 type obj struct {
-	ptr   *TimeNode
+	ptr   *timeNode
 	delay int
 }
 
-func (self *SafeMgr) Init(cap uint32) {
-	self.queue.Init(cap)
+func init()                                { _default.Init(1024) }
+func Refresh(timelapse int, timenow int64) { _default.Refresh(timelapse, timenow) }
+func AddTimer(cb func(), delay, cd, total float32) *timeNode {
+	return _default.AddTimer(cb, delay, cd, total)
+}
+func (self *TimeWheel) Init(cap uint32) {
+	self.Pipe.Init(1024)
 	self.timeWheel.Init()
 }
-func (self *SafeMgr) Refresh(timelapse int, timenow int64) {
-	for {
-		if v, ok, _ := self.queue.Get(); ok {
-			if v := v.(obj); v.delay >= 0 {
-				self.timeWheel._AddTimerNode(v.delay, v.ptr)
-			} else {
-				self.timeWheel.DelTimer(v.ptr)
-			}
+func (self *TimeWheel) Refresh(timelapse int, timenow int64) {
+	for _, v := range self.Get() {
+		if v := v.(obj); v.delay >= 0 {
+			self.timeWheel._AddTimerNode(v.delay, v.ptr)
 		} else {
-			break
+			self.timeWheel.DelTimer(v.ptr)
 		}
 	}
 	self.timeWheel.Refresh(timelapse, timenow)
 }
-func (self *SafeMgr) DelTimer(p *TimeNode) bool {
-	ok, _ := self.queue.Put(obj{p, -1})
-	if !ok {
-		gamelog.Error("timer del fail")
-	}
-	return ok
-}
-func (self *SafeMgr) AddTimerSec(cb func(), delay, cd, total float32) *TimeNode {
+func (self *TimeWheel) AddTimer(cb func(), delay, cd, total float32) *timeNode {
 	p := newNode(cb, delay, cd, total)
-	if ok, _ := self.queue.Put(obj{p, int(delay * 1000)}); ok {
-		return p
-	}
-	gamelog.Error("timer add fail")
-	return nil
+	self.Add(obj{p, int(delay * 1000)})
+	return p
 }
+func (p *timeNode) Stop() { _default.DelTimer(p) }

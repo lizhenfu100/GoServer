@@ -28,7 +28,7 @@ func Shutdown(args []string) {
 	tcp.CloseServer()
 	http.CloseServer()
 
-	player.G_player_cache.Range(func(_, v interface{}) bool {
+	player.G_players.Range(func(_, v interface{}) bool {
 		v.(*player.TPlayer).Logout()
 		return true
 	})

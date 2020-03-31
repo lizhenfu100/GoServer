@@ -33,8 +33,6 @@ package player
 
 import (
 	"common/service"
-	"common/timer"
-	"common/tool/wechat"
 	"dbmgo"
 	"gamelog"
 	"netConfig/meta"
@@ -44,15 +42,13 @@ import (
 )
 
 const (
-	kIdleMinuteMax  = 5 //须客户端心跳包
-	kReLoginWaitSec = 300
-	kActiveTime     = 24 * 3600
-	kDBPlayer       = "Player"
+	kIdleMinuteMax = 5 //须客户端心跳包
+	kDBPlayer      = "Player"
 )
 
-type TPlayerBase struct {
+type TPlayerBase struct { //Optimize：hash accountId分库分表
 	PlayerID    uint32 `bson:"_id"`
-	AccountID   uint32 //用于网络通信：一个账号下可能有多个角色，但仅可能一个在线
+	AccountID   uint32 //一个账号下可能有多个角色，但仅可能一个在线
 	LoginTime   int64
 	LogoutTime  int64
 	ForbidTime  int64
@@ -61,18 +57,10 @@ type TPlayerBase struct {
 	Head        string
 	Version     string //用于数据升级；客户端连接与自己版本匹配的节点
 }
-type iModule interface {
-	InitAndInsert(*TPlayer)
-	LoadFromDB(*TPlayer)
-	WriteToDB()
-	OnLogin()
-	OnLogout()
-}
 type TPlayer struct {
 	_isOnlnie int32
 	_idleMin  uint32 //每次收到消息时归零
 	conn      *tcp.TCPConn
-	//askchan   chan func(*TPlayer)
 
 	/* --- db data --- */
 	TPlayerBase
@@ -84,6 +72,13 @@ type TPlayer struct {
 	battle  TBattleModule
 	season  TSeasonModule
 }
+type iModule interface {
+	InitAndInsert(*TPlayer)
+	LoadFromDB(*TPlayer)
+	WriteToDB()
+	OnLogin()
+	OnLogout()
+}
 
 func _NewPlayer() *TPlayer {
 	self := new(TPlayer)
@@ -91,7 +86,6 @@ func _NewPlayer() *TPlayer {
 	return self
 }
 func (self *TPlayer) init() {
-	//self.askchan = make(chan func(*TPlayer), 128)
 	self.modules = []iModule{ //regist
 		&self.mail,
 		&self.friend,
@@ -101,16 +95,13 @@ func (self *TPlayer) init() {
 		&self.season,
 	}
 }
-func NewPlayerInDB(accountId uint32, name string) *TPlayer {
+func NewPlayerInDB(accountId uint32) *TPlayer {
 	player := _NewPlayer()
 	// if dbmgo.Find("Player", "name", name, player) { //禁止重名
 	// 	return nil
 	// }
-	player.Name = name
 	player.AccountID = accountId
-	player.PlayerID = accountId //一个账户下仅一个角色的游戏，可令pid=aid
-	//TODO:zhoumf:按格式生成pid，比如前几位是gameSvrId，方便提取信息
-	//player.PlayerID = dbmgo.GetNextIncId("PlayerId")
+	player.PlayerID = accountId
 	player.Version = meta.G_Local.Version
 
 	if dbmgo.DB().C(kDBPlayer).Insert(&player.TPlayerBase) == nil {
@@ -143,45 +134,34 @@ func (self *TPlayer) Login(conn *tcp.TCPConn) {
 	gamelog.Debug("Login: aid(%d), %s", self.AccountID, self.Name)
 	if atomic.SwapInt32(&self._isOnlnie, 1) == 0 {
 		atomic.AddInt32(&g_online_cnt, 1)
-
-		//TODO:zhoumf:在线必须得在Service队列中，且唯一，如何debug？
-		if !G_ServiceMgr.Register(Service_Write_DB, self) || //防止多次登录的重复注册
-			!G_ServiceMgr.Register(Service_Check_AFK, self) {
-			gamelog.Error("Login Service cap(%d)", G_ServiceMgr.Cap())
-			wechat.SendMsg("登录排队，满了")
-		}
+		G_ServiceMgr.Register(Service_Write_DB, self) //防止多次登录的重复注册
+		G_ServiceMgr.Register(Service_Check_AFK, self)
 	}
 	atomic.StoreUint32(&self._idleMin, 0)
 	atomic.StoreInt64(&self.LoginTime, time.Now().Unix())
-	if self.conn = conn; conn != nil && conn.UserPtr == nil { //链接可能是gateway节点
-		conn.UserPtr = self
+	if self.conn != nil && self.conn != conn {
+		self.conn.Close() //防串号
+	}
+	if self.conn = conn; conn != nil && conn.GetUser() == nil { //链接可能是gateway节点
+		conn.SetUser(self)
 	}
 	for _, v := range self.modules {
 		v.OnLogin()
 	}
 }
 func (self *TPlayer) Logout() {
-	gamelog.Debug("Logout: aid(%d)", self.Name, self.AccountID)
+	gamelog.Debug("Logout: aid(%d)", self.AccountID)
 	if atomic.SwapInt32(&self._isOnlnie, 0) > 0 {
 		atomic.AddInt32(&g_online_cnt, -1)
+		G_ServiceMgr.UnRegister(Service_Write_DB, self)
+		G_ServiceMgr.UnRegister(Service_Check_AFK, self)
 	}
-	atomic.StoreInt64(&self.LogoutTime, time.Now().Unix())
 	for _, v := range self.modules {
 		v.OnLogout()
 	}
+	atomic.StoreInt64(&self.LogoutTime, time.Now().Unix())
 	self.WriteAllToDB()
-
-	G_ServiceMgr.UnRegister(Service_Write_DB, self)
-	G_ServiceMgr.UnRegister(Service_Check_AFK, self)
-
-	//Notice: timer在主线程执行，传入函数必须线程安全
-	timer.G_TimerMgr.AddTimerSec(func() { //延时删除，提升重连效率
-		if !self.IsOnline() {
-			gamelog.Debug("Aid(%d) Delete", self.AccountID)
-			self.WriteAllToDB()
-			DelCache(self)
-		}
-	}, kReLoginWaitSec, 0, 0)
+	DelCache(self)
 }
 func (self *TPlayer) IsOnline() bool { return atomic.LoadInt32(&self._isOnlnie) > 0 }
 
@@ -206,9 +186,8 @@ func _Service_Write_DB(ptr interface{}) {
 	}
 }
 func _Service_Check_AFK(ptr interface{}) {
-	if player, ok := ptr.(*TPlayer); ok && player.IsOnline() {
+	if player, ok := ptr.(*TPlayer); ok {
 		if atomic.AddUint32(&player._idleMin, 1) > kIdleMinuteMax {
-			gamelog.Debug("Aid(%d) AFK", player.AccountID)
 			player.Logout()
 		}
 	}

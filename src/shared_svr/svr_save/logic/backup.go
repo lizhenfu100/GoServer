@@ -31,9 +31,11 @@ import (
 	"fmt"
 	"gamelog"
 	"generate_out/err"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -55,7 +57,7 @@ type Backup struct {
 func Http_backup_conf(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.S2B("passwd error"))
+		w.Write([]byte("passwd error"))
 		return
 	}
 	G_Backup.Lock()
@@ -69,7 +71,7 @@ func Http_backup_conf(w http.ResponseWriter, r *http.Request) {
 func Http_backup_force(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.S2B("passwd error"))
+		w.Write([]byte("passwd error"))
 		return
 	}
 	n, _ := strconv.Atoi(q.Get("force"))
@@ -111,6 +113,7 @@ func (self *Backup) OnEnterNextDay() {
 // 敏感数据（如游戏进度）异动，记录历史存档
 type TSensitive struct {
 	GameSession int //进度，不同游戏含义不一
+	//TODO:zhoumf:存档标识SaveKey，不是该账号的档，不能上传
 }
 
 func (self *TSaveData) CheckBackup(newExtra string) {
@@ -118,7 +121,7 @@ func (self *TSaveData) CheckBackup(newExtra string) {
 	json.Unmarshal(common.S2B(newExtra), pNew)
 	json.Unmarshal(common.S2B(self.Extra), pOld)
 	if pNew.GameSession < pOld.GameSession {
-		gamelog.Warn("GameSession rollback: %s", self.Key)
+		gamelog.Warn("GameSession: %s %d->%d", self.Key, pOld.GameSession, pNew.GameSession)
 	}
 	if pNew.GameSession < pOld.GameSession || G_Backup.IsValid(self.Key) {
 		self.Backup()
@@ -146,5 +149,33 @@ func (self *TSaveData) RollBack(filename string) uint16 {
 		}
 		f.Close()
 		return err.Success
+	}
+}
+
+// ------------------------------------------------------------
+func Rpc_save_backup_file(req, ack *common.NetPack) {
+	uid := req.ReadString()
+	pf_id := req.ReadString()
+
+	posInBuf, count := ack.Size(), uint32(0)
+	ack.WriteUInt32(count)
+
+	if names, e := file.WalkDir(fmt.Sprintf("player/%s/", GetSaveKey(pf_id, uid)), ".save"); e == nil {
+		for i := 0; i < len(names); i++ {
+			if f, e := os.Open(names[i]); e == nil {
+				if fi, e := f.Stat(); e == nil {
+					buff := make([]byte, fi.Size())
+					if _, e = io.ReadFull(f, buff); e == nil {
+						f.Close()
+						dir, name := path.Split(names[i])
+						ack.WriteString(dir)
+						ack.WriteString(name)
+						ack.WriteLenBuf(buff)
+						count++
+					}
+				}
+			}
+		}
+		ack.SetUInt32(posInBuf, count)
 	}
 }

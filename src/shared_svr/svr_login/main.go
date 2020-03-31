@@ -18,7 +18,6 @@ import (
 	"common/file"
 	"common/tool/email"
 	"conf"
-	"dbmgo"
 	"flag"
 	"gamelog"
 	_ "generate_out/rpc/shared_svr/svr_login"
@@ -28,28 +27,21 @@ import (
 	"shared_svr/zookeeper/component"
 )
 
-const kModuleName = "login"
-
 func main() {
 	var svrId int
 	flag.IntVar(&svrId, "id", 1, "svrId")
 	flag.Parse()
 
 	//初始化日志系统
-	gamelog.InitLogger(kModuleName)
+	gamelog.InitLogger("login")
 	InitConf()
 
 	//设置本节点meta信息
-	meta.G_Local = meta.GetMeta(kModuleName, svrId)
-
-	//设置mongodb的服务器地址
-	pMeta := meta.GetMeta("db_login", svrId)
-	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName,
-		conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
+	meta.G_Local = meta.GetMeta(conf.GameName, svrId)
 
 	component.RegisterToZookeeper()
 
-	go netConfig.RunNetSvr()
+	netConfig.RunNetSvr(false)
 	logic.MainLoop()
 }
 func InitConf() {

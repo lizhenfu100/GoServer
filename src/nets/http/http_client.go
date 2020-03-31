@@ -5,7 +5,6 @@ import (
 	"common"
 	"common/file"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"generate_out/err"
 	"io"
@@ -16,8 +15,8 @@ import (
 )
 
 var (
-	ErrGet  = errors.New("http get failed")
-	ErrPost = errors.New("http post failed")
+	ErrGet  = common.Err("http get failed")
+	ErrPost = common.Err("http post failed")
 
 	Client iClient //指向不同的实现
 )

@@ -34,9 +34,7 @@ type Rpc interface {
 	CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack))
 	CallRpcSafe(rid uint16, sendFun, recvFun func(*common.NetPack))
 }
-type rpcHttp struct {
-	*meta.Meta //缓存指针，节点信息可能变更
-}
+type rpcHttp struct{ *meta.Meta }
 
 func (p *rpcHttp) IsClose() bool { return p.IsClosed }
 func (p *rpcHttp) CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack)) {
@@ -46,24 +44,30 @@ func (p *rpcHttp) CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack)) {
 func (p *rpcHttp) CallRpcSafe(rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	p.CallRpc(rid, sendFun, recvFun)
 }
-func GetRpc(module string, svrId int) (Rpc, bool) { //interface无法"!= nil"判别有效
-	if p := meta.GetMeta(module, svrId); p == nil {
-		return nil, false
-	} else if p.HttpPort > 0 {
+
+//interface无法"!= nil"判别有效
+//GetRpc("game", 1); fmt.Println(p, ok, p != nil) //nil false true
+func GetRpc1(p *meta.Meta) (Rpc, bool) {
+	if p.HttpPort > 0 {
 		return &rpcHttp{p}, true
 	} else {
-		ret := GetTcpConn(module, svrId)
+		ret := GetTcpConn(p.Module, p.SvrID)
 		return ret, ret != nil
 	}
-	//GetRpc("game", 1); fmt.Println(p, ok, p != nil)
-	//<nil> false true
+}
+func GetRpc2(module string, svrId int) (Rpc, bool) {
+	if p := meta.GetMeta(module, svrId); p == nil {
+		return nil, false
+	} else {
+		return GetRpc1(p)
+	}
 }
 
 // ------------------------------------------------------------
 //! 无状态节点，随机取 -- login friend sdk save gm
 func GetRpcRand(module string) (Rpc, bool) {
-	if id := meta.RandModuleID(module); id >= 0 {
-		return GetRpc(module, id)
+	if p := meta.GetByRand(module); p != nil {
+		return GetRpc1(p)
 	}
 	return nil, false
 }
@@ -71,18 +75,11 @@ func GetRpcRand(module string) (Rpc, bool) {
 // ------------------------------------------------------------
 //! center http -- 账号名hash取模
 func HashCenterID(key string) int {
-	ids := meta.GetModuleIDs("center", meta.G_Local.Version)
-	if length := uint32(len(ids)); length > 0 {
-		return ids[hash.StrHash(key)%length]
+	list := meta.GetMetas("center", meta.G_Local.Version)
+	if n := uint32(len(list)); n > 0 {
+		return list[hash.StrHash(key)%n].SvrID
 	}
 	return -1
-}
-func SyncRelayToCenter(svrId int, rid uint16, req, ack *common.NetPack) {
-	CallRpcCenter(svrId, rid, func(buf *common.NetPack) {
-		buf.WriteBuf(req.LeftBuf())
-	}, func(recvBuf *common.NetPack) {
-		ack.WriteBuf(recvBuf.LeftBuf())
-	})
 }
 func CallRpcCenter(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	if addr := GetHttpAddr("center", svrId); addr != "" {
@@ -97,16 +94,16 @@ func CallRpcCenter(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)
 var g_cache_gate sync.Map //<int, Rpc>
 
 func HashGatewayID(accountId uint32) int { //TODO：用一致性hash，取模方式gateway无法动态扩展
-	ids := meta.GetModuleIDs("gateway", meta.G_Local.Version)
-	if length := uint32(len(ids)); length > 0 {
-		return ids[accountId%length]
+	list := meta.GetMetas("gateway", meta.G_Local.Version)
+	if n := uint32(len(list)); n > 0 {
+		return list[accountId%n].SvrID
 	}
 	return -1
 }
 func CallRpcGateway(accountId uint32, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	svrId := HashGatewayID(accountId)
 	if p, ok := GetGatewayRpc(svrId); ok {
-		p.CallRpcSafe(enum.Rpc_gateway_relay_player_msg, func(buf *common.NetPack) {
+		p.CallRpcSafe(enum.Rpc_gateway_relay, func(buf *common.NetPack) {
 			buf.WriteUInt16(rid)
 			buf.WriteUInt32(accountId)
 			sendFun(buf)
@@ -118,11 +115,11 @@ func CallRpcGateway(accountId uint32, rid uint16, sendFun, recvFun func(*common.
 func GetGatewayRpc(svrId int) (ret Rpc, ok bool) {
 	var v interface{}
 	if v, ok = g_cache_gate.Load(svrId); !ok {
-		if ret, ok = GetRpc("gateway", svrId); ok {
+		if ret, ok = GetRpc2("gateway", svrId); ok {
 			g_cache_gate.Store(svrId, ret)
 		}
 	} else if ret, ok = v.(Rpc); !ok || ret.IsClose() {
-		if ret, ok = GetRpc("gateway", svrId); ok {
+		if ret, ok = GetRpc2("gateway", svrId); ok {
 			g_cache_gate.Store(svrId, ret)
 		}
 	}
@@ -136,11 +133,11 @@ var g_cache_game sync.Map //<int, Rpc>
 func GetGameRpc(svrId int) (ret Rpc, ok bool) {
 	var v interface{}
 	if v, ok = g_cache_game.Load(svrId); !ok {
-		if ret, ok = GetRpc("game", svrId); ok {
+		if ret, ok = GetRpc2("game", svrId); ok {
 			g_cache_game.Store(svrId, ret)
 		}
 	} else if ret, ok = v.(Rpc); !ok || ret.IsClose() {
-		if ret, ok = GetRpc("game", svrId); ok {
+		if ret, ok = GetRpc2("game", svrId); ok {
 			g_cache_game.Store(svrId, ret)
 		}
 	}
@@ -153,8 +150,8 @@ var g_cache_cross = make(map[int]*tcp.TCPConn)
 var g_cache_battle = make(map[int]*tcp.TCPConn)
 
 func CallRpcCross(rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	if id := meta.RandModuleID("cross"); id >= 0 {
-		if conn := GetCrossConn(id); conn != nil {
+	if p := meta.GetByRand("cross"); p != nil {
+		if conn := GetCrossConn(p.SvrID); conn != nil {
 			conn.CallRpc(rid, sendFun, recvFun)
 			return
 		}

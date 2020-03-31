@@ -1,7 +1,7 @@
 package common
 
 const (
-	PACK_HEADER_SIZE = 7 //packetType & Opcode & reqIdx
+	PACK_HEADER_SIZE = 7 //Type & Opcode & reqIdx
 	INDEX_TYPE       = 0 //uint8
 	INDEX_MSG_ID     = 1 //uint16
 	INDEX_REQ_IDX    = 3 //uint32
@@ -9,61 +9,34 @@ const (
 	// INDEX_TYPE：写通用错误码
 	Err_offline   = 255
 	Err_too_often = 254
-	Err_end_flag  = 200
+	Err_flag      = 200
 )
 
-type NetPack struct {
-	*ByteBuffer
-}
+type NetPack = ByteBuffer
 
 func NewNetPackCap(capacity int) *NetPack {
-	if capacity < 16 {
-		capacity = 16
-	}
-	self := &NetPack{NewByteBufferCap(capacity)}
-	self.ReadPos = PACK_HEADER_SIZE
+	self := NewByteBufferCap(capacity)
+	self.ReadPos = PACK_HEADER_SIZE        //len == 0
 	self.buf = self.buf[:PACK_HEADER_SIZE] //len == PACK_HEADER_SIZE
 	return self
 }
-func NewNetPackLen(length int) *NetPack {
-	if length < PACK_HEADER_SIZE {
-		return nil
-	} else {
-		self := &NetPack{NewByteBufferLen(length)}
-		self.ReadPos = PACK_HEADER_SIZE
-		return self
-	}
-}
-func NewNetPack(data []byte) *NetPack {
+func ToNetPack(data []byte) *NetPack {
 	if len(data) < PACK_HEADER_SIZE {
 		return nil
 	} else {
-		self := &NetPack{NewByteBuffer(data)}
-		self.ReadPos = PACK_HEADER_SIZE
-		return self
+		return &NetPack{data, PACK_HEADER_SIZE}
 	}
 }
 
 func (self *NetPack) Body() []byte  { return self.buf[PACK_HEADER_SIZE:] }
 func (self *NetPack) BodySize() int { return len(self.buf) - PACK_HEADER_SIZE }
-func (self *NetPack) Clear() {
+func (self *NetPack) ClearBody() {
 	self.buf = self.buf[:PACK_HEADER_SIZE]
 	self.ReadPos = PACK_HEADER_SIZE
-	self.SetMsgId(0)
-}
-func (self *NetPack) Reset(data []byte) bool {
-	if len(data) < PACK_HEADER_SIZE {
-		self.Clear()
-		return false
-	} else {
-		self.buf = data
-		self.ReadPos = PACK_HEADER_SIZE
-		return true
-	}
 }
 func (self *NetPack) ResetHead(other *NetPack) {
 	self.buf = self.buf[:0]
-	self.WriteBuf(other.buf[:PACK_HEADER_SIZE])
+	self.buf = append(self.buf, other.buf[:PACK_HEADER_SIZE]...)
 	self.ReadPos = PACK_HEADER_SIZE
 }
 
@@ -94,5 +67,5 @@ func (self *NetPack) GetReqKey() uint64 {
 }
 func (self *NetPack) SetReqKey(key uint64) {
 	self.SetMsgId(uint16(key >> 32))
-	self.SetReqIdx(uint32(0xFFFFFFFF & key))
+	self.SetReqIdx(uint32(key))
 }

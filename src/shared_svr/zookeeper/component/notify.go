@@ -50,9 +50,6 @@ func CallRpcZoo(rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	g_cache_zoo_conn.CallRpc(rid, sendFun, recvFun)
 }
 
-// --------------------------------------------------------
-// ---------------此处Rpc函数须于init()手动注册---------------
-// --------------------------------------------------------
 //有服务节点加入，zoo通告相应客户节点
 func _Rpc_svr_node_join(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	pMeta := new(meta.Meta)

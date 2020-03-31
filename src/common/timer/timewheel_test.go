@@ -10,7 +10,7 @@ import (
 // TODO：timewheel单元测试
 
 func Test_add(t *testing.T) {
-	timer.G_TimerMgr.AddTimerSec(func() {
+	timer.AddTimer(func() {
 		fmt.Println("")
 	}, 0, 0, 0)
 }

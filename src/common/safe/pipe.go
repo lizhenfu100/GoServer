@@ -1,83 +1,58 @@
 package safe
 
-import (
-	"fmt"
-	"runtime/debug"
-	"sync"
-)
+import "sync"
 
-// 放开容量限制的channel，添加不阻塞，接收可能阻塞；传入nil表示退出
-type Pipe struct {
+type Pipe struct { //非阻塞
 	sync.Mutex
-	cond sync.Cond
-	list []interface{}
+	multi       [2][]interface{}
+	writer      []interface{}
+	writerCycle uint8
 }
-
-func (self *Pipe) Init() {
-	self.cond.L = &self.Mutex
-}
-func (self *Pipe) Add(msg interface{}) {
-	self.Lock()
-	self.list = append(self.list, msg)
-	self.Unlock()
-	self.cond.Signal()
-}
-func (self *Pipe) MoveToStack(retList *[]interface{}) {
-	self.Lock()
-	for len(self.list) == 0 {
-		self.cond.Wait() //无数据，阻塞
-	}
-	for _, v := range self.list {
-		*retList = append(*retList, v)
-		if v == nil {
-			break //stop loop flag
-		}
-	}
-	self.list = self.list[:0]
-	self.Unlock()
-}
-
-// ------------------------------------------------------------
-type EventQueue struct {
+type Chan struct { //阻塞
+	sync.Cond
 	Pipe
-	cond sync.WaitGroup
 }
 
-func (self *EventQueue) Init() {
-	self.Pipe.Init()
-}
-func (self *EventQueue) Add(cb func()) {
-	if cb != nil {
-		self.Pipe.Add(cb)
+func (self *Pipe) Init(cap uint32) {
+	for i := 0; i < len(self.multi); i++ {
+		self.multi[i] = make([]interface{}, 0, cap)
 	}
+	self.writer = self.multi[0]
 }
-func (self *EventQueue) Loop() {
-	self.cond.Add(1)
-	var msgs []interface{}
-LOOP1:
-	for {
-		msgs = msgs[:0]
-		self.MoveToStack(&msgs)
-		for _, msg := range msgs {
-			switch v := msg.(type) {
-			case func():
-				safeCall(v)
-			case nil:
-				break LOOP1
-			default:
-				fmt.Printf("unexpected type %T\n", v)
-			}
-		}
+func (self *Pipe) Add(v interface{}) {
+	self.Lock()
+	self.writer = append(self.writer, v)
+	self.Unlock()
+}
+func (self *Pipe) Get() (ret []interface{}) {
+	self.Lock()
+	ret = self._get()
+	self.Unlock()
+	return
+}
+func (self *Pipe) _get() (ret []interface{}) {
+	ret = self.writer
+	self.writerCycle = (self.writerCycle + 1) % uint8(len(self.multi))
+	self.writer = self.multi[self.writerCycle] //change writer
+	self.writer = self.writer[:0]
+	return ret
+}
+func (self *Chan) Init(cap uint32) {
+	self.Pipe.Init(cap)
+	self.Cond.L = &self.Mutex
+}
+func (self *Chan) Add(v interface{}) {
+	self.Lock()
+	self.writer = append(self.writer, v)
+	self.Unlock()
+	self.Signal()
+}
+func (self *Chan) Get() (ret []interface{}) {
+	self.Lock()
+	for len(self.writer) == 0 {
+		self.Wait()
 	}
-	self.cond.Done()
-}
-func (self *EventQueue) WaitStop() { self.Pipe.Add(nil); self.cond.Wait() }
-
-func safeCall(cb func()) {
-	defer func() {
-		if r := recover(); r != nil {
-			debug.PrintStack()
-		}
-	}()
-	cb()
+	ret = self._get()
+	self.Unlock()
+	return
 }

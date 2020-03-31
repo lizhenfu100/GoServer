@@ -40,6 +40,14 @@ func (self *Team) OnLogout()              {}
 // -- 队伍数据
 func (self *Team) Clear()        { self.list = self.list[:0] }
 func (self *Team) IsEmpty() bool { return len(self.list) == 0 }
+func (self *Team) Have(aid uint32) bool {
+	for i := 0; i < len(self.list); i++ {
+		if self.list[i].show.AccountId == aid {
+			return true
+		}
+	}
+	return false
+}
 
 func (self *Team) DataToBuf(buf *common.NetPack) {
 	buf.WriteByte(byte(len(self.list)))
@@ -70,7 +78,7 @@ func Rpc_game_battle_begin(req, ack *common.NetPack, this *TPlayer) {
 	}
 	gameMode := req.ReadUInt8()
 
-	netConfig.CallRpcCross(enum.Rpc_cross_join_battle, func(buf *common.NetPack) {
+	netConfig.CallRpcCross(enum.Rpc_cross_relay_battle_data, func(buf *common.NetPack) {
 		buf.WriteString(meta.G_Local.Version)
 		buf.WriteUInt8(gameMode)
 		this.team.DataToBuf(buf)
@@ -81,7 +89,6 @@ func Rpc_game_battle_begin(req, ack *common.NetPack, this *TPlayer) {
 		cnt := recvBuf.ReadByte()
 		for i := byte(0); i < cnt; i++ {
 			accountId := recvBuf.ReadUInt32()
-
 			// 通知client登录战斗服
 			CallRpcPlayer(accountId, enum.Rpc_client_login_battle, func(buf *common.NetPack) {
 				buf.WriteString(battleSvrOutIP)
@@ -93,7 +100,8 @@ func Rpc_game_battle_begin(req, ack *common.NetPack, this *TPlayer) {
 	// 通知队员，开等待界面
 	for i := 0; i < len(this.team.list); i++ {
 		ptr := &this.team.list[i]
-		CallRpcPlayer(ptr.show.AccountId, enum.Rpc_client_show_wait_ui, func(buf *common.NetPack) {}, nil)
+		CallRpcPlayer(ptr.show.AccountId, enum.Rpc_client_show_wait_ui, func(buf *common.NetPack) {
+		}, nil)
 	}
 }
 func Rpc_game_exit_team(req, ack *common.NetPack, this *TPlayer) {
@@ -148,6 +156,9 @@ func Rpc_game_team_chat(req, ack *common.NetPack, this *TPlayer) {
 func (self *TPlayer) JoinMyTeam(dest *TBattleModule) {
 	gamelog.Debug("JoinMyTeam: %v", self.team)
 
+	if self.team.Have(dest.show.AccountId) {
+		return
+	}
 	// 队内广播加入事件 -- 后台队伍数据，仅队长持有即可，同步到队员客户端，队员后台不必有
 	for i := 0; i < len(self.team.list); i++ {
 		ptr := &self.team.list[i]
@@ -155,7 +166,6 @@ func (self *TPlayer) JoinMyTeam(dest *TBattleModule) {
 			dest.show.DataToBuf(buf)
 		}, nil)
 	}
-
 	self.team.list = append(self.team.list, *dest)
 	CallRpcPlayer(dest.show.AccountId, enum.Rpc_client_on_self_join_team, func(buf *common.NetPack) {
 		self.team.ShowInfoToBuf(buf)

@@ -23,7 +23,7 @@ package cache
 
 import (
 	"common"
-	"common/std/sign"
+	"conf"
 	"gamelog"
 	"generate_out/err"
 	"github.com/go-redis/redis"
@@ -31,10 +31,7 @@ import (
 	"time"
 )
 
-var g_redis = redis.NewClient(&redis.Options{
-	Addr:     ":6379",
-	Password: "",
-})
+var g_redis = redis.NewClient(&redis.Options{Addr: ":6379"})
 
 func init() {
 	if _, e := g_redis.Ping().Result(); e != nil {
@@ -49,17 +46,23 @@ type TCache struct {
 	Password   string
 }
 
-// 逻辑同 Rpc_center_account_login
-func AccountLogin(req, ack *common.NetPack) (ok bool, account, pwd string) {
-	oldPos := req.ReadPos //临时读取
-	req.ReadString()      //gameName
-	account = req.ReadString()
-	pwd = req.ReadString()
-	sign.Decode(&account, &pwd)
-	req.ReadPos = oldPos
-	if ret, e := g_redis.Get(account).Result(); e == nil {
+func Add(account, pwd string, ack *common.NetPack) {
+	oldPos, v := ack.ReadPos, TCache{Password: pwd}
+	if ack.ReadUInt16() == err.Success {
+		v.BufToData(ack)
+		v.LoginSvrId = ack.ReadInt()
+		v.GameSvrId = ack.ReadInt()
+		if !conf.Auto_GameSvr || v.GameSvrId > 0 {
+			buf, _ := common.T2B(&v)
+			g_redis.Set(account, buf, 48*time.Hour)
+		}
+	}
+	ack.ReadPos = oldPos //临时读取
+}
+func Get(account, pwd string, ack *common.NetPack) (ok bool) {
+	if b, e := g_redis.Get(account).Result(); e == nil {
 		var v TCache
-		if common.B2T(common.S2B(ret), &v) == nil && v.Password == pwd {
+		if common.B2T(common.S2B(b), &v) == nil && v.Password == pwd {
 			ok = true
 			ack.WriteUInt16(err.Success)
 			v.DataToBuf(ack)
@@ -70,31 +73,17 @@ func AccountLogin(req, ack *common.NetPack) (ok bool, account, pwd string) {
 	gamelog.Track("Cache Login: %s %v", account, ok)
 	return
 }
-func Add(account, pwd string, ack *common.NetPack) {
-	oldPos := ack.ReadPos //临时读取
-	if ack.ReadUInt16() == err.Success {
-		var v TCache
-		v.BufToData(ack)
-		v.LoginSvrId = ack.ReadInt()
-		v.GameSvrId = ack.ReadInt()
-		v.Password = pwd
-		//有效的登录信息，才缓存
-		if v.LoginSvrId > 0 && v.GameSvrId > 0 {
-			buf, _ := common.T2B(&v)
-			g_redis.Set(account, buf, 48*time.Hour)
-		}
-	}
-	ack.ReadPos = oldPos
-}
+func Del(keys ...string) { g_redis.Del(keys...) }
+
 func IsExist(account string) bool {
-	sign.Decode(&account)
 	_, e := g_redis.Get(account).Result()
 	return e == nil
 }
 func Rpc_login_del_account_cache(req, ack *common.NetPack) {
-	var keys []string
-	for cnt, i := req.ReadByte(), byte(0); i < cnt; i++ {
-		keys = append(keys, req.ReadString())
+	cnt := req.ReadByte()
+	keys := make([]string, cnt)
+	for i := byte(0); i < cnt; i++ {
+		keys[i] = req.ReadString()
 	}
 	g_redis.Del(keys...)
 }

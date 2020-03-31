@@ -10,17 +10,16 @@
     <div class="all-wrapper">
         <h1>黑白名单</h1>
         <div class="form-wrapper">
-            <script>
-                function setActionAddr(form) {
-                    var select = form.getElementsByTagName("select")[0];
-                    var uri = select.options[select.selectedIndex].value;
-                    form.action="http://52.82.35.237:7081"+uri;
-                }
-            </script>
-            <form action="" method="get" onsubmit="setActionAddr(this)">
+            <form action="" method="get" onsubmit="SetSelectAddr2(this)">
+                <label>大区:</label>
+                <select>
+                    <option value="http://52.82.35.237:7081">China</option>
+                    <option value="http://15.185.99.247:7081">MiddleEast</option>
+                </select>
                 <label>操作类型:</label>
                 <select>
                     <option value="/names_add">添加</option>
+                    <option value="/names_view">查看</option>
                     <option value="/names_del">删除</option>
                 </select>
                 <label>名单类型:</label>

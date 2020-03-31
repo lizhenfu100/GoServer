@@ -33,108 +33,57 @@ type MultiQueue struct {
 	multi       [2][]interface{} //须比消费者数目多1，生产者共用一个写
 	writer      []interface{}    //引用自multi，生产者们往里写入
 	writerCycle uint8            //multi中循环挑选，作为writer
-	kSize       uint32
 	wpos        uint32
+	wposOld     uint32 //上次写了多少，用于减少清理数目
+	kFreeCycle  uint8  //惰性清理引用，让gc回收；队列极长时，可能尾部数据一直被引用着，无法gc
+	freeCycle   uint8
+	stop        bool
 }
 
-func (self *MultiQueue) Init(size uint32) {
-	self.kSize = size
+func (self *MultiQueue) Init(size uint32, freeCycle uint8) {
 	for i := 0; i < len(self.multi); i++ {
 		self.multi[i] = make([]interface{}, size)
 	}
 	self.writer = self.multi[0]
+	self.kFreeCycle = freeCycle
 }
-func (self *MultiQueue) PendingPos() (ret uint32) {
+func (self *MultiQueue) Close() {
 	self.Lock()
-	ret = self.wpos
+	self.stop = true
 	self.Unlock()
-	return
 }
-func (self *MultiQueue) Put(val interface{}) bool {
+func (self *MultiQueue) Put(v interface{}) (bool, bool) {
 	self.Lock()
-	if self.wpos >= self.kSize {
+	if self.wpos >= uint32(len(self.writer)) || self.stop {
 		self.Unlock()
-		return false
+		return false, self.stop
 	}
-	self.writer[self.wpos] = val
+	self.writer[self.wpos] = v
 	self.wpos++
 	self.Unlock()
-	return true
+	return true, false
 }
 func (self *MultiQueue) Get() (ret []interface{}) {
 	self.Lock()
 	ret = self.writer[:self.wpos]
 	self.writerCycle = (self.writerCycle + 1) % uint8(len(self.multi))
 	self.writer = self.multi[self.writerCycle] //change writer
+	self.free()
 	self.wpos = 0
 	self.Unlock()
 	return
 }
-
-// ------------------------------------------------------------
-type MultiQueueEx struct {
-	sync.Mutex
-	multi          [2][]interface{} //须比消费者数目多1，生产者共用一个写
-	writer         []interface{}    //引用自multi，生产者们往里写入
-	writerCycle    uint8            //multi中循环挑选，作为writer
-	stop           bool
-	pause          bool
-	kLazyFreeCycle uint8 //惰性清理引用，让gc回收；队列极长时，可能尾部数据一直被引用着，无法gc
-	freeCycle      uint8
-	kSize          uint32
-	wpos           uint32
-	wposOld        uint32 //上次写了多少，用于减少清理数目
-}
-
-func (self *MultiQueueEx) Init(size uint32, lazyFreeCycle uint8) {
-	self.kSize = size
-	self.kLazyFreeCycle = lazyFreeCycle
-	for i := 0; i < len(self.multi); i++ {
-		self.multi[i] = make([]interface{}, size)
-	}
-	self.writer = self.multi[0]
-}
-func (self *MultiQueueEx) Close() {
-	self.Lock()
-	self.stop = true
-	self.Unlock()
-}
-func (self *MultiQueueEx) Put(val interface{}) (bool, bool) {
-	self.Lock()
-	if self.pause || self.wpos >= self.kSize {
-		self.Unlock()
-		return false, self.stop
-	}
-	if self.stop {
-		self.Unlock()
-		return false, true
-	}
-	self.writer[self.wpos] = val
-	self.wpos++
-	self.Unlock()
-	return true, false
-}
-func (self *MultiQueueEx) Get(pause bool) (ret []interface{}) {
-	self.Lock()
-	self.pause = pause
-	ret = self.writer[:self.wpos]
-	self.writerCycle = (self.writerCycle + 1) % uint8(len(self.multi))
-	self.writer = self.multi[self.writerCycle] //change writer
-	self.free()
-	self.wposOld, self.wpos = self.wpos, 0
-	self.Unlock()
-	return
-}
-func (self *MultiQueueEx) free() {
-	if self.kLazyFreeCycle > 0 {
+func (self *MultiQueue) free() {
+	if self.kFreeCycle > 0 {
 		self.freeCycle++
-		oldq := self.writer
-		if self.kLazyFreeCycle == 1 {
+		oldq, kLen := self.writer, len(self.writer)
+		if self.kFreeCycle == 1 {
 			for i := uint32(0); i < self.wposOld; i++ {
 				oldq[i] = nil
 			}
-		} else if self.freeCycle%self.kLazyFreeCycle == 0 {
-			for i := uint32(0); i < self.kSize; i++ {
+			self.wposOld = self.wpos
+		} else if self.freeCycle%self.kFreeCycle == 0 {
+			for i := 0; i < kLen; i++ {
 				oldq[i] = nil
 			}
 		}

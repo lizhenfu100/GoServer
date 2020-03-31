@@ -26,7 +26,7 @@ import (
 // https://zhuanlan.zhihu.com/p/24432607
 
 // 若goroutine会执行很长时间，且不是通过io阻塞或channel来同步，就需要主动调用Gosched()让出CPU
-type SafeQueue struct { //lock free queue
+type Queue struct { //lock free queue
 	kCap    uint32
 	kCapMod uint32
 	putPos  uint32
@@ -39,7 +39,7 @@ type esCache struct {
 	value interface{}
 }
 
-func (q *SafeQueue) Init(capaciity uint32) {
+func (q *Queue) Init(capaciity uint32) {
 	q.kCap = minQuantity(capaciity)
 	q.kCapMod = q.kCap - 1
 	q.putPos = 0
@@ -55,7 +55,7 @@ func (q *SafeQueue) Init(capaciity uint32) {
 	cache.putNo = q.kCap
 }
 
-func (q *SafeQueue) Size() (putPos, getPos, size uint32) {
+func (q *Queue) Size() (putPos, getPos, size uint32) {
 	getPos = atomic.LoadUint32(&q.getPos)
 	putPos = atomic.LoadUint32(&q.putPos)
 	if putPos >= getPos {
@@ -65,9 +65,9 @@ func (q *SafeQueue) Size() (putPos, getPos, size uint32) {
 	}
 	return
 }
-func (q *SafeQueue) Cap() uint32 { return q.kCap }
+func (q *Queue) Cap() uint32 { return q.kCap }
 
-func (q *SafeQueue) Put(val interface{}) (ok bool, size uint32) {
+func (q *Queue) Put(val interface{}) (ok bool, size uint32) {
 	var putPos uint32
 	putPos, _, size = q.Size()
 	capMod := q.kCapMod
@@ -94,7 +94,7 @@ func (q *SafeQueue) Put(val interface{}) (ok bool, size uint32) {
 		}
 	}
 }
-func (q *SafeQueue) Get() (val interface{}, ok bool, size uint32) {
+func (q *Queue) Get() (val interface{}, ok bool, size uint32) {
 	var getPos uint32
 	_, getPos, size = q.Size()
 	capMod := q.kCapMod
@@ -124,7 +124,7 @@ func (q *SafeQueue) Get() (val interface{}, ok bool, size uint32) {
 }
 
 // 批处理，建议大小是2N
-func (q *SafeQueue) Puts(ref []interface{}) (putCnt, size uint32) {
+func (q *Queue) Puts(ref []interface{}) (putCnt, size uint32) {
 	var putPos uint32
 	putPos, _, size = q.Size()
 	capMod := q.kCapMod
@@ -159,7 +159,7 @@ func (q *SafeQueue) Puts(ref []interface{}) (putCnt, size uint32) {
 	}
 	return putCnt, size + putCnt
 }
-func (q *SafeQueue) Gets(ref []interface{}) (getCnt, size uint32) {
+func (q *Queue) Gets(ref []interface{}) (getCnt, size uint32) {
 	var getPos uint32
 	_, getPos, size = q.Size()
 	capMod := q.kCapMod
@@ -207,7 +207,7 @@ func minQuantity(v uint32) uint32 {
 	v++
 	return v
 }
-func (q *SafeQueue) Print() string {
+func (q *Queue) Print() string {
 	return fmt.Sprintf("Queue{cap: %v, capMod: %v, putPos: %v, getPos: %v}",
 		q.kCap, q.kCapMod, atomic.LoadUint32(&q.putPos), atomic.LoadUint32(&q.getPos))
 }

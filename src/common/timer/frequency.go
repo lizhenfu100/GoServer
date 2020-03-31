@@ -6,23 +6,16 @@ import (
 )
 
 type Freq struct {
-	m          sync.Map
-	kTotalSec  byte //多少秒内
-	kMaxCnt    byte //超多少次
-	kBanMinute byte //封几分钟
+	m         sync.Map
+	kTotalSec byte //多少秒内
+	kMaxCnt   byte //超多少次
 }
 type freq struct {
 	sync.Mutex
 	timing []int64
 }
 
-func NewFreq(maxCnt, periodSec, banMinute byte) *Freq {
-	return &Freq{
-		kTotalSec:  periodSec,
-		kMaxCnt:    maxCnt,
-		kBanMinute: banMinute,
-	}
-}
+func NewFreq(maxCnt, periodSec byte) *Freq { return &Freq{kTotalSec: periodSec, kMaxCnt: maxCnt} }
 func (self *Freq) Check(k interface{}) bool {
 	p, _ := self.m.Load(k)
 	if p == nil {
@@ -30,25 +23,19 @@ func (self *Freq) Check(k interface{}) bool {
 		self.m.Store(k, p)
 	}
 	timenow := time.Now().Unix()
-	if !p.(*freq).check(timenow, self.kMaxCnt, self.kTotalSec) {
-		G_TimerMgr.AddTimerSec(func() {
-			self.m.Delete(k)
-		}, float32(self.kBanMinute*60), 0, 0)
-		return false
-	}
-	return true
+	return p.(*freq).check(timenow, self.kMaxCnt, self.kTotalSec)
 }
 func (self *freq) check(t int64, kMaxCnt, kTotalSec byte) bool {
 	self.Lock()
-	self.timing = append(self.timing, t)
-	if len(self.timing) > int(kMaxCnt) {
-		if self.timing[kMaxCnt]-self.timing[0] > int64(kTotalSec) {
-			self.timing = append(self.timing[:0], self.timing[1:]...)
-		} else {
-			self.Unlock()
+	defer self.Unlock()
+	if len(self.timing) == int(kMaxCnt) {
+		if t-self.timing[0] < int64(kTotalSec) {
 			return false
+		} else {
+			self.timing = append(self.timing[:0], self.timing[1:]...) //删排头，加新的
+			self.timing = append(self.timing, t)
 		}
 	}
-	self.Unlock()
+	self.timing = append(self.timing, t)
 	return true
 }

@@ -5,7 +5,6 @@ import (
 	"common/console"
 	"common/file"
 	"conf"
-	"dbmgo"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -32,13 +31,9 @@ func main() {
 	//设置本节点meta信息
 	meta.G_Local = meta.GetMeta(kModuleName, svrId)
 
-	//设置mongodb的服务器地址
-	pMeta := meta.GetMeta("db_game", svrId)
-	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
-
 	component.RegisterToZookeeper()
 
-	go netConfig.RunNetSvr()
+	go netConfig.RunNetSvr(false)
 	logic.MainLoop()
 }
 func InitConf() {
@@ -53,6 +48,11 @@ func InitConf() {
 	console.Init()
 	console.RegShutdown(logic.Shutdown)
 
+	if list := meta.GetMetas(conf.GameName, ""); len(list) > 0 {
+		conf2.Const.LoginSvrId = list[0].SvrID % common.KIdMod
+	} else {
+		panic("LoginSvrId nil")
+	}
 	//展示重要配置数据
 	buf, _ := json.MarshalIndent(&conf2.Const, "", "     ")
 	fmt.Println("conf.Const: ", common.B2S(buf))

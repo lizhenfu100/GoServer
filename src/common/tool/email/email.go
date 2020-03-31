@@ -30,6 +30,7 @@ import (
 	"common"
 	"common/assert"
 	"common/format"
+	"common/timer"
 	"conf"
 	"gamelog"
 	"generate_out/err"
@@ -37,13 +38,11 @@ import (
 	"gopkg.in/gomail"
 	"math/rand"
 	"netConfig"
-	"sync"
 	"text/template"
-	"time"
 )
 
 func SendByLogin(subject, addr, body, language string) (errcode uint16) {
-	if p, ok := netConfig.GetRpcRand("login"); ok {
+	if p, ok := netConfig.GetRpcRand(conf.GameName); ok {
 		p.CallRpcSafe(enum.Rpc_login_send_email, func(buf *common.NetPack) {
 			buf.WriteString(subject)
 			buf.WriteString(addr)
@@ -60,13 +59,13 @@ func SendByLogin(subject, addr, body, language string) (errcode uint16) {
 func SendMail(subject, addr, body, language string) (errcode uint16) {
 	if !format.CheckBindValue("email", addr) {
 		return err.Invalid
-		//TODO:return err.Email_format_err
+		//TODO:return err.Email_format_err 2019春节版本后弃用旧错误码
 	}
 	if InCsvInvalid(addr) {
 		return err.Invalid
 		//TODO:return err.Is_forbidden
 	}
-	if !assert.IsDebug && !checkFreq(subject, addr) { //同内容的，限制发送频率
+	if !assert.IsDebug && !g_freq.Check(subject+addr) { //同内容的，限制发送频率
 		return err.Success
 		//TODO:return err.Email_try_send_please_check
 	}
@@ -92,7 +91,7 @@ func SendMail(subject, addr, body, language string) (errcode uint16) {
 // ------------------------------------------------------------
 var (
 	g_list []*gomail.Dialer
-	g_freq sync.Map //<string, int64>
+	g_freq = timer.NewFreq(1, 240)
 )
 
 func dialer() *gomail.Dialer {
@@ -110,15 +109,6 @@ func dialer() *gomail.Dialer {
 		g_list[idx] = ret
 	}
 	return ret
-}
-func checkFreq(subject, addr string) bool {
-	key := subject + addr
-	timenow, timeOld := time.Now().Unix(), int64(0)
-	if v, ok := g_freq.Load(key); ok {
-		timeOld = v.(int64)
-	}
-	g_freq.Store(key, timenow)
-	return timenow-timeOld >= 60*15
 }
 func packBody(subject, body *string, language string) {
 	if body2, ok := Translate(*subject, language); ok {

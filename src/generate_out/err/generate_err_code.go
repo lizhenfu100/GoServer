@@ -58,4 +58,7 @@ const ( //the top 100 are reserved for system
 	Account_not_found uint16 = 141
 	Record_bind_max uint16 = 142
 	Change_times_max uint16 = 143
+	Account_none uint16 = 144
+	BindInfo_had_been_bound uint16 = 145
+
 )

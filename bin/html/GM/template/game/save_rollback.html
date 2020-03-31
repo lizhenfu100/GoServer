@@ -26,51 +26,8 @@
                 </select>
                 <label>平台名:</label>
                 <select name="pf_id">
-                    <option value="TapTap">TapTap</option>
-                    <option value="IOS">IOS</option>
-                    <option value="Android">Android</option>
-                    <option value="4399_360">4399_360</option>
-                    <option value="4399_4399">4399_4399</option>
-                    <option value="4399_4399hezi">4399_4399hezi</option>
-                    <option value="4399_4399jm">4399_4399jm</option>
-                    <option value="4399_anzhi_dj">4399_anzhi_dj</option>
-                    <option value="4399_baidu_dj">4399_baidu_dj</option>
-                    <option value="4399_biligame">4399_biligame</option>
-                    <option value="4399_dn_dj">4399_dn_dj</option>
-                    <option value="4399_douyu">4399_douyu</option>
-                    <option value="4399_duowan_mc">4399_duowan_mc</option>
-                    <option value="4399_leap">4399_leap</option>
-                    <option value="4399_letv">4399_letv</option>
-                    <option value="4399_meiyou_dj">4399_meiyou_dj</option>
-                    <option value="4399_migu">4399_migu</option>
-                    <option value="4399_muzhiwan">4399_muzhiwan</option>
-                    <option value="4399_pps">4399_pps</option>
-                    <option value="4399_samsungapp">4399_samsungapp</option>
-                    <option value="4399_snssdk">4399_snssdk</option>
-                    <option value="4399_sogou">4399_sogou</option>
-                    <option value="4399_uc_dj">4399_uc_dj</option>
-                    <option value="4399_wdj_dj">4399_wdj_dj</option>
-                    <option value="4399_wo">4399_wo</option>
-                    <option value="4399_xiaomi">4399_xiaomi</option>
-                    <option value="4399_yxgame">4399_yxgame</option>
-                    <option value="4399_yyb_dj">4399_yyb_dj</option>
-                    <option value="4399_yyh_dj">4399_yyh_dj</option>
-                    <option value="BlackBox">BlackBox</option>
-                    <option value="CatClaw">CatClaw</option>
-                    <option value="CoolPad">CoolPad</option>
-                    <option value="GamePop">GamePop</option>
-                    <option value="Gourd">Gourd</option>
-                    <option value="HuaWei">HuaWei</option>
-                    <option value="JinLi">JinLi</option>
-                    <option value="KuaiKan">KuaiKan</option>
-                    <option value="Lenovo">Lenovo</option>
-                    <option value="LianYun001">LianYun001</option>
-                    <option value="MeiZu">MeiZu</option>
-                    <option value="OPPO">OPPO</option>
-                    <option value="VIVO">VIVO</option>
-                    <option value="Xiao7">Xiao7</option>
-                    <option value="YYBShare">YYBShare</option>
-                    <option value="YouPinWei">YouPinWei</option>
+                    {{range .PfidSave}}<option value="{{.}}">{{.}}</option>
+                    {{end}}
                 </select>
                 <label title="我们自己约定的操作权限密码，一般不会变">权限密码:</label>
                 <input type="password" name="passwd"><br>

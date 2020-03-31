@@ -1,7 +1,6 @@
 package gm
 
 import (
-	"common"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -16,6 +15,6 @@ func Http_show_player(w http.ResponseWriter, r *http.Request) {
 		str, _ := json.MarshalIndent(ptr, "", "     ")
 		w.Write(str)
 	} else {
-		w.Write(common.S2B("none player"))
+		w.Write([]byte("none player"))
 	}
 }

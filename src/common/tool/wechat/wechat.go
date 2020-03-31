@@ -14,47 +14,40 @@ package wechat
 import (
 	"common"
 	"common/assert"
+	"common/timer"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"gamelog"
 	"netConfig/meta"
 	"nets/http"
-	"sync"
-	"time"
 )
 
 var (
-	g_corpId  string
-	g_secret  string
-	g_agentId int      //企业微信中的应用id
-	g_touser  string   //消息接收者，多个用‘|’分隔，可指定为@all
-	g_token   string   //有过期时间
-	g_freq    sync.Map //<string, int64>
+	g_corpId  string //企业id
+	g_secret  string //应用secret
+	g_agentId int    //应用id
+	g_token   token  //有过期时间
+	g_freq    = timer.NewFreq(1, 60)
 )
 
-func Init(corpId, secret, touser string, agentId int) {
-	g_corpId = corpId
-	g_secret = secret
-	g_touser = touser
-	g_agentId = agentId
-
-	if e := updateToken(corpId, secret); e != nil {
+func Init(corpId, secret string, agentId int) {
+	g_corpId, g_secret, g_agentId = corpId, secret, agentId
+	if e := updateToken(); e != nil {
 		fmt.Println("Wechat token err: ", e.Error())
 	}
 }
 func SendMsg(text string) {
-	if assert.IsDebug || !checkFreq(text) {
+	if assert.IsDebug || !g_freq.Check(text) {
 		return
 	}
 	buf, _ := json.Marshal(&msgWechat{
 		Agentid: g_agentId,
-		Touser:  g_touser,
+		Touser:  "@all",
 		Msgtype: "text",
 		Text:    map[string]string{"content": format(text)},
 	})
 	if e := sendMsg(buf); e != nil {
-		if e = updateToken(g_corpId, g_secret); e != nil {
+		if e = updateToken(); e != nil {
 			gamelog.Error("Wechat token: ", e.Error())
 		} else if e = sendMsg(buf); e != nil {
 			gamelog.Error("Wechat send: %s", e.Error())
@@ -71,14 +64,6 @@ func format(text string) string {
 		meta.G_Local.SvrName,
 		meta.G_Local.OutIP) +
 		"\n--------------------------\n" + text
-}
-func checkFreq(key string) bool { //同内容的，限制发送频率
-	timenow, timeOld := time.Now().Unix(), int64(0)
-	if v, ok := g_freq.Load(key); ok {
-		timeOld = v.(int64)
-	}
-	g_freq.Store(key, timenow)
-	return timenow-timeOld >= 60
 }
 
 // ------------------------------------------------------------
@@ -105,26 +90,27 @@ type errMsg struct {
 	Errmsg  string `json:"errmsg"`
 }
 
-func updateToken(corpId, secret string) error {
-	if buf := http.Client.Get(kUrlGetToken + corpId + "&corpsecret=" + secret); buf == nil {
+func updateToken() error {
+	if buf := http.Client.Get(kUrlGetToken + g_corpId + "&corpsecret=" + g_secret); buf == nil {
 		return http.ErrGet
 	} else {
-		var val token
-		json.Unmarshal(buf, &val)
-		if g_token = val.Access_token; g_token == "" {
-			return errors.New(common.B2S(buf))
+		g_token.Access_token = ""
+		json.Unmarshal(buf, &g_token)
+		if g_token.Access_token == "" {
+			return common.Err(common.B2S(buf))
 		}
 	}
 	return nil
 }
 func sendMsg(b []byte) error {
-	if buf := http.Client.Post(kUrlSend+g_token, "application/json", b); buf == nil {
+	url := kUrlSend + g_token.Access_token
+	if buf := http.Client.Post(url, "application/json", b); buf == nil {
 		return http.ErrPost
 	} else {
 		var msg errMsg
 		json.Unmarshal(buf, &msg)
 		if msg.Errcode != 0 && msg.Errmsg != "ok" {
-			return errors.New(common.B2S(buf))
+			return common.Err(common.B2S(buf))
 		}
 	}
 	return nil

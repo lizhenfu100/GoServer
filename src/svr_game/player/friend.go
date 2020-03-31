@@ -2,55 +2,64 @@ package player
 
 import (
 	"common"
+	"common/std"
+	"dbmgo"
 	"generate_out/rpc/enum"
+	"gopkg.in/mgo.v2/bson"
 	"netConfig"
+	"netConfig/meta"
+	"svr_game/conf"
 )
 
+const kDBFriend = "friend"
+
 type TFriendModule struct {
-	owner *TPlayer
+	Pid     uint64 `bson:"_id"`
+	Friends std.UInt64s
 }
 
 // ------------------------------------------------------------
 // -- 框架接口
-func (self *TFriendModule) InitAndInsert(p *TPlayer) { self.owner = p }
-func (self *TFriendModule) LoadFromDB(p *TPlayer)    { self.owner = p }
-func (self *TFriendModule) WriteToDB()               {}
+func (self *TFriendModule) InitAndInsert(p *TPlayer) {
+	self.Pid = common.PidNew(p.AccountID, conf.Const.LoginSvrId, meta.G_Local.SvrID)
+	dbmgo.Insert(kDBFriend, self)
+}
+func (self *TFriendModule) LoadFromDB(p *TPlayer) {
+	if ok, _ := dbmgo.Find(kDBFriend, "_id", p.PlayerID, self); !ok {
+		self.InitAndInsert(p)
+	}
+}
+func (self *TFriendModule) WriteToDB() { dbmgo.UpdateId(kDBFriend, self.Pid, self) }
 func (self *TFriendModule) OnLogin() {
-	if p, ok := netConfig.GetRpcRand("friend"); ok {
-		p.CallRpc(enum.Rpc_friend_get_friend_list, func(buf *common.NetPack) {
-			buf.WriteUInt32(self.owner.AccountID)
-		}, func(recvBuf *common.NetPack) {
-			for cnt, i := recvBuf.ReadUInt16(), uint16(0); i < cnt; i++ {
-				friendId := recvBuf.ReadUInt32()
-
-				//通告好友我上线了 TODO:zhoumf:只需通知在线好友
-				netConfig.CallRpcGateway(friendId, enum.Rpc_client_friend_login, func(buf *common.NetPack) {
-					self.owner.GetShowInfo().DataToBuf(buf)
-				}, nil)
-
-				//收集在线好友信息
-				netConfig.CallRpcGateway(friendId, enum.Rpc_game_get_show_info, func(buf *common.NetPack) {
-				}, func(recvBuf *common.NetPack) {
-					netConfig.CallRpcGateway(self.owner.AccountID, enum.Rpc_client_friend_add, func(buf *common.NetPack) {
-						buf.WriteBuf(recvBuf.LeftBuf())
-					}, nil)
-				})
-			}
-		})
+	for _, friendId := range self.Friends {
+		netConfig.CallRpcGateway(common.PidToAid(friendId), enum.Rpc_client_friend_login, func(buf *common.NetPack) {
+			buf.WriteUInt32(common.PidToAid(self.Pid))
+		}, nil)
 	}
 }
 func (self *TFriendModule) OnLogout() {
+	for _, friendId := range self.Friends {
+		netConfig.CallRpcGateway(common.PidToAid(friendId), enum.Rpc_client_friend_logout, func(buf *common.NetPack) {
+			buf.WriteUInt32(common.PidToAid(self.Pid))
+		}, nil)
+	}
+}
+func (self *TFriendModule) InitFriends() {
 	if p, ok := netConfig.GetRpcRand("friend"); ok {
-		p.CallRpc(enum.Rpc_friend_get_friend_list, func(buf *common.NetPack) {
-			buf.WriteUInt32(self.owner.AccountID)
+		p.CallRpc(enum.Rpc_friend_list, func(buf *common.NetPack) {
+			buf.WriteUInt32(common.PidToAid(self.Pid))
+			buf.WriteUInt16(uint16(len(self.Friends)))
+			for _, v := range self.Friends {
+				buf.WriteUInt32(common.PidToAid(v))
+			}
 		}, func(recvBuf *common.NetPack) {
 			for cnt, i := recvBuf.ReadUInt16(), uint16(0); i < cnt; i++ {
-				friendId := recvBuf.ReadUInt32()
-
-				//通告好友我下线了 TODO:zhoumf:只需通知在线好友
-				netConfig.CallRpcGateway(friendId, enum.Rpc_client_friend_logout, func(buf *common.NetPack) {
-					buf.WriteUInt32(self.owner.AccountID)
-				}, nil)
+				aid := recvBuf.ReadUInt32()
+				ptr := &TPlayerBase{} //本区aid下的角色，加好友
+				if ok, _ := dbmgo.Find(kDBPlayer, "accountid", aid, ptr); ok {
+					pid := common.PidNew(ptr.AccountID, conf.Const.LoginSvrId, meta.G_Local.SvrID)
+					self.Friends.Add(pid)
+				}
 			}
 		})
 	}
@@ -58,3 +67,64 @@ func (self *TFriendModule) OnLogout() {
 
 // ------------------------------------------------------------
 // --
+func Rpc_game_friend_add(req, ack *common.NetPack, this *TPlayer) {
+	dstId := req.ReadUInt64()
+
+	this.friend.AddFriend(dstId)
+	ptr := &TFriendModule{Pid: dstId}
+	if ok, _ := dbmgo.Find(kDBFriend, "_id", dstId, ptr); ok {
+		ptr.AddFriend(this.friend.Pid)
+	} else {
+		ptr.Friends.Add(this.friend.Pid)
+		dbmgo.Insert(kDBFriend, ptr)
+	}
+}
+func Rpc_game_friend_del(req, ack *common.NetPack, this *TPlayer) {
+	dstId := req.ReadUInt64()
+
+	this.friend.DelFriend(dstId)
+	ptr := &TFriendModule{Pid: dstId}
+	if ok, _ := dbmgo.Find(kDBFriend, "_id", dstId, ptr); ok {
+		ptr.DelFriend(this.friend.Pid)
+	}
+}
+func Rpc_game_friend_list(req, ack *common.NetPack, this *TPlayer) {
+	list := make(std.UInt64s, len(this.friend.Friends))
+	copy(list, this.friend.Friends)
+	//删除上报的，剩余即新增
+	for cnt, i := req.ReadUInt16(), uint16(0); i < cnt; i++ {
+		pid := req.ReadUInt64()
+		if j := list.Index(pid); j >= 0 {
+			list.Del(j)
+		}
+	}
+	//返回新增好友
+	posInBuf, count := ack.Size(), uint16(0)
+	ack.WriteUInt16(count)
+	var base TPlayerBase
+	for _, pid := range list {
+		//Optimize:先收集本大区(同个db)，其它大区的走proxy转发
+		if ok, _ := dbmgo.Find(kDBPlayer, "_id", pid, &base); ok {
+			base.GetShowInfo().DataToBuf(ack)
+			count++
+		}
+	}
+	ack.SetUInt16(posInBuf, count)
+}
+
+// ------------------------------------------------------------
+// - 辅助函数
+func (self *TFriendModule) AddFriend(dst uint64) {
+	if i := self.Friends.Index(dst); i < 0 && dst != self.Pid {
+		self.Friends.Add(dst)
+		dbmgo.UpdateId(kDBFriend, self.Pid, bson.M{"$push": bson.M{
+			"friends": dst}})
+	}
+}
+func (self *TFriendModule) DelFriend(dst uint64) {
+	if i := self.Friends.Index(dst); i >= 0 {
+		self.Friends.Del(i)
+		dbmgo.UpdateId(kDBFriend, self.Pid, bson.M{"$pull": bson.M{
+			"friends": dst}})
+	}
+}

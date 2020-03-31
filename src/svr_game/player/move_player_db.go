@@ -24,6 +24,7 @@ import (
 
 func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
 	newLoginId := req.ReadInt()
+	accountName := req.ReadString()
 
 	errCode := err.Unknow_error
 	defer func() { //defer ack.WriteUInt16(errCode) Bug：声明时参数立即解析
@@ -32,16 +33,19 @@ func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
 
 	//1、向center查询新大区地址
 	newLoginAddr := ""
-	if p, ok := netConfig.GetRpcRand("login"); ok {
-		p.CallRpcSafe(enum.Rpc_login_relay_to_center, func(buf *common.NetPack) {
+	if p, ok := netConfig.GetRpcRand(conf.GameName); ok {
+		p.CallRpcSafe(enum.Rpc_login_to_center_by_str, func(buf *common.NetPack) {
 			buf.WriteUInt16(enum.Rpc_get_meta)
-			buf.WriteString("login")
+			buf.WriteString(conf.GameName)
+			buf.WriteString(meta.G_Local.Version)
+			buf.WriteByte(common.ById)
 			buf.WriteInt(newLoginId)
 		}, func(recvBuf *common.NetPack) {
-			ip := recvBuf.ReadString()
-			port := recvBuf.ReadUInt16()
-			recvBuf.ReadString() //svrName
-			newLoginAddr = http.Addr(ip, port)
+			if svrId := recvBuf.ReadInt(); svrId > 0 {
+				ip := recvBuf.ReadString()
+				port := recvBuf.ReadUInt16()
+				newLoginAddr = http.Addr(ip, port)
+			}
 		})
 	}
 	if newLoginAddr == "" {
@@ -52,6 +56,7 @@ func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
 	http.CallRpc(newLoginAddr, enum.Rpc_login_move_player_db, func(buf *common.NetPack) {
 		buf.WriteString(conf.GameName)
 		buf.WriteString(meta.G_Local.Version)
+		buf.WriteString(accountName)
 		//game中的玩家数据迁移
 		buf.WriteUInt32(this.AccountID)
 		playerBuf, _ := common.T2B(this)
@@ -77,7 +82,7 @@ func Rpc_game_move_player_db2(req, ack *common.NetPack, conn *tcp.TCPConn) {
 
 	this := FindWithDB(accountId)
 	if this == nil { //载入失败，须新建角色
-		if this = NewPlayerInDB(accountId, ""); this == nil {
+		if this = NewPlayerInDB(accountId); this == nil {
 			ack.WriteUInt16(err.Create_Player_failed)
 			return
 		}

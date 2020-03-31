@@ -1,11 +1,9 @@
 package main
 
 import (
-	"Tools/AFK"
 	"common/console"
 	"common/file"
 	"conf"
-	"dbmgo"
 	"gamelog"
 	"generate_out/rpc/enum"
 	"netConfig"
@@ -27,9 +25,7 @@ func main() {
 
 	meta.G_Local = meta.GetMeta(kModuleName, 0)
 
-	dbmgo.InitWithUser("", 27017, "other", conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
-	afk.Init()
-	netConfig.RunNetSvr()
+	netConfig.RunNetSvr(true)
 }
 func InitConf() {
 	var metaCfg []meta.Meta

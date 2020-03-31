@@ -74,12 +74,12 @@ func Fatal(format string, v ...interface{}) {
 // ------------------------------------------------------------
 type AsyncLog struct {
 	sync.Mutex
-	cond    sync.Cond
+	sync.Cond
 	curBuf  []byte
 	nextBuf []byte
 	bufs    [][]byte
 	wr      atomic.Value //io.Writer
-	isStop  bool
+	stop    bool
 }
 
 func NewAsyncLog(cap int, wr io.Writer) *AsyncLog {
@@ -88,11 +88,11 @@ func NewAsyncLog(cap int, wr io.Writer) *AsyncLog {
 		nextBuf: make([]byte, 0, cap),
 	}
 	self.wr.Store(wr)
-	self.cond.L = &self.Mutex
+	self.Cond.L = &self.Mutex
 	go self._writeLoop(cap)
 	go func() {
 		for range time.Tick(Flush_Interval) { //周期性唤醒写线程
-			self.cond.Signal()
+			self.Signal()
 		}
 	}()
 	return self
@@ -108,7 +108,7 @@ func (self *AsyncLog) Write(p []byte) (int, error) {
 		} else {
 			self.curBuf = make([]byte, 0, nCap)
 		}
-		self.cond.Signal()
+		self.Signal()
 	}
 	self.Unlock()
 	return len(p), nil
@@ -117,10 +117,10 @@ func (self *AsyncLog) _writeLoop(cap int) {
 	spareBuf1 := make([]byte, 0, cap)
 	spareBuf2 := make([]byte, 0, cap)
 	bufs := make([][]byte, 0, 8)
-	for !self.isStop || !self.isNil() {
+	for !self.stop {
 		self.Lock()
 		if len(self.bufs) == 0 {
-			self.cond.Wait()
+			self.Wait()
 		}
 		self.bufs = append(self.bufs, self.curBuf)
 		_move(&self.curBuf, &spareBuf1)
@@ -144,16 +144,15 @@ func (self *AsyncLog) _writeLoop(cap int) {
 		}
 		bufs = bufs[:0]
 	}
+	self.bufs = append(self.bufs, self.curBuf)
+	wr := self.wr.Load().(io.Writer)
+	for _, v := range self.bufs {
+		wr.Write(v)
+	}
 }
-func _move(rhs, lhs *[]byte)   { *rhs = *lhs; *lhs = nil }
-func _swap(rhs, lhs *[][]byte) { temp := *rhs; *rhs = *lhs; *lhs = temp }
+func _move(a, b *[]byte)   { *a, *b = *b, nil }
+func _swap(a, b *[][]byte) { *a, *b = *b, *a }
 func (self *AsyncLog) Stop() {
-	self.isStop = true
-	self.cond.Signal()
-}
-func (self *AsyncLog) isNil() bool {
-	self.Lock()
-	ret := len(self.curBuf) == 0 && len(self.bufs) == 0
-	self.Unlock()
-	return ret
+	self.stop = true
+	self.Signal()
 }

@@ -3,6 +3,7 @@ package web
 import (
 	"common"
 	"common/file"
+	"common/std"
 	"encoding/json"
 	"fmt"
 	"generate_out/rpc/enum"
@@ -18,52 +19,73 @@ type TCommon struct {
 	CenterList []string //center地址
 	SdkAddrs   []string //支付sdk暂时各项目共用
 }
+type TemplateData struct {
+	*TCommon
+	GameName string
+	Logins   []TLogin //0位空，1起始
+	pf_id    []string
+}
 type TLogin struct {
 	Name  string
 	Addrs []string //登录节点同质的
 	Games []TGame
+	Gates []std.KeyPair
 }
 type TGame struct {
 	ID        int
 	GameAddr  string
 	SaveAddrs []string //同节点下的save同质的
 }
-type TemplateData struct {
-	*TCommon
-	GameName string
-	Logins   []TLogin //0位空，1起始
-}
 
 func (self *TemplateData) GetAddrs() {
-	// 先拉login下所有game
-	for i := 1; i < len(self.Logins); i++ {
-		if p1 := &self.Logins[i]; len(p1.Addrs) > 0 {
-			p1.Games = p1.Games[:0] //清空旧值
-			http.CallRpc(p1.Addrs[0], enum.Rpc_meta_list, func(buf *common.NetPack) {
+	// 拉游戏大区
+	http.CallRpc(self.CenterList[0], enum.Rpc_meta_list, func(buf *common.NetPack) {
+		buf.WriteString(self.GameName)
+	}, func(recvBuf *common.NetPack) {
+	LOOP:
+		for cnt, i := recvBuf.ReadByte(), byte(0); i < cnt; i++ {
+			recvBuf.ReadInt() //svrId
+			outip := recvBuf.ReadString()
+			port := recvBuf.ReadUInt16()
+			svrName := recvBuf.ReadString()
+			addr := http.Addr(outip, port)
+			for i := 0; i < len(self.Logins); i++ {
+				if self.Logins[i].Name == svrName {
+					self.Logins[i].Addrs = append(self.Logins[i].Addrs, addr)
+					continue LOOP
+				}
+			}
+			self.Logins = append(self.Logins, TLogin{
+				Name:  svrName,
+				Addrs: []string{addr},
+			})
+		}
+	})
+	for i := 0; i < len(self.Logins); i++ {
+		if pLogin := &self.Logins[i]; len(pLogin.Addrs) > 0 {
+			// 拉大区下所有game
+			pLogin.Games = pLogin.Games[:0] //清空旧值
+			http.CallRpc(pLogin.Addrs[0], enum.Rpc_meta_list, func(buf *common.NetPack) {
 				buf.WriteString("game")
-				buf.WriteString("")
 			}, func(recvBuf *common.NetPack) {
-				cnt := recvBuf.ReadByte()
-				for i := byte(0); i < cnt; i++ {
-					svrId := recvBuf.ReadInt() //svrId
+				for cnt, i := recvBuf.ReadByte(), byte(0); i < cnt; i++ {
+					svrId := recvBuf.ReadInt()
 					outip := recvBuf.ReadString()
 					port := recvBuf.ReadUInt16()
 					recvBuf.ReadString() //name
-					p1.Games = append(p1.Games, TGame{
+					pLogin.Games = append(pLogin.Games, TGame{
 						ID:       svrId,
 						GameAddr: http.Addr(outip, port),
 					})
 				}
 				// 再拉game下所有save
-				for i := 0; i < len(p1.Games); i++ {
-					ptr := &p1.Games[i]
+				for i := 0; i < len(pLogin.Games); i++ {
+					ptr := &pLogin.Games[i]
 					ptr.SaveAddrs = ptr.SaveAddrs[:0] //清空旧值
 					http.CallRpc(ptr.GameAddr, enum.Rpc_meta_list, func(buf *common.NetPack) {
 						buf.WriteString("save")
-						buf.WriteString("")
 					}, func(recvBuf *common.NetPack) {
-						cnt := recvBuf.ReadByte()
-						for i := byte(0); i < cnt; i++ {
+						for cnt, i := recvBuf.ReadByte(), byte(0); i < cnt; i++ {
 							recvBuf.ReadInt() //svrId
 							outip := recvBuf.ReadString()
 							port := recvBuf.ReadUInt16()
@@ -71,6 +93,19 @@ func (self *TemplateData) GetAddrs() {
 							ptr.SaveAddrs = append(ptr.SaveAddrs, http.Addr(outip, port))
 						}
 					})
+				}
+			})
+			// 拉大区下所有gateway
+			pLogin.Gates = pLogin.Gates[:0] //清空旧值
+			http.CallRpc(pLogin.Addrs[0], enum.Rpc_meta_list, func(buf *common.NetPack) {
+				buf.WriteString("gateway")
+			}, func(recvBuf *common.NetPack) {
+				for cnt, i := recvBuf.ReadByte(), byte(0); i < cnt; i++ {
+					svrId := recvBuf.ReadInt()
+					outip := recvBuf.ReadString()
+					port := recvBuf.ReadUInt16()
+					recvBuf.ReadString() //name
+					pLogin.Gates = append(pLogin.Gates, std.KeyPair{http.Addr(outip, port), svrId})
 				}
 			})
 		}
@@ -125,25 +160,62 @@ func UpdateHtml(fileIn, fileOut string, ptr interface{}) {
 
 // ------------------------------------------------------------
 // template func
-func (self *TemplateData) AddrLogin(id int) string {
-	if v := self.Logins[id].Addrs; len(v) > 0 {
-		return v[0]
+func (self *TemplateData) AddrLogin(idx int) string {
+	if idx < len(self.Logins) {
+		return self.Logins[idx].Addrs[0]
 	}
 	return ""
 }
-func (self *TemplateData) AddrGame(id1, id2 int) string {
-	for _, v := range self.Logins[id1].Games {
-		if v.ID == id2 {
-			return v.GameAddr
+func (self *TemplateData) AddrGame(idx, id int) string {
+	if idx < len(self.Logins) {
+		for _, v := range self.Logins[idx].Games {
+			if v.ID == id {
+				return v.GameAddr
+			}
 		}
 	}
 	return ""
 }
-func (self *TemplateData) AddrSave(id1, id2 int) string {
-	for _, v := range self.Logins[id1].Games {
-		if v.ID == id2 {
-			return v.SaveAddrs[0]
+func (self *TemplateData) AddrSave(idx, id int) string {
+	if idx < len(self.Logins) {
+		for _, v := range self.Logins[idx].Games {
+			if v.ID == id && len(v.SaveAddrs) > 0 {
+				return v.SaveAddrs[0]
+			}
 		}
 	}
 	return ""
+}
+func (self *TemplateData) PfidSave() (ret []string) { //存档互通的渠道
+	for _, v := range self.pf_id {
+		ret = append(ret, strings.Split(v, ",")[0])
+	}
+	return
+}
+func (self *TemplateData) PfidAll() (ret []string) {
+	for _, v := range self.pf_id {
+		if vs := strings.Split(v, ","); len(vs) > 1 {
+			ret = append(ret, vs[1:]...)
+		} else {
+			ret = append(ret, vs[0])
+		}
+	}
+	return
+}
+func (self *TemplateData) SplitLogin1() string { //分割国区、海外
+	var list []string
+	for _, v := range self.Logins {
+		if strings.Index(v.Name, "China") >= 0 {
+			list = append(list, v.Addrs[0])
+		}
+	}
+	return strings.Join(list, " ")
+}
+func (self *TemplateData) SplitLogin2() (ret []TLogin) {
+	for _, v := range self.Logins {
+		if strings.Index(v.Name, "China") < 0 {
+			ret = append(ret, v)
+		}
+	}
+	return
 }

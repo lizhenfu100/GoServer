@@ -18,6 +18,10 @@
 * @ 单机防作弊
 	1、后台不断变更密钥，用于金币、钻石、攻击力...敏感数据，防止用户窜改
 
+* @ 分库分表
+	1、须处理跨库的移动
+	2、多线程竞态：玩家上传中途，还没传完，发生扩容迁移，旧存档被移动 …… 玩家丢了部分档
+
 * @ author zhoumf
 * @ date 2018-10-31
 ***********************************************************************/
@@ -26,6 +30,7 @@ package logic
 import (
 	"common"
 	"common/assert"
+	conf3 "conf"
 	"dbmgo"
 	"gamelog"
 	"generate_out/err"
@@ -47,7 +52,7 @@ type TSaveData struct {
 	Data      []byte `json:"-"`
 	UpTime    int64  //上传时刻
 	ChTime    int64  //更换时刻
-	RaiseTime int64  //提升绑定上限的时刻
+	RaiseTime int64  //重置绑定上限的时刻
 	MacCnt    byte   //绑定的设备次数
 	Extra     string //json TSensitive
 	Version   string
@@ -59,7 +64,7 @@ type MacInfo struct {
 
 func GetSaveKey(pf_id, uid string) string { return pf_id + "_" + uid }
 
-func Rpc_save_get_meta_info(req, ack *common.NetPack) {
+func Rpc_save_get_meta_info(req, ack *common.NetPack) { //TODO:待删除
 	uid := req.ReadString()
 	pf_id := req.ReadString()
 
@@ -74,60 +79,90 @@ func Rpc_save_get_meta_info(req, ack *common.NetPack) {
 		ack.WriteInt64(0)
 	}
 }
+func Rpc_save_get_time_info(req, ack *common.NetPack) {
+	uid := req.ReadString()
+	pf_id := req.ReadString()
+	ptr, now := &TSaveData{Key: GetSaveKey(pf_id, uid)}, time.Now().Unix()
+	if ok, e := dbmgo.Find(KDBSave, "_id", ptr.Key, ptr); ok {
+		ack.WriteUInt16(err.Success)
+		ack.WriteInt64(ptr.UpTime)
+		//绑定新设备，等待的秒数
+		ack.WriteInt(int(ptr.ChTime-now) + conf.Const.MacChangePeriod)
+		//重置绑定次数，等待的秒数
+		ack.WriteInt(int(ptr.RaiseTime-now) + int(conf.Const.RaiseBindCntDay)*3600*24)
+	} else if e != nil {
+		ack.WriteUInt16(err.Unknow_error)
+	} else {
+		ack.WriteUInt16(err.Record_cannot_find)
+	}
+}
 func Rpc_save_check_mac(req, ack *common.NetPack) {
 	uid := req.ReadString()
 	pf_id := req.ReadString()
 	mac := req.ReadString()
-
-	_, errCode := checkMac(pf_id, uid, mac)
-	ack.WriteUInt16(errCode)
+	_, e := checkMac(pf_id, uid, mac)
+	ack.WriteUInt16(e)
 }
 func checkMac(pf_id, uid, mac string) (*TSaveData, uint16) { //Notice：不可调换错误码判断顺序
 	pSave, pMac := &TSaveData{Key: GetSaveKey(pf_id, uid)}, &MacInfo{}
-	if assert.IsDebug || isWhite(mac) { //白名单，直接放过
+	if assert.IsDebug || isWhite(mac) == 1 { //白名单，直接放过
 		if ok, _ := dbmgo.Find(KDBSave, "_id", pSave.Key, pSave); ok {
 			return pSave, err.Success
 		}
 	}
 	oldMac, _ := dbmgo.Find(KDBMac, "_id", mac, pMac)
-	if oldMac && pMac.Key != pSave.Key {
+	if oldMac && pMac.Key != pSave.Key && needUnbind(pf_id) {
 		gamelog.Info("Record_mac_already_bind: mac(%s) new(%s) old(%s)", mac, pSave.Key, pMac.Key)
 		return pSave, err.Record_mac_already_bind //设备被别人占用，得解绑
 	}
-	if ok, _ := dbmgo.Find(KDBSave, "_id", pSave.Key, pSave); !ok {
+	if ok, e := dbmgo.Find(KDBSave, "_id", pSave.Key, pSave); e != nil {
+		return pSave, err.Unknow_error
+	} else if !ok {
 		gamelog.Track("Record_cannot_find: %s", pSave.Key)
 		return pSave, err.Record_cannot_find
 	}
 	if !oldMac /*新设备*/ && pSave.MacCnt >= conf.Const.MacFreeBindMax {
 		now := time.Now().Unix()
+		if pSave.MacCnt >= conf.Const.MacBindMax {
+			if (now-pSave.RaiseTime)/(3600*24) < int64(conf.Const.RaiseBindCntDay) {
+				gamelog.Track("Record_bind_max: %s", pSave.Key)
+				return pSave, err.Record_bind_max //绑定次数用尽，月余后重置
+			} else {
+				pSave.MacCnt = 0 //90天，绑定次数重置
+				pSave.RaiseTime = now
+			}
+		}
 		if now-pSave.ChTime < int64(conf.Const.MacChangePeriod) {
 			gamelog.Track("Record_bind_limit: %s", pSave.Key)
 			return pSave, err.Record_bind_limit //等几天才能换设备
 		}
-		if pSave.MacCnt >= conf.Const.MacBindMax {
-			if (now-pSave.RaiseTime)/(3600*24) < int64(conf.Const.RaiseBindCntDay) {
-				gamelog.Track("Record_bind_max: %s", pSave.Key)
-				return pSave, err.Record_bind_max //绑定次数用尽，月余后才会增加次数
-			} else {
-				pSave.MacCnt-- //90天，绑定次数+1
-				pSave.RaiseTime = now
-				return pSave, err.Success
-			}
-		}
 	}
 	return pSave, err.Success
 }
-func isWhite(mac string) bool {
-	ret := byte(0)
+func isWhite(mac string) int8 {
+	ret := int8(0)
 	if p, ok := netConfig.GetRpcRand("gm"); ok {
-		p.CallRpcSafe(enum.Rpc_gm_is_white, func(buf *common.NetPack) {
+		p.CallRpcSafe(enum.Rpc_gm_white_black, func(buf *common.NetPack) {
 			buf.WriteString(conf2.Save_Mac)
 			buf.WriteString(mac)
 		}, func(recvbuf *common.NetPack) {
-			ret = recvbuf.ReadByte()
+			ret = recvbuf.ReadInt8()
 		})
 	}
-	return ret > 0
+	return ret
+}
+func needUnbind(pf_id string) bool { //设备可多个号使用的渠道，无需解绑
+	if conf3.GameName == "HappyDiner" {
+		switch pf_id {
+		case
+			"4399", "9games", "xiaomi",
+			"bilibili", "huawei",
+			"meizu", "oppo", "lenovo",
+			"coolpad", "jinli", "nubiya", "testPlatform":
+			return false
+		}
+	}
+	return true
 }
 
 func upload(pf_id, uid, mac string, data []byte, extra, clientVersion string) uint16 {
@@ -135,7 +170,7 @@ func upload(pf_id, uid, mac string, data []byte, extra, clientVersion string) ui
 	pSave, errCode := checkMac(pf_id, uid, mac)
 	switch errCode {
 	case err.Success:
-		if clientVersion < pSave.Version { //旧client覆盖新档，报错
+		if common.CompareVersion(clientVersion, pSave.Version) < 0 { //旧client覆盖新档，报错
 			return err.Version_not_match
 		}
 		pSave.CheckBackup(extra) //敏感数据异动，记下历史存档
@@ -154,7 +189,7 @@ func upload(pf_id, uid, mac string, data []byte, extra, clientVersion string) ui
 		pSave.Data = data
 		pSave.UpTime = now
 		pSave.ChTime = now
-		pSave.RaiseTime = 0
+		pSave.RaiseTime = now
 		pSave.MacCnt = 1
 		pSave.Extra = extra
 		pSave.Version = clientVersion
@@ -168,7 +203,7 @@ func upload(pf_id, uid, mac string, data []byte, extra, clientVersion string) ui
 }
 func download(pf_id, uid, mac, clientVersion string) (*TSaveData, uint16) {
 	if pSave, errCode := checkMac(pf_id, uid, mac); errCode == err.Success {
-		if clientVersion < pSave.Version { //旧client下载新档，报错
+		if common.CompareVersion(clientVersion, pSave.Version) < 0 { //旧client下载新档，报错
 			return nil, err.Version_not_match
 		}
 		if dbmgo.DB().C(KDBMac).Insert(&MacInfo{mac, pSave.Key}) == nil {
@@ -187,7 +222,7 @@ func download(pf_id, uid, mac, clientVersion string) (*TSaveData, uint16) {
 
 // ------------------------------------------------------------
 // -- Binary 存档
-func Rpc_save_upload_binary2(req, ack *common.NetPack) {
+func Rpc_save_upload_binary2(req, ack *common.NetPack) { //TODO:待删除
 	uid := req.ReadString()
 	pf_id := req.ReadString()
 	mac := req.ReadString()
@@ -203,6 +238,44 @@ func Rpc_save_upload_binary2(req, ack *common.NetPack) {
 
 	errcode := upload(pf_id, uid, mac, data, extra, clientVersion)
 	ack.WriteUInt16(errcode)
+}
+func Rpc_save_move(req, ack *common.NetPack) {
+	uid1 := req.ReadString()
+	pf_id1 := req.ReadString()
+	uid2 := req.ReadString()
+	pf_id2 := req.ReadString()
+	key1, key2 := GetSaveKey(pf_id1, uid1), GetSaveKey(pf_id2, uid2)
+	dbmgo.UpdateId(KDBSave, key1, bson.M{"$set": bson.M{"_id": key2}})
+}
+func Rpc_save_gm_up(req, ack *common.NetPack) {
+	uid := req.ReadString()
+	pf_id := req.ReadString()
+	extra := req.ReadString()
+	data := req.ReadLenBuf()
+	ptr := &TSaveData{Key: GetSaveKey(pf_id, uid)}
+	if _, e := dbmgo.Find(KDBSave, "_id", ptr.Key, ptr); e != nil {
+		ack.WriteUInt16(err.Unknow_error)
+	} else {
+		ack.WriteUInt16(err.Success)
+		ptr.CheckBackup(extra)
+		ptr.Data = data
+		ptr.UpTime = time.Now().Unix()
+		ptr.Extra = extra
+		dbmgo.UpsertId(KDBSave, ptr.Key, ptr)
+	}
+}
+func Rpc_save_gm_dn(req, ack *common.NetPack) {
+	uid := req.ReadString()
+	pf_id := req.ReadString()
+	ptr := &TSaveData{Key: GetSaveKey(pf_id, uid)}
+	if ok, e := dbmgo.Find(KDBSave, "_id", ptr.Key, ptr); ok {
+		ack.WriteUInt16(err.Success)
+		ack.WriteBuf(ptr.Data)
+	} else if e != nil {
+		ack.WriteUInt16(err.Unknow_error)
+	} else {
+		ack.WriteUInt16(err.Record_cannot_find)
+	}
 }
 func Rpc_save_upload_binary(req, ack *common.NetPack) {
 	uid := req.ReadString()

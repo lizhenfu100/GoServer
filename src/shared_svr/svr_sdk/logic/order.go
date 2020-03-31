@@ -164,11 +164,13 @@ func Http_query_order_unfinished(w http.ResponseWriter, r *http.Request) {
 
 // ------------------------------------------------------------
 func CheckSign(_sign, s, gameid string) bool {
-	if gameid == "SoulKnight" {
+	switch gameid {
+	case "SoulKnight":
 		const k_sign_key = "xdc*ef&xzz"
-		return _sign == sign.CalcSign(s) || _sign == sign.GetSign(s, k_sign_key)
+		return _sign == sign.GetSign(s, k_sign_key)
+	default:
+		return _sign == sign.CalcSign(s)
 	}
-	return _sign == sign.CalcSign(s)
 }
 
 // ------------------------------------------------------------

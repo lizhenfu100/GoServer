@@ -41,6 +41,7 @@ func (self *TCPClient) connectRoutine() {
 		firstMsg = make([]byte, kfirstMsgLen+2+regMsg.Size())
 		binary.LittleEndian.PutUint16(firstMsg[kfirstMsgLen:], uint16(regMsg.Size()))
 		copy(firstMsg[kfirstMsgLen+2:], regMsg.Data())
+		regMsg.Free()
 	}
 	for atomic.LoadInt32(&self._isClose) == 0 {
 		if self.connect() {
@@ -63,7 +64,7 @@ func (self *TCPClient) connect() bool {
 	}
 	if self.Conn == nil {
 		self.Conn = newTCPConn(conn)
-		self.Conn.UserPtr = self
+		self.Conn.SetUser(self)
 	} else {
 		//断线重连的新连接标记得重置，否则tcpConn.readLoop会直接break
 		self.Conn.resetConn(conn)
@@ -78,7 +79,7 @@ func (self *TCPClient) Close() {
 	}
 }
 func _Rpc_svr_accept(req, ack *common.NetPack, conn *TCPConn) {
-	self := conn.UserPtr.(*TCPClient)
+	self := conn.GetUser().(*TCPClient)
 	self.connId = req.ReadUInt32()
 	if self.onConnect != nil {
 		self.onConnect(self.Conn)

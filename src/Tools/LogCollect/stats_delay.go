@@ -34,7 +34,7 @@ func DoStats(result StringSlice) { //统计外网延时log
 	sort.Sort(result)
 	var infos []Info
 	stats := make([]int, 100)
-	file.ParseRefCsv(result, &infos)
+	file.ParseCsv(result, &infos)
 	ret := map[string]int{}
 	cur, delay, n := "", 0, 0
 	for _, v := range infos {

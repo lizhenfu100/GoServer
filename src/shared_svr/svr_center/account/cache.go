@@ -30,19 +30,15 @@ var g_redis *redis.Client
 
 func Init() {
 	// 跟db在同个节点，无需redis，mongo自带缓存的
-	if meta.GetMeta("db_account", meta.G_Local.SvrID).IP != meta.G_Local.IP {
-		g_redis = redis.NewClient(&redis.Options{
-			Addr:     ":6379",
-			Password: "",
-		})
+	if meta.GetMeta("db_center", meta.G_Local.SvrID).IP != meta.G_Local.IP {
+		g_redis = redis.NewClient(&redis.Options{Addr: ":6379"})
 		if _, e := g_redis.Ping().Result(); e != nil {
 			panic(e)
 		}
 	}
 }
-
 func CacheAdd(key string, p *TAccount) {
-	if p.Name != "" && p.BindInfo["name"] == "" { //FIXME：初版账号系统的遗祸~囧
+	if p.Name != "" && p.BindInfo["name"] == "" { //TODO:待删除
 		p.BindInfo["name"] = p.Name
 		dbmgo.UpdateId(KDBTable, p.AccountID, bson.M{"$set": bson.M{"bindinfo.name": p.Name}})
 	}
@@ -53,9 +49,9 @@ func CacheAdd(key string, p *TAccount) {
 }
 func CacheGet(key string) *TAccount {
 	if g_redis != nil {
-		if ret, e := g_redis.Get(key).Result(); e == nil {
+		if b, e := g_redis.Get(key).Result(); e == nil {
 			var v TAccount
-			if common.B2T(common.S2B(ret), &v) == nil {
+			if common.B2T(common.S2B(b), &v) == nil {
 				return &v
 			}
 		}

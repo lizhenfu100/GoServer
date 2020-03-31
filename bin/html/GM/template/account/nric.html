@@ -1,0 +1,33 @@
+<html>
+
+<head>
+    <title>实名信息</title>
+    <link rel="stylesheet" href="main.css">
+    <script src="app.js"></script>
+</head>
+
+<body bgcolor="white">
+    <div class="all-wrapper">
+        <h1>查看实名信息</h1>
+        <div class="form-wrapper">
+            <script>
+                function setActionAddr(form) {
+                    var uri = "/get_account_nric"
+                    // window.alert(document.getElementById("gameaddr").value)
+                    form.action="{{index .SdkAddrs 0}}"+uri;
+                    // window.alert(form.action)
+                }
+            </script>
+            <form action="" method="get" onsubmit="setActionAddr(this)">
+                <label>key:</label>
+                <input type="text" name="aid_mac" placeholder="账号id 或 设备码"><br>
+                <label>密码:</label>
+                <input type="password" name="passwd"><br>
+                <br>
+                <input type="submit" value="确认">
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

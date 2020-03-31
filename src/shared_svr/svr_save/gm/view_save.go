@@ -1,7 +1,6 @@
 package gm
 
 import (
-	"common"
 	"conf"
 	"dbmgo"
 	"encoding/json"
@@ -13,7 +12,7 @@ import (
 func Http_view_save_data(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.S2B("passwd error"))
+		w.Write([]byte("passwd error"))
 		return
 	}
 	pf_id := q.Get("pf_id")
@@ -24,14 +23,14 @@ func Http_view_save_data(w http.ResponseWriter, r *http.Request) {
 		ack, _ := json.MarshalIndent(ptr, "", "     ")
 		w.Write(ack)
 	} else {
-		w.Write(common.S2B("none save data"))
+		w.Write([]byte("none save data"))
 	}
 }
 
 func Http_view_bind_mac(w http.ResponseWriter, r *http.Request) { //绑定的设备信息
 	q := r.URL.Query()
 	if q.Get("passwd") != conf.GM_Passwd {
-		w.Write(common.S2B("passwd error"))
+		w.Write([]byte("passwd error"))
 		return
 	}
 	pf_id := q.Get("pf_id")
@@ -42,7 +41,7 @@ func Http_view_bind_mac(w http.ResponseWriter, r *http.Request) { //绑定的设
 		ack, _ := json.MarshalIndent(list, "", "     ")
 		w.Write(ack)
 	} else {
-		w.Write(common.S2B("none mac data"))
+		w.Write([]byte("none mac data"))
 	}
 }
 

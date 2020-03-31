@@ -45,17 +45,14 @@ func Select(list []Weight, count int) (ids []int) {
 func Between(left, right int) int { return left + rand.Intn(right+1-left) }
 
 // 数组乱序
-func Shuffle(slice []int) {
-	length := len(slice)
-	for i := 0; i < length; i++ {
-		ri := rand.Intn(length-i) + i
-		temp := slice[ri]
-		slice[i] = temp
-		slice[ri] = slice[i]
+func Shuffle(p []int) {
+	for n, i := len(p), 0; i < n; i++ {
+		r := rand.Intn(n-i) + i //i前是已洗好的，随机抽后面的，换到i
+		p[r], p[i] = p[i], p[r]
 	}
 }
 
-//生成随机字符串s
+//生成随机字符串
 var g_strBase = []byte("0123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNOPQRSTUVWXYZ")
 
 func String(length int) string {

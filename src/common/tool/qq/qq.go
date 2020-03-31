@@ -17,7 +17,7 @@ import (
 
 const (
 	//路由器里显示的ip，web返回的ip不能用
-	kUrlSend = "http://100.64.91.164:5700/send_group_msg"
+	kUrlSend = "http://192.168.1.50:5700/send_group_msg"
 )
 
 func SendMsg(qq int, text string) {
@@ -35,7 +35,7 @@ func SendMsg(qq int, text string) {
 			gamelog.Error("QQ send: %v", ack)
 		}
 	} else {
-		gamelog.Error("QQ send fail")
+		gamelog.Error("QQ send fail: %s", text)
 	}
 }
 

@@ -2,100 +2,90 @@
 
 <head>
     <title>公告发布</title>
+    <link href="../web/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../web/static/css//bootstrap-datetimepicker.min.css" rel="stylesheet">
+    <link href="../web/static/css//bootstrap-select.min.css" rel="stylesheet">
+    <script src="../web/jquery-3.1.1.js"></script>
+    <script src="../web/static/js/bootstrap.min.js"></script>
+    <script src="../web/static/js/moment-with-locales.min.js"></script>
+    <script src="../web/static//js/bootstrap-datetimepicker.min.js"></script>
+    <script src="../web/static/js//bootstrap-select.min.js"></script>
     <link rel="stylesheet" href="main.css">
+    <script src="../web/stats2.js"></script>
     <script src="app.js"></script>
 </head>
-
 <body bgcolor="white">
     <div class="all-wrapper">
         <h1>公告发布</h1>
         <div class="form-wrapper">
-            <form action="" method="get" onsubmit="SetSelectAddr(this)">
-                <label>大区:</label>
-                <select>
-                    <option value="{{.LocalAddr}}/bulletin">全区</option>
-                    <option value="{{.AddrLogin 1}}/bulletin">北美</option>
-                    <option value="{{.AddrLogin 2}}/bulletin">亚洲</option>
-                    <option value="{{.AddrLogin 3}}/bulletin">欧洲</option>
-                    <option value="{{.AddrLogin 4}}/bulletin">南美</option>
-                    <option value="{{.AddrLogin 5}}/bulletin">中国华北</option>
-                    <option value="{{.AddrLogin 6}}/bulletin">中国华南</option>
-                </select>
+            <form action="{{.LocalAddr}}/bulletin" method="get">
+                <label><input name="_list" type="checkbox" value="{{.SplitLogin1}}"/>China</label>
+                {{range .SplitLogin2}}
+                <label><input name="_list" type="checkbox" value="{{index .Addrs 0}}"/>{{.Name}}</label>
+                {{end}}
                 <label>平台名:</label>
                 <select name="pf_id">
                     <option value="">全平台</option>
-                    <option value="TapTap">TapTap</option>
-                    <option value="IOS">IOS</option>
-                    <option value="Android">Android</option>
-                    <option value="4399_360">4399_360</option>
-                    <option value="4399_4399">4399_4399</option>
-                    <option value="4399_4399hezi">4399_4399hezi</option>
-                    <option value="4399_4399jm">4399_4399jm</option>
-                    <option value="4399_anzhi_dj">4399_anzhi_dj</option>
-                    <option value="4399_baidu_dj">4399_baidu_dj</option>
-                    <option value="4399_biligame">4399_biligame</option>
-                    <option value="4399_dn_dj">4399_dn_dj</option>
-                    <option value="4399_douyu">4399_douyu</option>
-                    <option value="4399_duowan_mc">4399_duowan_mc</option>
-                    <option value="4399_leap">4399_leap</option>
-                    <option value="4399_letv">4399_letv</option>
-                    <option value="4399_meiyou_dj">4399_meiyou_dj</option>
-                    <option value="4399_migu">4399_migu</option>
-                    <option value="4399_muzhiwan">4399_muzhiwan</option>
-                    <option value="4399_pps">4399_pps</option>
-                    <option value="4399_samsungapp">4399_samsungapp</option>
-                    <option value="4399_snssdk">4399_snssdk</option>
-                    <option value="4399_sogou">4399_sogou</option>
-                    <option value="4399_uc_dj">4399_uc_dj</option>
-                    <option value="4399_wdj_dj">4399_wdj_dj</option>
-                    <option value="4399_wo">4399_wo</option>
-                    <option value="4399_xiaomi">4399_xiaomi</option>
-                    <option value="4399_yxgame">4399_yxgame</option>
-                    <option value="4399_yyb_dj">4399_yyb_dj</option>
-                    <option value="4399_yyh_dj">4399_yyh_dj</option>
-                    <option value="BlackBox">BlackBox</option>
-                    <option value="CatClaw">CatClaw</option>
-                    <option value="CoolPad">CoolPad</option>
-                    <option value="GamePop">GamePop</option>
-                    <option value="Gourd">Gourd</option>
-                    <option value="HuaWei">HuaWei</option>
-                    <option value="JinLi">JinLi</option>
-                    <option value="KuaiKan">KuaiKan</option>
-                    <option value="Lenovo">Lenovo</option>
-                    <option value="LianYun001">LianYun001</option>
-                    <option value="MeiZu">MeiZu</option>
-                    <option value="OPPO">OPPO</option>
-                    <option value="VIVO">VIVO</option>
-                    <option value="Xiao7">Xiao7</option>
-                    <option value="YYBShare">YYBShare</option>
-                    <option value="YouPinWei">YouPinWei</option>
+                    {{range .PfidAll}}<option value="{{.}}">{{.}}</option>
+                    {{end}}
                 </select>
-                <label>游戏:</label>
-                <select name="game">
-                    <option value="{{.GameName}}">{{.GameName}}</option>
-                </select>
+                <div class="form-group">
+                    <label>起始时间:</label>
+                    <div class='input-group date' id='datetimepicker3'>
+                        <input name="begin" type='text' class="form-control" />
+                        <span class="input-group-addon">
+                        <span class="glyphicon glyphicon-calendar"></span>
+                        </span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>结束时间:</label>
+                    <div class='input-group date' id='datetimepicker4'>
+                        <input name="end" type='text' class="form-control" />
+                        <span class="input-group-addon">
+                        <span class="glyphicon glyphicon-calendar"></span>
+                        </span>
+                    </div>
+                </div>
+                <div class="form-group">
                 <label>中文简体:</label>
-                <input type="text" name="zh"><br>
+                <input type="text" name="Zh"><br></div>
+                <div class="form-group">
                 <label>中文繁体:</label>
-                <input type="text" name="zh_hant"><br>
+                <input type="text" name="Zh_Hant"><br></div>
+                <div class="form-group">
                 <label>英语:</label>
-                <input type="text" name="en"><br>
+                <input type="text" name="En"><br></div>
+                <div class="form-group">
                 <label>日语:</label>
-                <input type="text" name="jp"><br>
+                <input type="text" name="Jp"><br></div>
+                <div class="form-group">
                 <label>俄语:</label>
-                <input type="text" name="ru"><br>
+                <input type="text" name="Ru"><br></div>
+                <div class="form-group">
                 <label>韩语:</label>
-                <input type="text" name="kr"><br>
+                <input type="text" name="Kr"><br></div>
+                <div class="form-group">
                 <label>西班牙语:</label>
-                <input type="text" name="es"><br>
+                <input type="text" name="Es"><br></div>
+                <div class="form-group">
                 <label>葡萄牙语:</label>
-                <input type="text" name="pt_br"><br>
+                <input type="text" name="Pt_Br"><br></div>
+                <div class="form-group">
                 <label>法语:</label>
-                <input type="text" name="fr"><br>
+                <input type="text" name="Fr"><br></div>
+                <div class="form-group">
                 <label>印尼语:</label>
-                <input type="text" name="id"><br>
+                <input type="text" name="Id"><br></div>
+                <div class="form-group">
                 <label>德语:</label>
-                <input type="text" name="de"><br>
+                <input type="text" name="De"><br></div>
+                <div class="form-group">
+                <label>阿拉伯语:</label>
+                <input type="text" name="Ar"><br></div>
+                <div class="form-group">
+                <label>波斯语:</label>
+                <input type="text" name="Fa"><br></div>
                 <br>
                 <input type="submit" value="确认发布">
             </form>

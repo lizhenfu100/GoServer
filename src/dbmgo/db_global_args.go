@@ -1,12 +1,3 @@
-/***********************************************************************
-* @ 入库的全局参数
-* @ brief
-	、本模块的接口性能不高（数据库同步操作）
-	、业务模块管理各自的参数缓存
-
-* @ author zhoumf
-* @ date 2018-12-7
-***********************************************************************/
 package dbmgo
 
 import (
@@ -39,7 +30,7 @@ func Log(key1, key2, val string) {
 		time.Now().Unix(),
 	})
 }
-func LogFind(key1, key2 string) []string {
+func LogFind(key1, key2 string) []string { //无索引，低性能
 	if key1 == "" {
 		return nil
 	}

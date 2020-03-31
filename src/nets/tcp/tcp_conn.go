@@ -63,24 +63,20 @@ package tcp
 import (
 	"bufio"
 	"common"
-	"common/timer"
-	"conf"
 	"encoding/binary"
-	"errors"
 	"gamelog"
 	"generate_out/rpc/enum"
-	"io"
 	"net"
-	"runtime/debug"
-	"svr_client/test/qps"
 	"sync/atomic"
+	"time"
 )
 
 const (
+	kHeadLen          = 2 //头2字节存msgSize
 	Msg_Size_Max      = 1024
 	Msg_Queue_Cap     = 10240
 	Write_Chan_Cap    = 32
-	Delay_Delete_Conn = 60
+	Delay_Delete_Conn = 60 * time.Second
 )
 
 var (
@@ -93,19 +89,19 @@ var (
 )
 
 func init() {
-	G_RpcQueue.Init(Msg_Queue_Cap)
+	G_RpcQueue.Init()
 }
 
-type TCPConn struct { //TODO:pprof性能测试
+type TCPConn struct {
 	conn          net.Conn
-	reader        *bufio.Reader //包装conn减少conn.Read的io次数，见【common/net.go】
+	reader        *bufio.Reader //包装conn减少conn.Read的io次数【client/test/net.go】
 	writer        *bufio.Writer
 	writeChan     chan []byte
-	_isClose      int32 //isClose标记仅在resetConn、Close中设置，其它地方只读
+	_isClose      int32
 	_isWriteClose int32
-	delayDel      *timer.TimeNode //针对玩家链接，延时删除，以待断线重连
-	onDisConnect  func(*TCPConn)
-	UserPtr       interface{}
+	delayDel      *time.Timer
+	onDisConnect  func()
+	user          atomic.Value
 }
 
 func newTCPConn(conn net.Conn) *TCPConn {
@@ -136,25 +132,22 @@ func (self *TCPConn) Close() {
 }
 func (self *TCPConn) IsClose() bool { return atomic.LoadInt32(&self._isClose) > 0 }
 
+func (self *TCPConn) GetUser() interface{}  { return self.user.Load() }
+func (self *TCPConn) SetUser(v interface{}) { self.user.Store(v) }
+
 //Notice：若连接关闭，继续写入的消息会堆积在writeChan中，直至塞满
 func (self *TCPConn) WriteMsg(msg *common.NetPack) {
 	msgLen := uint16(msg.Size())
-
-	// chan里传递的是地址，这里不能像readLoop中那样，优化为"操作同一块buf"，必须每次new新的
-	// 否则writeRoutine里拿到的极可能是同样数据
-	buf := make([]byte, 2+msgLen)
-
+	buf := make([]byte, kHeadLen+msgLen)
 	binary.LittleEndian.PutUint16(buf, msgLen)
-
-	copy(buf[2:], msg.Data())
-
-	self.WriteBuf(buf)
+	copy(buf[kHeadLen:], msg.Data())
+	self.WriteBuf(buf) //异步转至io线程
 }
 func (self *TCPConn) WriteBuf(buf []byte) {
 	select {
 	case self.writeChan <- buf: //chan满后再写即阻塞，select进入default分支报错
 	default:
-		gamelog.Error("WriteBuf: channel full %v\n %s", self.UserPtr, debug.Stack())
+		gamelog.Error("WriteBuf full: %v", self.GetUser())
 		/* 连接无效bug
 		1、tcp_conn断开后，业务层还是能调write接口的，消息缓存在writeChan里，它被塞满后，即使重连依然会立即失效
 		2、连接建立流程是：先发首条消息、注册消息，再开读写协程
@@ -165,9 +158,34 @@ func (self *TCPConn) WriteBuf(buf []byte) {
 		//close(self.writeChan) //重连chan里的数据得保留
 	}
 }
+func (self *TCPConn) writeLoop() {
+	atomic.StoreInt32(&self._isWriteClose, 0)
+LOOP:
+	for {
+		select {
+		case buf := <-self.writeChan:
+			if self._WriteFull(buf) != nil {
+				break LOOP
+			}
+		default:
+			if err := self.writer.Flush(); err != nil { //io.ErrShortWrite见文件头brief.6
+				gamelog.Error("Write Flush: %s", err.Error())
+				break LOOP
+			}
+			//FIXME:这里能不能加句 sleep(10ms)，让包更易积累，合并发送
+			//依赖底层调度，不是写一个包就唤醒一次，问题不大
+			buf := <-self.writeChan //阻塞，待数据写入
+			if self._WriteFull(buf) != nil {
+				break LOOP
+			}
+		}
+	}
+	atomic.StoreInt32(&self._isWriteClose, 1)
+	self.Close()
+}
 func (self *TCPConn) _WriteFull(buf []byte) error { //brief.6：err可能是io.ErrShortWrite，网络还是能继续工作的
 	if buf == nil || self.IsClose() {
-		return errors.New("tcp conn close")
+		return common.Err("tcp conn close")
 	}
 	total := len(buf)
 	for pos := 0; pos < total; {
@@ -180,79 +198,4 @@ func (self *TCPConn) _WriteFull(buf []byte) error { //brief.6：err可能是io.E
 		}
 	}
 	return nil
-}
-func (self *TCPConn) writeLoop() {
-	atomic.StoreInt32(&self._isWriteClose, 0)
-LOOP:
-	for {
-		select {
-		case buf := <-self.writeChan:
-			if self._WriteFull(buf) != nil {
-				break LOOP
-			}
-		default:
-			//var err error
-			//for i := 0; i < 100; i++ { //还写不完，等下一轮调度吧 //在同一函数帧里多次尝试意义不大,io还是阻塞的
-			//	if err = self.writer.Flush(); err != io.ErrShortWrite { //见文件头brief.6
-			//		break
-			//	}
-			//}
-			if err := self.writer.Flush(); err != nil {
-				gamelog.Error("(%p)WriteRoutine Flush: %s", self.conn, err.Error())
-				break LOOP
-			}
-			//FIXME: 这里能不能加句 sleep(10ms)，让包更易积累，合并发送；不加的话，调度权就完全依赖golang了，其实只要不是写一个包就唤醒一次，问题不大
-			buf := <-self.writeChan //阻塞，待数据写入
-			if self._WriteFull(buf) != nil {
-				break LOOP
-			}
-		}
-	}
-	atomic.StoreInt32(&self._isWriteClose, 1)
-	self.Close()
-}
-func (self *TCPConn) readLoop() {
-	var err error
-	var msgLen int
-	var msgHeader = make([]byte, 2) //前2字节存msgLen
-	//var packet, msgBuf = &common.NetPack{}, make([]byte, Msg_Size_Max)
-	for {
-		if self.IsClose() {
-			break
-		}
-		_, err = io.ReadFull(self.reader, msgHeader)
-		if err != nil {
-			gamelog.Debug("pConn(%p): %s", self.conn, err.Error())
-			break
-		}
-		msgLen = int(binary.LittleEndian.Uint16(msgHeader))
-		if msgLen <= 0 || msgLen > Msg_Size_Max {
-			gamelog.Error("invalid msgLen: %d", msgLen)
-			break
-		}
-		//packet.Reset(msgBuf[:msgLen]) //每次都操作的同片内存
-		packet := common.NewNetPackLen(msgLen)
-		if packet == nil {
-			gamelog.Error("invalid packLen: %d", msgLen)
-			break
-		}
-		_, err = io.ReadFull(self.reader, packet.Data())
-		if err != nil {
-			gamelog.Debug("pConn(%p): %s", self.conn, err.Error())
-			break
-		}
-		if conf.TestFlag_CalcQPS {
-			qps.AddQps()
-		}
-		//FIXME: 消息加密、验证有效性，不通过即踢掉，放到逻辑线程做，io线程只管io
-		if packet.GetMsgId() >= enum.RpcEnumCnt {
-			gamelog.Error("Msg(%d) Not Regist", packet.GetMsgId())
-		} else {
-			//在io线程直接调消息响应函数(多线程处理玩家操作)，玩家之间互改数据须考虑竞态问题(可用actor模式解决)
-			//若友好支持玩家强交互，可将packet放入主逻辑循环的消息队列(SafeQueue)
-			G_RpcQueue.Insert(self, packet) //转至逻辑线程处理消息
-			//G_RpcQueue._Handle(self, packet) //直接在io线程处理消息，响应函数中须考虑竞态问题了
-		}
-	}
-	self.Close()
 }

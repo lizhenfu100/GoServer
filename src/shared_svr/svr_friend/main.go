@@ -1,15 +1,3 @@
-/***********************************************************************
-* @ 好友服务器
-* @ brief
-	1、独立的好友服，好友关系入库(类似微信，实现社交关系不同游戏间复用)
-
-	2、避免维护“玩家-好友服”对应关系
-		a、设计为无状态的，独立的缓存(redis)，节点彼此一致；玩家可任意选取
-		b、设计为http节点，同步取数据，接口更友好；让业务节点遍历“好友服集群”，缓存成功取到数据的节点信息
-
-* @ author zhoumf
-* @ date 2018-3-26
-***********************************************************************/
 package main
 
 import (
@@ -17,14 +5,11 @@ import (
 	"common/console/shutdown"
 	"common/file"
 	"conf"
-	"dbmgo"
 	"flag"
 	"gamelog"
 	_ "generate_out/rpc/shared_svr/svr_friend"
 	"netConfig"
 	"netConfig/meta"
-	"shared_svr/svr_friend/logic"
-	"shared_svr/zookeeper/component"
 )
 
 const kModuleName = "friend"
@@ -41,15 +26,7 @@ func main() {
 	//设置本节点meta信息
 	meta.G_Local = meta.GetMeta(kModuleName, svrId)
 
-	//设置mongodb的服务器地址
-	pMeta := meta.GetMeta("db_friend", svrId)
-	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName,
-		conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
-
-	component.RegisterToZookeeper()
-
-	go netConfig.RunNetSvr()
-	logic.MainLoop()
+	netConfig.RunNetSvr(true)
 }
 func InitConf() {
 	var metaCfg []meta.Meta

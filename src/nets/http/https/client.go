@@ -26,7 +26,7 @@ func (client) PostReq(url string, b []byte) []byte {
 		//除非连接因超时终止了，否则相关资源无法被回收
 		return http2.ReadBody(ack.Body)
 	} else {
-		if msg := common.NewNetPack(b); msg != nil {
+		if msg := common.ToNetPack(b); msg != nil {
 			gamelog.Error("(%d) %s", msg.GetMsgId(), e.Error())
 		} else {
 			gamelog.Error(e.Error())

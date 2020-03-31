@@ -3,7 +3,6 @@ package tcp
 import (
 	"common"
 	"common/std"
-	"common/timer"
 	"conf"
 	"encoding/binary"
 	"fmt"
@@ -33,7 +32,7 @@ var _svr TCPServer
 
 func NewTcpServer(port uint16, maxconn int32) { //"ip:port"，ip可缺省
 	if conf.TestFlag_CalcQPS {
-		go qps.WatchLoop()
+		qps.Watch()
 	}
 	_svr.MaxConnNum = maxconn
 	_svr.closer.L = &_svr.Mutex
@@ -41,32 +40,30 @@ func NewTcpServer(port uint16, maxconn int32) { //"ip:port"，ip可缺省
 		_svr.SetListener(l)
 		_svr.run()
 	} else {
-		panic("NewTcpServer failed :%s" + err.Error())
+		panic("NewTcpServer: %s" + err.Error())
 	}
 }
 func CloseServer() { _svr.Close() }
 
 func (self *TCPServer) run() {
-	delay := 0
+	var delay time.Duration
 	for {
-		if conn, err := self.listener.Accept(); err == nil {
+		if conn, e := self.listener.Accept(); e == nil {
 			delay = 0
 			go self._HandleAcceptConn(conn)
-		} else {
-			if ne, ok := err.(net.Error); ok && ne.Temporary() {
-				if delay == 0 {
-					delay = 5
-				} else {
-					delay *= 2
-				}
-				if delay > 1000 {
-					delay = 1000
-				}
-				gamelog.Error("accept error: %s retrying in %d", err.Error(), delay)
-				time.Sleep(time.Duration(delay) * time.Millisecond)
-				continue
+		} else if ne, ok := e.(net.Error); ok && ne.Temporary() {
+			if delay == 0 {
+				delay = 5 * time.Millisecond
+			} else {
+				delay *= 2
 			}
-			gamelog.Error("accept closed: " + err.Error())
+			if delay > time.Second {
+				delay = time.Second
+			}
+			gamelog.Error("accept error: %s retrying in %d", e.Error(), delay/time.Millisecond)
+			time.Sleep(delay)
+		} else {
+			gamelog.Error("accept closed: " + e.Error())
 			break
 		}
 	}
@@ -78,15 +75,12 @@ func (self *TCPServer) _HandleAcceptConn(conn net.Conn) {
 	conn.SetReadDeadline(time.Now().Add(5 * time.Second)) //首次读，5秒超时防连接占用攻击；client无需超时限制
 	if _, err := io.ReadFull(conn, buf); err != nil {
 		conn.Close()
-		gamelog.Error("(%p)RecvFirstPack: %s", conn, err.Error())
+		gamelog.Error("RecvFirstMsg: %s", err.Error())
 		return
 	}
-	connId := binary.LittleEndian.Uint32(buf)
-	gamelog.Debug("_HandleAcceptConn: %d", connId)
 	conn.SetReadDeadline(time.Time{}) //后续无超时限制
-
-	if connId > 0 {
-		self._ResetOldConn(conn, connId)
+	if oldId := binary.LittleEndian.Uint32(buf); oldId > 0 {
+		self._ResetOldConn(conn, oldId)
 	} else {
 		self._AddNewConn(conn)
 	}
@@ -97,34 +91,29 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 		gamelog.Error("too many connections")
 		return
 	}
-
 	connId := atomic.AddUint32(&self.autoConnId, 1)
-
 	tcpConn := newTCPConn(conn)
 	self.connmap.Store(connId, tcpConn)
 	atomic.AddInt32(&self.connCnt, 1)
-	gamelog.Debug("Connect From: %s, AddConnId(%d)", conn.RemoteAddr().String(), connId)
+	gamelog.Debug("AddConn(%d) From:%s", connId, conn.RemoteAddr().String())
 
-	tcpConn.onDisConnect = func(conn *TCPConn) { //Notice:回调函数须线程安全
+	tcpConn.onDisConnect = func() { //Notice:回调函数须线程安全
 		self.connmap.Delete(connId)
 		atomic.AddInt32(&self.connCnt, -1)
-		gamelog.Debug("DelConnId(%d) %v", connId, conn.UserPtr)
-
-		//通知逻辑线程，连接断开
-		packet := common.NewNetPackCap(16)
-		packet.SetMsgId(enum.Rpc_net_error)
-		G_RpcQueue.Insert(conn, packet)
-
-		//连接的后台节点断开，注销之
-		if _, ok := conn.UserPtr.(*meta.Meta); ok {
+		gamelog.Debug("DelConnId(%d) %v", connId, tcpConn.GetUser())
+		if G_HandleFunc[enum.Rpc_net_error] != nil { //通知逻辑线程，连接断开
+			packet := common.NewNetPackCap(16)
+			packet.SetMsgId(enum.Rpc_net_error)
+			G_RpcQueue.Insert(tcpConn, packet)
+		}
+		if _, ok := tcpConn.GetUser().(*meta.Meta); ok { //连接的后台节点断开，注销之
 			packet := common.NewNetPackCap(16)
 			packet.SetMsgId(enum.Rpc_unregist)
-			G_RpcQueue.Insert(conn, packet)
+			G_RpcQueue.Insert(tcpConn, packet)
 		}
 	}
-
 	//通知client，连接被接收，下发connId、密钥等
-	acceptMsg := common.NewNetPackCap(32)
+	acceptMsg := common.NewNetPackCap(16)
 	acceptMsg.SetMsgId(enum.Rpc_svr_accept)
 	acceptMsg.WriteUInt32(connId)
 	tcpConn.WriteMsg(acceptMsg)
@@ -132,48 +121,31 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 	self._RunConn(tcpConn, connId)
 }
 func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
-	if v, ok := self.connmap.Load(oldId); ok {
+	if v, ok := self.connmap.Load(oldId); ok && v.(*TCPConn).IsClose() {
+		gamelog.Debug("ResetOldConn(%d)", oldId)
 		oldconn := v.(*TCPConn)
-		if oldconn.IsClose() {
-			gamelog.Debug("_ResetOldConn(%d) isClose, %v", oldId, oldconn.UserPtr)
-			oldconn.resetConn(newconn)
-			self._RunConn(oldconn, oldId)
-		} else {
-			gamelog.Debug("_ResetOldConn(%d) isOpen", oldId)
-			self._AddNewConn(newconn)
-		}
+		oldconn.resetConn(newconn)
+		self._RunConn(oldconn, oldId)
 	} else {
-		gamelog.Debug("_ResetOldConn(%d) to _AddNewConn", oldId)
+		gamelog.Debug("ResetOldConn(%d) to AddNewConn", oldId)
 		self._AddNewConn(newconn)
 	}
 }
 func (self *TCPServer) _RunConn(conn *TCPConn, connId uint32) {
 	self.wgConns.Add(1)
-
 	go conn.writeLoop()
-	conn.readLoop() //block 留read线程，保证消息响应、连接回收，都是同一线程处理的
-
-	//针对玩家链接，延时删除，以待断线重连
-	if _, ok := conn.UserPtr.(*meta.Meta); ok {
-		conn.onDisConnect(conn)
-	} else {
-		gamelog.Debug("RunEnd(%d) %v", connId, conn.UserPtr)
-		//if conn.delayDel == nil {
-		//	conn.delayDel = time.AfterFunc(Delay_Delete_Conn, func() {
-		//		if tcpConn.IsClose() {
-		//			tcpConn.onDisConnect()
-		//		}
-		//	})
-		//} else {
-		//	conn.delayDel.Reset(Delay_Delete_Conn)
-		//}
-		conn.delayDel = timer.G_TimerMgr.AddTimerSec(func() {
+	conn.readLoop() //block read io，保证消息响应、连接回收，在同一线程处理
+	if _, ok := conn.GetUser().(*meta.Meta); ok {
+		conn.onDisConnect() //节点断开，须立即注销
+	} else if conn.delayDel == nil {
+		conn.delayDel = time.AfterFunc(Delay_Delete_Conn, func() {
 			if conn.IsClose() {
-				conn.onDisConnect(conn)
+				conn.onDisConnect()
 			}
-		}, Delay_Delete_Conn, 0, 0)
+		})
+	} else {
+		conn.delayDel.Reset(Delay_Delete_Conn)
 	}
-
 	self.wgConns.Done()
 }
 
@@ -212,13 +184,13 @@ func _Rpc_regist(req, _ *common.NetPack, conn *TCPConn) {
 			return
 		}
 	}
-	conn.UserPtr = pMeta
+	conn.SetUser(pMeta)
 	meta.AddMeta(pMeta)
 	g_reg_conn_map.Store(std.KeyPair{pMeta.Module, pMeta.SvrID}, conn)
 	gamelog.Debug("Regist: %v", pMeta)
 }
 func _Rpc_unregist(req, _ *common.NetPack, conn *TCPConn) {
-	if pMeta, ok := conn.UserPtr.(*meta.Meta); ok {
+	if pMeta, ok := conn.GetUser().(*meta.Meta); ok {
 		if pConn := FindRegModule(pMeta.Module, pMeta.SvrID); pConn == nil || pConn.IsClose() {
 			gamelog.Debug("UnRegist: %v", pMeta)
 			meta.DelMeta(pMeta.Module, pMeta.SvrID)

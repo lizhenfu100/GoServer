@@ -7,7 +7,6 @@ import (
 	"common/file"
 	"common/tool/email"
 	"conf"
-	"dbmgo"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -17,6 +16,7 @@ import (
 	"netConfig/meta"
 	conf2 "shared_svr/svr_save/conf"
 	"shared_svr/svr_save/logic"
+	"shared_svr/zookeeper/component"
 )
 
 const kModuleName = "save"
@@ -32,13 +32,12 @@ func main() {
 
 	//设置本节点meta信息
 	meta.G_Local = meta.GetMeta(kModuleName, svrId)
+	if meta.G_Local.HttpPort != meta.KSavePort {
+		panic("svr_save port err")
+	}
+	component.RegisterToZookeeper()
 
-	//设置mongodb的服务器地址
-	pMeta := meta.GetMeta("db_save", svrId)
-	dbmgo.InitWithUser(pMeta.IP, pMeta.Port(), pMeta.SvrName,
-		conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
-
-	go netConfig.RunNetSvr()
+	netConfig.RunNetSvr(false)
 	logic.MainLoop()
 }
 func InitConf() {

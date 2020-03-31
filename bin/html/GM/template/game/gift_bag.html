@@ -12,12 +12,19 @@
         <div class="form-wrapper">
             <script>
                 function setActionAddr(form) {
-                    var select = form.getElementsByTagName("select")[0];
+                    var select = form.getElementsByTagName("select")[1];
                     var uri = select.options[select.selectedIndex].value;
                     form.action="{{.LocalAddr}}"+uri;
                 }
             </script>
             <form action="" method="get" onsubmit="setActionAddr(this)">
+                <label>大区:</label>
+                <select name="_list">
+                    <option value="{{.SplitLogin1}}">China</option>
+                    {{range .SplitLogin2}}
+                        <option value="{{index .Addrs 0}}">{{.Name}}</option>
+                    {{end}}
+                </select>
                 <label>操作类型:</label>
                 <select>
                     <option value="/gift_bag_add">投放</option>
@@ -27,55 +34,8 @@
                 <label>限定平台:</label>
                 <select name="pf_id">
                     <option value="">全平台</option>
-                    <option value="TapTap">TapTap</option>
-                    <option value="IOS">IOS</option>
-                    <option value="Android">Android</option>
-                    <option value="4399_360">4399_360</option>
-                    <option value="4399_4399">4399_4399</option>
-                    <option value="4399_4399hezi">4399_4399hezi</option>
-                    <option value="4399_4399jm">4399_4399jm</option>
-                    <option value="4399_anzhi_dj">4399_anzhi_dj</option>
-                    <option value="4399_baidu_dj">4399_baidu_dj</option>
-                    <option value="4399_biligame">4399_biligame</option>
-                    <option value="4399_dn_dj">4399_dn_dj</option>
-                    <option value="4399_douyu">4399_douyu</option>
-                    <option value="4399_duowan_mc">4399_duowan_mc</option>
-                    <option value="4399_leap">4399_leap</option>
-                    <option value="4399_letv">4399_letv</option>
-                    <option value="4399_meiyou_dj">4399_meiyou_dj</option>
-                    <option value="4399_migu">4399_migu</option>
-                    <option value="4399_muzhiwan">4399_muzhiwan</option>
-                    <option value="4399_pps">4399_pps</option>
-                    <option value="4399_samsungapp">4399_samsungapp</option>
-                    <option value="4399_snssdk">4399_snssdk</option>
-                    <option value="4399_sogou">4399_sogou</option>
-                    <option value="4399_uc_dj">4399_uc_dj</option>
-                    <option value="4399_wdj_dj">4399_wdj_dj</option>
-                    <option value="4399_wo">4399_wo</option>
-                    <option value="4399_xiaomi">4399_xiaomi</option>
-                    <option value="4399_yxgame">4399_yxgame</option>
-                    <option value="4399_yyb_dj">4399_yyb_dj</option>
-                    <option value="4399_yyh_dj">4399_yyh_dj</option>
-                    <option value="BlackBox">BlackBox</option>
-                    <option value="CatClaw">CatClaw</option>
-                    <option value="CoolPad">CoolPad</option>
-                    <option value="GamePop">GamePop</option>
-                    <option value="Gourd">Gourd</option>
-                    <option value="HuaWei">HuaWei</option>
-                    <option value="JinLi">JinLi</option>
-                    <option value="KuaiKan">KuaiKan</option>
-                    <option value="Lenovo">Lenovo</option>
-                    <option value="LianYun001">LianYun001</option>
-                    <option value="MeiZu">MeiZu</option>
-                    <option value="OPPO">OPPO</option>
-                    <option value="VIVO">VIVO</option>
-                    <option value="Xiao7">Xiao7</option>
-                    <option value="YYBShare">YYBShare</option>
-                    <option value="YouPinWei">YouPinWei</option>
-                </select>
-                <label>游戏名称:</label>
-                <select name="game">
-                    <option value="{{.GameName}}">{{.GameName}}</option>
+                    {{range .PfidAll}}<option value="{{.}}">{{.}}</option>
+                    {{end}}
                 </select>
                 <label>权限密码:</label>
                 <input type="password" name="passwd"><br>

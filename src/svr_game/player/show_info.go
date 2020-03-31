@@ -22,7 +22,7 @@ func (self *TShowInfo) DataToBuf(buf *common.NetPack) {
 	buf.WriteString(self.Name)
 	buf.WriteString(self.Head)
 }
-func (self *TPlayer) GetShowInfo() *TShowInfo {
+func (self *TPlayerBase) GetShowInfo() *TShowInfo {
 	return &TShowInfo{
 		self.AccountID,
 		self.Name,

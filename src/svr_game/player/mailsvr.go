@@ -33,7 +33,7 @@ func (self *TMailModule) SendSvrMail(mail *TMail) bool {
 	self.SvrMailId = mail.ID
 	mail.ID = dbmgo.GetNextIncId("MailId")
 	dbmgo.UpdateId(kDBMail, self.PlayerID, bson.M{"$push": bson.M{"maillst": mail}})
-	self.MailLst = append(self.MailLst, *mail)
+	self.Mails = append(self.Mails, *mail)
 	// self.owner.WriteMsg( mail.MailToBuf() )
 	return true
 }

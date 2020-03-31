@@ -9,7 +9,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"strings"
 )
@@ -96,14 +95,14 @@ func (this *RSA) Init(privateKey, publicKey []byte) (err error) {
 		if block, _ := pem.Decode(privateKey); block != nil {
 			this.PrivateKey, err = genPrivate(block.Bytes, block.Type)
 		} else {
-			err = errors.New("private key error")
+			err = common.Err("private key error")
 		}
 	}
 	if err == nil && publicKey != nil { //生成公钥
 		if block, _ := pem.Decode(publicKey); block != nil {
 			this.PublicKey, err = genPublic(block.Bytes)
 		} else {
-			err = errors.New("public key error")
+			err = common.Err("public key error")
 		}
 	}
 	return
@@ -118,7 +117,7 @@ func genPrivate(privateKey []byte, typ string) (ret *rsa.PrivateKey, err error) 
 			ret = key.(*rsa.PrivateKey)
 		}
 	default:
-		err = errors.New("unsupport private key type")
+		err = common.Err("unsupport private key type")
 	}
 	return
 }

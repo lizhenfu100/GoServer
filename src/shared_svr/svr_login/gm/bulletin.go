@@ -5,7 +5,7 @@
 * @ 接口文档
 	· Rpc_login_bulletin
 	· 上行参数
-		· string area		语言地区，须是约定的缩写
+		· string language	语言地区，须是约定的缩写
 	· 下行参数
 		· string content	公告文本
 
@@ -16,14 +16,12 @@ package gm
 
 import (
 	"common"
-	"common/copy"
 	"common/timer"
 	"dbmgo"
 	"encoding/json"
 	"gamelog"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
-	"reflect"
 	"strconv"
 	"time"
 )
@@ -34,19 +32,11 @@ const (
 )
 
 type Bulletin struct {
-	Begin   int64
-	End     int64
-	En      string //告示内容，按国家划分
-	Zh      string
-	Zh_Hant string
-	Jp      string
-	Ru      string //俄语
-	Kr      string //韩语
-	Es      string //西班牙语
-	Pt_Br   string //葡萄牙语
-	Fr      string //法语
-	Id      string //印尼语
-	De      string //德语
+	Begin int64
+	End   int64
+	Txt   map[string]string //<language, txt>
+	//En   Zh   Zh_Hant Jp Ru Kr  Es   Pt_Br  Fr   Id  De    Ar    Fa
+	//英语 简中    繁中	日 俄 韩 西班牙 葡萄牙 法语 印尼 德语 阿拉伯 波斯语
 }
 type Bulletins struct {
 	DBKey string `bson:"_id"`
@@ -54,19 +44,19 @@ type Bulletins struct {
 }
 
 func Rpc_login_bulletin(req, ack *common.NetPack) {
-	area := req.ReadString()
+	language := req.ReadString()
 	pf_id := req.ReadString()
 	pAll, ret, timenow := &Bulletins{}, "", time.Now().Unix()
 	if ok, _ := dbmgo.Find(dbmgo.KTableArgs, "_id", kDBKey, pAll); ok {
 		if v, ok := pAll.Pf[pf_id]; ok { //优先找本平台的
 			if common.InTime(timenow, v.Begin, v.End) {
-				ret = v.Get(area)
+				ret = v.Txt[language]
 			}
 		}
 		if ret == "" {
 			if v, ok := pAll.Pf[kAllPf]; ok { //再找全平台的
 				if common.InTime(timenow, v.Begin, v.End) {
-					ret = v.Get(area)
+					ret = v.Txt[language]
 				}
 			}
 		}
@@ -79,10 +69,15 @@ func Http_bulletin(w http.ResponseWriter, r *http.Request) {
 	if pf_id == "" {
 		pf_id = kAllPf
 	}
-	pVal := &Bulletin{}
-	copy.CopyForm(pVal, q)
+	pVal := &Bulletin{Txt: map[string]string{}}
 	pVal.Begin = timer.S2T(q.Get("begin"))
 	pVal.End = timer.S2T(q.Get("end"))
+	delete(q, "pf_id")
+	delete(q, "begin")
+	delete(q, "end")
+	for k, v := range q {
+		pVal.Txt[k] = v[0]
+	}
 	pAll := &Bulletins{}
 	pAll.setPlatform(pf_id, pVal)
 	ack, _ := json.MarshalIndent(pAll, "", "     ")
@@ -108,18 +103,9 @@ func (self *Bulletins) setPlatform(pf_id string, pVal *Bulletin) {
 		dbmgo.UpdateId(dbmgo.KTableArgs, kDBKey, bson.M{"$set": bson.M{"pf." + pf_id: pVal}})
 	} else {
 		self.DBKey = kDBKey
-		self.Pf[pf_id] = *pVal
+		self.Pf = map[string]Bulletin{pf_id: *pVal}
 		dbmgo.Insert(dbmgo.KTableArgs, self)
 	}
-}
-func (self *Bulletin) Get(area string) string {
-	if self != nil {
-		ref := reflect.ValueOf(self).Elem()
-		if v := ref.FieldByName(area); v.IsValid() {
-			return v.String()
-		}
-	}
-	return ""
 }
 
 // ------------------------------------------------------------

@@ -5,32 +5,33 @@ import (
 	"common/format"
 	"common/std/sign"
 	"common/tool/email"
+	"common/tool/sms"
 	"encoding/binary"
 	"fmt"
 	"generate_out/err"
 	"net/http"
 	"net/url"
 	"netConfig"
+	"shared_svr/svr_login/logic/cache"
 	"strconv"
 	"time"
 )
 
-// Client须提示玩家查收邮件
-func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) {
+func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) { //提示查收邮件
 	q := r.URL.Query()
-	k, v := "email", q.Get("name")
+	k, v := q.Get("key"), q.Get("name")
 	passwd := q.Get("passwd")
 	language := q.Get("language")
 	sign.Decode(&passwd)
-
-	//! 创建回复
+	if k == "" {
+		k = "email" //TODO:待删除，兼容老客户端
+	}
 	errCode := err.Unknow_error
 	defer func() {
 		ack := make([]byte, 2)
 		binary.LittleEndian.PutUint16(ack, errCode)
 		w.Write(ack)
 	}()
-
 	if !format.CheckPasswd(passwd) {
 		errCode = err.Passwd_format_err
 	} else {
@@ -48,7 +49,18 @@ func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) {
 		q.Set("sign", sign.CalcSign(k+v+passwd+flag))
 		//3、生成完整url
 		u.RawQuery = q.Encode()
-		errCode = email.SendMail("Reset Password", v, u.String(), language)
+		switch cache.Del(v); k {
+		case "email":
+			errCode = email.SendMail("Reset Password", v, u.String(), language)
+		case "phone":
+			if code := q.Get("code"); sms.CheckCode(v, code) {
+				if _, e := http.Get(u.String()); e == nil {
+					errCode = err.Success
+				}
+			} else {
+				errCode = err.Token_verify_err
+			}
+		}
 	}
 }
 

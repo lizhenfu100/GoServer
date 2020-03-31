@@ -24,8 +24,8 @@ func RegCmd(key string, f cmdFunc) {
 func _Rpc_gm_cmd1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_gm_cmd2(req, ack) }
 func _Rpc_gm_cmd2(req, ack *common.NetPack) {
 	cmd := req.ReadString()
-	str := req.ReadString()
-	args := strings.Split(str, " ")
+	args_ := req.ReadString()
+	args := strings.Split(args_, " ")
 
 	defer func() {
 		if r := recover(); r != nil {

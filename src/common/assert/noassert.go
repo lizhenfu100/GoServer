@@ -2,8 +2,6 @@
 
 package assert
 
-const (
-	IsDebug = false
-)
+const IsDebug = false
 
 func True(cond bool) {}

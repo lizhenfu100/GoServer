@@ -30,7 +30,7 @@ func Rpc_save_unbind_mac_by_email(req, ack *common.NetPack) {
 	} else {
 		//1、创建url
 		httpAddr := fmt.Sprintf("http://%s:%d/unbind_mac",
-			meta.G_Local.OutIP, meta.G_Local.Port())
+			meta.G_Local.OutIP, meta.G_Local.HttpPort)
 		u, _ := url.Parse(httpAddr)
 		q := u.Query()
 		//2、写入参数
@@ -77,12 +77,20 @@ func Http_unbind_mac(w http.ResponseWriter, r *http.Request) {
 var g_unbindTime1 sync.Map //<MacInfo.Key, int64>
 var g_unbindTime2 sync.Map //<MacInfo.Mac, int64>
 
-func Rpc_save_unbind_mac(req, ack *common.NetPack) {
+func Rpc_save_unbind_mac(req, ack *common.NetPack) { //TODO:待删除
 	mac := req.ReadString()
 
-	errcode, timeBind := UnbindMac(mac)
+	errcode, timeUnbind := UnbindMac(mac)
 	ack.WriteUInt16(errcode)
-	ack.WriteInt64(timeBind)
+	ack.WriteInt64(timeUnbind)
+}
+func Rpc_save_unbind_mac2(req, ack *common.NetPack) {
+	mac := req.ReadString()
+
+	errcode, timeUnbind := UnbindMac(mac)
+	ack.WriteUInt16(errcode)
+	//解绑，等待的秒数
+	ack.WriteInt(int(timeUnbind-time.Now().Unix()) + conf.Const.MacUnbindPeriod)
 }
 func UnbindMac(mac string) (uint16, int64) {
 	ptr := &MacInfo{}
@@ -108,9 +116,9 @@ func canUnbindMac(key, mac string, timeNow int64) (bool, int64) {
 		}
 	}
 	if v, ok := g_unbindTime2.Load(mac); ok {
-		timeBind := v.(int64)
-		if timeNow-timeBind < int64(conf.Const.MacUnbindPeriod) {
-			return false, timeBind
+		timeUnbind := v.(int64)
+		if timeNow-timeUnbind < int64(conf.Const.MacUnbindPeriod) {
+			return false, timeUnbind
 		}
 	}
 	return true, 0

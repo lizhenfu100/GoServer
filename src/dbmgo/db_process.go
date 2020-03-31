@@ -5,6 +5,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"strings"
 	"sync"
+	"time"
 )
 
 var (
@@ -13,14 +14,13 @@ var (
 )
 
 const (
-	_ = iota
-	DB_Insert
-	DB_Update_Field
-	DB_Update_Id
-	DB_Update_All
-	DB_Remove_One
-	DB_Remove_All
-	DB_Upsert_Id
+	DB_Insert     = 1
+	DB_Update     = 2
+	DB_Update_Id  = 3
+	DB_Update_All = 4
+	DB_Remove_One = 5
+	DB_Remove_All = 6
+	DB_Upsert_Id  = 7
 )
 
 type action struct {
@@ -39,7 +39,7 @@ func _loop() {
 		switch coll := DB().C(v.table); v.optype {
 		case DB_Insert:
 			err = coll.Insert(v.pData)
-		case DB_Update_Field:
+		case DB_Update:
 			err = coll.Update(v.search, v.pData)
 		case DB_Update_Id:
 			err = coll.UpdateId(v.search, v.pData)
@@ -57,10 +57,12 @@ func _loop() {
 			}
 		}
 		if err != nil {
-			gamelog.Error("DBLoop: op[%d] table[%s] search[%v], data[%v], Error[%v]",
+			gamelog.Error("op[%d] table[%s] search[%v], data[%v], Error[%v]",
 				v.optype, v.table, v.search, v.pData, err)
 			if isClosedErr(err) { //Mongodb会极低概率忽然断开，所有操作均超时~囧
-				_default.Connect()
+				for !_default.Connect() {
+					time.Sleep(time.Second)
+				}
 				_actions <- v
 			}
 		}
@@ -75,7 +77,7 @@ func isClosedErr(e error) bool {
 
 func Update(table string, search, update bson.M) {
 	_actions <- &action{
-		optype: DB_Update_Field,
+		optype: DB_Update,
 		table:  table,
 		search: search,
 		pData:  update,

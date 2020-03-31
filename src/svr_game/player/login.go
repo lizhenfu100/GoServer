@@ -16,26 +16,19 @@ package player
 
 import (
 	"common"
-	"gamelog"
 	"generate_out/err"
 	"nets/tcp"
 	"sync"
 	"sync/atomic"
 )
 
-func Rpc_game_login(req, ack *common.NetPack, conn *tcp.TCPConn) {
+func Rpc_check_identity(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	accountId := req.ReadUInt32()
 	token := req.ReadUInt32()
-
 	if !CheckLoginToken(accountId, token) {
 		ack.WriteUInt16(err.Token_verify_err)
-		return
-	}
-	//账户下可有多个角色的游戏，此处应下发角色列表，供client选取后再进游戏
-
-	//FIXME: 读数据库同步的，比较耗时，直接读的方式不适合外网；可转入线程池再通知回主线程
-	if this := FindWithDB(accountId); this == nil {
-		ack.WriteUInt16(err.Account_have_none_player) //notify client to create new player
+	} else if this := FindWithDB(accountId); this == nil {
+		ack.WriteUInt16(err.Account_have_none_player)
 	} else if this.IsForbidden {
 		ack.WriteUInt16(err.Account_forbidden)
 	} else {
@@ -45,36 +38,35 @@ func Rpc_game_login(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		ack.WriteString(this.Name)
 	}
 }
-func Rpc_game_create_player(req, ack *common.NetPack, conn *tcp.TCPConn) {
-	accountId := req.ReadUInt32()
-	playerName := req.ReadString()
-
-	if this := NewPlayerInDB(accountId, playerName); this == nil {
-		ack.WriteUInt32(0)
-	} else {
-		this.Login(conn)
-		gamelog.Debug("Create NewPlayer: accountId(%d) name(%s)", accountId, playerName)
-		ack.WriteUInt32(this.PlayerID)
-	}
-}
-func Rpc_game_logout(req, ack *common.NetPack, this *TPlayer) {
-	this.Logout()
+func Rpc_game_player_set_name(req, ack *common.NetPack, this *TPlayer) {
+	this.Name = req.ReadString()
 }
 
 // -------------------------------------
 // -- 后台账号验证
-var g_login_token sync.Map //<accountId, token>
+var g_tokens sync.Map //<accountId, token>
 
-func Rpc_game_login_token(req, ack *common.NetPack, conn *tcp.TCPConn) {
+func Rpc_set_identity(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	token := req.ReadUInt32()
 	accountId := req.ReadUInt32()
-	g_login_token.Store(accountId, token)
-
+	g_tokens.Store(accountId, token)
 	cnt := atomic.LoadInt32(&g_online_cnt)
-	ack.WriteInt32(cnt)
+	ack.WriteInt32(cnt + 1)
+	//单角色的游戏，自动建号、检查
+	ptr := FindWithDB(accountId)
+	if ptr == nil {
+		ptr = NewPlayerInDB(accountId)
+	}
+	if ptr == nil {
+		ack.WriteUInt16(err.Unknow_error)
+	} else if ptr.IsForbidden {
+		ack.WriteUInt16(err.Account_forbidden)
+	} else {
+		ack.WriteUInt16(err.Success)
+	}
 }
 func CheckLoginToken(accountId, token uint32) bool {
-	if value, ok := g_login_token.Load(accountId); ok {
+	if value, ok := g_tokens.Load(accountId); ok {
 		return token == value
 	}
 	return false

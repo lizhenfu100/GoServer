@@ -13,32 +13,32 @@ type ByteBuffer struct {
 
 func NewByteBufferCap(capacity int) *ByteBuffer {
 	self := malloc()
-	if self.buf == nil || cap(self.buf) < capacity {
+	if cap(self.buf) < capacity {
 		self.buf = make([]byte, 0, capacity)
 	}
 	return self
 }
 func NewByteBufferLen(length int) *ByteBuffer {
 	self := malloc()
-	if self.buf == nil || cap(self.buf) < length {
+	if cap(self.buf) < length {
 		self.buf = make([]byte, length)
 	} else {
 		self.buf = self.buf[:length]
 	}
 	return self
 }
-func NewByteBuffer(data []byte) *ByteBuffer { return &ByteBuffer{buf: data} }
+func ToBuf(data []byte) *ByteBuffer { return &ByteBuffer{buf: data} }
 
 func (self *ByteBuffer) Data() []byte    { return self.buf }
 func (self *ByteBuffer) Size() int       { return len(self.buf) }
 func (self *ByteBuffer) LeftBuf() []byte { return self.buf[self.ReadPos:] }
-func (self *ByteBuffer) Reset(data []byte) {
-	self.buf = data
-	self.ReadPos = 0
-}
 func (self *ByteBuffer) Clear() {
 	self.buf = self.buf[:0]
 	self.ReadPos = 0
+}
+func (self *ByteBuffer) Reset(buf []byte, pos int) {
+	self.buf = buf
+	self.ReadPos = pos
 }
 
 //! Write
@@ -46,6 +46,13 @@ func (self *ByteBuffer) WriteByte(v byte)   { self.buf = append(self.buf, v) }
 func (self *ByteBuffer) WriteInt(v int)     { self.WriteInt32(int32(v)) }
 func (self *ByteBuffer) WriteInt8(v int8)   { self.buf = append(self.buf, byte(v)) }
 func (self *ByteBuffer) WriteUInt8(v uint8) { self.buf = append(self.buf, byte(v)) }
+func (self *ByteBuffer) WriteBool(v bool) {
+	vv := byte(0)
+	if v {
+		vv = 1
+	}
+	self.buf = append(self.buf, vv)
+}
 func (self *ByteBuffer) WriteInt16(v int16) {
 	self.buf = append(self.buf, byte(v), byte(v>>8))
 }
@@ -215,8 +222,8 @@ func malloc() *ByteBuffer {
 	return buf
 }
 func (p *ByteBuffer) Free() {
-	assert.True(p.ReadPos >= 0) //防止同片内存重复归还
+	assert.True(p.ReadPos >= 0) //防重复归还
 	p.buf = p.buf[:0]
-	p.ReadPos = -99999
+	p.ReadPos = -9999 //防仍被使用
 	g_pool.Put(p)
 }

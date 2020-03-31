@@ -6,32 +6,19 @@ import (
 	"shared_svr/svr_gateway/logic"
 )
 
-func Rpc_gateway_login(req, ack *common.NetPack) {
+func Rpc_check_identity(req, ack *common.NetPack) {
 	accountId := req.ReadUInt32()
 	token := req.ReadUInt32()
-
 	if logic.CheckToken(accountId, token) {
 		ack.WriteUInt16(err.Success)
 	} else {
 		ack.WriteUInt16(err.Token_verify_err)
 	}
 }
-func Rpc_gateway_login_token(req, ack *common.NetPack) {
-	logic.Rpc_gateway_login_token(req)
-}
-
-func Rpc_gateway_relay_module(req, ack *common.NetPack) {
-	logic.Rpc_gateway_relay_module(req, func(backBuf *common.NetPack) {
-		ack.WriteBuf(backBuf.LeftBuf())
-	})
-}
-func Rpc_gateway_relay_modules(req, ack *common.NetPack) {
-	logic.Rpc_gateway_relay_modules(req, func(backBuf *common.NetPack) {
-		ack.WriteBuf(backBuf.LeftBuf())
-	})
-}
-func Rpc_gateway_relay_player_msg(req, ack *common.NetPack) {
-	logic.Rpc_gateway_relay_player_msg(req, func(backBuf *common.NetPack) {
+func Rpc_set_identity(req, ack *common.NetPack) { logic.Rpc_set_identity(req) }
+func Rpc_gateway_relay(req, ack *common.NetPack) {
+	logic.Rpc_gateway_relay(req, func(backBuf *common.NetPack) {
+		ack.ResetHead(backBuf)
 		ack.WriteBuf(backBuf.LeftBuf())
 	})
 }

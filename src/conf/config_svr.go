@@ -14,7 +14,7 @@ const (
 	// 通信的子功能开关
 	Is_Msg_Compress   = false //消息压缩
 	Is_Msg_Encode     = false //消息加密
-	Is_Http_To_Client = true  //Http推送
+	Is_Http_To_Client = false //Http推送
 
 	// 测试标记
 	TestFlag_CalcQPS = false //后台qps
@@ -23,8 +23,25 @@ const (
 	GM_Passwd = "chillyroom_gm_*"
 )
 
+var (
+	SvrList = []string{ //本项目包含哪类节点
+		"shared_svr/svr_center",
+		"shared_svr/svr_file",
+		"shared_svr/svr_friend",
+		"shared_svr/svr_gateway",
+		"shared_svr/svr_gm",
+		"shared_svr/svr_login",
+		"shared_svr/svr_sdk",
+		"shared_svr/svr_relay",
+		"shared_svr/svr_nric",
+		"shared_svr/zookeeper",
+		"svr_cross",
+		"svr_game",
+	}
+)
+
 var SvrCsv struct {
-	// 数据库
+	//数据库
 	DBuser   string
 	DBpasswd string
 

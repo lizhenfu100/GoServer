@@ -13,11 +13,9 @@ type client struct{}
 
 func (client) PostReq(url string, b []byte) []byte {
 	if _, body, e := http.Post(b, url, nil); e == nil {
-		//如果Response.Body既没有被完全读取，也没有被关闭，那么这次http事务就没有完成
-		//除非连接因超时终止了，否则相关资源无法被回收
 		return body
 	} else {
-		if msg := common.NewNetPack(b); msg != nil {
+		if msg := common.ToNetPack(b); msg != nil {
 			gamelog.Error("(%d) %s", msg.GetMsgId(), e.Error())
 		} else {
 			gamelog.Error(e.Error())

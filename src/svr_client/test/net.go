@@ -26,8 +26,8 @@ package test
 
 import (
 	"bufio"
+	"common"
 	"encoding/binary"
-	"errors"
 	"io"
 	"net"
 )
@@ -78,7 +78,7 @@ func (self *Session) Send(buf []byte) error {
 	select {
 	case self.sendChan <- buf:
 	default:
-		return errors.New("Send Chan Blocked!")
+		return common.Err("Send Chan Blocked!")
 	}
 	return nil
 }

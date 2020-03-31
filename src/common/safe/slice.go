@@ -39,12 +39,19 @@ func (p *Strings) Index(v string) (ret int) {
 	p.Unlock()
 	return
 }
-func (p *Strings) MoveToStack(retList *[]string) {
+func (p *Strings) MoveTo(ret *[]string) {
 	p.Lock()
 	for _, v := range p.v {
-		*retList = append(*retList, v)
+		*ret = append(*ret, v)
 	}
 	p.v = p.v[:0]
+	p.Unlock()
+}
+func (p *Strings) CopyTo(ret *[]string) {
+	p.Lock()
+	for _, v := range p.v {
+		*ret = append(*ret, v)
+	}
 	p.Unlock()
 }
 func (p *Strings) Size() int {

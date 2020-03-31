@@ -3,6 +3,7 @@ package console
 import (
 	"common"
 	"common/file"
+	"common/std/hash"
 	"common/tool/wechat"
 	"conf"
 	"gamelog"
@@ -32,11 +33,9 @@ func Init() {
 	tcp.G_HandleFunc[enum.Rpc_timestamp] = _Rpc_timestamp1
 	http.G_HandleFunc[enum.Rpc_timestamp] = _Rpc_timestamp2
 	go sigTerm() //监控进程终止信号
-
-	wechat.Init( //启动微信通知
+	wechat.Init( //启动微信报警
 		conf.SvrCsv.WechatCorpId,
 		conf.SvrCsv.WechatSecret,
-		conf.SvrCsv.WechatTouser,
 		conf.SvrCsv.WechatAgentId)
 }
 
@@ -53,10 +52,9 @@ func _Rpc_meta_list1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_meta_list2
 func _Rpc_meta_list2(req, ack *common.NetPack) {
 	module := req.ReadString() //game、save、file...
 	version := req.ReadString()
-	ids := meta.GetModuleIDs(module, version)
-	ack.WriteByte(byte(len(ids)))
-	for _, id := range ids {
-		p := meta.GetMeta(module, id)
+	list := meta.GetMetas(module, version)
+	ack.WriteByte(byte(len(list)))
+	for _, p := range list {
 		ack.WriteInt(p.SvrID)
 		ack.WriteString(p.OutIP)
 		ack.WriteUInt16(p.Port())
@@ -66,11 +64,36 @@ func _Rpc_meta_list2(req, ack *common.NetPack) {
 func _Rpc_get_meta1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_get_meta2(req, ack) }
 func _Rpc_get_meta2(req, ack *common.NetPack) {
 	module := req.ReadString() //game、save、file...
-	svrId := req.ReadInt()
-	if p := meta.GetMeta(module, svrId); p != nil {
+	version := req.ReadString()
+	typ := req.ReadByte()
+	var p *meta.Meta
+	vs := meta.GetMetas(module, version)
+	if n := len(vs); n > 0 {
+		switch typ {
+		case common.Random:
+			p = vs[rand.Intn(n)]
+		case common.Core:
+			p = vs[0]
+		case common.ById:
+			p = meta.GetMeta(module, req.ReadInt())
+		case common.ModInt:
+			p = vs[req.ReadUInt32()%uint32(n)]
+		case common.ModStr:
+			p = vs[hash.StrHash(req.ReadString())%uint32(n)]
+		case common.KeyShuntInt:
+			svrId := req.ReadInt()
+			aid := req.ReadUInt32()
+			p = meta.ShuntSvr(&svrId, vs, aid)
+		case common.KeyShuntStr:
+			svrId := req.ReadInt()
+			hashId := hash.StrHash(req.ReadString())
+			p = meta.ShuntSvr(&svrId, vs, hashId)
+		}
+	}
+	if p != nil {
+		ack.WriteInt(p.SvrID)
 		ack.WriteString(p.OutIP)
 		ack.WriteUInt16(p.Port())
-		ack.WriteString(p.SvrName)
 	}
 }
 func _Rpc_timestamp1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_timestamp2(req, ack) }

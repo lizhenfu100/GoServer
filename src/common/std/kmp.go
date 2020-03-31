@@ -14,48 +14,33 @@
 * @ author zhoumf
 * @ date 2018-11-30
 ***********************************************************************/
-package kmp
-
-import (
-	"errors"
-	"fmt"
-)
+package std
 
 // KMP字符串匹配，用于脏字库排查
 type kmp struct {
 	pattern string
 	next    []int
-	size    int
 }
 
-func NewKMP(pattern string) (*kmp, error) {
-	if next, err := makeNext(pattern); err != nil {
-		return nil, err
-	} else {
-		return &kmp{
-			pattern: pattern,
-			next:    next,
-			size:    len(pattern)}, nil
+func NewKMP(pattern string) *kmp {
+	if next := makeNext(pattern); next != nil {
+		return &kmp{pattern, next}
 	}
-}
-func (self *kmp) String() string { //For debugging
-	return fmt.Sprintf("pattern: %v\nnext: %v", self.pattern, self.next)
+	return nil
+
 }
 
 // returns an array containing indexes of matches
-// - error if pattern argument is less than 1 char
-func makeNext(pattern string) ([]int, error) {
-	// sanity check
+func makeNext(pattern string) []int {
 	length := len(pattern)
 	if length == 0 {
-		return nil, errors.New("'pattern' must contain at least one character")
+		return nil
 	}
 	if length == 1 {
-		return []int{-1}, nil
+		return []int{-1}
 	}
 	next := make([]int, length)
 	next[0], next[1] = -1, 0
-
 	pos, count := 2, 0
 	for pos < length {
 		if pattern[pos-1] == pattern[count] {
@@ -71,29 +56,26 @@ func makeNext(pattern string) ([]int, error) {
 			}
 		}
 	}
-	return next, nil
+	return next
 }
 
 // return index of first occurence of kmp.pattern in argument 's'
 // - if not found, returns -1
 func (self *kmp) FindStringIndex(s string) int {
-	// sanity check
-	if len(s) < self.size {
-		return -1
-	}
-	m, i := 0, 0
-	for m+i < len(s) {
-		if self.pattern[i] == s[m+i] {
-			if i == self.size-1 {
-				return m
-			}
-			i++
-		} else {
-			m += i - self.next[i]
-			if self.next[i] > -1 {
-				i = self.next[i]
+	if size, cnt := len(self.pattern), len(s); cnt >= size {
+		for m, i := 0, 0; m+i < cnt; {
+			if self.pattern[i] == s[m+i] {
+				if i == size-1 {
+					return m
+				}
+				i++
 			} else {
-				i = 0
+				m += i - self.next[i]
+				if self.next[i] > -1 {
+					i = self.next[i]
+				} else {
+					i = 0
+				}
 			}
 		}
 	}
@@ -104,37 +86,34 @@ const startSize = 10 //for effeciency, define default array-size
 
 // find every occurence of the kmp.pattern in 's'
 func (self *kmp) FindAllStringIndex(s string) []int {
-	// precompute
-	len_s := len(s)
-	if len_s < self.size {
+	if size, cnt := len(self.pattern), len(s); cnt < size {
 		return []int{}
-	}
-
-	match := make([]int, 0, startSize)
-	m, i := 0, 0
-	for m+i < len_s {
-		if self.pattern[i] == s[m+i] {
-			if i == self.size-1 {
-				// the word was matched
-				match = append(match, m)
-				// simulate miss, and keep running
+	} else {
+		match := make([]int, 0, startSize)
+		for m, i := 0, 0; m+i < cnt; {
+			if self.pattern[i] == s[m+i] {
+				if i == size-1 {
+					// the word was matched
+					match = append(match, m)
+					// simulate miss, and keep running
+					m += i - self.next[i]
+					if self.next[i] > -1 {
+						i = self.next[i]
+					} else {
+						i = 0
+					}
+				} else {
+					i++
+				}
+			} else {
 				m += i - self.next[i]
 				if self.next[i] > -1 {
 					i = self.next[i]
 				} else {
 					i = 0
 				}
-			} else {
-				i++
-			}
-		} else {
-			m += i - self.next[i]
-			if self.next[i] > -1 {
-				i = self.next[i]
-			} else {
-				i = 0
 			}
 		}
+		return match
 	}
-	return match
 }

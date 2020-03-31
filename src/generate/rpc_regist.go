@@ -38,8 +38,10 @@ func gatherRpcInfo(svr string) *RpcInfo {
 	pinfo := &RpcInfo{Module: getModuleName(svr), PackDirs: make(map[string]bool)}
 	names, _ := file.WalkDir(K_SvrDir+svr, ".go") //遍历所有go文件，收集rpc函数
 	for _, fileName := range names {
-		packdir, pack := "", ""
+		packdir, pack, lineNum := "", "", 0
 		file.ReadLine(fileName, func(line string) {
+			lineNum++
+			CheckReq(line, fileName, lineNum)
 			fname := "" //func name
 			if packdir == "" {
 				packdir = path.Dir(fileName)[len(K_SvrDir):]
@@ -81,35 +83,35 @@ func getModuleName(svr string) string {
 // -- 提取 package、RpcFunc
 func getPackage(dir string) string { return path.Base(dir) }
 func getTcpRpc(s string) string {
-	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack, \w+ \*tcp.TCPConn\) \{`, s); ok {
+	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack, \w+ \*tcp.TCPConn\)`, s); ok {
 		reg := regexp.MustCompile(`Rpc_\w+`)
 		return reg.FindAllString(s, -1)[0]
 	}
 	return ""
 }
 func getHttpRpc(s string) string {
-	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack\) \{`, s); ok {
+	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack\)`, s); ok {
 		reg := regexp.MustCompile(`Rpc_\w+`)
 		return reg.FindAllString(s, -1)[0]
 	}
 	return ""
 }
 func getPlayerRpc(s string) string {
-	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack, this \*.+\) \{`, s); ok {
+	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack, this \*.+\)`, s); ok {
 		reg := regexp.MustCompile(`Rpc_\w+`)
 		return reg.FindAllString(s, -1)[0]
 	}
 	return ""
 }
 func getHttpHandle(s string) string {
-	if ok, _ := regexp.MatchString(`^func Http_\w+\(\w+ http.ResponseWriter, \w+ \*http.Request\) \{`, s); ok {
+	if ok, _ := regexp.MatchString(`^func Http_\w+\(\w+ http.ResponseWriter, \w+ \*http.Request\)`, s); ok {
 		reg := regexp.MustCompile(`Http_\w+`)
 		return reg.FindAllString(s, -1)[0][5:]
 	}
 	return ""
 }
 func getRegPlayerRpc(s string) string {
-	if ok, _ := regexp.MatchString(`^func RegPlayerRpc\(\w+ map\[uint16\]PlayerRpc\) \{`, s); ok {
+	if ok, _ := regexp.MatchString(`^func RegPlayerRpc\(\w+ map\[uint16\]PlayerRpc\)`, s); ok {
 		return "RegPlayerRpc"
 	}
 	return ""

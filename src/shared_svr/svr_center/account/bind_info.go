@@ -20,40 +20,37 @@ import (
 // 绑定信息到账号
 func Rpc_center_bind_info(req, ack *common.NetPack) {
 	str := req.ReadString()
-	passwd := req.ReadString()
+	pwd := req.ReadString()
 	k := req.ReadString()
 	v := req.ReadString()
 	force := req.ReadBool()
-	sign.Decode(&str, &passwd)
-
-	errcode, ptr := GetAccount(str, passwd)
-	if errcode == err.Success {
+	sign.Decode(&str, &pwd)
+	errcode, ptr := GetAccount(str, pwd)
+	if ptr != nil {
 		if !format.CheckBindValue(k, v) {
 			errcode = err.BindInfo_format_err
-		} else if GetAccountByBindInfo(k, v) != nil {
+		} else if e, _ := GetAccountByBindInfo(k, v); e == err.Success {
 			errcode = err.BindInfo_already_in_use
-		} else if k == "email" && ptr.IsValidEmail > 0 {
-			errcode = err.Is_forbidden
-		} else {
+		} else if e == err.Not_found {
 			if _, ok := ptr.BindInfo[k]; !ok {
 				errcode = ptr.bind(k, v)
 			} else if force { //强制绑定，须验证
-				errcode = ptr.forceBind(k, v)
+				errcode = ptr.bindVerify(k, v)
 			} else {
 				errcode = err.Account_had_been_bound
 			}
+		} else {
+			errcode = e
 		}
 	}
 	ack.WriteUInt16(errcode)
 }
 func Rpc_center_isvalid_bind_info(req, ack *common.NetPack) {
-	val := req.ReadString()
+	str := req.ReadString()
 	typ := req.ReadString()
-	if p := GetAccountByBindInfo(typ, val); p == nil {
-		ack.WriteUInt16(err.Not_found)
+	if e, p := GetAccountByBindInfo(typ, str); p == nil {
+		ack.WriteUInt16(e)
 	} else if typ == "email" && p.IsValidEmail <= 0 {
-		ack.WriteUInt16(err.Invalid)
-	} else if typ == "phone" && p.IsValidPhone <= 0 {
 		ack.WriteUInt16(err.Invalid)
 	} else {
 		ack.WriteUInt16(err.Success)
@@ -62,23 +59,26 @@ func Rpc_center_isvalid_bind_info(req, ack *common.NetPack) {
 
 // ------------------------------------------------------------
 // 辅助函数
-func (self *TAccount) bind(k, newVal string) uint16 {
-	if GetAccountByBindInfo(k, newVal) != nil {
+func (self *TAccount) bind(typ, newVal string) uint16 {
+	if e, p := GetAccountByBindInfo(typ, newVal); p != nil {
 		return err.BindInfo_already_in_use
+	} else if e == err.Not_found {
+		CacheDel(self)
+		dbmgo.Log("Change_"+typ, self.BindInfo[typ], newVal)
+		self.BindInfo[typ] = newVal
+		CacheAdd(typ+newVal, self)
+		dbmgo.UpdateId(KDBTable, self.AccountID, bson.M{"$set": bson.M{"bindinfo." + typ: newVal}})
+		return err.Success
+	} else {
+		return e
 	}
-	CacheDel(self)
-	dbmgo.Log("Change_"+k, self.BindInfo[k], newVal)
-	self.BindInfo[k] = newVal
-	CacheAdd(k+newVal, self)
-	dbmgo.UpdateId(KDBTable, self.AccountID, bson.M{"$set": bson.M{"bindinfo." + k: newVal}})
-	return err.Success
 }
-func (self *TAccount) forceBind(k, v string) uint16 {
+func (self *TAccount) bindVerify(k, v string) uint16 {
 	switch k {
 	case "email":
 		//1、创建url
 		u, _ := url.Parse(fmt.Sprintf("http://%s:%d/bind_info_force",
-			meta.G_Local.OutIP, meta.G_Local.Port()))
+			meta.G_Local.OutIP, meta.G_Local.HttpPort))
 		q := u.Query()
 		//2、写入参数
 		aid := strconv.Itoa(int(self.AccountID))
@@ -98,9 +98,8 @@ func (self *TAccount) forceBind(k, v string) uint16 {
 }
 func Http_bind_info_force(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
+	k, v := q.Get("k"), q.Get("v")
 	aid := q.Get("aid")
-	k := q.Get("k")
-	v := q.Get("v")
 	flag := q.Get("flag")
 	timeFlag, _ := strconv.ParseInt(flag, 10, 64)
 	aids, _ := strconv.Atoi(aid)
@@ -108,42 +107,33 @@ func Http_bind_info_force(w http.ResponseWriter, r *http.Request) {
 
 	ack := "Error: unknown"
 	defer func() {
+		if k == "email" {
+			ack, _ = email.Translate(ack, "")
+		}
 		w.Write(common.S2B(ack))
 	}()
-
 	if sign.CalcSign(aid+k+v+flag) != q.Get("sign") {
-		ack, _ = email.Translate("Error: sign failed", "")
+		ack = "Error: sign failed"
 	} else if time.Now().Unix()-timeFlag > 3600 {
-		ack, _ = email.Translate("Error: url expire", "")
-	} else if account := GetAccountById(accountId); account == nil {
-		ack, _ = email.Translate("Error: Account_none", "")
-	} else {
-		if account.bind(k, v) == err.Success {
-			if k == "email" {
-				account.verifyEmailOK()
-			}
-			ack, _ = email.Translate("Bind info ok", "")
-		} else {
-			ack = "Error: BindInfo_already_in_use"
+		ack = "Error: url expire"
+	} else if _, p := GetAccountById(accountId); p == nil {
+		ack = "Error: Account_none"
+	} else if p.bind(k, v) == err.Success {
+		if k == "email" {
+			p.verifyEmailOK()
 		}
+		ack = "Bind info ok"
+	} else {
+		ack = "Error: BindInfo_already_in_use"
 	}
 }
 
 // ------------------------------------------------------------
-// 邮箱、手机验证
+// 邮箱验证 【不同游戏间验证，不保障强一致性，遍历各个游戏太挫了】
 func (self *TAccount) verifyEmailOK() {
 	if self.IsValidEmail == 0 {
 		self.IsValidEmail = 1
 		dbmgo.UpdateId(KDBTable, self.AccountID, bson.M{"$set": bson.M{"isvalidemail": 1}})
-		self.refreshLoginCache()
-		CacheDel(self)
-	}
-}
-func (self *TAccount) verifyPhoneOK() {
-	if self.IsValidPhone == 0 {
-		self.IsValidPhone = 1
-		dbmgo.UpdateId(KDBTable, self.AccountID, bson.M{"$set": bson.M{"isvalidphone": 1}})
-		self.refreshLoginCache()
 		CacheDel(self)
 	}
 }
@@ -155,14 +145,12 @@ func Http_verify_email(w http.ResponseWriter, r *http.Request) {
 	timeFlag, _ := strconv.ParseInt(flag, 10, 64)
 
 	ack := "Error: unknown"
-	defer func() {
-		w.Write(common.S2B(ack))
-	}()
+	defer func() { w.Write(common.S2B(ack)) }()
 	if sign.CalcSign(addr+flag) != q.Get("sign") {
 		ack, _ = email.Translate("Error: sign failed", language)
 	} else if time.Now().Unix()-timeFlag > 7*24*3600 {
 		ack, _ = email.Translate("Error: url expire", language)
-	} else if p := GetAccountByBindInfo("email", addr); p == nil {
+	} else if _, p := GetAccountByBindInfo("email", addr); p == nil {
 		ack, _ = email.Translate("Error: Account_none", language)
 	} else {
 		p.verifyEmailOK()
@@ -178,14 +166,12 @@ func Http_reg_account_by_email(w http.ResponseWriter, r *http.Request) {
 	timeFlag, _ := strconv.ParseInt(flag, 10, 64)
 
 	ack := "Error: unknown"
-	defer func() {
-		w.Write(common.S2B(ack))
-	}()
+	defer func() { w.Write(common.S2B(ack)) }()
 	if sign.CalcSign(addr+passwd+flag) != q.Get("sign") {
 		ack, _ = email.Translate("Error: sign failed", language)
 	} else if time.Now().Unix()-timeFlag > 7*24*3600 {
 		ack, _ = email.Translate("Error: url expire", language)
-	} else if sign.Decode(&passwd); !format.CheckPasswd(passwd) {
+	} else if !format.CheckPasswd(passwd) {
 		ack, _ = email.Translate("Error: Passwd_format_err", language)
 	} else if _, p := NewAccountInDB(passwd, "email", addr); p == nil {
 		ack, _ = email.Translate("Error: Account_reg_fail", language)

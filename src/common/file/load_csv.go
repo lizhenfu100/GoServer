@@ -12,7 +12,7 @@
 			物品权重表，可配成两列：[]IntPair + []int
 
 	2、代码数据格式
-			type TTestCsv struct { // 字段须与csv表格的顺序一致
+			type TTestCsv struct { // 字段名须与csv表的一致
 				Num  int
 				Str  string
 				Arr1 []int
@@ -77,25 +77,25 @@ func LoadCsv(fullName string, ptr interface{}) {
 	if records, err := ReadCsv(fullName); err != nil {
 		fmt.Println("LoadCsv error: ", err.Error())
 	} else {
-		ParseRefCsv(records, ptr)
+		ParseCsv(records, ptr)
 	}
 }
 
 // -------------------------------------
 // 反射解析
-func ParseRefCsv(records [][]string, ptr interface{}) {
+func ParseCsv(records [][]string, ptr interface{}) {
 	switch reflect.TypeOf(ptr).Elem().Kind() {
 	case reflect.Map:
-		ParseRefCsvByMap(records, ptr)
+		ParseByMap(records, ptr)
 	case reflect.Slice:
-		ParseRefCsvBySlice(records, ptr)
+		ParseBySlice(records, ptr)
 	case reflect.Struct:
-		ParseRefCsvByStruct(records, ptr)
+		ParseStruct(records, ptr)
 	default:
 		fmt.Println("Csv Type Error: TypeName: ", reflect.TypeOf(ptr).Elem().String())
 	}
 }
-func ParseRefCsvByMap(records [][]string, pMap interface{}) {
+func ParseByMap(records [][]string, pMap interface{}) {
 	table := reflect.ValueOf(pMap).Elem()
 	typ := table.Type().Elem().Elem() // map内保存的指针，第二次Elem()得到所指对象类型
 	table.Set(reflect.MakeMap(table.Type()))
@@ -122,7 +122,7 @@ func ParseRefCsvByMap(records [][]string, pMap interface{}) {
 		}
 	}
 }
-func ParseRefCsvBySlice(records [][]string, pSlice interface{}) { // slice可减少对象数量，降低gc
+func ParseBySlice(records [][]string, pSlice interface{}) { // slice可减少对象数量，降低gc
 	slice := reflect.ValueOf(pSlice).Elem() // 这里slice是nil
 	typ := reflect.TypeOf(pSlice).Elem()
 
@@ -143,7 +143,7 @@ func ParseRefCsvBySlice(records [][]string, pSlice interface{}) { // slice可减
 		}
 	}
 }
-func ParseRefCsvByStruct(records [][]string, pStruct interface{}) {
+func ParseStruct(records [][]string, pStruct interface{}) {
 	st := reflect.ValueOf(pStruct).Elem()
 	for _, v := range records {
 		if !strings.HasPrefix(v[0], "#") { // "#"起始的不读

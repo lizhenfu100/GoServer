@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"common"
+	"common/std"
 	"fmt"
 	"os"
 	"strings"
@@ -23,40 +24,45 @@ func generateRpcRoute(modules, funcs []string) {
 		return
 	}
 	defer f.Close()
-
 	//1、先写入函数的switch部分
-	f.Write(common.S2B("func GetRpcModule(rpcEnum uint16) string {\nswitch rpcEnum {"))
-
+	f.Write([]byte("func GetRpcModule(rpcEnum uint16) string {\nswitch rpcEnum {"))
 	//2、case部分由模板生成
 	if tpl, err := template.New(filename).Parse(funcRouteTemplate); err == nil {
 		var bf bytes.Buffer
-		for _, module := range modules {
-			if list := getModuleRpcs(module, funcs); len(list) > 0 {
-				if err = tpl.Execute(&bf, list); err != nil {
-					panic(err.Error())
-					return
-				}
-				buf := bf.Bytes()
-				buf[len(buf)-2] = ':'
-				buf[len(buf)-1] = ' '
-				f.Write(common.S2B("\ncase"))
-				f.Write(buf)
-				f.Write(common.S2B(fmt.Sprintf(`return "%s"`, module)))
-				bf.Reset()
+		for k, v := range splitModuleRpcs(modules, funcs) {
+			if err = tpl.Execute(&bf, v); err != nil {
+				panic(err.Error())
+				return
 			}
+			buf := bf.Bytes()
+			buf[len(buf)-2] = ':'
+			buf[len(buf)-1] = ' '
+			f.Write([]byte("\ncase"))
+			f.Write(buf)
+			if k == "login" {
+				f.Write([]byte(`return conf.GameName`))
+			} else {
+				f.Write(common.S2B(fmt.Sprintf(`return "%s"`, k)))
+			}
+			bf.Reset()
 		}
 	} else {
 		panic(err.Error())
 		return
 	}
-
 	//3、函数收尾
-	f.Write(common.S2B("}\nreturn \"\"}"))
+	f.Write([]byte("}\nreturn \"\"}"))
 }
-func getModuleRpcs(module string, funcs []string) (ret []string) {
-	for _, name := range funcs {
-		if strings.Split(name, "_")[1] == module { //Rpc_后面的字符即为模块名
-			ret = append(ret, name)
+func splitModuleRpcs(modules, funcs std.Strings) (ret map[string]std.Strings) {
+	ret = make(map[string]std.Strings)
+	for _, v := range funcs {
+		if m := strings.Split(v, "_")[1]; modules.Index(m) >= 0 { //Rpc_后面的字符即为模块名
+			if m == "nric" {
+				m = "sdk" //TODO:zhoumf:待删除
+			}
+			vs := ret[m]
+			vs.Add(v)
+			ret[m] = vs
 		}
 	}
 	return

@@ -20,6 +20,8 @@ type csvEmail struct { // Notice：用支持UTF-8的编辑器写csv，否则容�
 	Fr      string //法语
 	Id      string //印尼语
 	De      string //德语
+	Ar      string //阿拉伯语
+	Fa 		string //波斯语
 }
 
 func Translate(title, language string) (string, bool) {

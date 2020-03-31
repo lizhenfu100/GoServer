@@ -11,11 +11,10 @@ var (
 	_cipher, _ = aes.NewCipher(_key)
 )
 
-//【补全，可能更改原buf，改为string参数】
 func Encode(orig string) []byte {
 	blockSize := _cipher.BlockSize()
 	blockMode := cipher.NewCBCEncrypter(_cipher, _key[:blockSize])
-	buf := pkcs7Padding([]byte(orig), blockSize)
+	buf := pkcs7Padding([]byte(orig), blockSize) //【补全，可能更改原buf】
 	ret := make([]byte, len(buf))
 	blockMode.CryptBlocks(ret, buf)
 	return ret
