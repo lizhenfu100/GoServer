@@ -11,14 +11,14 @@ import (
 func CopyForm(ptr interface{}, form url.Values) {
 	val, typ := reflect.ValueOf(ptr).Elem(), reflect.TypeOf(ptr).Elem()
 	for i := 0; i < typ.NumField(); i++ {
-		if val.Field(i).CanSet() {
+		if field := val.Field(i); field.CanSet() {
 			name := strings.ToLower(typ.Field(i).Name)
 			if vs, ok := form[name]; ok {
-				v := ""
 				if len(vs) > 0 {
-					v = vs[0]
+					file.SetField(field, vs[0])
+				} else {
+					file.SetField(field, "")
 				}
-				file.SetField(val.Field(i), v)
 			}
 		}
 	}
@@ -26,14 +26,14 @@ func CopyForm(ptr interface{}, form url.Values) {
 func Form2Json(ptr interface{}, form url.Values) {
 	val, typ := reflect.ValueOf(ptr).Elem(), reflect.TypeOf(ptr).Elem()
 	for i := 0; i < typ.NumField(); i++ {
-		if val.Field(i).CanSet() {
+		if field := val.Field(i); field.CanSet() {
 			name := typ.Field(i).Tag.Get("json")
 			if vs, ok := form[name]; ok {
-				v := ""
 				if len(vs) > 0 {
-					v = vs[0]
+					file.SetField(field, vs[0])
+				} else {
+					file.SetField(field, "")
 				}
-				file.SetField(val.Field(i), v)
 			}
 		}
 	}
@@ -41,12 +41,13 @@ func Form2Json(ptr interface{}, form url.Values) {
 
 //拷贝同名field
 func CopySameField(pDest interface{}, pSrc interface{}) {
-	typ1 := reflect.TypeOf(pDest).Elem()
-	val1 := reflect.ValueOf(pDest).Elem()
-	val2 := reflect.ValueOf(pSrc).Elem()
-	for i := 0; i < typ1.NumField(); i++ {
-		if v := val2.FieldByName(typ1.Field(i).Name); v.IsValid() && v.CanSet() {
-			val1.Field(i).Set(v)
+	val, typ := reflect.ValueOf(pDest).Elem(), reflect.TypeOf(pDest).Elem()
+	src := reflect.ValueOf(pSrc).Elem()
+	for i := 0; i < typ.NumField(); i++ {
+		if field := val.Field(i); field.CanSet() {
+			if v := src.FieldByName(typ.Field(i).Name); v.IsValid() {
+				field.Set(v)
+			}
 		}
 	}
 }

@@ -24,9 +24,10 @@ const (
 
 func main() {
 	var sleep int
-	var addrList, dirList, gameName string
+	var addrList, dirList, suffix, gameName string
 	flag.StringVar(&addrList, "addr", "", "远端地址列表,空格隔开")
 	flag.StringVar(&dirList, "dir", "", "本地目录列表,空格隔开")
+	flag.StringVar(&suffix, "suffix", "", "待上传文件的后缀,空格隔开")
 	flag.StringVar(&gameName, "game", "", "游戏名称")
 	flag.IntVar(&sleep, "sleep", 1, "")
 	flag.Parse()
@@ -34,18 +35,20 @@ func main() {
 
 	addrList = format.MergeNearSpace(addrList)
 	dirList = format.MergeNearSpace(dirList)
+	suffix = format.MergeNearSpace(suffix)
 	if addrList == "" || dirList == "" {
-		fmt.Println("Param nil, run .bat")
-	}
-
-	//本地文件列表
-	localMap := make(map[string]uint32, 32)
-	localDirs := strings.Split(dirList, " ")
-	for _, dir := range localDirs {
-		readDir(dir, localMap)
-	}
-	for _, addr := range strings.Split(addrList, " ") {
-		SyncServerPatch("http://"+addr, gameName, localMap, localDirs)
+		fmt.Println("Please run .bat")
+	} else {
+		//本地文件列表
+		localMap := make(map[string]uint32, 32)
+		localDirs := strings.Split(dirList, " ")
+		suffixs := strings.Split(suffix, " ")
+		for _, dir := range localDirs {
+			readDir(dir, suffixs, localMap)
+		}
+		for _, addr := range strings.Split(addrList, " ") {
+			SyncServerPatch("http://"+addr, gameName, localMap, localDirs)
+		}
 	}
 	if fmt.Println("\n...finish..."); sleep > 0 {
 		time.Sleep(time.Hour)
@@ -87,7 +90,7 @@ func SyncServerPatch(addr, gameName string, localMap map[string]uint32, localDir
 		//比对本地、服务器，有新增或变更才上传
 		fmt.Println("\nSync File: ")
 		for k, v1 := range localMap {
-			if kIsCdn {
+			if kIsCdn && gameName != "" {
 				k = gameName + "/" + k //官网资源，追加游戏名父目录
 			}
 			if v2, ok := svrMap[k]; ok {
@@ -137,10 +140,15 @@ func SyncServerPatch(addr, gameName string, localMap map[string]uint32, localDir
 		}
 	})
 }
-func readDir(dir string, localMap map[string]uint32) {
+func readDir(dir string, suffix []string, localMap map[string]uint32) {
 	names, _ := file.WalkDir(dir, "")
 	for _, v := range names {
 		v = strings.TrimPrefix(v, "./")
-		localMap[v] = file.CalcMd5(v)
+		for _, s := range suffix {
+			if strings.HasSuffix(v, s) {
+				localMap[v] = file.CalcMd5(v)
+				continue
+			}
+		}
 	}
 }

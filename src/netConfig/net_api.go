@@ -46,7 +46,9 @@ func (p *rpcHttp) CallRpcSafe(rid uint16, sendFun, recvFun func(*common.NetPack)
 }
 
 //interface无法"!= nil"判别有效
-//GetRpc("game", 1); fmt.Println(p, ok, p != nil) //nil false true
+//var p netConfig.Rpc
+//p = netConfig.GetTcpConn("game", 2)
+//fmt.Println(p == nil, p) //false nil
 func GetRpc1(p *meta.Meta) (Rpc, bool) {
 	if p.HttpPort > 0 {
 		return &rpcHttp{p}, true

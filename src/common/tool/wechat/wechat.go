@@ -33,7 +33,7 @@ var (
 func Init(corpId, secret string, agentId int) {
 	g_corpId, g_secret, g_agentId = corpId, secret, agentId
 	if e := updateToken(); e != nil {
-		fmt.Println("Wechat token err: ", e.Error())
+		fmt.Println("Wechat init: ", e.Error())
 	}
 }
 func SendMsg(text string) {
@@ -48,9 +48,9 @@ func SendMsg(text string) {
 	})
 	if e := sendMsg(buf); e != nil {
 		if e = updateToken(); e != nil {
-			gamelog.Error("Wechat token: ", e.Error())
+			gamelog.Error("%s %s", text, e.Error())
 		} else if e = sendMsg(buf); e != nil {
-			gamelog.Error("Wechat send: %s", e.Error())
+			gamelog.Error("%s %s", text, e.Error())
 		}
 	}
 }

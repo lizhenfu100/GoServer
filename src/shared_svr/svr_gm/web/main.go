@@ -40,7 +40,6 @@ func Init() {
 	}
 	UpdateHtmls("account/", "account/", &g_common)
 	UpdateHtml("index", "index", &g_common)
-	UpdateHtml("relay_gm_cmd", "relay_gm_cmd", &g_common)
 }
 func init() {
 	nets.RegHttpHandler(map[string]nets.HttpHandle{

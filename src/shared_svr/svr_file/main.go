@@ -12,6 +12,7 @@ import (
 	"netConfig/meta"
 	"nets"
 	"shared_svr/svr_file/logic"
+	"shared_svr/zookeeper/component"
 )
 
 const kModuleName = "file"
@@ -27,6 +28,8 @@ func main() {
 
 	//设置本节点meta信息
 	meta.G_Local = meta.GetMeta(kModuleName, svrId)
+
+	component.RegisterToZookeeper()
 
 	netConfig.RunNetSvr(true)
 }

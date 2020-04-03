@@ -1,3 +1,37 @@
+/***********************************************************************
+* @ Nginx
+* @ /etc/nginx/sites-enabled
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server ipv6only=on;
+    index index.html index.htm;
+    server_name www.chillyroom.com;
+    error_page 404 502 /404.html;
+    root /home/ubuntu/chillyroom-gate-v2/public/;
+    location / {
+        root /home/ubuntu/web/public/;
+    }
+    location /api/ {
+        proxy_pass http://127.0.0.1:7071/;
+    }
+    location = /404.html {
+        root /home/ubuntu/web/public/;
+    }
+}
+server {
+    listen 80;
+    server_name afk.chillyroom.com;
+    location / {
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $host;
+        proxy_pass http://161.189.123.149:7708;
+    }
+}
+* @ author zhoumf
+* @ date 2020-4-2
+***********************************************************************/
 package main
 
 import (
@@ -6,7 +40,7 @@ import (
 )
 
 // ------------------------------------------------------------
-// -- 登录服列表  http://www.chillyroom.com/api/
+// -- 登录服列表 http://chillyroom.com/api/
 type TLogins struct {
 	GameName string
 	Logins   map[string][]string //<大区名, 地址>

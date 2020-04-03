@@ -31,7 +31,6 @@ const (
 	kFileDirRoot   = "net_file/"
 	kFileDirPlayer = kFileDirRoot + "upload/"
 	kFileDirPatch  = kFileDirRoot + "patch/"
-	kMaxUploadSize = 1024 * 1024 * 20
 )
 
 var (
@@ -62,28 +61,22 @@ func Http_download_file(w http.ResponseWriter, r *http.Request) {
 	m.RUnlock()
 }
 func Http_upload_patch_file(w http.ResponseWriter, r *http.Request) {
-	if name := _upload_file(w, r, kFileDirPatch); name != "" {
+	if name := _upload_file(r, kFileDirPatch); name != "" {
 		g_file_md5.Store(name, file.CalcMd5(name))
 	}
 }
 func Http_upload_player_file(w http.ResponseWriter, r *http.Request) {
-	_upload_file(w, r, kFileDirPlayer)
+	_upload_file(r, kFileDirPlayer)
 }
-func _upload_file(w http.ResponseWriter, r *http.Request, baseDir string) string {
-	r.Body = http.MaxBytesReader(w, r.Body, kMaxUploadSize)
-	if err := r.ParseMultipartForm(kMaxUploadSize); err != nil {
-		gamelog.Error(err.Error())
-		return ""
-	}
-
-	upfile, handler, err := r.FormFile("file")
+func _upload_file(r *http.Request, baseDir string) string {
+	upfile, h, err := r.FormFile("file")
 	if err != nil {
 		gamelog.Error(err.Error())
 		return ""
 	}
 	defer upfile.Close()
 
-	fullname := baseDir + handler.Filename
+	fullname := baseDir + h.Filename
 	gamelog.Debug("Path:%s  Name:%s", r.URL.Path, fullname)
 
 	// 创建临时文件，避免直接写原文件带来的竞态
@@ -126,12 +119,10 @@ func Rpc_file_update_list(req, ack *common.NetPack) {
 	}
 }
 func Rpc_file_delete(req, ack *common.NetPack) {
-	if cnt := req.ReadInt(); cnt > 0 {
-		for i := 0; i < cnt; i++ {
-			name := kFileDirPatch + req.ReadString()
-			g_file_md5.Delete(name)
-			os.Remove(name)
-		}
+	for cnt, i := req.ReadInt(), 0; i < cnt; i++ {
+		name := kFileDirPatch + req.ReadString()
+		g_file_md5.Delete(name)
+		os.Remove(name)
 	}
 }
 

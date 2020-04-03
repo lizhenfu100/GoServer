@@ -66,6 +66,7 @@ type TPlayer struct {
 	TPlayerBase
 	modules []iModule
 	mail    TMailModule
+	daily   TDailyModule
 	friend  TFriendModule
 	team    Team
 	money   TMoneyModule
@@ -88,6 +89,7 @@ func _NewPlayer() *TPlayer {
 func (self *TPlayer) init() {
 	self.modules = []iModule{ //regist
 		&self.mail,
+		&self.daily,
 		&self.friend,
 		&self.team,
 		&self.money,

@@ -173,7 +173,7 @@ LOOP:
 				break LOOP
 			}
 			//FIXME:这里能不能加句 sleep(10ms)，让包更易积累，合并发送
-			//依赖底层调度，不是写一个包就唤醒一次，问题不大
+			//依赖底层调度，不是写一个包就唤醒一次，问题不大；C++中频繁小包陷入系统调用，需辅助线程batch
 			buf := <-self.writeChan //阻塞，待数据写入
 			if self._WriteFull(buf) != nil {
 				break LOOP

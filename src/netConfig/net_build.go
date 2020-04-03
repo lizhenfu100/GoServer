@@ -71,7 +71,7 @@ func RunNetSvr(block bool) {
 			go tcp.NewTcpServer(local.TcpPort, local.Maxconn)
 		}
 	} else {
-		gamelog.Error(local.Module + ": have none HttpPort|TcpPort")
+		fmt.Println(local.Module, ": none HttpPort|TcpPort")
 	}
 }
 

@@ -26,7 +26,7 @@ func (self *TCPConn) readLoop() {
 		if _, err = io.ReadAtLeast(self.reader, msgBuf, kHeadLen); err != nil {
 			break
 		}
-		msgLen = int(binary.LittleEndian.Uint16(msgHeader))
+		msgLen = int(binary.LittleEndian.Uint16(msgBuf))
 		if msgLen < common.PACK_HEADER_SIZE || msgLen > Msg_Size_Max {
 			gamelog.Error("invalid msgLen: %d", msgLen)
 			break
@@ -36,7 +36,7 @@ func (self *TCPConn) readLoop() {
 		}
 		//FIXME: 消息加密、验证有效性，pipeline模式优化
 		req.Reset(msgBuf[kHeadLen:kHeadLen+msgLen], common.PACK_HEADER_SIZE)
-		q._Handle(conn, &req, &ack) //io线程直接处理，须考虑竞态
+		q._Handle(self, &req, &ack) //io线程直接处理，须考虑竞态
 	}
 	self.Close()
 }

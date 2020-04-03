@@ -102,8 +102,7 @@ func relay_gm_cmd(w http.ResponseWriter, r *http.Request) {
 		buf.WriteString(cmd)
 		buf.WriteString(args)
 	}, func(recvBuf *common.NetPack) {
-		str := recvBuf.ReadString()
-		w.Write(common.S2B(str))
+		w.Write(common.S2B(recvBuf.ReadString()))
 	})
 }
 
@@ -165,11 +164,11 @@ func Http_gift_code_spawn(w http.ResponseWriter, r *http.Request) {
 // ------------------------------------------------------------
 // 云存档
 func Http_download_save_data(w http.ResponseWriter, r *http.Request) {
-	r.ParseMultipartForm(32 << 20) //multipart/form-data格式，用于传文件
-	saveAddr := "http://" + r.Form.Get("addr")
+	r.ParseForm()
+	addr := "http://" + r.Form.Get("addr")
 	uid := r.Form.Get("uid")
 	pf_id := r.Form.Get("pf_id")
-	mhttp.CallRpc(saveAddr, enum.Rpc_save_gm_dn, func(buf *common.NetPack) {
+	mhttp.CallRpc(addr, enum.Rpc_save_gm_dn, func(buf *common.NetPack) {
 		buf.WriteString(uid)
 		buf.WriteString(pf_id)
 	}, func(backBuf *common.NetPack) {
@@ -181,11 +180,10 @@ func Http_download_save_data(w http.ResponseWriter, r *http.Request) {
 	})
 }
 func Http_upload_save_data(w http.ResponseWriter, r *http.Request) {
-	r.ParseMultipartForm(32 << 20) //multipart/form-data格式，用于传文件
-	saveAddr := "http://" + r.Form.Get("addr")
+	f, _, e := r.FormFile("save")
+	addr := "http://" + r.Form.Get("addr")
 	uid := r.Form.Get("uid")
 	pf_id := r.Form.Get("pf_id")
-	f, _, e := r.FormFile("save")
 	if e != nil {
 		w.Write([]byte("上传失败 无效文件"))
 		return
@@ -195,7 +193,7 @@ func Http_upload_save_data(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("上传失败 无效文件"))
 		return
 	}
-	mhttp.CallRpc(saveAddr, enum.Rpc_save_gm_up, func(buf *common.NetPack) {
+	mhttp.CallRpc(addr, enum.Rpc_save_gm_up, func(buf *common.NetPack) {
 		buf.WriteString(uid)
 		buf.WriteString(pf_id)
 		buf.WriteString("") //extra

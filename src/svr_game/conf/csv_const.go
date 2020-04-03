@@ -1,7 +1,11 @@
 package conf
 
+import "common/std"
+
 var Const struct {
 	LoginSvrId int //所在区服
+
+	DailySignInReward [][]std.IntPair //每日签到奖励
 
 	// 赛季
 	Season_Begin_Month []int //开始月份

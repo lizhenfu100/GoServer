@@ -95,9 +95,8 @@ func (self *Meta) BufToData(buf *common.NetPack) {
 	self.TcpPort = buf.ReadUInt16()
 	self.HttpPort = buf.ReadUInt16()
 	self.Maxconn = buf.ReadInt32()
-	length := buf.ReadByte()
 	self.ConnectLst = self.ConnectLst[:0]
-	for i := byte(0); i < length; i++ {
+	for cnt, i := buf.ReadByte(), byte(0); i < cnt; i++ {
 		str := buf.ReadString()
 		self.ConnectLst = append(self.ConnectLst, str)
 	}

@@ -26,6 +26,7 @@ const (
 var (
 	SvrList = []string{ //本项目包含哪类节点
 		"shared_svr/svr_center",
+		"shared_svr/svr_dns",
 		"shared_svr/svr_file",
 		"shared_svr/svr_friend",
 		"shared_svr/svr_gateway",

@@ -26,8 +26,8 @@ func TodayRunSec() int {
 }
 func TodayLeftSec() int { return OneDaySec - TodayRunSec() }
 
-func S2T(date string) int64 {
-	if v, e := time.ParseInLocation(Layout, date, time.Local); e == nil {
+func S2T(s string) int64 {
+	if v, e := time.ParseInLocation(Layout, s, time.Local); e == nil {
 		return v.Unix()
 	}
 	return 0

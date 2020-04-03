@@ -22,7 +22,7 @@ import (
 	"os"
 )
 
-func Default(args []string) {
+func Default() {
 	gamelog.Info("Shutdown Begin")
 	tcp.CloseServer()
 	http.CloseServer()
