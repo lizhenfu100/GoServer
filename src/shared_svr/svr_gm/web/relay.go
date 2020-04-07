@@ -148,7 +148,7 @@ func Http_gift_code_spawn(w http.ResponseWriter, r *http.Request) {
 	} else {
 		r.URL.Path = gift_bag.KGiftCodeDir + game + "/" + key + ".csv" //历史所有礼包码
 	}
-	if count < 1000 {
+	if count < 100 {
 		var buf bytes.Buffer
 		vs, _ := file.ReadCsv(r.URL.Path)
 		for _, v := range vs {

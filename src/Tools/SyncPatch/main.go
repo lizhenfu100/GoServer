@@ -88,7 +88,7 @@ func SyncServerPatch(addr, gameName string, localMap map[string]uint32, localDir
 		var cdnUrls std.Strings     //同步过的，用于刷新cdn
 
 		//比对本地、服务器，有新增或变更才上传
-		fmt.Println("\nSync File: ")
+		fmt.Println("\nSync File: ", addr)
 		for k, v1 := range localMap {
 			if kIsCdn && gameName != "" {
 				k = gameName + "/" + k //官网资源，追加游戏名父目录

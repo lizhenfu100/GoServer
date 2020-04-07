@@ -56,20 +56,17 @@ func Rpc_friend_del(req, ack *common.NetPack) {
 }
 func Rpc_friend_list(req, ack *common.NetPack) {
 	myId := req.ReadUInt32()
-	if this := FindWithDB(myId); this != nil {
-		list := make(std.UInt32s, len(this.Friends))
-		copy(list, this.Friends)
+	if p := FindWithDB(myId); p != nil {
 		//删除上报的，剩余即新增
 		for cnt, i := req.ReadUInt16(), uint16(0); i < cnt; i++ {
-			aid := req.ReadUInt32()
-			if j := list.Index(aid); j >= 0 {
-				list.Del(j)
+			if j := p.Friends.Index(req.ReadUInt32()); j >= 0 {
+				p.Friends.Del(j)
 			}
 		}
-		//返回新增好友
+		//返回新好友accountId
 		posInBuf, count := ack.Size(), uint16(0)
 		ack.WriteUInt16(count)
-		for _, aid := range list {
+		for _, aid := range p.Friends {
 			ack.WriteUInt32(aid)
 			count++
 		}
@@ -87,22 +84,22 @@ func FindWithDB(aid uint32) *TFriend {
 	return nil
 }
 func AddFriend(aid, dst uint32) {
-	if this := FindWithDB(aid); this == nil {
+	if p := FindWithDB(aid); p == nil {
 		dbmgo.Insert(kDBTable, &TFriend{
 			AccountId: aid,
 			Friends:   []uint32{dst},
 		})
-	} else if i := this.Friends.Index(dst); i < 0 && dst != this.AccountId {
-		this.Friends.Add(dst)
-		dbmgo.UpdateId(kDBTable, this.AccountId, bson.M{"$push": bson.M{
+	} else if i := p.Friends.Index(dst); i < 0 && dst != p.AccountId {
+		p.Friends.Add(dst)
+		dbmgo.UpdateId(kDBTable, p.AccountId, bson.M{"$push": bson.M{
 			"friends": dst}})
 	}
 }
 func DelFriend(aid, dst uint32) {
-	if this := FindWithDB(aid); this != nil {
-		if i := this.Friends.Index(dst); i >= 0 {
-			this.Friends.Del(i)
-			dbmgo.UpdateId(kDBTable, this.AccountId, bson.M{"$pull": bson.M{
+	if p := FindWithDB(aid); p != nil {
+		if i := p.Friends.Index(dst); i >= 0 {
+			p.Friends.Del(i)
+			dbmgo.UpdateId(kDBTable, p.AccountId, bson.M{"$pull": bson.M{
 				"friends": dst}})
 		}
 	}

@@ -35,7 +35,6 @@ import (
 	"common/service"
 	"dbmgo"
 	"gamelog"
-	"netConfig/meta"
 	"nets/tcp"
 	"sync/atomic"
 	"time"
@@ -55,7 +54,6 @@ type TPlayerBase struct { //Optimize：hash accountId分库分表
 	IsForbidden bool //是否禁用
 	Name        string
 	Head        string
-	Version     string //用于数据升级；客户端连接与自己版本匹配的节点
 }
 type TPlayer struct {
 	_isOnlnie int32
@@ -104,7 +102,6 @@ func NewPlayerInDB(accountId uint32) *TPlayer {
 	// }
 	player.AccountID = accountId
 	player.PlayerID = accountId
-	player.Version = meta.G_Local.Version
 
 	if dbmgo.DB().C(kDBPlayer).Insert(&player.TPlayerBase) == nil {
 		for _, v := range player.modules {

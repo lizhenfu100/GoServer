@@ -37,10 +37,8 @@ func (self *TCPClient) connectRoutine() {
 		regMsg.SetMsgId(enum.Rpc_regist)
 		meta.G_Local.DataToBuf(regMsg)
 		//将regMsg追加到firstMsg之后，须满足tcp包格式
-		kfirstMsgLen := len(firstMsg)
-		firstMsg = make([]byte, kfirstMsgLen+2+regMsg.Size())
-		binary.LittleEndian.PutUint16(firstMsg[kfirstMsgLen:], uint16(regMsg.Size()))
-		copy(firstMsg[kfirstMsgLen+2:], regMsg.Data())
+		firstMsg = append(firstMsg, byte(regMsg.Size()), byte(regMsg.Size()>>8))
+		firstMsg = append(firstMsg, regMsg.Data()...)
 		regMsg.Free()
 	}
 	for atomic.LoadInt32(&self._isClose) == 0 {

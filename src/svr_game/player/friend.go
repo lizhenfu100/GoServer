@@ -31,21 +31,23 @@ func (self *TFriendModule) LoadFromDB(p *TPlayer) {
 }
 func (self *TFriendModule) WriteToDB() { dbmgo.UpdateId(kDBFriend, self.Pid, self) }
 func (self *TFriendModule) OnLogin() {
-	for _, friendId := range self.Friends {
-		netConfig.CallRpcGateway(common.PidToAid(friendId), enum.Rpc_client_friend_login, func(buf *common.NetPack) {
-			buf.WriteUInt32(common.PidToAid(self.Pid))
+	myId := common.PidToAid(self.Pid)
+	for _, pid := range self.Friends {
+		netConfig.CallRpcGateway(common.PidToAid(pid), enum.Rpc_client_friend_login, func(buf *common.NetPack) {
+			buf.WriteUInt32(myId)
 		}, nil)
 	}
 }
 func (self *TFriendModule) OnLogout() {
-	for _, friendId := range self.Friends {
-		netConfig.CallRpcGateway(common.PidToAid(friendId), enum.Rpc_client_friend_logout, func(buf *common.NetPack) {
-			buf.WriteUInt32(common.PidToAid(self.Pid))
+	myId := common.PidToAid(self.Pid)
+	for _, pid := range self.Friends {
+		netConfig.CallRpcGateway(common.PidToAid(pid), enum.Rpc_client_friend_logout, func(buf *common.NetPack) {
+			buf.WriteUInt32(myId)
 		}, nil)
 	}
 }
 func (self *TFriendModule) InitFriends() {
-	if p, ok := netConfig.GetRpcRand("friend"); ok {
+	if p, ok := netConfig.GetRpcRand("friend"); ok { //公司好友数据，初始化游戏好友
 		p.CallRpc(enum.Rpc_friend_list, func(buf *common.NetPack) {
 			buf.WriteUInt32(common.PidToAid(self.Pid))
 			buf.WriteUInt16(uint16(len(self.Friends)))
@@ -71,21 +73,21 @@ func Rpc_game_friend_add(req, ack *common.NetPack, this *TPlayer) {
 	dstId := req.ReadUInt64()
 
 	this.friend.AddFriend(dstId)
-	ptr := &TFriendModule{Pid: dstId}
-	if ok, _ := dbmgo.Find(kDBFriend, "_id", dstId, ptr); ok {
-		ptr.AddFriend(this.friend.Pid)
+	other := &TFriendModule{Pid: dstId}
+	if ok, _ := dbmgo.Find(kDBFriend, "_id", dstId, other); ok {
+		other.AddFriend(this.friend.Pid)
 	} else {
-		ptr.Friends.Add(this.friend.Pid)
-		dbmgo.Insert(kDBFriend, ptr)
+		other.Friends.Add(this.friend.Pid)
+		dbmgo.Insert(kDBFriend, other)
 	}
 }
 func Rpc_game_friend_del(req, ack *common.NetPack, this *TPlayer) {
 	dstId := req.ReadUInt64()
 
 	this.friend.DelFriend(dstId)
-	ptr := &TFriendModule{Pid: dstId}
-	if ok, _ := dbmgo.Find(kDBFriend, "_id", dstId, ptr); ok {
-		ptr.DelFriend(this.friend.Pid)
+	other := &TFriendModule{Pid: dstId}
+	if ok, _ := dbmgo.Find(kDBFriend, "_id", dstId, other); ok {
+		other.DelFriend(this.friend.Pid)
 	}
 }
 func Rpc_game_friend_list(req, ack *common.NetPack, this *TPlayer) {
@@ -93,12 +95,11 @@ func Rpc_game_friend_list(req, ack *common.NetPack, this *TPlayer) {
 	copy(list, this.friend.Friends)
 	//删除上报的，剩余即新增
 	for cnt, i := req.ReadUInt16(), uint16(0); i < cnt; i++ {
-		pid := req.ReadUInt64()
-		if j := list.Index(pid); j >= 0 {
+		if j := list.Index(req.ReadUInt64()); j >= 0 {
 			list.Del(j)
 		}
 	}
-	//返回新增好友
+	//返回新好友showInfo
 	posInBuf, count := ack.Size(), uint16(0)
 	ack.WriteUInt16(count)
 	var base TPlayerBase
