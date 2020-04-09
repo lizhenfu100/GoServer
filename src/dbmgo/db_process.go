@@ -4,13 +4,12 @@ import (
 	"gamelog"
 	"gopkg.in/mgo.v2/bson"
 	"strings"
-	"sync"
 	"time"
 )
 
 var (
-	_actions  = make(chan *action, 4096)
-	_finished sync.WaitGroup //告知DBProcess结束
+	_actions = make(chan *action, 4096)
+	_exit    = make(chan int, 1)
 )
 
 const (
@@ -30,10 +29,9 @@ type action struct {
 	pData  interface{} //数据，可bson.M指定更新字段，详见dbmgo.go头部注释
 }
 
-func WaitStop() { close(_actions); _finished.Wait() }
+func WaitStop() { close(_actions); <-_exit }
 
 func _loop() {
-	_finished.Add(1)
 	for v := range _actions {
 		var err error
 		switch coll := DB().C(v.table); v.optype {
@@ -67,7 +65,7 @@ func _loop() {
 			}
 		}
 	}
-	_finished.Done()
+	_exit <- 0
 }
 func isClosedErr(e error) bool {
 	err := e.Error()

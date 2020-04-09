@@ -105,7 +105,7 @@ func Rpc_nric_set(req, ack *common.NetPack) {
 		Birthday:   GetBirthDay(id),
 		PersonHash: hash.StrHash(id + name),
 	}
-	if !g_regexp.MatchString(name) {
+	if !g_regexp.MatchString(name) { //汉字
 		ack.WriteUInt16(err.Name_format_err)
 	} else if v.AidMac <= 0 || v.Birthday == 0 {
 		ack.WriteUInt16(err.Invalid)

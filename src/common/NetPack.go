@@ -35,8 +35,8 @@ func (self *NetPack) ClearBody() {
 	self.ReadPos = PACK_HEADER_SIZE
 }
 func (self *NetPack) ResetHead(other *NetPack) {
-	self.buf = self.buf[:0]
-	self.buf = append(self.buf, other.buf[:PACK_HEADER_SIZE]...)
+	self.buf = self.buf[:PACK_HEADER_SIZE]
+	copy(self.buf, other.buf)
 	self.ReadPos = PACK_HEADER_SIZE
 }
 

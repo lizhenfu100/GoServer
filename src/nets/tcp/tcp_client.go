@@ -24,10 +24,13 @@ func Addr(ip string, port uint16) string { return fmt.Sprintf("%s:%d", ip, port)
 
 func (self *TCPClient) ConnectToSvr(addr string, cb func(*TCPConn)) {
 	if self.addr != addr {
-		self.Close()
 		self.addr = addr
 		self.onConnect = cb
-		go self.connectRoutine() //会断线后自动重连
+		if self.Conn == nil {
+			go self.connectRoutine() //会断线后自动重连
+		} else {
+			self.Conn.Close()
+		}
 	}
 }
 func (self *TCPClient) connectRoutine() {
@@ -70,7 +73,7 @@ func (self *TCPClient) connect() bool {
 	return true
 }
 func (self *TCPClient) Close() {
-	atomic.StoreInt32(&self._isClose, 0)
+	atomic.StoreInt32(&self._isClose, 1)
 	if self.Conn != nil {
 		self.Conn.Close()
 		self.Conn = nil

@@ -40,7 +40,7 @@ type esCache struct {
 }
 
 func (q *Queue) Init(capaciity uint32) {
-	q.kCap = minQuantity(capaciity)
+	q.kCap = CeilToPowerOfTwo(capaciity)
 	q.kCapMod = q.kCap - 1
 	q.putPos = 0
 	q.getPos = 0
@@ -196,8 +196,7 @@ func (q *Queue) Gets(ref []interface{}) (getCnt, size uint32) {
 	return getCnt, size - getCnt
 }
 
-// round 到最近的2的倍数
-func minQuantity(v uint32) uint32 {
+func CeilToPowerOfTwo(v uint32) uint32 {
 	v--
 	v |= v >> 1
 	v |= v >> 2

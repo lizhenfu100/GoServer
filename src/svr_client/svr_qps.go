@@ -3,6 +3,7 @@ package main
 import (
 	"common"
 	"common/console"
+	"fmt"
 	"generate_out/rpc/enum"
 	fasthttp2 "github.com/valyala/fasthttp"
 	http2 "net/http"
@@ -12,10 +13,6 @@ import (
 	"nets/tcp"
 	"svr_client/test/qps"
 )
-
-func testQPS() {
-	tcp1()
-}
 
 // ------------------------------------------------------------
 // qps: http fasthttp
@@ -48,13 +45,14 @@ func test2() {
 func tcp0() {
 	var client tcp.TCPClient
 	client.ConnectToSvr("192.168.1.111:7777", func(conn *tcp.TCPConn) {
+		fmt.Println("tcp qps begin ...")
 		for {
 			conn.CallRpcSafe(enum.Rpc_gm_cmd, func(buf *common.NetPack) {
 			}, nil)
 		}
 	})
 }
-func tcp1() {
+func tcp_svr() {
 	console.Init()
 	go tcp.NewTcpServer(7777, 5000)
 }

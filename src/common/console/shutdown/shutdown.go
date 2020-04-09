@@ -16,20 +16,20 @@ package shutdown
 
 import (
 	"dbmgo"
-	"gamelog"
+	"fmt"
 	"nets/http/http"
 	"nets/tcp"
 	"os"
 )
 
 func Default() {
-	gamelog.Info("Shutdown Begin")
+	fmt.Println("Shutdown Begin")
 	tcp.CloseServer()
 	http.CloseServer()
 
 	//关服任务，阻塞，等待任务都完成才能关服
 	dbmgo.WaitStop()
 
-	gamelog.Info("Shutdown End")
+	fmt.Println("Shutdown End")
 	os.Exit(0)
 }

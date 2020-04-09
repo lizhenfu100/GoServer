@@ -16,15 +16,15 @@ package logic
 
 import (
 	"dbmgo"
-	"gamelog"
+	"fmt"
 	"nets/http/http"
 	"nets/tcp"
 	"os"
 	"svr_game/player"
 )
 
-func Shutdown(args []string) {
-	gamelog.Info("Shutdown Begin")
+func Shutdown() {
+	fmt.Println("Shutdown Begin")
 	tcp.CloseServer()
 	http.CloseServer()
 
@@ -36,6 +36,6 @@ func Shutdown(args []string) {
 	//关服任务，阻塞，等待任务都完成才能关服
 	dbmgo.WaitStop()
 
-	gamelog.Info("Shutdown End")
+	fmt.Println("Shutdown End")
 	os.Exit(0)
 }

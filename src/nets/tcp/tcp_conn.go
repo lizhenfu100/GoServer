@@ -61,12 +61,11 @@
 package tcp
 
 import (
-	"bufio"
 	"common"
-	"encoding/binary"
 	"gamelog"
 	"generate_out/rpc/enum"
 	"net"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -75,7 +74,7 @@ const (
 	kHeadLen          = 2 //头2字节存msgSize
 	Msg_Size_Max      = 1024
 	Msg_Queue_Cap     = 10240
-	Write_Chan_Cap    = 32
+	Writer_Cap        = 8 * 1024
 	Delay_Delete_Conn = 60 * time.Second
 )
 
@@ -93,27 +92,26 @@ func init() {
 }
 
 type TCPConn struct {
-	conn          net.Conn
-	reader        *bufio.Reader //包装conn减少conn.Read的io次数【client/test/net.go】
-	writer        *bufio.Writer
-	writeChan     chan []byte
-	_isClose      int32
-	_isWriteClose int32
-	delayDel      *time.Timer
-	onDisConnect  func()
-	user          atomic.Value
+	conn         net.Conn
+	reader       netbuf //包装conn减少conn.Read的io次数【client/test/net.go】
+	writer       Chan
+	_isClose     int32
+	delayDel     *time.Timer
+	onDisConnect func()
+	user         atomic.Value
 }
 
 func newTCPConn(conn net.Conn) *TCPConn {
 	self := new(TCPConn)
-	self.writeChan = make(chan []byte, Write_Chan_Cap)
+	self.reader.Init(conn)
+	self.writer.Init(2048)
 	self.resetConn(conn)
 	return self
 }
 func (self *TCPConn) resetConn(conn net.Conn) {
 	self.conn = conn
-	self.reader = bufio.NewReader(conn)
-	self.writer = bufio.NewWriter(conn)
+	self.reader.Reset(conn)
+	self.writer.stop = false
 	atomic.StoreInt32(&self._isClose, 0)
 	if self.delayDel != nil {
 		self.delayDel.Stop()
@@ -125,9 +123,6 @@ func (self *TCPConn) Close() {
 	}
 	self.conn.(*net.TCPConn).SetLinger(0) //丢弃数据
 	self.conn.Close()
-	if atomic.LoadInt32(&self._isWriteClose) == 0 {
-		self.WriteBuf(nil) //触发writeRoutine结束
-	}
 	atomic.StoreInt32(&self._isClose, 1)
 }
 func (self *TCPConn) IsClose() bool { return atomic.LoadInt32(&self._isClose) > 0 }
@@ -135,67 +130,71 @@ func (self *TCPConn) IsClose() bool { return atomic.LoadInt32(&self._isClose) > 
 func (self *TCPConn) GetUser() interface{}  { return self.user.Load() }
 func (self *TCPConn) SetUser(v interface{}) { self.user.Store(v) }
 
-//Notice：若连接关闭，继续写入的消息会堆积在writeChan中，直至塞满
+//FIXME：断网允许积攒，以待重连；有超载风险
 func (self *TCPConn) WriteMsg(msg *common.NetPack) {
-	msgLen := uint16(msg.Size())
-	buf := make([]byte, kHeadLen+msgLen)
-	binary.LittleEndian.PutUint16(buf, msgLen)
-	copy(buf[kHeadLen:], msg.Data())
-	self.WriteBuf(buf) //异步转至io线程
+	self.writer.Add([]byte{byte(msg.Size()), byte(msg.Size() >> 8)})
+	self.writer.Add(msg.Data())
 }
-func (self *TCPConn) WriteBuf(buf []byte) {
-	select {
-	case self.writeChan <- buf: //chan满后再写即阻塞，select进入default分支报错
-	default:
-		gamelog.Error("WriteBuf full: %v", self.GetUser())
-		/* 连接无效bug
-		1、tcp_conn断开后，业务层还是能调write接口的，消息缓存在writeChan里，它被塞满后，即使重连依然会立即失效
-		2、连接建立流程是：先发首条消息、注册消息，再开读写协程
-		3、writeChan满后，调发送接口即引发关闭~
-		4、还是只抛弃，记录错误堆栈，更健壮些
-		*/
-		//self.Close()
-		//close(self.writeChan) //重连chan里的数据得保留
-	}
-}
+func (self *TCPConn) WriteBuf(buf []byte) { self.writer.Add(buf) }
+
 func (self *TCPConn) writeLoop() {
-	atomic.StoreInt32(&self._isWriteClose, 0)
-LOOP:
-	for {
-		select {
-		case buf := <-self.writeChan:
-			if self._WriteFull(buf) != nil {
-				break LOOP
-			}
-		default:
-			if err := self.writer.Flush(); err != nil { //io.ErrShortWrite见文件头brief.6
-				gamelog.Error("Write Flush: %s", err.Error())
-				break LOOP
-			}
-			//FIXME:这里能不能加句 sleep(10ms)，让包更易积累，合并发送
-			//依赖底层调度，不是写一个包就唤醒一次，问题不大；C++中频繁小包陷入系统调用，需辅助线程batch
-			buf := <-self.writeChan //阻塞，待数据写入
-			if self._WriteFull(buf) != nil {
-				break LOOP
-			}
+	for b := self.writer.Get(); len(b) < Writer_Cap; b = self.writer.Get() {
+		if writeFull(self.conn, b) != nil {
+			break
 		}
 	}
-	atomic.StoreInt32(&self._isWriteClose, 1)
 	self.Close()
 }
-func (self *TCPConn) _WriteFull(buf []byte) error { //brief.6：err可能是io.ErrShortWrite，网络还是能继续工作的
-	if buf == nil || self.IsClose() {
-		return common.Err("tcp conn close")
-	}
-	total := len(buf)
-	for pos := 0; pos < total; {
-		// bufio包装过，这里不会陷入系统调用；先缓存完chan的数据再Flush，更高效
-		if n, err := self.writer.Write(buf[pos:]); err == nil {
-			pos += n
-		} else {
-			gamelog.Error("Write error: " + err.Error())
-			return err
+func writeFull(w net.Conn, b []byte) error {
+	for pos, total := 0, len(b); ; {
+		if n, e := w.Write(b[pos:]); e != nil {
+			gamelog.Debug(e.Error())
+			return e
+		} else if pos += n; pos == total {
+			return nil
 		}
+		time.Sleep(10 * time.Millisecond)
 	}
-	return nil
+}
+
+// ------------------------------------------------------------
+type Chan struct { //阻塞，单消费者
+	sync.Mutex
+	sync.Cond
+	multi [2][]byte
+	cur   []byte
+	cycle uint8
+	stop  bool
+}
+
+func (p *Chan) Init(cap uint32) {
+	for i := 0; i < len(p.multi); i++ {
+		p.multi[i] = make([]byte, 0, cap)
+	}
+	p.cur = p.multi[0]
+	p.Cond.L = &p.Mutex
+}
+func (p *Chan) Add(v []byte) {
+	p.Lock()
+	p.cur = append(p.cur, v...)
+	p.Unlock()
+	p.Signal()
+}
+func (p *Chan) Get() (ret []byte) {
+	p.Lock()
+	for len(p.cur) == 0 && !p.stop {
+		p.Wait()
+	}
+	ret = p.cur
+	p.cycle = (p.cycle + 1) % uint8(len(p.multi))
+	p.cur = p.multi[p.cycle]
+	p.cur = p.cur[:0]
+	p.Unlock()
+	return
+}
+func (p *Chan) Stop() {
+	p.Lock()
+	p.stop = true
+	p.Unlock()
+	p.Signal()
 }

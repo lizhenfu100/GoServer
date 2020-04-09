@@ -231,7 +231,7 @@ func AddTimer(cb func(), delay, cd, total float32) *timeNode {
 	return _default.AddTimer(cb, delay, cd, total)
 }
 func (self *TimeWheel) Init(cap uint32) {
-	self.Pipe.Init(1024)
+	self.Pipe.Init(cap)
 	self.timeWheel.Init()
 }
 func (self *TimeWheel) Refresh(timelapse int, timenow int64) {
