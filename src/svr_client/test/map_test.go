@@ -42,7 +42,7 @@ func Test_List(t *testing.T) {
 	fmt.Println(&buf[0], &buf[1], &buf[2])
 	fmt.Println(&buf1[0], &buf1[1])
 
-	common.ClearBuf(&buf)
+	buf = buf[:0]
 	fmt.Println("--Clear--")
 	fmt.Println(buf, len(buf), cap(buf))
 	fmt.Println(buf1, len(buf1), cap(buf1))

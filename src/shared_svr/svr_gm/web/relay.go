@@ -7,10 +7,12 @@ import (
 	"common/std/sign"
 	"generate_out/err"
 	"generate_out/rpc/enum"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	mhttp "nets/http"
+	"nets/tcp"
 	"shared_svr/svr_login/gift_bag"
 	"strconv"
 	"strings"
@@ -98,12 +100,37 @@ func relay_gm_cmd(w http.ResponseWriter, r *http.Request) {
 	addr := q.Get("addr")
 	cmd := q.Get("cmd")
 	args := q.Get("args")
-	mhttp.CallRpc("http://"+addr, enum.Rpc_gm_cmd, func(buf *common.NetPack) {
-		buf.WriteString(cmd)
-		buf.WriteString(args)
-	}, func(recvBuf *common.NetPack) {
-		w.Write(common.S2B(recvBuf.ReadString()))
+	if q.Get("typ") == "tcp" {
+		relay_tcp(w, addr, enum.Rpc_gm_cmd, func(buf *common.NetPack) {
+			buf.WriteString(cmd)
+			buf.WriteString(args)
+		}, func(c chan []byte, recvBuf *common.NetPack) {
+			c <- common.S2B(recvBuf.ReadString())
+		})
+	} else {
+		mhttp.CallRpc("http://"+addr, enum.Rpc_gm_cmd, func(buf *common.NetPack) {
+			buf.WriteString(cmd)
+			buf.WriteString(args)
+		}, func(recvBuf *common.NetPack) {
+			w.Write(common.S2B(recvBuf.ReadString()))
+		})
+	}
+}
+func relay_tcp(w io.Writer, addr string, rpcId uint16, sendFun func(*common.NetPack), recvFun func(chan []byte, *common.NetPack)) {
+	c := make(chan []byte, 1)
+	var client tcp.TCPClient
+	client.ConnectToSvr(addr, func(conn *tcp.TCPConn) {
+		conn.CallRpcSafe(rpcId, sendFun, func(recvBuf *common.NetPack) { //recvBuf生命周期仅限回调函数
+			recvFun(c, recvBuf)
+		})
 	})
+	select { //异步转同步
+	case v := <-c:
+		w.Write(v)
+	case <-time.After(5 * time.Second):
+		w.Write(common.S2B("relay_tcp fail: " + addr))
+	}
+	client.Close()
 }
 
 func Http_reset_password(w http.ResponseWriter, r *http.Request) {

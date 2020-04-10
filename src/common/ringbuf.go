@@ -39,7 +39,7 @@ func (b *RingBuf) Read(p []byte) (n int) {
 }
 func (b *RingBuf) Write(p []byte) {
 	n := len(p)
-	if left := b.writableBytes(); left < n {
+	if left := b.WritableBytes(); left < n {
 		b.malloc(n - left)
 	}
 	copy(b.buf[b.w:], p)
@@ -66,7 +66,7 @@ func (b *RingBuf) Peek() (head []byte, tail []byte) {
 	}
 	return
 }
-func (b *RingBuf) readableBytes() int {
+func (b *RingBuf) ReadableBytes() int {
 	if b.r == b.w {
 		if b.isFull {
 			return b.size
@@ -78,7 +78,7 @@ func (b *RingBuf) readableBytes() int {
 	}
 	return b.size - b.r + b.w
 }
-func (b *RingBuf) writableBytes() int {
+func (b *RingBuf) WritableBytes() int {
 	if b.r == b.w {
 		if b.isFull {
 			return 0
@@ -91,9 +91,9 @@ func (b *RingBuf) writableBytes() int {
 	return b.size - b.w + b.r
 }
 func (b *RingBuf) malloc(n int) {
-	newLen := b.size + CeilToPowerOfTwo(n)
+	newLen := CeilToPowerOfTwo(b.size + n)
 	newBuf := make([]byte, newLen)
-	oldLen := b.readableBytes()
+	oldLen := b.ReadableBytes()
 	b.Read(newBuf)
 	b.r, b.w = 0, oldLen
 	b.size = newLen

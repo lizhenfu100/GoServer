@@ -1,8 +1,6 @@
 package main
 
 import (
-	"common"
-	"common/console"
 	"common/file"
 	"common/tool/email"
 	"conf"
@@ -32,6 +30,8 @@ func main() {
 
 	fmt.Println("--- test begin ---")
 	test()
+	//tcp0()
+	//tcp_svr()
 	fmt.Println("--- test end ---")
 
 	MainLoop()
@@ -44,12 +44,10 @@ func InitConf() {
 	}
 	file.LoadAllCsv()
 	meta.InitConf(metaCfg)
-	console.Init()
 }
 
 // ------------------------------------------------------------
 func test() {
-	fmt.Println(common.CompareVersion("2.5.1", "2.6.0"))
 	//testRedis()
 	//var v interface{}
 	//var p netConfig.Rpc
@@ -59,7 +57,15 @@ func test() {
 	//fmt.Println(v, p, pp, pp == nil)
 
 	//InvalidEmail()
-	//testQPS()
+}
+func average() {
+	sum, list := 0, []int{
+		3979913,
+	}
+	for _, v := range list {
+		sum += v
+	}
+	fmt.Println(sum/len(list))
 }
 
 var client = redis.NewClient(&redis.Options{
