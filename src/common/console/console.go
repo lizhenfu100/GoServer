@@ -4,6 +4,7 @@ import (
 	"common"
 	"common/file"
 	"common/std/hash"
+	"common/tool/sms"
 	"common/tool/wechat"
 	"conf"
 	"gamelog"
@@ -33,10 +34,13 @@ func Init() {
 	tcp.G_HandleFunc[enum.Rpc_timestamp] = _Rpc_timestamp1
 	http.G_HandleFunc[enum.Rpc_timestamp] = _Rpc_timestamp2
 	go sigTerm() //监控进程终止信号
-	wechat.Init( //启动微信报警
+	wechat.Init( //微信报警
 		conf.SvrCsv.WechatCorpId,
 		conf.SvrCsv.WechatSecret,
 		conf.SvrCsv.WechatAgentId)
+	sms.Init( //短信
+		conf.SvrCsv.SmsKeyId,
+		conf.SvrCsv.SmsSecret)
 }
 
 func _Rpc_log1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_log2(req, ack) }

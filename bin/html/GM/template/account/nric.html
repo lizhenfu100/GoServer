@@ -8,7 +8,7 @@
 
 <body bgcolor="white">
     <div class="all-wrapper">
-        <h1>查看实名信息</h1>
+        <h1>实名信息</h1>
         <div class="form-wrapper">
             <script>
                 function setActionAddr(form) {
@@ -19,6 +19,11 @@
                 }
             </script>
             <form action="" method="get" onsubmit="setActionAddr(this)">
+                <label>选择操作</label>
+                <select name="operate">
+                    <option value="Query">查询实名信息</option>
+                    <option value="Update">重置实名次数</option>
+                </select>
                 <label>key:</label>
                 <input type="text" name="aid_mac" placeholder="账号id 或 设备码"><br>
                 <label>密码:</label>

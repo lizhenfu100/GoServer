@@ -11,9 +11,12 @@ import (
 	"time"
 )
 
-const (
-	kAccessKeyId  = "LTAI4FhegmMD7vSWQvHwCdfX"
-	kAccessSecret = "7l8bl5PJEp1mnoGuIQwyiTGJR5L3B7"
+var (
+	g_freq    = timer.NewFreq(1, 120)
+	g_strBase = []byte("0123456789")
+	g_code    sync.Map
+	_keyId    string
+	_secret   string
 )
 
 type Code struct {
@@ -21,17 +24,15 @@ type Code struct {
 	T int64
 }
 
-var (
-	g_freq    = timer.NewFreq(1, 120)
-	g_strBase = []byte("0123456789")
-	g_code    sync.Map
-)
-
+func Init(key, secret string) {
+	_keyId = key
+	_secret = secret
+}
 func SendCode(phone string) {
 	if !g_freq.Check(phone) {
 		return
 	}
-	client, _ := dysmsapi.NewClientWithAccessKey("cn-hangzhou", kAccessKeyId, kAccessSecret)
+	client, _ := dysmsapi.NewClientWithAccessKey("cn-hangzhou", _keyId, _secret)
 	req, code := dysmsapi.CreateSendSmsRequest(), MakeCode()
 	req.Scheme = "https"
 	req.PhoneNumbers = phone
