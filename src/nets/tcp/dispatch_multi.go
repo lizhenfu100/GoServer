@@ -36,7 +36,7 @@ func (b *netbuf) ReadN(n int) (ret []byte) {
 	}
 	for {
 		if i, e := b.rd.Read(b.buf[b.w:]); e != nil || i < 0 {
-			gamelog.Debug(err.Error())
+			gamelog.Debug(e.Error())
 			return nil
 		} else if b.w += i; b.w-b.r >= n {
 			return b.readBuf(n)

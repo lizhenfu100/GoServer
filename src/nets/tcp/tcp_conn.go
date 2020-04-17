@@ -130,31 +130,35 @@ func (self *TCPConn) IsClose() bool { return atomic.LoadInt32(&self._isClose) > 
 func (self *TCPConn) GetUser() interface{}  { return self.user.Load() }
 func (self *TCPConn) SetUser(v interface{}) { self.user.Store(v) }
 
-//FIXME：断网允许积攒，以待重连；有超载风险
 func (self *TCPConn) WriteMsg(msg *common.NetPack) {
-	self.writer.Add([]byte{byte(msg.Size()), byte(msg.Size() >> 8)})
-	self.writer.Add(msg.Data())
+	w := &self.writer
+	w.Lock()
+	if len(w.cur) > Writer_Cap {
+		self.Close()
+	} else {
+		w.cur = append(w.cur, byte(msg.Size()), byte(msg.Size()>>8))
+		w.cur = append(w.cur, msg.Data()...)
+	}
+	w.Unlock()
+	w.Signal()
 }
 func (self *TCPConn) WriteBuf(buf []byte) { self.writer.Add(buf) }
 
 func (self *TCPConn) writeLoop() {
-	for b := self.writer.Get(); len(b) < Writer_Cap; b = self.writer.Get() {
-		if writeFull(self.conn, b) != nil {
-			break
+loop:
+	for {
+		b := self.writer.Get() //block
+		for pos, total := 0, len(b); ; {
+			if n, e := self.conn.Write(b[pos:]); e != nil {
+				gamelog.Debug(e.Error())
+				break loop
+			} else if pos += n; pos == total {
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
 		}
 	}
 	self.Close()
-}
-func writeFull(w net.Conn, b []byte) error {
-	for pos, total := 0, len(b); ; {
-		if n, e := w.Write(b[pos:]); e != nil {
-			gamelog.Debug(e.Error())
-			return e
-		} else if pos += n; pos == total {
-			return nil
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
 }
 
 // ------------------------------------------------------------

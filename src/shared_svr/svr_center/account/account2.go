@@ -72,17 +72,16 @@ func Rpc_center_bind_info2(req, ack *common.NetPack) {
 	str := req.ReadString()
 	pwd := req.ReadString()
 	typ := req.ReadString()
-	k := req.ReadString()
 	v := req.ReadString()
 	sign.Decode(&str, &pwd)
 	errcode, ptr := GetAccountByBindInfo(typ, str)
 	if ptr != nil {
 		if errcode = err.Unknow_error; !ptr.CheckPasswd(pwd) {
 			errcode = err.Account_mismatch_passwd
-		} else if !format.CheckBindValue(k, v) {
+		} else if !format.CheckBindValue(typ, v) {
 			errcode = err.BindInfo_format_err
 		} else {
-			errcode = ptr.bindVerify(k, v)
+			errcode = ptr.bindVerify(typ, v)
 		}
 	}
 	ack.WriteUInt16(errcode)

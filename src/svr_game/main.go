@@ -33,7 +33,7 @@ func main() {
 
 	component.RegisterToZookeeper()
 
-	go netConfig.RunNetSvr(false)
+	netConfig.RunNetSvr(false)
 	logic.MainLoop()
 }
 func InitConf() {

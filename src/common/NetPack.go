@@ -1,11 +1,13 @@
 package common
 
 const (
-	PACK_HEADER_SIZE = 7 //Type & Opcode & reqIdx
+	PACK_HEADER_SIZE = 7 //type & msgId & reqIdx
 	INDEX_TYPE       = 0 //uint8
 	INDEX_MSG_ID     = 1 //uint16
 	INDEX_REQ_IDX    = 3 //uint32
 
+	//Type == 0 默认是对端的请求，其它值是对端的回复；两边有同样rpc时区分
+	Type_ack = 1
 	// INDEX_TYPE：写通用错误码
 	Err_offline   = 255
 	Err_too_often = 254

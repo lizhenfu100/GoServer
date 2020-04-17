@@ -29,7 +29,7 @@ func (self *TCPClient) ConnectToSvr(addr string, cb func(*TCPConn)) {
 		if self.Conn == nil {
 			go self.connectRoutine() //会断线后自动重连
 		} else {
-			self.Conn.Close()
+			self.Conn.Close() //关老连接，重连新地址
 		}
 	}
 }

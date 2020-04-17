@@ -22,21 +22,8 @@ import (
 	"sync/atomic"
 )
 
-func Rpc_check_identity(req, ack *common.NetPack, conn *tcp.TCPConn) {
-	accountId := req.ReadUInt32()
-	token := req.ReadUInt32()
-	if !CheckLoginToken(accountId, token) {
-		ack.WriteUInt16(err.Token_verify_err)
-	} else if this := FindWithDB(accountId); this == nil {
-		ack.WriteUInt16(err.Account_have_none_player)
-	} else if this.IsForbidden {
-		ack.WriteUInt16(err.Account_forbidden)
-	} else {
-		this.Login(conn)
-		ack.WriteUInt16(err.Success)
-		ack.WriteUInt32(this.PlayerID)
-		ack.WriteString(this.Name)
-	}
+func Rpc_game_player_info(req, ack *common.NetPack, this *TPlayer) {
+	ack.WriteString(this.Name)
 }
 func Rpc_game_player_set_name(req, ack *common.NetPack, this *TPlayer) {
 	this.Name = req.ReadString()
@@ -63,6 +50,7 @@ func Rpc_set_identity(req, ack *common.NetPack, conn *tcp.TCPConn) {
 		ack.WriteUInt16(err.Account_forbidden)
 	} else {
 		ack.WriteUInt16(err.Success)
+		ptr.Login(conn)
 	}
 }
 func CheckLoginToken(accountId, token uint32) bool {

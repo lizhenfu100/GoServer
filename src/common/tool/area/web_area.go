@@ -19,6 +19,7 @@ const (
 	kTaobaoLoacl = "http://ip.taobao.com/service/getIpInfo.php?ip=myip"
 	kTaobaoApi   = "http://ip.taobao.com/service/getIpInfo.php?ip="
 	kCountryApi  = "http://api.wipmania.com" //国内很卡
+	kIpApi       = "https://api-ipv4.ip.sb/ip"
 )
 
 type TArea struct {

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const kDBDaily = "Daily"
+const kDBDaily = "daily"
 
 type TDailyModule struct {
 	PlayerID       uint32 `bson:"_id"`

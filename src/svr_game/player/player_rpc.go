@@ -105,6 +105,7 @@ func Rpc_recv_player_msg(req, ack *common.NetPack, conn *tcp.TCPConn) {
 			DoPlayerRpc(p, rpcId, req, ack)
 		} else {
 			ack.SetType(common.Err_offline)
+			gamelog.Debug("Player(%d) isn't online", accountId)
 		}
 	} else if msgFunc := tcp.G_HandleFunc[rpcId]; msgFunc != nil {
 		msgFunc(req, ack, conn)

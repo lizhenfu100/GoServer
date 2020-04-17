@@ -41,17 +41,13 @@ func (p *Strings) Index(v string) (ret int) {
 }
 func (p *Strings) MoveTo(ret *[]string) {
 	p.Lock()
-	for _, v := range p.v {
-		*ret = append(*ret, v)
-	}
+	*ret = append(*ret, p.v...)
 	p.v = p.v[:0]
 	p.Unlock()
 }
 func (p *Strings) CopyTo(ret *[]string) {
 	p.Lock()
-	for _, v := range p.v {
-		*ret = append(*ret, v)
-	}
+	*ret = append(*ret, p.v...)
 	p.Unlock()
 }
 func (p *Strings) Size() int {

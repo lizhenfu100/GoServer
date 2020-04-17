@@ -17,12 +17,16 @@ func InTime(now, begin, end int64) bool {
 // 跨服服务用PidRpc，需求方可自己组合pid，避免线上项目的数据改造
 const KIdMod = 1000
 
-// 头两位预留(可抽一位作角色编号)，三位loginId、四位gameId，最后四位accountId
-func PidNew(aid uint32, loginId, gameId int) uint64 {
-	return uint64(loginId%KIdMod)<<40 | uint64(gameId%KIdMod)<<32 | uint64(aid)
+type Uid uint64
+
+// 头两位预留，三位loginId、四位gameId，最后四位accountId
+func UidNew(aid uint32, loginId, gameId int) Uid {
+	return Uid(loginId%KIdMod)<<40 | Uid(gameId%KIdMod)<<32 | Uid(aid)
 }
-func PidToRoute(pid uint64) (loginId, gameId int) { return int(pid >> 40), int(0xFF & (pid >> 32)) }
-func PidToAid(pid uint64) uint32                  { return uint32(pid) }
+func (u Uid) ToAid() uint32 { return uint32(u) }
+func (u Uid) GetRoute() (loginId, gameId int) {
+	return int(u >> 40), int(0xFF & (u >> 32))
+}
 
 func IsMatchVersion(a, b string) bool {
 	if a == "" || b == "" {
