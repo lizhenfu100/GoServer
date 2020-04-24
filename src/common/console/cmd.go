@@ -8,6 +8,7 @@ import (
 	"gamelog"
 	"netConfig/meta"
 	"nets/tcp"
+	zk "shared_svr/zookeeper/logic"
 	"strconv"
 	"strings"
 )
@@ -22,8 +23,8 @@ func RegCmd(key string, f cmdFunc) {
 	}
 	g_cmds[key] = f
 }
-func _Rpc_gm_cmd1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_gm_cmd2(req, ack) }
-func _Rpc_gm_cmd2(req, ack *common.NetPack) {
+func _Rpc_gm_cmd1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_gm_cmd(req, ack) }
+func _Rpc_gm_cmd(req, ack *common.NetPack) {
 	cmd := req.ReadString()
 	args_ := req.ReadString()
 	args := strings.Split(args_, " ")
@@ -42,7 +43,7 @@ func _Rpc_gm_cmd2(req, ack *common.NetPack) {
 var g_cmds = map[string]cmdFunc{ //Notice：注意下列函数的线程安全性
 	"loglv":   cmd_logLv,
 	"metas":   cmd_metas,
-	"setmeta": cmd_setmeta,
+	"setmeta": cmd_setmeta, //不含空格{"Module":"game","SvrID":1,"Closed":true}
 }
 
 // ------------------------------------------------------------
@@ -58,7 +59,7 @@ func cmd_metas(args []string) string {
 	return common.B2S(b)
 }
 func cmd_setmeta(args []string) string {
-	jsonData := common.S2B(args[0]) //不含空格{"Module":"game","SvrID":1,"IP":"192.168.1.111"}
+	jsonData := common.S2B(args[0])
 	pNew := &meta.Meta{}
 	json.Unmarshal(jsonData, pNew)
 	if p := meta.GetMeta(pNew.Module, pNew.SvrID); p != nil {
@@ -67,6 +68,17 @@ func cmd_setmeta(args []string) string {
 	} else {
 		meta.AddMeta(pNew)
 	}
+	_on_edit_zk(pNew) //GM编辑zookeeper，控制集群路由关系
+
 	b, _ := json.MarshalIndent(pNew, "", "     ")
 	return common.B2S(b)
+}
+func _on_edit_zk(p *meta.Meta) {
+	if meta.G_Local.Module == meta.Zookeeper {
+		if p.Closed {
+			zk.OnMetaDel(p)
+		} else {
+			zk.OnMetaAdd(p)
+		}
+	}
 }

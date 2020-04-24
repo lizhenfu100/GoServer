@@ -36,13 +36,16 @@ func init() {
 
 var _svr http.Server
 
-func NewHttpServer(port uint16) error {
+func NewHttpServer(port uint16, block bool) {
 	http.HandleFunc("/client_rpc", HandleRpc)
 	http.HandleFunc("/reg_to_svr", func(w http.ResponseWriter, r *http.Request) {
 		mhttp.Reg_to_svr(w, ReadBody(r.Body))
 	})
-	_svr.Addr = fmt.Sprintf(":%d", port)
-	return _svr.ListenAndServe()
+	if _svr.Addr = fmt.Sprintf(":%d", port); block {
+		_svr.ListenAndServe()
+	} else {
+		go _svr.ListenAndServe()
+	}
 }
 func CloseServer() { _svr.Close() }
 

@@ -28,7 +28,7 @@ var (
 	_map = map[string]http.RequestHandler{}
 )
 
-func NewHttpServer(port uint16) error {
+func NewHttpServer(port uint16, block bool) {
 	_svr.Handler = func(ctx *http.RequestCtx) {
 		if v, ok := _map[common.B2S(ctx.Path())]; ok {
 			v(ctx)
@@ -40,7 +40,11 @@ func NewHttpServer(port uint16) error {
 	HandleFunc("/reg_to_svr", func(ctx *http.RequestCtx) {
 		mhttp.Reg_to_svr(ctx, ctx.Request.Body())
 	})
-	return _svr.ListenAndServe(fmt.Sprintf(":%d", port))
+	if block {
+		_svr.ListenAndServe(fmt.Sprintf(":%d", port))
+	} else {
+		go _svr.ListenAndServe(fmt.Sprintf(":%d", port))
+	}
 }
 func CloseServer() { _svr.Shutdown() }
 

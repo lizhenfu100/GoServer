@@ -23,15 +23,14 @@ import (
 )
 
 var (
-	g_corpId  string //企业id
-	g_secret  string //应用secret
-	g_agentId int    //应用id
-	g_token   token  //有过期时间
-	g_freq    = timer.NewFreq(1, 60)
+	_corpId  string //企业id
+	_secret  string //应用secret
+	_agentId int    //应用id
+	g_freq   = timer.NewFreq(1, 60)
 )
 
 func Init(corpId, secret string, agentId int) {
-	g_corpId, g_secret, g_agentId = corpId, secret, agentId
+	_corpId, _secret, _agentId = corpId, secret, agentId
 	if e := updateToken(); e != nil {
 		fmt.Println("Wechat init: ", e.Error())
 	}
@@ -41,7 +40,7 @@ func SendMsg(text string) {
 		return
 	}
 	buf, _ := json.Marshal(&msgWechat{
-		Agentid: g_agentId,
+		Agentid: _agentId,
 		Touser:  "@all",
 		Msgtype: "text",
 		Text:    map[string]string{"content": format(text)},
@@ -90,8 +89,10 @@ type errMsg struct {
 	Errmsg  string `json:"errmsg"`
 }
 
+var g_token token //有过期时间
+
 func updateToken() error {
-	if buf := http.Client.Get(kUrlGetToken + g_corpId + "&corpsecret=" + g_secret); buf == nil {
+	if buf := http.Client.Get(kUrlGetToken + _corpId + "&corpsecret=" + _secret); buf == nil {
 		return http.ErrGet
 	} else {
 		g_token.Access_token = ""

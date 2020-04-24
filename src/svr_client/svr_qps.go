@@ -29,7 +29,7 @@ func test1() {
 	http2.HandleFunc("/echo", func(w http2.ResponseWriter, r *http2.Request) {
 		qps.AddQps()
 	})
-	go http.NewHttpServer(7777)
+	http.NewHttpServer(7777, false)
 }
 func test2() {
 	fasthttp.HandleFunc("/echo", func(ctx *fasthttp2.RequestCtx) {
@@ -37,7 +37,7 @@ func test2() {
 		//fmt.Println("body: ", common.B2S(ctx.Request.Body()))
 		ctx.Write(ctx.Request.Body())
 	})
-	go fasthttp.NewHttpServer(7777)
+	fasthttp.NewHttpServer(7777, false)
 }
 
 // ------------------------------------------------------------
@@ -54,5 +54,5 @@ func tcp0() {
 }
 func tcp_svr() {
 	console.Init()
-	go tcp.NewTcpServer(7777, 5000)
+	tcp.NewTcpServer(7777, 5000, false)
 }

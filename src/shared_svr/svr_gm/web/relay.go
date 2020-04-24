@@ -127,7 +127,7 @@ func relay_tcp(w io.Writer, addr string, rpcId uint16, sendFun func(*common.NetP
 	select { //异步转同步
 	case v := <-c:
 		w.Write(v)
-	case <-time.After(5 * time.Second):
+	case <-time.After(10 * time.Second):
 		w.Write(common.S2B("relay_tcp fail: " + addr))
 	}
 	client.Close()

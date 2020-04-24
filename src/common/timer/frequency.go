@@ -22,8 +22,7 @@ func (self *Freq) Check(k interface{}) bool {
 		p = &freq{}
 		self.m.Store(k, p)
 	}
-	timenow := time.Now().Unix()
-	return p.(*freq).check(timenow, self.kMaxCnt, self.kTotalSec)
+	return p.(*freq).check(time.Now().Unix(), self.kMaxCnt, self.kTotalSec)
 }
 func (self *freq) check(t int64, kMaxCnt, kTotalSec byte) bool {
 	self.Lock()

@@ -30,7 +30,7 @@
                 </select>
                 <label>平台名:</label>
                 <select name="pf_id">
-                    {{range .PfidSave}}<option value="{{.}}">{{.}}</option>
+                    {{range .PfidSave}}<option value="{{.K}}">{{.V}}</option>
                     {{end}}
                 </select>
                 <label title="我们自己约定的操作权限密码，一般不会变">权限密码:</label>

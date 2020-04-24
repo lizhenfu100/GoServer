@@ -40,13 +40,6 @@ func NewPreBuyAck(pay_id int) msg.IPre_buy_ack {
 		return &msg.Pre_buy_ack{}
 	}
 }
-func ConfirmOrder(order *msg.TOrderInfo) { //发货后的回调
-	msg.ConfirmOrder(order)
-	switch order.Pay_id {
-	case 102: //米大师
-		return //TODO:zhoumf:通知第三方后台
-	}
-}
 func Init() {
 	midas.Init()
 }

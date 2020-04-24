@@ -35,26 +35,25 @@ var (
 		"shared_svr/svr_sdk",
 		"shared_svr/svr_relay",
 		"shared_svr/svr_nric",
-		"shared_svr/zookeeper",
 		"svr_cross",
 		"svr_game",
 	}
+	SvrCsv struct {
+		//数据库
+		DBuser   string
+		DBpasswd string
+		// 邮箱
+		EmailUser     []string
+		EmailPasswd   []string
+		EmailHost     string
+		EmailPort     int
+		EmailLanguage string //默认语言，参见language.go
+		// 微信
+		WechatCorpId  string //企业id
+		WechatSecret  string //应用的Secret
+		WechatAgentId int    //应用id
+		// 短信
+		SmsKeyId  string
+		SmsSecret string
+	}
 )
-
-var SvrCsv struct {
-	//数据库
-	DBuser   string
-	DBpasswd string
-
-	// 邮箱
-	EmailUser     []string
-	EmailPasswd   []string
-	EmailHost     string
-	EmailPort     int
-	EmailLanguage string //默认语言，参见language.go
-	// 微信
-	WechatCorpId  string //企业id
-	WechatSecret  string //应用的Secret
-	WechatTouser  string //接收者,多个用‘|’分隔
-	WechatAgentId int    //应用id
-}

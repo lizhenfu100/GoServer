@@ -9,6 +9,7 @@ import (
 	"gamelog"
 	"generate_out/rpc/enum"
 	"nets/http"
+	_ "nets/http/http"
 	"shared_svr/svr_sdk/msg"
 	"strings"
 	"time"

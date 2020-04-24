@@ -48,7 +48,8 @@ type TOrderInfo struct {
 	Status         int    //1成功 0失败（第三方通告）
 	Can_send       int    //1能发货 （client发货后置0）
 	Time           int64
-	Mac            string //设备码
+	Mac            string //原始设备码
+	Pf_mac         string //渠道用设备码，渠道名_Mac
 	Version_code   string //客户端版本号
 	Extra          string
 }

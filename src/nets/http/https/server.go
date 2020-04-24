@@ -29,12 +29,15 @@ const (
 
 var _svr http.Server
 
-func NewHttpServer(port uint16) error {
+func NewHttpServer(port uint16, block bool) {
 	http.HandleFunc("/client_rpc", http2.HandleRpc)
 	http.HandleFunc("/reg_to_svr", func(w http.ResponseWriter, r *http.Request) {
 		mhttp.Reg_to_svr(w, http2.ReadBody(r.Body))
 	})
-	_svr.Addr = fmt.Sprintf(":%d", port)
-	return _svr.ListenAndServeTLS(k_svr_crt, k_svr_key)
+	if _svr.Addr = fmt.Sprintf(":%d", port); block {
+		_svr.ListenAndServeTLS(k_svr_crt, k_svr_key)
+	} else {
+		go _svr.ListenAndServeTLS(k_svr_crt, k_svr_key)
+	}
 }
 func CloseServer() { _svr.Close() }

@@ -29,6 +29,8 @@ func Rpc_center_bind_info(req, ack *common.NetPack) {
 	if ptr != nil {
 		if !format.CheckBindValue(k, v) {
 			errcode = err.BindInfo_format_err
+		} else if k == "email" && ptr.IsValidEmail == 1 {
+			errcode = err.Is_forbidden
 		} else if e, _ := GetAccountByBindInfo(k, v); e == err.Success {
 			errcode = err.BindInfo_already_in_use
 		} else if e == err.Not_found {

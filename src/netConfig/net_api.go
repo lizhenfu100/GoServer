@@ -36,7 +36,7 @@ type Rpc interface {
 }
 type rpcHttp struct{ *meta.Meta }
 
-func (p *rpcHttp) IsClose() bool { return p.IsClosed }
+func (p *rpcHttp) IsClose() bool { return p.Closed }
 func (p *rpcHttp) CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	addr := http.Addr(p.IP, p.HttpPort)
 	http.CallRpc(addr, rid, sendFun, recvFun)

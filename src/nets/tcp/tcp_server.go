@@ -30,15 +30,18 @@ type TCPServer struct {
 
 var _svr TCPServer
 
-func NewTcpServer(port uint16, maxconn int32) { //"ip:port"，ip可缺省
+func NewTcpServer(port uint16, maxconn int32, block bool) { //"ip:port"，ip可缺省
 	if conf.TestFlag_CalcQPS {
 		qps.Watch()
 	}
 	_svr.MaxConnNum = maxconn
 	_svr.closer.L = &_svr.Mutex
 	if l, err := net.Listen("tcp", fmt.Sprintf(":%d", port)); err == nil {
-		_svr.SetListener(l)
-		_svr.run()
+		if _svr.SetListener(l); block {
+			_svr.run()
+		} else {
+			go _svr.run()
+		}
 	} else {
 		panic("NewTcpServer: %s" + err.Error())
 	}
@@ -101,15 +104,15 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 		self.connmap.Delete(connId)
 		atomic.AddInt32(&self.connCnt, -1)
 		gamelog.Debug("DelConnId(%d) %v", connId, tcpConn.GetUser())
-		if G_HandleFunc[enum.Rpc_net_error] != nil { //通知逻辑线程，连接断开
-			packet := common.NewNetPackCap(16)
-			packet.SetMsgId(enum.Rpc_net_error)
-			G_RpcQueue.Insert(tcpConn, packet)
+		if G_HandleFunc[enum.Rpc_net_error] != nil { //先通知逻辑线程，连接断开
+			msg := common.NewNetPackCap(16)
+			msg.SetMsgId(enum.Rpc_net_error)
+			G_RpcQueue.Insert(tcpConn, msg)
 		}
-		if _, ok := tcpConn.GetUser().(*meta.Meta); ok { //连接的后台节点断开，注销之
-			packet := common.NewNetPackCap(16)
-			packet.SetMsgId(enum.Rpc_unregist)
-			G_RpcQueue.Insert(tcpConn, packet)
+		if _, ok := tcpConn.GetUser().(*meta.Meta); ok { //再注销
+			msg := common.NewNetPackCap(16)
+			msg.SetMsgId(enum.Rpc_unregist)
+			G_RpcQueue.Insert(tcpConn, msg)
 		}
 	}
 	//通知client，连接被接收，下发connId、密钥等

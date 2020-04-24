@@ -132,7 +132,7 @@ func Http_confirm_order(w http.ResponseWriter, r *http.Request) {
 		ack.Msg = "sign failed"
 	} else {
 		ack.Retcode = 0
-		platform.ConfirmOrder(order)
+		msg.ConfirmOrder(order)
 		DelMacOrder(order.Mac, order.Order_id) //统计Mac下的无效订单
 	}
 }
@@ -140,7 +140,7 @@ func Http_confirm_order(w http.ResponseWriter, r *http.Request) {
 func Http_query_order_unfinished(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	third := r.Form.Get("third_account")
-
+	pf_mac := r.Form.Get("pf_mac")
 	//! 创建回复
 	var ack msg.Order_unfinished_ack
 	defer func() {
@@ -150,15 +150,18 @@ func Http_query_order_unfinished(w http.ResponseWriter, r *http.Request) {
 	if third == "" {
 		return
 	}
-	var list []msg.TOrderInfo
-	dbmgo.FindAll(msg.KDBTable, bson.M{
+	filter := bson.M{
 		"third_account": third,
 		"can_send":      1,
-	}, &list)
-	var order msg.UnfinishedOrder
+	}
+	if pf_mac != "" {
+		filter["pf_mac"] = pf_mac
+	}
+	var list []msg.TOrderInfo
+	dbmgo.FindAll(msg.KDBTable, filter, &list)
+	ack.Orders = make([]msg.UnfinishedOrder, len(list))
 	for i := 0; i < len(list); i++ {
-		copy.CopySameField(&order, &list[i])
-		ack.Orders = append(ack.Orders, order)
+		copy.CopySameField(&ack.Orders[i], &list[i])
 	}
 }
 

@@ -15,26 +15,24 @@ import (
 	"generate_out/rpc/enum"
 	"netConfig"
 	"netConfig/meta"
+	"nets/http"
 	"nets/tcp"
 )
 
-var (
-	g_cache_zoo_conn *tcp.TCPConn
-)
-
 func init() {
-	tcp.G_HandleFunc[enum.Rpc_svr_node_join] = _Rpc_svr_node_join
-	tcp.G_HandleFunc[enum.Rpc_http_node_quit] = _Rpc_http_node_quit
+	tcp.G_HandleFunc[enum.Rpc_node_join] = _Rpc_node_join1
+	http.G_HandleFunc[enum.Rpc_node_join] = _Rpc_node_join
+	tcp.G_HandleFunc[enum.Rpc_node_quit] = _Rpc_node_quit1
+	http.G_HandleFunc[enum.Rpc_node_quit] = _Rpc_node_quit
 }
 func RegisterToZookeeper() {
-	// 连接zookeeper并注册，须防止多次调用本接口
-	if pZoo := meta.GetMeta("zookeeper", 0); pZoo != nil && g_cache_zoo_conn == nil {
-		netConfig.ConnectModuleTcp(pZoo, func(*tcp.TCPConn) {
-			CallRpcZoo(enum.Rpc_zoo_register, func(buf *common.NetPack) {
+	if pZoo := meta.GetMeta(meta.Zookeeper, 0); pZoo != nil {
+		netConfig.ConnectModuleTcp(pZoo, func(conn *tcp.TCPConn) {
+			conn.CallRpc(enum.Rpc_zoo_register, func(buf *common.NetPack) {
 				buf.WriteString(meta.G_Local.Module)
 				buf.WriteInt(meta.G_Local.SvrID)
 			}, func(recvBuf *common.NetPack) { //主动连接zoo通告的服务节点
-				for cnt, i := recvBuf.ReadUInt16(), uint16(0); i < cnt; i++ {
+				for len(recvBuf.LeftBuf()) > 0 {
 					pMeta := new(meta.Meta) //Notice：须每次new新的，供ConnectToModule中的闭包引用
 					pMeta.BufToData(recvBuf)
 					netConfig.ConnectModule(pMeta)
@@ -43,20 +41,16 @@ func RegisterToZookeeper() {
 		})
 	}
 }
-func CallRpcZoo(rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	if g_cache_zoo_conn == nil || g_cache_zoo_conn.IsClose() {
-		g_cache_zoo_conn = netConfig.GetTcpConn("zookeeper", 0)
-	}
-	g_cache_zoo_conn.CallRpc(rid, sendFun, recvFun)
-}
 
 //有服务节点加入，zoo通告相应客户节点
-func _Rpc_svr_node_join(req, ack *common.NetPack, conn *tcp.TCPConn) {
+func _Rpc_node_join1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_node_join(req, ack) }
+func _Rpc_node_join(req, ack *common.NetPack) {
 	pMeta := new(meta.Meta)
 	pMeta.BufToData(req)
 	netConfig.ConnectModule(pMeta)
 }
-func _Rpc_http_node_quit(req, ack *common.NetPack, conn *tcp.TCPConn) {
+func _Rpc_node_quit1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_node_quit(req, ack) }
+func _Rpc_node_quit(req, ack *common.NetPack) {
 	module := req.ReadString()
 	svrID := req.ReadInt()
 	meta.DelMeta(module, svrID)

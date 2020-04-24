@@ -25,7 +25,6 @@
 package netConfig
 
 import (
-	"common/assert"
 	"common/std"
 	"conf"
 	"dbmgo"
@@ -39,39 +38,28 @@ import (
 )
 
 func RunNetSvr(block bool) {
-	//1、找到当前的配置信息，连db
-	local := meta.G_Local
-	assert.True(local != nil)
-	if p := meta.GetMeta("db_"+local.Module, local.SvrID); p != nil {
+	module, svrId := meta.G_Local.Module, meta.G_Local.SvrID
+	//1、连db
+	if p := meta.GetMeta("db_"+module, svrId); p != nil {
 		//TODO:支持连多个db，分库分表
 		dbmgo.InitWithUser(p.IP, p.TcpPort, p.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
 	}
 	//2、连接并注册到其它模块
-	if nil == meta.GetMeta("zookeeper", 0) { //没有zoo节点，才依赖配置，否则依赖zoo通知
+	if nil == meta.GetMeta(meta.Zookeeper, 0) { //没有zoo节点，才依赖配置，否则依赖zoo通知
 		meta.G_Metas.Range(func(_, v interface{}) bool {
-			if p := v.(*meta.Meta); p.IsMyServer(local) == meta.SC {
+			if p := v.(*meta.Meta); p.IsMyServer(meta.G_Local) == meta.SC {
 				ConnectModule(p)
 			}
 			return true
 		})
 	}
-	//3、开启本模块网络服务(Busy Loop)
-	fmt.Printf("-------%s(%d %d) start-------\n", local.Module, local.SvrID, local.Port())
-	if local.HttpPort > 0 {
-		http.InitSvr(local.Module, local.SvrID)
-		if block {
-			http2.NewHttpServer(local.HttpPort)
-		} else {
-			go http2.NewHttpServer(local.HttpPort)
-		}
+	//3、开启本模块网络服务
+	fmt.Printf("-------%s(%d %d) start-------\n", module, svrId, meta.G_Local.Port())
+	if local := meta.G_Local; local.HttpPort > 0 {
+		http.InitSvr(module, svrId)
+		http2.NewHttpServer(local.HttpPort, block)
 	} else if local.TcpPort > 0 {
-		if block {
-			tcp.NewTcpServer(local.TcpPort, local.Maxconn)
-		} else {
-			go tcp.NewTcpServer(local.TcpPort, local.Maxconn)
-		}
-	} else {
-		fmt.Println(local.Module, ": none HttpPort|TcpPort")
+		tcp.NewTcpServer(local.TcpPort, local.Maxconn, block)
 	}
 }
 

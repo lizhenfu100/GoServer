@@ -23,7 +23,7 @@ type TemplateData struct {
 	*TCommon
 	GameName string
 	Logins   []TLogin //0位空，1起始
-	pf_id    []string
+	pf_id    []std.StrPair
 }
 type TLogin struct {
 	Name  string
@@ -186,18 +186,36 @@ func (self *TemplateData) AddrSave(idx, id int) string {
 	}
 	return ""
 }
-func (self *TemplateData) PfidSave() (ret []string) { //存档互通的渠道
-	for _, v := range self.pf_id {
-		ret = append(ret, strings.Split(v, ",")[0])
+func (self *TemplateData) PfidSave() (ret []std.StrPair) { //存档互通的渠道
+	for _, p := range self.pf_id {
+		p.K = strings.ReplaceAll(p.K, " ", "") //剔除空格
+		p.K = strings.Split(p.K, ",")[0]
+		if p.V != "" {
+			p.V = fmt.Sprintf("%s（%s）", p.K, p.V)
+		} else {
+			p.V = p.K
+		}
+		ret = append(ret, p)
 	}
 	return
 }
-func (self *TemplateData) PfidAll() (ret []string) {
-	for _, v := range self.pf_id {
-		if vs := strings.Split(v, ","); len(vs) > 1 {
-			ret = append(ret, vs[1:]...)
+func (self *TemplateData) PfidAll() (ret []std.StrPair) {
+	for _, p := range self.pf_id {
+		p.K = strings.ReplaceAll(p.K, " ", "") //剔除空格
+		if ks := strings.Split(p.K, ","); len(ks) > 1 {
+			vs := strings.Split(p.V, ",")
+			for i, k := range ks[1:] {
+				p.K = k
+				p.V = fmt.Sprintf("%s（%s）", p.K, vs[i])
+				ret = append(ret, p)
+			}
 		} else {
-			ret = append(ret, vs[0])
+			if p.K = ks[0]; p.V != "" {
+				p.V = fmt.Sprintf("%s（%s）", p.K, p.V)
+			} else {
+				p.V = p.K
+			}
+			ret = append(ret, p)
 		}
 	}
 	return

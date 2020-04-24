@@ -95,7 +95,7 @@ type TCPConn struct {
 	conn         net.Conn
 	reader       netbuf //包装conn减少conn.Read的io次数【client/test/net.go】
 	writer       Chan
-	_isClose     int32
+	_isClose     bool
 	delayDel     *time.Timer
 	onDisConnect func()
 	user         atomic.Value
@@ -112,20 +112,20 @@ func (self *TCPConn) resetConn(conn net.Conn) {
 	self.conn = conn
 	self.reader.Reset(conn)
 	self.writer.stop = false
-	atomic.StoreInt32(&self._isClose, 0)
+	self._isClose = false
 	if self.delayDel != nil {
 		self.delayDel.Stop()
 	}
 }
 func (self *TCPConn) Close() {
-	if self.IsClose() {
+	if self._isClose {
 		return
 	}
 	self.conn.(*net.TCPConn).SetLinger(0) //丢弃数据
 	self.conn.Close()
-	atomic.StoreInt32(&self._isClose, 1)
+	self._isClose = true
 }
-func (self *TCPConn) IsClose() bool { return atomic.LoadInt32(&self._isClose) > 0 }
+func (self *TCPConn) IsClose() bool { return self._isClose }
 
 func (self *TCPConn) GetUser() interface{}  { return self.user.Load() }
 func (self *TCPConn) SetUser(v interface{}) { self.user.Store(v) }

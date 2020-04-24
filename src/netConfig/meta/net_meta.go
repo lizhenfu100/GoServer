@@ -20,6 +20,14 @@
 		· 玩家相关的节点，待所有玩家下线后，可自杀
 		· 转发性质的，没有逻辑状态数据的，等三分钟后自杀
 
+* @ 多线程下，裸读写int32，除了脏读，可能读出来错数据不，比如写了几个字节，被另外线程读了？？
+	· 通常都是对齐的，是不会一半被修改的
+	· 不对齐的非原子读取，我持怀疑态度
+	· 只要不跨cacheline, 可以保证读这4个是原子的
+	· ok，那就是说，如果业务只要求最终一致，裸读，是不是就没问题？
+	· 现在的程序一般都对齐了，只要送进了struct，再读，应该都对齐着的
+	· 流数据不一定
+
 * @ author zhoumf
 * @ date 2017-11-30
 ***********************************************************************/
@@ -51,7 +59,7 @@ type Meta struct {
 	HttpPort   uint16
 	Maxconn    int32
 	ConnectLst []string //待连接的模块名
-	IsClosed   bool     //TODO:如何检测节点失效？通信失败或超时
+	Closed     bool     //TODO:如何检测节点失效？通信失败或超时
 }
 type metas []*Meta
 
@@ -123,23 +131,23 @@ func AddMeta(pNew *Meta) {
 func DelMeta(module string, svrID int) {
 	gamelog.Debug("DelMeta: %s:%d", module, svrID)
 	key := std.KeyPair{module, svrID}
-	if v, ok := G_Metas.Load(key); ok && !v.(*Meta).IsClosed {
-		v.(*Meta).IsClosed = true
+	if v, ok := G_Metas.Load(key); ok && !v.(*Meta).Closed {
+		v.(*Meta).Closed = true
 		G_Metas.Delete(key)
 	}
 }
 
 //Notice：禁止缓存指针，G_Metas会被多线程改写
 func GetMeta(module string, svrID int) *Meta {
-	if v, ok := G_Metas.Load(std.KeyPair{module, svrID}); ok && !v.(*Meta).IsClosed {
+	if v, ok := G_Metas.Load(std.KeyPair{module, svrID}); ok && !v.(*Meta).Closed {
 		return v.(*Meta)
 	}
 	gamelog.Debug("{%s %d}: none meta", module, svrID)
 	return nil
 }
 func GetMetas(module, version string) (ret []*Meta) {
-	G_Metas.Range(func(k, v interface{}) bool {
-		if p := v.(*Meta); p.Module == module && !p.IsClosed &&
+	G_Metas.Range(func(_, v interface{}) bool {
+		if p := v.(*Meta); p.Module == module && !p.Closed &&
 			common.IsMatchVersion(p.Version, version) {
 			ret = append(ret, p)
 		}
@@ -185,6 +193,7 @@ const (
 	CS
 	SC
 	KSavePort = 7090 //固定云存档端口，便于随游戏服动态扩增
+	Zookeeper = "zookeeper"
 )
 
 func (src *Meta) IsMyServer(dst *Meta) byte {

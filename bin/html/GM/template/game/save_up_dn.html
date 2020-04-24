@@ -41,7 +41,7 @@
                 </select>
                 <label>平台名:</label>
                 <select name="pf_id">
-                    {{range .PfidSave}}<option value="{{.}}">{{.}}</option>
+                    {{range .PfidSave}}<option value="{{.K}}">{{.V}}</option>
                     {{end}}
                 </select>
                 <label title="玩家所在svr_save地址，端口一般是7090">存档服:</label>

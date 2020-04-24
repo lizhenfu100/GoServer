@@ -41,8 +41,18 @@ func Rpc_check_identity(req, ack *common.NetPack) {
 		}
 	}
 }
-func Rpc_center_account_reg2(req, ack *common.NetPack)       { Rpc_center_account_reg(req, ack) }
-func Rpc_center_account_reg_force2(req, ack *common.NetPack) { Rpc_center_account_reg_force(req, ack) }
+func Rpc_center_account_reg2(req, ack *common.NetPack) { Rpc_center_account_reg(req, ack) }
+func Rpc_center_platform_reg(req, ack *common.NetPack) {
+	uid := req.ReadString()
+	pf_id := req.ReadString()
+	if uid == "" || pf_id == "" {
+		ack.WriteUInt16(err.BindInfo_format_err)
+	} else {
+		sign.Decode(&uid)
+		e, _ := NewAccountInDB("", "name", pf_id+"_"+uid)
+		ack.WriteUInt16(e)
+	}
+}
 func Rpc_center_reg_if2(req, ack *common.NetPack) {
 	str := req.ReadString()
 	typ := req.ReadString()
@@ -80,6 +90,8 @@ func Rpc_center_bind_info2(req, ack *common.NetPack) {
 			errcode = err.Account_mismatch_passwd
 		} else if !format.CheckBindValue(typ, v) {
 			errcode = err.BindInfo_format_err
+		} else if typ == "email" && ptr.IsValidEmail == 1 {
+			errcode = err.Is_forbidden
 		} else {
 			errcode = ptr.bindVerify(typ, v)
 		}

@@ -10,7 +10,7 @@
     <div class="all-wrapper">
         <h1>查询 & 修改</h1>
         <div class="form-wrapper">
-            <form action="" method="get" onsubmit="SetSelectAddr2(this)">
+            <form action="" method="post" onsubmit="SetSelectAddr2(this)">
                 <label>大区:</label>
                 <select>
                     <option value="{{index .SdkAddrs 0}}">China</option>
@@ -18,8 +18,8 @@
                 <label>操作类型:</label>
                 <select>
                     <option value="/order_info">查询</option>
-                    <option value="/order_success">修复“钱没到账”</option>
-                    <option value="/order_set_force">强制恢复至“付款未发货”</option>
+                    <option value="/order_success">付款成功，补货</option>
+                    <option value="/order_set_force">强制改为“付款未发货”</option>
                 </select>
                 <label title="我们自己约定的操作权限密码，一般不会变">权限密码:</label>
                 <input type="password" name="passwd"><br>

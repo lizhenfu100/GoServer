@@ -98,7 +98,7 @@ func loadCacheNetMeta() {
 	}
 }
 func appendNetMeta(pMeta *meta.Meta) {
-	if meta.GetMeta("zookeeper", 0) != nil {
+	if meta.GetMeta(meta.Zookeeper, 0) != nil {
 		return //有zookeeper实现重启恢复，不必本地缓存
 	}
 	_mutex.Lock()
