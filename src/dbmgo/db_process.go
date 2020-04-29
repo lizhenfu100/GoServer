@@ -29,32 +29,14 @@ type action struct {
 	pData  interface{} //数据，可bson.M指定更新字段，详见dbmgo.go头部注释
 }
 
-func WaitStop() { close(_actions); <-_exit }
-
+func WaitStop() {
+	if close(_actions); DB() != nil {
+		<-_exit
+	}
+}
 func _loop() {
 	for v := range _actions {
-		var err error
-		switch coll := DB().C(v.table); v.optype {
-		case DB_Insert:
-			err = coll.Insert(v.pData)
-		case DB_Update:
-			err = coll.Update(v.search, v.pData)
-		case DB_Update_Id:
-			err = coll.UpdateId(v.search, v.pData)
-		case DB_Upsert_Id:
-			_, err = coll.UpsertId(v.search, v.pData)
-		case DB_Update_All:
-			_, err = coll.UpdateAll(v.search, v.pData)
-		case DB_Remove_One:
-			err = coll.Remove(v.search)
-		case DB_Remove_All:
-			if v.search == nil {
-				err = coll.DropCollection()
-			} else {
-				_, err = coll.RemoveAll(v.search)
-			}
-		}
-		if err != nil {
+		if err := v.do(); err != nil {
 			gamelog.Error("op[%d] table[%s] search[%v], data[%v], Error[%v]",
 				v.optype, v.table, v.search, v.pData, err)
 			if isClosedErr(err) { //Mongodb会极低概率忽然断开，所有操作均超时~囧
@@ -66,6 +48,27 @@ func _loop() {
 		}
 	}
 	_exit <- 0
+}
+func (v *action) do() (err error) {
+	switch coll := DB().C(v.table); v.optype {
+	case DB_Insert:
+		err = coll.Insert(v.pData)
+	case DB_Update:
+		err = coll.Update(v.search, v.pData)
+	case DB_Update_Id:
+		err = coll.UpdateId(v.search, v.pData)
+	case DB_Upsert_Id:
+		_, err = coll.UpsertId(v.search, v.pData)
+	case DB_Update_All:
+		_, err = coll.UpdateAll(v.search, v.pData)
+	case DB_Remove_One:
+		err = coll.Remove(v.search)
+	case DB_Remove_All:
+		if v.search != nil {
+			_, err = coll.RemoveAll(v.search)
+		}
+	}
+	return
 }
 func isClosedErr(e error) bool {
 	err := e.Error()

@@ -3,7 +3,6 @@ package main
 import (
 	"common"
 	"common/console"
-	"common/console/shutdown"
 	"common/file"
 	"encoding/json"
 	"fmt"
@@ -21,14 +20,11 @@ func main() {
 	netConfig.RunNetSvr(true)
 }
 func InitConf() {
-	file.G_Csv_Map = map[string]interface{}{
-		"csv/outip.csv": &logic.G_Logins,
-	}
+	file.RegCsvType("csv/outip.csv", logic.Logins())
 	file.LoadAllCsv()
 	console.Init()
-	console.RegShutdown(shutdown.Default)
 
 	//展示重要配置数据
-	b, _ := json.MarshalIndent(&logic.G_Logins, "", "     ")
+	b, _ := json.MarshalIndent(logic.Logins(), "", "     ")
 	fmt.Println("G_Logins: ", common.B2S(b))
 }

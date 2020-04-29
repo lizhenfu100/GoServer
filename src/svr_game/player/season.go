@@ -40,8 +40,7 @@ type TSeasonModule struct {
 	TimeBegin int64  //赛季开启时刻，仅用于识别“离线跨赛季”
 	Score     int    //赛季积分
 
-	owner     *TPlayer
-	winStreak byte //连胜纪录，影响赛季得分
+	owner *TPlayer
 }
 
 // ------------------------------------------------------------
@@ -87,7 +86,7 @@ func (self *TSeasonModule) calcScore(
 	assistCnt, //助攻数
 	reviveCnt uint8) int { //拉队友次数
 
-	kConf := &conf.Const
+	kConf := conf.Csv()
 	ret := kConf.Score_Normal
 	if isWin {
 		ret = kConf.Score_Win
@@ -112,7 +111,7 @@ func (self *TSeasonModule) calcScore(
 	return ret
 }
 func (self *TSeasonModule) calcLv() uint8 {
-	kConf := &conf.Const
+	kConf := conf.Csv()
 	kLen := uint8(len(kConf.Season_Score))
 	for i := uint8(0); i < kLen; i++ {
 		if self.Score < kConf.Season_Score[i] {

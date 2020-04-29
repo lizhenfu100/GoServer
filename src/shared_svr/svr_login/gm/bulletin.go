@@ -1,6 +1,7 @@
 /***********************************************************************
-* @ 告示 游戏初始界面的（不登录也会看到）
+* @ 公告（不登录也会看到）
 * @ brief
+	· 公告可能被所有玩家访问，只读，有分流需求，不适合放单节点模块
 
 * @ 接口文档
 	· Rpc_login_bulletin
@@ -22,7 +23,6 @@ import (
 	"gamelog"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
-	"strconv"
 	"time"
 )
 
@@ -105,15 +105,5 @@ func (self *Bulletins) setPlatform(pf_id string, pVal *Bulletin) {
 		self.DBKey = kDBKey
 		self.Pf = map[string]Bulletin{pf_id: *pVal}
 		dbmgo.Insert(dbmgo.KTableArgs, self)
-	}
-}
-
-// ------------------------------------------------------------
-// 运营用自增id
-func Http_get_inc_id(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
-	if key := q.Get("key"); key != "" {
-		id := dbmgo.GetNextIncId(key)
-		w.Write(common.S2B(strconv.FormatInt(int64(id), 10)))
 	}
 }

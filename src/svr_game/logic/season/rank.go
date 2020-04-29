@@ -49,8 +49,9 @@ func (self *RankItem) OnValueChange() bool          { return g_rank.OnValueChang
 // ------------------------------------------------------------
 //
 func InitRankList() {
-	kLen := len(conf.Const.Season_Score)
-	KRankNeedScore = conf.Const.Season_Score[kLen-1]
+	csv := conf.Csv()
+	kLen := len(csv.Season_Score)
+	KRankNeedScore = csv.Season_Score[kLen-1]
 	//初始化排行榜
 	var list []RankItem
 	g_rank.Init("SeasonRank", 100, &list)

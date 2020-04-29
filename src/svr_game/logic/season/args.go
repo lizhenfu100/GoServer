@@ -35,14 +35,15 @@ func InitDB() {
 func GetBeginTime() int64 { //本赛季开启时刻
 	now := time.Now()
 	month := int(now.Month())
-	length := len(conf.Const.Season_Begin_Month)
+	csv := conf.Csv()
+	length := len(csv.Season_Begin_Month)
 	idx := sort.Search(length, func(i int) bool {
-		return conf.Const.Season_Begin_Month[i] > month
+		return csv.Season_Begin_Month[i] > month
 	})
 	if idx == 0 {
 		idx = length
 	}
-	month = conf.Const.Season_Begin_Month[idx-1]
+	month = csv.Season_Begin_Month[idx-1]
 	return time.Date(now.Year(), time.Month(month), 1, 0, 0, 0, 0, now.Location()).Unix()
 }
 func OnEnterNextDay() {

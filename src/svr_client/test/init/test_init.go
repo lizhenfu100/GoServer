@@ -11,12 +11,9 @@ import (
 func init() {
 	fmt.Println("--- unit test init ---")
 	gamelog.InitLogger("test")
-	var metaCfg []meta.Meta
-	file.G_Csv_Map = map[string]interface{}{
-		"csv/conf_net.csv": &metaCfg,
-		"csv/conf_svr.csv": &conf.SvrCsv,
-	}
+	var metaCfg meta.Metas
+	file.RegCsvType("csv/conf_net.csv", metaCfg)
+	file.RegCsvType("csv/conf_svr.csv", conf.SvrCsv())
 	file.LoadAllCsv()
-	meta.InitConf(metaCfg)
 	meta.G_Local = meta.GetMeta("client", 0)
 }

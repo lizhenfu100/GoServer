@@ -61,17 +61,18 @@ type Meta struct {
 	ConnectLst []string //待连接的模块名
 	Closed     bool     //TODO:如何检测节点失效？通信失败或超时
 }
-type metas []*Meta
+type Metas []Meta
 
-func (p metas) Len() int           { return len(p) }
-func (p metas) Less(i, j int) bool { return p[i].SvrID < p[j].SvrID }
-func (p metas) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
-
-func (self *Meta) Port() uint16 {
-	if self.HttpPort > 0 {
-		return self.HttpPort
+func (p *Meta) Port() uint16 {
+	if p.HttpPort > 0 {
+		return p.HttpPort
 	} else {
-		return self.TcpPort
+		return p.TcpPort
+	}
+}
+func (v Metas) Init() {
+	for i := 0; i < len(v); i++ {
+		AddMeta(&v[i])
 	}
 }
 
@@ -111,13 +112,6 @@ func (self *Meta) BufToData(buf *common.NetPack) {
 }
 
 // -------------------------------------
-//! meta list
-func InitConf(list []Meta) {
-	for i := 0; i < len(list); i++ {
-		AddMeta(&list[i])
-	}
-}
-
 //Notice：ptr必须是堆上的，且指向不同内存
 func AddMeta(pNew *Meta) {
 	key := std.KeyPair{pNew.Module, pNew.SvrID}
@@ -136,6 +130,12 @@ func DelMeta(module string, svrID int) {
 		G_Metas.Delete(key)
 	}
 }
+
+type metas []*Meta
+
+func (p metas) Len() int           { return len(p) }
+func (p metas) Less(i, j int) bool { return p[i].SvrID < p[j].SvrID }
+func (p metas) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 //Notice：禁止缓存指针，G_Metas会被多线程改写
 func GetMeta(module string, svrID int) *Meta {

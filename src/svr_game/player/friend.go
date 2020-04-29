@@ -20,7 +20,7 @@ type TFriendModule struct {
 // ------------------------------------------------------------
 // -- 框架接口
 func (self *TFriendModule) InitAndInsert(p *TPlayer) {
-	self.Uid = common.UidNew(p.AccountID, conf.Const.LoginSvrId, meta.G_Local.SvrID)
+	self.Uid = common.UidNew(p.AccountID, conf.Csv().LoginSvrId, meta.G_Local.SvrID)
 	dbmgo.Insert(kDBFriend, self)
 }
 func (self *TFriendModule) LoadFromDB(p *TPlayer) {
@@ -60,7 +60,7 @@ func (self *TFriendModule) InitFriends() {
 			for cnt, i := recvBuf.ReadUInt16(), uint16(0); i < cnt; i++ {
 				aid := recvBuf.ReadUInt32() //本区aid下的角色，加好友
 				if ok, _ := dbmgo.Find(kDBPlayer, "accountid", aid, ptr); ok {
-					uid := common.UidNew(aid, conf.Const.LoginSvrId, meta.G_Local.SvrID)
+					uid := common.UidNew(aid, conf.Csv().LoginSvrId, meta.G_Local.SvrID)
 					self.Friends = append(self.Friends, uid)
 				}
 			}

@@ -1,8 +1,16 @@
+/***********************************************************************
+* @ GM
+* @ brief
+	1、管理单个项目的某地区，比如国内（包含华南、华北两大区）
+	2、地区共享的数据，如礼包码……防跨大区二次领取
+
+* @ author zhoumf
+* @ date 2018-12-12
+***********************************************************************/
 package main
 
 import (
 	"common/console"
-	"common/console/shutdown"
 	"common/file"
 	"conf"
 	"flag"
@@ -38,13 +46,9 @@ func main() {
 	logic.MainLoop()
 }
 func InitConf() {
-	var metaCfg []meta.Meta
-	file.G_Csv_Map = map[string]interface{}{
-		"csv/conf_net.csv": &metaCfg,
-		"csv/conf_svr.csv": &conf.SvrCsv,
-	}
+	var metaCfg meta.Metas
+	file.RegCsvType("csv/conf_net.csv", metaCfg)
+	file.RegCsvType("csv/conf_svr.csv", conf.SvrCsv())
 	file.LoadAllCsv()
-	meta.InitConf(metaCfg)
 	console.Init()
-	console.RegShutdown(shutdown.Default)
 }

@@ -2,7 +2,8 @@ package conf
 
 import "common/std"
 
-var Const struct {
+//go:generate D:\server\bin\gen_conf.exe *csv conf
+type csv struct {
 	LoginSvrId int //所在区服
 
 	DailySignInReward [][]std.IntPair //每日签到奖励

@@ -31,10 +31,6 @@ type Code struct {
 	T int64
 }
 
-func Init(key, secret string) {
-	_keyId = key
-	_secret = secret
-}
 func SendCode(phone string) {
 	if !g_freq.Check(phone) {
 		return
@@ -79,27 +75,38 @@ type smsAck struct {
 	Message string
 }
 
+var _buf1, _buf2, _buf3 bytes.Buffer
+
+func Init(key, secret string) {
+	_keyId = key
+	_secret = secret
+	_buf1.WriteString("AccessKeyId=")
+	_buf1.WriteString(encode(_keyId))
+	_buf1.WriteString("&Action=SendSms")
+	_buf1.WriteString("&Format=json")
+	_buf1.WriteString("&PhoneNumbers=")
+	//buf.WriteString(encode(phone))
+	_buf2.WriteString("&RegionId=")
+	_buf2.WriteString(encode("cn-hangzhou"))
+	_buf2.WriteString("&SignName=")
+	_buf2.WriteString(encode(kName))
+	_buf2.WriteString("&SignatureMethod=")
+	_buf2.WriteString(encode("HMAC-SHA1"))
+	_buf2.WriteString("&SignatureNonce=")
+	//buf.WriteString(encode(strconv.FormatUint(rand.Uint64(), 10)))
+	_buf3.WriteString("&SignatureVersion=")
+	_buf3.WriteString(encode("1.0"))
+	_buf3.WriteString("&TemplateCode=")
+	_buf3.WriteString(encode(kTemplateId))
+	_buf3.WriteString("&TemplateParam=")
+}
 func MakeUrl(phone string, code string) string {
 	var buf, sign, ret bytes.Buffer
-	buf.WriteString("AccessKeyId=")
-	buf.WriteString(encode(_keyId))
-	buf.WriteString("&Action=SendSms")
-	buf.WriteString("&Format=json")
-	buf.WriteString("&PhoneNumbers=")
+	buf.Write(_buf1.Bytes())
 	buf.WriteString(encode(phone))
-	buf.WriteString("&RegionId=")
-	buf.WriteString(encode("cn-hangzhou"))
-	buf.WriteString("&SignName=")
-	buf.WriteString(encode(kName))
-	buf.WriteString("&SignatureMethod=")
-	buf.WriteString(encode("HMAC-SHA1"))
-	buf.WriteString("&SignatureNonce=") //签名唯一随机数
+	buf.Write(_buf2.Bytes())
 	buf.WriteString(encode(strconv.FormatUint(rand.Uint64(), 10)))
-	buf.WriteString("&SignatureVersion=")
-	buf.WriteString(encode("1.0"))
-	buf.WriteString("&TemplateCode=")
-	buf.WriteString(encode(kTemplateId))
-	buf.WriteString("&TemplateParam=")
+	buf.Write(_buf3.Bytes())
 	buf.WriteString(encode(fmt.Sprintf("{code:%s}", code)))
 	buf.WriteString("&Timestamp=")
 	buf.WriteString(encode(time.Now().UTC().Format("2006-01-02T15:04:05Z")))

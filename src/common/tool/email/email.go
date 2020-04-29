@@ -61,7 +61,7 @@ func SendMail(subject, addr, body, language string) (errcode uint16) {
 		return err.Invalid
 		//TODO:return err.Email_format_err 2019春节版本后弃用旧错误码
 	}
-	if InCsvInvalid(addr) {
+	if Invalid(addr) {
 		return err.Invalid
 		//TODO:return err.Is_forbidden
 	}
@@ -95,17 +95,18 @@ var (
 )
 
 func dialer() *gomail.Dialer {
+	csv := conf.SvrCsv()
 	if g_list == nil {
-		g_list = make([]*gomail.Dialer, len(conf.SvrCsv.EmailUser))
+		g_list = make([]*gomail.Dialer, len(csv.EmailUser))
 	}
 	idx := rand.Intn(len(g_list))
 	ret := g_list[idx]
-	if ret == nil || ret.Password != conf.SvrCsv.EmailPasswd[idx] {
+	if ret == nil || ret.Password != csv.EmailPasswd[idx] {
 		ret = gomail.NewDialer(
-			conf.SvrCsv.EmailHost,
-			conf.SvrCsv.EmailPort,
-			conf.SvrCsv.EmailUser[idx],
-			conf.SvrCsv.EmailPasswd[idx])
+			csv.EmailHost,
+			csv.EmailPort,
+			csv.EmailUser[idx],
+			csv.EmailPasswd[idx])
 		g_list[idx] = ret
 	}
 	return ret

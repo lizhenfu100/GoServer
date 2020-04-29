@@ -3,7 +3,6 @@ package main
 import (
 	"common"
 	"common/console"
-	"common/console/shutdown"
 	"common/file"
 	"conf"
 	"encoding/json"
@@ -40,18 +39,14 @@ func main() {
 	logic.MainLoop()
 }
 func InitConf() {
-	var metaCfg []meta.Meta
-	file.G_Csv_Map = map[string]interface{}{
-		"csv/conf_net.csv":   &metaCfg,
-		"csv/conf_svr.csv":   &conf.SvrCsv,
-		"csv/sdk/pingxx.csv": &conf2.PingxxSub,
-	}
+	var metaCfg meta.Metas
+	file.RegCsvType("csv/conf_net.csv", metaCfg)
+	file.RegCsvType("csv/conf_svr.csv", conf.SvrCsv())
+	file.RegCsvType("csv/sdk/pingxx.csv", conf2.PingxxSub())
 	file.LoadAllCsv()
-	meta.InitConf(metaCfg)
 	console.Init()
-	console.RegShutdown(shutdown.Default)
 
 	//展示重要配置数据
-	buf, _ := json.MarshalIndent(&conf2.PingxxSub, "", "     ")
+	buf, _ := json.MarshalIndent(conf2.PingxxSub(), "", "     ")
 	fmt.Println("conf.Const: ", common.B2S(buf))
 }

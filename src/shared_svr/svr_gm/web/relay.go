@@ -1,7 +1,6 @@
 package web
 
 import (
-	"bytes"
 	"common"
 	"common/file"
 	"common/std/sign"
@@ -13,7 +12,6 @@ import (
 	"net/url"
 	mhttp "nets/http"
 	"nets/tcp"
-	"shared_svr/svr_login/gift_bag"
 	"strconv"
 	"strings"
 	"time"
@@ -31,7 +29,7 @@ func GetAddrs(q url.Values) (ret []string) {
 	}
 	return
 }
-func foreach_svr(w http.ResponseWriter, r *http.Request) {
+func foreach_svr(w http.ResponseWriter, r *http.Request) { //逐一展示所有节点的结果
 	q := r.URL.Query()
 	for _, v := range GetAddrs(q) {
 		u, _ := url.Parse(v + r.URL.Path)
@@ -43,6 +41,11 @@ func foreach_svr(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("http fail\n"))
 		}
 	}
+}
+func relay_to(w http.ResponseWriter, r *http.Request) { //合并所有节点的结果
+	q := r.URL.Query()
+	addrs := GetAddrs(q)
+	mergeAcks(addrs, q.Encode(), r.URL.Path, w)
 }
 func mergeAcks(addrs []string, rawQuery string, path string, w http.ResponseWriter) {
 	var acks [][]byte
@@ -73,11 +76,6 @@ func mergeAcks(addrs []string, rawQuery string, path string, w http.ResponseWrit
 			w.Write(acks[i])
 		}
 	}
-}
-func relay_to(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
-	addrs := GetAddrs(q)
-	mergeAcks(addrs, q.Encode(), r.URL.Path, w)
 }
 func relay_to_save(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
@@ -120,8 +118,8 @@ func relay_tcp(w io.Writer, addr string, rpcId uint16, sendFun func(*common.NetP
 	c := make(chan []byte, 1)
 	var client tcp.TCPClient
 	client.ConnectToSvr(addr, func(conn *tcp.TCPConn) {
-		conn.CallRpcSafe(rpcId, sendFun, func(recvBuf *common.NetPack) { //recvBuf生命周期仅限回调函数
-			recvFun(c, recvBuf)
+		conn.CallRpcSafe(rpcId, sendFun, func(recvBuf *common.NetPack) {
+			recvFun(c, recvBuf) //recvBuf生命周期仅限回调函数
 		})
 	})
 	select { //异步转同步
@@ -161,37 +159,9 @@ func Http_bind_info_force(w http.ResponseWriter, r *http.Request) {
 }
 
 // ------------------------------------------------------------
-// 生成礼包码
-func Http_gift_code_spawn(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
-	key := q.Get("key")
-	game := q.Get("game")
-	count, _ := strconv.Atoi(q.Get("count"))
-
-	gift_bag.MakeGiftCodeCsv(game, key, count)
-
-	if q.Get("all") == "" {
-		r.URL.Path = gift_bag.KGiftCodeDir + game + "/" + gift_bag.KGiftCodeTemp //只给新礼包码
-	} else {
-		r.URL.Path = gift_bag.KGiftCodeDir + game + "/" + key + ".csv" //历史所有礼包码
-	}
-	if count < 100 {
-		var buf bytes.Buffer
-		vs, _ := file.ReadCsv(r.URL.Path)
-		for _, v := range vs {
-			buf.WriteString(v[0])
-			buf.WriteString("\n")
-		}
-		w.Write(buf.Bytes())
-	} else {
-		http.FileServer(http.Dir(".")).ServeHTTP(w, r)
-	}
-}
-
-// ------------------------------------------------------------
 // 云存档
 func Http_download_save_data(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
+	r.ParseMultipartForm(32 << 20)
 	addr := "http://" + r.Form.Get("addr")
 	uid := r.Form.Get("uid")
 	pf_id := r.Form.Get("pf_id")
@@ -207,10 +177,11 @@ func Http_download_save_data(w http.ResponseWriter, r *http.Request) {
 	})
 }
 func Http_upload_save_data(w http.ResponseWriter, r *http.Request) {
-	f, _, e := r.FormFile("save")
+	r.ParseMultipartForm(32 << 20)
 	addr := "http://" + r.Form.Get("addr")
 	uid := r.Form.Get("uid")
 	pf_id := r.Form.Get("pf_id")
+	f, _, e := r.FormFile("save")
 	if e != nil {
 		w.Write([]byte("上传失败 无效文件"))
 		return

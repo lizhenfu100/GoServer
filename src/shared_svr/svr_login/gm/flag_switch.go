@@ -4,8 +4,10 @@ import (
 	"common"
 	"common/timer"
 	"conf"
+	"dbmgo"
 	"net/http"
 	"shared_svr/svr_login/logic"
+	"strconv"
 )
 
 func Http_flag_switch(w http.ResponseWriter, r *http.Request) {
@@ -32,4 +34,14 @@ func Http_flag_switch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(common.S2B(falg + " " + val))
+}
+
+// ------------------------------------------------------------
+// 运营用自增id
+func Http_get_inc_id(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	if key := q.Get("key"); key != "" {
+		id := dbmgo.GetNextIncId(key)
+		w.Write(common.S2B(strconv.FormatInt(int64(id), 10)))
+	}
 }

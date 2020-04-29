@@ -2,7 +2,6 @@ package main
 
 import (
 	"common/console"
-	"common/console/shutdown"
 	"common/file"
 	"conf"
 	"flag"
@@ -32,13 +31,9 @@ func main() {
 	netConfig.RunNetSvr(true) //FIXME:考虑fasthttp
 }
 func InitConf() {
-	var metaCfg []meta.Meta
-	file.G_Csv_Map = map[string]interface{}{
-		"csv/conf_net.csv": &metaCfg,
-		"csv/conf_svr.csv": &conf.SvrCsv,
-	}
+	var metaCfg meta.Metas
+	file.RegCsvType("csv/conf_net.csv", metaCfg)
+	file.RegCsvType("csv/conf_svr.csv", conf.SvrCsv())
 	file.LoadAllCsv()
-	meta.InitConf(metaCfg)
 	console.Init()
-	console.RegShutdown(shutdown.Default)
 }

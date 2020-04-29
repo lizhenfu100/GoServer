@@ -41,8 +41,8 @@ func RunNetSvr(block bool) {
 	module, svrId := meta.G_Local.Module, meta.G_Local.SvrID
 	//1、连db
 	if p := meta.GetMeta("db_"+module, svrId); p != nil {
-		//TODO:支持连多个db，分库分表
-		dbmgo.InitWithUser(p.IP, p.TcpPort, p.SvrName, conf.SvrCsv.DBuser, conf.SvrCsv.DBpasswd)
+		csv := conf.SvrCsv()
+		dbmgo.InitWithUser(p.IP, p.TcpPort, p.SvrName, csv.DBuser, csv.DBpasswd)
 	}
 	//2、连接并注册到其它模块
 	if nil == meta.GetMeta(meta.Zookeeper, 0) { //没有zoo节点，才依赖配置，否则依赖zoo通知

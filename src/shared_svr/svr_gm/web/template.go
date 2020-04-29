@@ -30,6 +30,7 @@ type TLogin struct {
 	Addrs []string //登录节点同质的
 	Games []TGame
 	Gates []std.KeyPair
+	GM    string
 }
 type TGame struct {
 	ID        int
@@ -108,6 +109,17 @@ func (self *TemplateData) GetAddrs() {
 					pLogin.Gates = append(pLogin.Gates, std.KeyPair{http.Addr(outip, port), svrId})
 				}
 			})
+			// 拉大区的gm
+			http.CallRpc(pLogin.Addrs[0], enum.Rpc_get_meta, func(buf *common.NetPack) {
+				buf.WriteString("gm")
+				buf.WriteString("") //version
+				buf.WriteByte(common.Core)
+			}, func(recvBuf *common.NetPack) {
+				recvBuf.ReadInt() //svrId
+				outip := recvBuf.ReadString()
+				port := recvBuf.ReadUInt16()
+				pLogin.GM = http.Addr(outip, port)
+			})
 		}
 	}
 	// 拉到的数据写本地文件
@@ -166,25 +178,19 @@ func (self *TemplateData) AddrLogin(idx int) string {
 	}
 	return ""
 }
-func (self *TemplateData) AddrGame(idx, id int) string {
-	if idx < len(self.Logins) {
-		for _, v := range self.Logins[idx].Games {
-			if v.ID == id {
-				return v.GameAddr
+func (self *TemplateData) AddrSave(region string) string { //China,America...
+	var list []string
+	for _, v := range self.Logins {
+		if strings.Index(v.Name, region) >= 0 {
+			for _, v := range v.Games {
+				if v.ID < common.KIdMod && len(v.SaveAddrs) > 0 {
+					list = append(list, v.SaveAddrs[0])
+
+				}
 			}
 		}
 	}
-	return ""
-}
-func (self *TemplateData) AddrSave(idx, id int) string {
-	if idx < len(self.Logins) {
-		for _, v := range self.Logins[idx].Games {
-			if v.ID == id && len(v.SaveAddrs) > 0 {
-				return v.SaveAddrs[0]
-			}
-		}
-	}
-	return ""
+	return strings.Join(list, " ")
 }
 func (self *TemplateData) PfidSave() (ret []std.StrPair) { //存档互通的渠道
 	for _, p := range self.pf_id {

@@ -28,7 +28,7 @@ type (
 	// PlayerRpc func(req, ack *common.NetPack, this *Type)
 	TcpRpc     func(req, ack *common.NetPack, conn *tcp.TCPConn)
 	HttpRpc    func(req, ack *common.NetPack)
-	HttpHandle func(http.ResponseWriter, *http.Request)
+	HttpHandle http.HandlerFunc
 )
 
 func RegTcpRpc(tcpLst map[uint16]TcpRpc) {

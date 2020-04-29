@@ -69,3 +69,20 @@ func ReportErr(f func(*common.NetPack), e byte) {
 	f(ack)
 	ack.Free()
 }
+
+// ------------------------------------------------------------
+// 转发http
+//var _sdk http.Handler
+//func relaySdk(w http.ResponseWriter, r *http.Request) { _sdk.ServeHTTP(w, r) }
+//func init() {
+//	_sdk = &httputil.ReverseProxy{Director: func(r *http.Request) {
+//		if p := meta.GetByRand("sdk"); p != nil {
+//			r.URL.Scheme = "http"
+//			r.URL.Host = fmt.Sprintf("%s:%d", p.IP, p.HttpPort)
+//		}
+//	}}
+//	http.HandleFunc("/pre_buy_request", relaySdk)
+//	http.HandleFunc("/query_order", relaySdk)
+//	http.HandleFunc("/confirm_order", relaySdk)
+//	http.HandleFunc("/query_order_unfinished", relaySdk)
+//}

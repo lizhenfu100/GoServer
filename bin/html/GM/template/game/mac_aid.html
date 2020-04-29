@@ -13,7 +13,7 @@
             <form action="{{.LocalAddr}}/find_aid_in_mac" method="get">
                 <label>大区:</label>
                 <select name="_list">
-                    <option value="{{.AddrSave 0 1}} {{.AddrSave 0 2}} {{.AddrSave 1 1}}">China</option>
+                    <option value="{{.AddrSave `China`}}">China</option>
                 </select>
                 <label>设备码:</label>
                 <input type="text" name="mac"><br>

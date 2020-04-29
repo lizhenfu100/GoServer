@@ -5,9 +5,8 @@ import (
 	"reflect"
 )
 
-var G_EmailCsv = map[string]*csvEmail{}
-
-type csvEmail struct { // Notice：用支持UTF-8的编辑器写csv，否则容易乱码
+//go:generate D:\server\bin\gen_conf.exe emailCsv email
+type emailCsv map[string]*struct { // Notice：用支持UTF-8的编辑器写csv，否则容易乱码
 	Title   string
 	En      string
 	Zh      string //简中
@@ -21,22 +20,33 @@ type csvEmail struct { // Notice：用支持UTF-8的编辑器写csv，否则容�
 	Id      string //印尼语
 	De      string //德语
 	Ar      string //阿拉伯语
-	Fa 		string //波斯语
+	Fa      string //波斯语
 }
 
 func Translate(title, language string) (string, bool) {
 	ret, ok := translate(title, language)
 	if !ok {
-		ret, ok = translate(title, conf.SvrCsv.EmailLanguage)
+		ret, ok = translate(title, conf.SvrCsv().EmailLanguage)
 	}
 	return ret, ok
 }
 func translate(title, language string) (string, bool) {
-	if csv, ok := G_EmailCsv[title]; ok {
+	if csv, ok := EmailCsv()[title]; ok {
 		ref := reflect.ValueOf(csv).Elem()
 		if v := ref.FieldByName(language); v.IsValid() && v.String() != "" {
 			return v.String(), true
 		}
 	}
 	return title, false
+}
+
+// ------------------------------------------------------------
+//go:generate D:\server\bin\gen_conf.exe invalidCsv email
+type invalidCsv map[string]*struct {
+	Addr string
+}
+
+func Invalid(addr string) bool {
+	_, ok := InvalidCsv()[addr]
+	return ok
 }

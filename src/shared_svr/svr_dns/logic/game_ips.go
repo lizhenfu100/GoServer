@@ -17,17 +17,18 @@ import (
 	"net/http"
 )
 
+// http://game.chillyroom.com:7233/svr_list?game=HappyDiner
+
 // ------------------------------------------------------------
-type TLogins struct {
+//go:generate D:\server\bin\gen_conf.exe logins logic
+type logins map[string]*struct {
 	Game string
 	IPs  map[string][]string //<大区, 地址>
 }
 
-var G_Logins map[string]*TLogins = nil //<游戏名, 大区列表>
-
 func Http_svr_list(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
-	if v, ok := G_Logins[q.Get("game")]; ok {
+	q, csv := r.URL.Query(), Logins()
+	if v, ok := csv[q.Get("game")]; ok {
 		if v, ok := v.IPs[q.Get("region")]; ok {
 			b, _ := json.Marshal(v)
 			w.Write(b)

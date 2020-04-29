@@ -70,7 +70,7 @@ func Rpc_login_account_login(req, ack *common.NetPack) {
 	sign.Decode(&account, &pwd)
 	if !assert.IsDebug && gameName != conf.GameName {
 		ack.WriteUInt16(err.LoginSvr_not_match)
-		wechat.SendMsg("登录服不匹配：" + conf.GameName + account)
+		wechat.SendMsg("登录服不匹配：" + account)
 	} else if centerId := netConfig.HashCenterID(account); centerId < 0 {
 		ack.WriteUInt16(err.None_center_server)
 	} else {
@@ -174,7 +174,7 @@ func accountLogin3(pInfo *gameInfo.TAccountClient, gameSvrId int, version string
 	} else if pMetaToClient = meta.GetMeta("game", gameSvrId); pMetaToClient == nil {
 		errCode = err.None_game_server
 	}
-	if conf.GameName == "SoulKnight" { //TODO:待删除
+	if conf.GameName == "SoulKnight" { //TODO:待删除，老包无gateway
 		if common.CompareVersion(version, "2.6.0") < 0 {
 			if pMetaToClient = meta.GetMeta("game", gameSvrId); pMetaToClient == nil {
 				errCode = err.None_game_server

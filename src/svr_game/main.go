@@ -37,23 +37,20 @@ func main() {
 	logic.MainLoop()
 }
 func InitConf() {
-	var metaCfg []meta.Meta
-	file.G_Csv_Map = map[string]interface{}{
-		"csv/conf_net.csv":   &metaCfg,
-		"csv/conf_svr.csv":   &conf.SvrCsv,
-		"csv/game/const.csv": &conf2.Const,
-	}
+	var metaCfg meta.Metas
+	file.RegCsvType("csv/conf_net.csv", metaCfg)
+	file.RegCsvType("csv/conf_svr.csv", conf.SvrCsv())
+	file.RegCsvType("csv/game/const.csv", conf2.Csv())
 	file.LoadAllCsv()
-	meta.InitConf(metaCfg)
 	console.Init()
 	console.RegShutdown(logic.Shutdown)
 
 	if list := meta.GetMetas(conf.GameName, ""); len(list) > 0 {
-		conf2.Const.LoginSvrId = list[0].SvrID % common.KIdMod
+		conf2.Csv().LoginSvrId = list[0].SvrID % common.KIdMod
 	} else {
 		panic("LoginSvrId nil")
 	}
 	//展示重要配置数据
-	buf, _ := json.MarshalIndent(&conf2.Const, "", "     ")
+	buf, _ := json.MarshalIndent(conf2.Csv(), "", "     ")
 	fmt.Println("conf.Const: ", common.B2S(buf))
 }

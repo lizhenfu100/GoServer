@@ -62,12 +62,15 @@ type MacInfo struct {
 	Key string //Pf_id + Uid
 }
 
-func GetSaveKey(pf_id, uid string) string { return pf_id + "_" + uid }
-
+func GetSaveKey(pf_id, uid string) string {
+	if assert.IsDebug && !conf2.CheckPf(conf3.GameName, pf_id) {
+		panic("Platform error")
+	}
+	return pf_id + "_" + uid
+}
 func Rpc_save_get_meta_info(req, ack *common.NetPack) { //TODO:待删除
 	uid := req.ReadString()
 	pf_id := req.ReadString()
-
 	ptr := &TSaveData{Key: GetSaveKey(pf_id, uid)}
 	if ok, e := dbmgo.Find(KDBSave, "_id", ptr.Key, ptr); ok {
 		ack.WriteInt64(ptr.UpTime)
@@ -84,12 +87,13 @@ func Rpc_save_get_time_info(req, ack *common.NetPack) {
 	pf_id := req.ReadString()
 	ptr, now := &TSaveData{Key: GetSaveKey(pf_id, uid)}, time.Now().Unix()
 	if ok, e := dbmgo.Find(KDBSave, "_id", ptr.Key, ptr); ok {
+		csv := conf.Csv()
 		ack.WriteUInt16(err.Success)
 		ack.WriteInt64(ptr.UpTime)
 		//绑定新设备，等待的秒数
-		ack.WriteInt(int(ptr.ChTime-now) + conf.Const.MacChangePeriod)
+		ack.WriteInt(int(ptr.ChTime-now) + csv.MacChangePeriod)
 		//重置绑定次数，等待的秒数
-		ack.WriteInt(int(ptr.RaiseTime-now) + int(conf.Const.RaiseBindCntDay)*3600*24)
+		ack.WriteInt(int(ptr.RaiseTime-now) + int(csv.RaiseBindCntDay)*3600*24)
 	} else if e != nil {
 		ack.WriteUInt16(err.Unknow_error)
 	} else {
@@ -121,10 +125,10 @@ func checkMac(pf_id, uid, mac string) (*TSaveData, uint16) { //Notice：不可�
 		gamelog.Track("Record_cannot_find: %s", pSave.Key)
 		return pSave, err.Record_cannot_find
 	}
-	if !oldMac /*新设备*/ && pSave.MacCnt >= conf.Const.MacFreeBindMax {
+	if csv := conf.Csv(); !oldMac /*新设备*/ && pSave.MacCnt >= csv.MacFreeBindMax {
 		now := time.Now().Unix()
-		if pSave.MacCnt >= conf.Const.MacBindMax {
-			if (now-pSave.RaiseTime)/(3600*24) < int64(conf.Const.RaiseBindCntDay) {
+		if pSave.MacCnt >= csv.MacBindMax {
+			if (now-pSave.RaiseTime)/(3600*24) < int64(csv.RaiseBindCntDay) {
 				gamelog.Track("Record_bind_max: %s", pSave.Key)
 				return pSave, err.Record_bind_max //绑定次数用尽，月余后重置
 			} else {
@@ -132,7 +136,7 @@ func checkMac(pf_id, uid, mac string) (*TSaveData, uint16) { //Notice：不可�
 				pSave.RaiseTime = now
 			}
 		}
-		if now-pSave.ChTime < int64(conf.Const.MacChangePeriod) {
+		if now-pSave.ChTime < int64(csv.MacChangePeriod) {
 			gamelog.Track("Record_bind_limit: %s", pSave.Key)
 			return pSave, err.Record_bind_limit //等几天才能换设备
 		}

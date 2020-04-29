@@ -44,7 +44,6 @@ func Init() {
 func init() {
 	nets.RegHttpHandler(map[string]nets.HttpHandle{
 		"/backup_conf":     relay_to_save,
-		"/backup_auto":     relay_to_save,
 		"/backup_force":    relay_to_save,
 		"/relay_gm_cmd":    relay_gm_cmd,
 		"/gift_bag_add":    relay_to,

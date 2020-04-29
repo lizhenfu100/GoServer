@@ -1,12 +1,13 @@
 package console
 
 import (
+	"common/console/shutdown"
 	"os"
 	"os/signal"
 	"syscall"
 )
 
-var g_shutdown func()
+var g_shutdown = shutdown.Default
 
 func RegShutdown(f func()) { g_shutdown = f }
 

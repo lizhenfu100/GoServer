@@ -125,7 +125,7 @@ func _NeedVerifyEmail(emailAddr, passwd string) (errcode uint16) {
 			q.Set("pwd", passwd)
 			flag := strconv.FormatInt(time.Now().Unix(), 10)
 			q.Set("flag", flag)
-			q.Set("language", conf.SvrCsv.EmailLanguage)
+			q.Set("language", conf.SvrCsv().EmailLanguage)
 			q.Set("sign", sign.CalcSign(emailAddr+passwd+flag))
 			//3、生成完整url
 			u.RawQuery = q.Encode()

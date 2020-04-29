@@ -4,22 +4,6 @@
     <title>云存档</title>
     <link rel="stylesheet" href="main.css">
     <script src="app.js"></script>
-    <script type="text/javascript" language="javascript">
-        function browseFolder(path) {
-            try {
-                var Message = "\u8bf7\u9009\u62e9\u6587\u4ef6\u5939"; //选择框提示信息
-                var Shell = new ActiveXObject("Shell.Application");
-                var Folder = Shell.BrowseForFolder(0, Message, 0, "d:\\");
-                if (Folder != null) {
-                    var i = 0;
-                    var savePath = Folder.Self.Path;
-                    document.getElementsByName("path")[0].value = savePath;
-                }
-            } catch (e) {
-                alert(e.message);
-            }
-        }
-    </script>
 </head>
 
 <body bgcolor="white">

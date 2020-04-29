@@ -1,8 +1,7 @@
 package conf
 
-var PingxxSub = map[string]*pingxxSub{}
-
-type pingxxSub struct {
+//go:generate D:\server\bin\gen_conf.exe pingxxSub conf
+type pingxxSub map[string]*struct {
 	GamePf string
 	AppId  string
 }

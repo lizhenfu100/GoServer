@@ -51,11 +51,11 @@ func main() {
 			}
 		}
 	}
-	addrs := strings.Split(addrList, " ")
-	for _, addr := range _UpdateList(addrs) {
+	updates, reloads := _UpdateList(strings.Split(addrList, " "))
+	for _, addr := range updates {
 		UpdateCsv("http://"+addr, svrFile)
 	}
-	for _, addr := range addrs {
+	for _, addr := range reloads {
 		ReloadCsv("http://"+addr, svrFile)
 	}
 	fmt.Println("\n...finish...")
@@ -93,16 +93,18 @@ func ReloadCsv(addr string, svrFile map[string][]byte) {
 
 // ------------------------------------------------------------
 // 每个均得Reload，同ip的选一个Update即可
-func _UpdateList(addrs []string) (ret []string) {
+func _UpdateList(addrs []string) (update, reload []string) {
 	var ips std.Strings
 	for _, addr := range addrs {
 		if idx := strings.Index(addr, ":"); idx >= 0 {
 			ip := addr[:idx]
 			if ips.Index(ip) < 0 {
 				ips.Add(ip)
-				ret = append(ret, addr)
+				update = append(update, addr)
+				continue
 			}
 		}
+		reload = append(reload, addr)
 	}
 	return
 }

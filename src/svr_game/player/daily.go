@@ -39,14 +39,14 @@ func (self *TDailyModule) OnLogout() {
 // -------------------------------------
 //! rpc
 func Rpc_game_daily_sign_in(req, ack *common.NetPack, this *TPlayer) { //每日签到
-	timenow := time.Now()
+	timenow, csv := time.Now(), conf.Csv()
 	wday := (timenow.Weekday() + 6) % 7 // weekday but Monday = 0.
 
-	if int(wday) < len(conf.Const.DailySignInReward) && !std.GetBit8(this.daily.SignInMask, uint(wday)) {
+	if int(wday) < len(csv.DailySignInReward) && !std.GetBit8(this.daily.SignInMask, uint(wday)) {
 		std.SetBit8(&this.daily.SignInMask, uint(wday), true)
 		_, this.daily.SignInYearWeek = timenow.ISOWeek()
 
-		reward := conf.Const.DailySignInReward[wday]
+		reward := csv.DailySignInReward[wday]
 		length := len(reward)
 		ack.WriteByte(byte(length))
 		for i := 0; i < length; i++ {
@@ -62,7 +62,7 @@ func Rpc_game_look_over_daily_sign_in(req, ack *common.NetPack, this *TPlayer) {
 	if this.daily.SignInYearWeek != yearWeek { //不是同一周了，清空签到记录
 		this.daily.SignInMask = 0
 	}
-	rewards := conf.Const.DailySignInReward
+	rewards := conf.Csv().DailySignInReward
 	ack.WriteUInt8(this.daily.SignInMask)
 	ack.WriteByte(byte(len(rewards)))
 	for i := 0; i < len(rewards); i++ {

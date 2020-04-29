@@ -1,6 +1,9 @@
 package web
 
-import "common/std"
+import (
+	"common/std"
+	"shared_svr/svr_gm/conf"
+)
 
 var (
 	g_common = TCommon{
@@ -13,28 +16,6 @@ var (
 		SdkAddrs: []string{
 			"http://120.78.152.152:7002", //China
 		},
-	}
-	G_Platform = []std.StrPair{
-		{"TapTap", ""}, {"IOS", ""}, {"IOS_CN", ""}, {"GP", ""},
-		{"SY_Coolpad", "尚游_酷派"},
-		{"SY_Lenovo", "尚游_联想"}, {"SY_Meizu", "尚游_魅族"},
-		{"SY_Huawei", "尚游_华为"}, {"SY_Jinli", "尚游_金立"},
-		{"SY_Oppo", "尚游_Oppo"}, {"SY_Vivo", "尚游_Vivo"},
-		{"360", ""}, {"4399", ""}, {"4399hezi", "4399盒子"},
-		{"Anzhi", "安智"}, {"Bazaar", ""}, {"Baidu", "百度"},
-		{"Biligame", "b站"}, {"Douyu", "斗鱼"},
-		{"Gourd", "葫芦侠"}, {"Gamepop", "好游快爆"},
-		{"Huawei_Overseas", "华为海外"}, {"Leap", "微信leap"},
-		{"Lianyun001_kkp", "酷酷跑"},
-		{"LianYun233", "233游戏"},
-		{"LianYunCPS", "咪咕CPS"},
-		{"Meiyou", "魅游单机"}, {"Migu", "咪咕"}, {"Muzhiwan", "拇指玩"},
-		{"Nubiya", "努比亚"},
-		{"PPS", "PPS平台"}, {"Samsung", "三星"}, {"Sogou", "搜狗"},
-		{"Toutiao", "今日头条"}, {"UC", "九游"},
-		{"WDJ", "豌豆荚"}, {"Wo", "联通沃商店"},
-		{"Xiao7", "小七游戏"}, {"XiaoMi", "小米"},
-		{"Yixin", "易信"}, {"YYB", "应用宝"}, {"YYH", "应用汇"},
 	}
 	g_map = map[string]TemplateData{
 		"HappyDiner": {
@@ -79,13 +60,13 @@ var (
 			Logins: []TLogin{
 				{Name: "华南", Addrs: []string{"http://52.82.37.128:7030"}},
 			},
-			pf_id: G_Platform,
+			pf_id: conf.G_Platform,
 		},
 		//"DungeonOfWeirdos": {
 		//	Logins: []TLogin{
 		//		{Name: "华南", Addrs: []string{"http://52.82.109.217:7030"}},
 		//	},
-		//	Pf_id: G_Platform,
+		//	Pf_id: conf.G_Platform,
 		//},
 	}
 )

@@ -90,7 +90,7 @@ func Rpc_save_unbind_mac2(req, ack *common.NetPack) {
 	errcode, timeUnbind := UnbindMac(mac)
 	ack.WriteUInt16(errcode)
 	//解绑，等待的秒数
-	ack.WriteInt(int(timeUnbind-time.Now().Unix()) + conf.Const.MacUnbindPeriod)
+	ack.WriteInt(int(timeUnbind-time.Now().Unix()) + conf.Csv().MacUnbindPeriod)
 }
 func UnbindMac(mac string) (uint16, int64) {
 	ptr := &MacInfo{}
@@ -109,15 +109,16 @@ func UnbindMac(mac string) (uint16, int64) {
 	return err.Not_found, 0
 }
 func canUnbindMac(key, mac string, timeNow int64) (bool, int64) {
+	csv := conf.Csv()
 	if v, ok := g_unbindTime1.Load(key); ok {
 		timeUnbind := v.(int64)
-		if timeNow-timeUnbind < int64(conf.Const.MacUnbindPeriod) {
+		if timeNow-timeUnbind < int64(csv.MacUnbindPeriod) {
 			return false, timeUnbind
 		}
 	}
 	if v, ok := g_unbindTime2.Load(mac); ok {
 		timeUnbind := v.(int64)
-		if timeNow-timeUnbind < int64(conf.Const.MacUnbindPeriod) {
+		if timeNow-timeUnbind < int64(csv.MacUnbindPeriod) {
 			return false, timeUnbind
 		}
 	}

@@ -30,7 +30,7 @@
 * @ author zhoumf
 * @ date 2017-5-3
 ***********************************************************************/
-package tool
+package tag
 
 import (
 	"fmt"

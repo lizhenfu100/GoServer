@@ -34,13 +34,13 @@
 	4、行列注释："#"开头的行，没命名/前缀"_"的列    有些列仅client显示用的
 
 	5、使用方式：
-			var G_MapCsv map[int]*TTestCsv = nil  	// map结构读表，首列作Key
-			var G_SliceCsv []TTestCsv = nil 		// 数组结构读表，注册【&G_SliceCsv】到G_Csv_Map
+			var G_MapCsv map[int]*TTestCsv	// map结构读表，首列作Key
+			var G_SliceCsv []TTestCsv 		// 数组结构读表，注册引用语义到_csv_map
 
-			var G_Csv_Map = map[string]interface{}{
-				"test": &G_MapCsv,
-				// "test": &G_SliceCsv,
-			}
+			file.RegCsvType("test1.csv", G_MapCsv)
+			file.RegCsvType("test2.csv", G_SliceCsv)
+			file.RegCsvType("test3.csv", &G_Struct)
+
 * @ author zhoumf
 * @ date 2016-6-22
 ***********************************************************************/
@@ -57,8 +57,18 @@ import (
 	"strings"
 )
 
-var G_Csv_Map map[string]interface{}
+var _csv_map = map[string]reflect.Type{}
 
+func RegCsvType(path string, v interface{}) {
+	if _, ok := v.(interface{ Init() }); !ok {
+		panic(path + " miss Init()")
+	}
+	if typ := reflect.TypeOf(v); typ.Kind() == reflect.Ptr {
+		_csv_map[path] = typ.Elem()
+	} else {
+		_csv_map[path] = typ
+	}
+}
 func LoadAllCsv() {
 	if names, err := WalkDir("csv/", ".csv"); err == nil {
 		for _, name := range names {
@@ -69,15 +79,18 @@ func LoadAllCsv() {
 	}
 }
 func ReloadCsv(fullName string) {
-	if ptr, ok := G_Csv_Map[fullName]; ok {
-		LoadCsv(fullName, ptr)
+	if typ, ok := _csv_map[fullName]; ok {
+		LoadCsv(fullName, reflect.New(typ).Interface())
 	}
 }
 func LoadCsv(fullName string, ptr interface{}) {
-	if records, err := ReadCsv(fullName); err != nil {
-		fmt.Println("LoadCsv error: ", err.Error())
+	if records, e := ReadCsv(fullName); e == nil {
+		ParseCsv(records, ptr) //配置的加载可能带有逻辑的
+		if v, ok := ptr.(interface{ Init() }); ok {
+			v.Init()
+		}
 	} else {
-		ParseCsv(records, ptr)
+		fmt.Println("LoadCsv error: ", e.Error())
 	}
 }
 
@@ -97,11 +110,13 @@ func ParseCsv(records [][]string, ptr interface{}) {
 }
 func ParseByMap(records [][]string, pMap interface{}) {
 	table := reflect.ValueOf(pMap).Elem()
-	typ := table.Type().Elem().Elem() // map内保存的指针，第二次Elem()得到所指对象类型
-	table.Set(reflect.MakeMap(table.Type()))
+	typ := reflect.TypeOf(pMap).Elem()
+	vTyp := typ.Elem().Elem() // map内保存的指针，第二次Elem()得到所指对象类型
 
 	total, idx := _validCnt(records), 0
-	slice := reflect.MakeSlice(reflect.SliceOf(typ), total, total) // 避免多次new对象，直接new数组，拆开用
+	// 避免多次new对象，直接new数组，拆开用
+	slice := reflect.MakeSlice(reflect.SliceOf(vTyp), total, total)
+	table.Set(reflect.MakeMapWithSize(typ, total))
 
 	isParsedHead, nilFlag := false, uint64(0)
 	for _, v := range records {
@@ -113,10 +128,10 @@ func ParseByMap(records [][]string, pMap interface{}) {
 				data := slice.Index(idx)
 				idx++
 				_parseData(v, nilFlag, data)
-				if table.MapIndex(data.Field(0)).IsValid() { //首列作Key
-					fmt.Println("csv map key is repeated !!!", data.Field(0))
+				if key := data.Field(0); table.MapIndex(key).IsValid() { //首列作Key
+					fmt.Println("csv map key is repeated !!!", key)
 				} else {
-					table.SetMapIndex(data.Field(0), data.Addr())
+					table.SetMapIndex(key, data.Addr())
 				}
 			}
 		}
@@ -164,14 +179,13 @@ func _parseHead(record []string) (nilFlag uint64) { // 不读的列：没命名/
 	return nilFlag
 }
 func _parseData(record []string, nilFlag uint64, data reflect.Value) {
-	fidx := -1
+	idx := -1
 	for i, s := range record {
 		if nilFlag&(1<<uint(i)) > 0 { //跳过不读的列
 			continue
 		}
-		fidx++
-		if s != "" && fidx < data.NumField() {
-			SetField(data.Field(fidx), s)
+		if idx++; s != "" && idx < data.NumField() {
+			SetField(data.Field(idx), s)
 		}
 	}
 }

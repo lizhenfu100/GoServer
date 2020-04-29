@@ -3,7 +3,6 @@ package main
 import (
 	"common"
 	"common/console"
-	"common/console/shutdown"
 	"common/file"
 	"common/tool/email"
 	"conf"
@@ -41,19 +40,16 @@ func main() {
 	logic.MainLoop()
 }
 func InitConf() {
-	var metaCfg []meta.Meta
-	file.G_Csv_Map = map[string]interface{}{
-		"csv/conf_net.csv":    &metaCfg,
-		"csv/conf_svr.csv":    &conf.SvrCsv,
-		"csv/save/const.csv":  &conf2.Const,
-		"csv/email/email.csv": &email.G_EmailCsv,
-	}
+	var metaCfg meta.Metas
+	file.RegCsvType("csv/conf_net.csv", metaCfg)
+	file.RegCsvType("csv/conf_svr.csv", conf.SvrCsv())
+	file.RegCsvType("csv/save/const.csv", conf2.Csv())
+	file.RegCsvType("csv/email/email.csv", email.EmailCsv())
+	file.RegCsvType("csv/email/invalid.csv", email.InvalidCsv())
 	file.LoadAllCsv()
-	meta.InitConf(metaCfg)
 	console.Init()
-	console.RegShutdown(shutdown.Default)
 
 	//展示重要配置数据
-	buf, _ := json.MarshalIndent(&conf2.Const, "", "     ")
+	buf, _ := json.MarshalIndent(conf2.Csv(), "", "     ")
 	fmt.Println("conf.Const: ", common.B2S(buf))
 }

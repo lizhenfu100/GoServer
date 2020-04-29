@@ -21,21 +21,16 @@ package gift_bag
 import (
 	"common"
 	"common/copy"
-	"common/file"
 	"common/std"
 	"common/std/hash"
-	"common/std/random"
 	"conf"
 	"dbmgo"
-	"encoding/csv"
 	"encoding/json"
-	"fmt"
 	"gamelog"
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
 	"math"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 )
@@ -44,8 +39,6 @@ const (
 	KDBGift       = "gift"
 	KDBGiftCode   = "giftcode"
 	KDBGiftPlayer = "giftuid"
-	KGiftCodeDir  = "log/gift/"
-	KGiftCodeTemp = "temp.csv"
 )
 
 type TGiftBag struct {
@@ -126,56 +119,6 @@ func GetDBKey(code string) string {
 		}
 	}
 	return code
-}
-func MakeGiftCode(dbkey string) string {
-	str, kMod := random.String(kPrefixLen)+dbkey, uint32(math.Pow10(kSuffixLen))
-	sign := fmt.Sprintf(kSuffixFmt, hash.StrHash(str)%kMod)
-	return str + sign
-}
-func MakeGiftCodeCsv(gameName, dbkey string, kAddNum int) {
-	dir := KGiftCodeDir + gameName + "/"
-	f, e := file.CreateFile(dir, dbkey+".csv", os.O_APPEND|os.O_RDWR)
-	if e != nil {
-		gamelog.Error("MakeGiftCode: %s", e.Error())
-		return
-	}
-	records, e := csv.NewReader(f).ReadAll() //读已生成的，去重
-	if e != nil {
-		gamelog.Error("MakeGiftCode: %s", e.Error())
-		return
-	}
-	all := make(map[string]bool, len(records))
-	news := make([]string, 0, kAddNum)
-	for _, v := range records {
-		all[v[0]] = true
-	}
-	for len(news) < kAddNum {
-		v := MakeGiftCode(dbkey)
-		if _, ok := all[v]; !ok {
-			all[v] = true
-			news = append(news, v)
-		}
-	}
-	wr := func(f *os.File) {
-		w, i := csv.NewWriter(f), 0
-		for _, v := range news {
-			if e := w.Write([]string{v}); e != nil {
-				f.Close()
-				return
-			}
-			if i++; i%4096 == 0 {
-				w.Flush()
-			}
-		}
-		w.Flush()
-		f.Close()
-	}
-	wr(f) //新礼包码写入文件
-
-	// 临时文件，仅含新礼包码
-	if f, e = file.CreateFile(dir, KGiftCodeTemp, os.O_TRUNC|os.O_WRONLY); e == nil {
-		wr(f)
-	}
 }
 
 // ------------------------------------------------------------

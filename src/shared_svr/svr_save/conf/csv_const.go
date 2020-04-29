@@ -1,6 +1,7 @@
 package conf
 
-var Const struct {
+//go:generate D:\server\bin\gen_conf.exe *csv conf
+type csv struct {
 	// 云存档
 	MacBindMax      byte
 	MacFreeBindMax  byte //可随意绑定的设备数，无时间间隔限制

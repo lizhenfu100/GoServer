@@ -1,6 +1,7 @@
 package main
 
 import (
+	"common/console"
 	"common/file"
 	"common/tool/email"
 	"conf"
@@ -37,13 +38,11 @@ func main() {
 	MainLoop()
 }
 func InitConf() {
-	var metaCfg []meta.Meta
-	file.G_Csv_Map = map[string]interface{}{
-		"csv/conf_net.csv": &metaCfg,
-		"csv/conf_svr.csv": &conf.SvrCsv,
-	}
+	var metaCfg meta.Metas
+	file.RegCsvType("csv/conf_net.csv", metaCfg)
+	file.RegCsvType("csv/conf_svr.csv", conf.SvrCsv())
 	file.LoadAllCsv()
-	meta.InitConf(metaCfg)
+	console.Init()
 }
 
 // ------------------------------------------------------------
@@ -88,10 +87,11 @@ func testRedis() {
 }
 
 func InvalidEmail() { //剔除重复地址
-	file.LoadCsv("D:/soulknight/bin/UpdateCsv/csv/email/invalid.csv", &email.G_InvalidCsv)
-	records := make([][]string, 0, len(email.G_InvalidCsv)+1)
+	csv := email.InvalidCsv()
+	file.LoadCsv("D:/soulknight/bin/UpdateCsv/csv/email/invalid.csv", &csv)
+	records := make([][]string, 0, len(csv)+1)
 	records = append(records, []string{"无效地址"})
-	for v := range email.G_InvalidCsv {
+	for v := range csv {
 		records = append(records, []string{v})
 	}
 	file.UpdateCsv("D:/soulknight/bin/UpdateCsv/csv/email/", "invalid2.csv", records)

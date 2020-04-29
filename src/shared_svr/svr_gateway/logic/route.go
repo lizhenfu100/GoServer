@@ -6,8 +6,8 @@
 
     3、代码生成器可获知，rpc是被哪个模块处理的
 
-* @ optimize
-    1、公用的tcp_rpc是单线程的，适合业务逻辑；gateway可改用多线程版，提高转发性能
+* @ 跨大区
+    、大区配个专门的svr_proxy，统一负责大区间的路由
 
 * @ author zhoumf
 * @ date 2018-3-13
@@ -16,11 +16,7 @@ package logic
 
 import (
 	"common"
-	"fmt"
 	"github.com/go-redis/redis"
-	"net/http"
-	"net/http/httputil"
-	"netConfig/meta"
 	"nets/tcp"
 	"strconv"
 	"sync"
@@ -84,22 +80,4 @@ func TryDelClientConn(aid uint32) bool {
 		return true
 	}
 	return false
-}
-
-// ------------------------------------------------------------
-// 转发http
-var _sdk http.Handler
-
-func relaySdk(w http.ResponseWriter, r *http.Request) { _sdk.ServeHTTP(w, r) }
-func init() {
-	_sdk = &httputil.ReverseProxy{Director: func(r *http.Request) {
-		if p := meta.GetByRand("sdk"); p != nil {
-			r.URL.Scheme = "http"
-			r.URL.Host = fmt.Sprintf("%s:%d", p.IP, p.HttpPort)
-		}
-	}}
-	http.HandleFunc("/pre_buy_request", relaySdk)
-	http.HandleFunc("/query_order", relaySdk)
-	http.HandleFunc("/confirm_order", relaySdk)
-	http.HandleFunc("/query_order_unfinished", relaySdk)
 }

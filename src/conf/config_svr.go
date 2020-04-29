@@ -23,6 +23,26 @@ const (
 	GM_Passwd = "chillyroom_gm_*"
 )
 
+//go:generate D:\server\bin\gen_conf.exe *svrCsv conf
+type svrCsv struct {
+	// 数据库
+	DBuser   string
+	DBpasswd string
+	// 邮箱
+	EmailUser     []string
+	EmailPasswd   []string
+	EmailHost     string
+	EmailPort     int
+	EmailLanguage string //默认语言，参见language.go
+	// 微信
+	WechatCorpId  string //企业id
+	WechatSecret  string //应用的Secret
+	WechatAgentId int    //应用id
+	// 短信
+	SmsKeyId  string
+	SmsSecret string
+}
+
 var (
 	SvrList = []string{ //本项目包含哪类节点
 		"shared_svr/svr_center",
@@ -37,23 +57,5 @@ var (
 		"shared_svr/svr_nric",
 		"svr_cross",
 		"svr_game",
-	}
-	SvrCsv struct {
-		//数据库
-		DBuser   string
-		DBpasswd string
-		// 邮箱
-		EmailUser     []string
-		EmailPasswd   []string
-		EmailHost     string
-		EmailPort     int
-		EmailLanguage string //默认语言，参见language.go
-		// 微信
-		WechatCorpId  string //企业id
-		WechatSecret  string //应用的Secret
-		WechatAgentId int    //应用id
-		// 短信
-		SmsKeyId  string
-		SmsSecret string
 	}
 )

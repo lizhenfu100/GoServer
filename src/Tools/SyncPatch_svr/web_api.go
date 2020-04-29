@@ -41,16 +41,15 @@ import (
 
 // ------------------------------------------------------------
 // -- 登录服列表 http://chillyroom.com/api/
-type TLogins struct {
+//go:generate D:\server\bin\gen_conf.exe logins main
+type logins map[string]*struct {
 	GameName string
 	Logins   map[string][]string //<大区名, 地址>
 }
 
-var G_Logins map[string]*TLogins = nil //<游戏名, 登录列表>
-
 func Http_get_login_list(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
-	if v, ok := G_Logins[q.Get("name")]; ok {
+	q, csv := r.URL.Query(), Logins()
+	if v, ok := csv[q.Get("name")]; ok {
 		str, _ := json.MarshalIndent(v.Logins, "", "     ")
 		w.Write(str)
 	}

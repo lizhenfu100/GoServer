@@ -2,7 +2,6 @@ package main
 
 import (
 	"common/console"
-	"common/console/shutdown"
 	"common/file"
 	"common/tool/email"
 	"conf"
@@ -32,15 +31,11 @@ func main() {
 	logic.MainLoop()
 }
 func InitConf() {
-	var metaCfg []meta.Meta
-	file.G_Csv_Map = map[string]interface{}{
-		"csv/conf_net.csv":      &metaCfg,
-		"csv/conf_svr.csv":      &conf.SvrCsv,
-		"csv/email/email.csv":   &email.G_EmailCsv,
-		"csv/email/invalid.csv": &email.G_InvalidCsv,
-	}
+	var metaCfg meta.Metas
+	file.RegCsvType("csv/conf_net.csv", metaCfg)
+	file.RegCsvType("csv/conf_svr.csv", conf.SvrCsv())
+	file.RegCsvType("csv/email/email.csv", email.EmailCsv())
+	file.RegCsvType("csv/email/invalid.csv", email.InvalidCsv())
 	file.LoadAllCsv()
-	meta.InitConf(metaCfg)
 	console.Init()
-	console.RegShutdown(shutdown.Default)
 }
