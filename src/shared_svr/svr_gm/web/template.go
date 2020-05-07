@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"generate_out/rpc/enum"
 	"io/ioutil"
+	"netConfig/meta"
 	"nets/http"
 	"os"
 	"path/filepath"
@@ -15,7 +16,6 @@ import (
 )
 
 type TCommon struct {
-	LocalAddr  string   //GM地址
 	CenterList []string //center地址
 	SdkAddrs   []string //支付sdk暂时各项目共用
 }
@@ -172,6 +172,9 @@ func UpdateHtml(fileIn, fileOut string, ptr interface{}) {
 
 // ------------------------------------------------------------
 // template func
+func (*TCommon) LocalAddr() string {
+	return http.Addr(meta.G_Local.OutIP, meta.G_Local.HttpPort)
+}
 func (self *TemplateData) AddrLogin(idx int) string {
 	if idx < len(self.Logins) {
 		return self.Logins[idx].Addrs[0]

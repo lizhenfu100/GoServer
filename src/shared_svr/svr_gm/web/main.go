@@ -15,10 +15,11 @@
 package web
 
 import (
+	"common/assert"
+	"common/std/random"
+	"fmt"
 	"net/http"
-	"netConfig/meta"
 	"nets"
-	mhttp "nets/http"
 	"strings"
 )
 
@@ -28,7 +29,6 @@ const (
 )
 
 func Init() {
-	g_common.LocalAddr = mhttp.Addr(meta.G_Local.OutIP, meta.G_Local.HttpPort)
 	for k, v := range g_map {
 		v.TCommon, v.GameName = &g_common, k
 		if !v.LoadAddrs() {
@@ -40,6 +40,13 @@ func Init() {
 	}
 	UpdateHtmls("account/", "account/", &g_common)
 	UpdateHtml("index", "index", &g_common)
+
+	// web入口
+	if !assert.IsDebug {
+		_gate = "/" + random.String(16)
+	}
+	http.HandleFunc("/", _download_file)
+	fmt.Println(g_common.LocalAddr() + _gate)
 }
 func init() {
 	nets.RegHttpHandler(map[string]nets.HttpHandle{
@@ -55,14 +62,20 @@ func init() {
 		"/view_bulletin":   relay_to,
 		"/find_aid_in_mac": foreach_svr,
 	})
-	g_file_server = http.FileServer(http.Dir(FileDirRoot))
-	http.HandleFunc("/", _download_file)
+	_file = http.FileServer(http.Dir(FileDirRoot))
 }
 
-var g_file_server http.Handler
+var (
+	_file http.Handler
+	_gate = "/"
+)
 
 func _download_file(w http.ResponseWriter, r *http.Request) {
-	if strings.HasSuffix(r.URL.Path, "app.js") {
+	if r.URL.Path == _gate {
+		r.URL.Path = "/"
+	} else if r.URL.Path == "/" {
+		return //防外网扫描
+	} else if strings.HasSuffix(r.URL.Path, "app.js") {
 		r.URL.Path = "/app.js"
 	} else if strings.HasSuffix(r.URL.Path, "stats.js") {
 		r.URL.Path = "/stats.js"
@@ -71,5 +84,5 @@ func _download_file(w http.ResponseWriter, r *http.Request) {
 	} else if strings.HasSuffix(r.URL.Path, "stats.css") {
 		r.URL.Path = "/stats.css"
 	}
-	g_file_server.ServeHTTP(w, r)
+	_file.ServeHTTP(w, r)
 }

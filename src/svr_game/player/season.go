@@ -29,6 +29,7 @@ package player
 import (
 	"common"
 	"dbmgo"
+	"strconv"
 	"svr_game/conf"
 	"svr_game/logic/season"
 )
@@ -74,10 +75,11 @@ func (self *TSeasonModule) AddScore(diff int) {
 	if self.Score += diff; self.Score < 0 {
 		self.Score = 0
 	}
+	pid := strconv.Itoa(int(self.PlayerID))
 	if self.Score >= season.KRankNeedScore {
-		if p := self._RankItem(); p.OnValueChange() {
-			season.AddRankItem(p)
-		}
+		season.G_Rank.AddScore(pid, float64(self.Score))
+	} else {
+		season.G_Rank.Del(pid)
 	}
 }
 func (self *TSeasonModule) calcScore(
@@ -121,31 +123,13 @@ func (self *TSeasonModule) calcLv() uint8 {
 	return kLen
 }
 
-func (self *TSeasonModule) GetRank() uint8 {
-	if v := season.GetRankItem(self.PlayerID); v != nil {
-		return v.Rank
-	} else {
-		return 0
-	}
+func (self *TSeasonModule) GetRank() int {
+	pid := strconv.Itoa(int(self.PlayerID))
+	return season.G_Rank.Rank(pid)
 }
 func (self *TSeasonModule) Clear() {
 	self.TimeBegin = season.G_Args.TimeBgein
 	self.Score = 0
-}
-
-// ------------------------------------------------------------
-// -- 排行榜
-func (self *TSeasonModule) _RankItem() *season.RankItem {
-	if v := season.GetRankItem(self.PlayerID); v != nil {
-		return v
-	} else {
-		return &season.RankItem{
-			0,
-			self.Score,
-			self.PlayerID,
-			self.owner.Name,
-		}
-	}
 }
 
 // ------------------------------------------------------------
@@ -156,5 +140,5 @@ func Rpc_game_season_info(req, ack *common.NetPack, this *TPlayer) { //客户端
 	}
 	ack.WriteInt(this.season.Score)
 	ack.WriteUInt8(this.season.calcLv())
-	ack.WriteUInt8(this.season.GetRank()) //仅最高档有排名，其余为0
+	ack.WriteInt(this.season.GetRank()) //仅最高档有排名，其余为-1
 }

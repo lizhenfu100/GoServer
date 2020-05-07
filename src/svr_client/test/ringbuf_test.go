@@ -11,7 +11,8 @@ import (
 // go test -v ./src/svr_client/test/ringbuf_test.go
 
 func TestRingBuffer_Write(t *testing.T) {
-	rb := common.NewRingBuf(64)
+	var rb common.RingBuf
+	rb.Init(64)
 	if !rb.IsEmpty() {
 		t.Fatalf("expect IsEmpty is true but got false")
 	}
@@ -136,7 +137,8 @@ func TestRingBuffer_Write(t *testing.T) {
 }
 
 func TestRingBuffer_Read(t *testing.T) {
-	rb := common.NewRingBuf(64)
+	var rb common.RingBuf
+	rb.Init(64)
 	if !rb.IsEmpty() {
 		t.Fatalf("expect IsEmpty is true but got false")
 	}
@@ -194,7 +196,8 @@ func TestRingBuffer_Read(t *testing.T) {
 }
 
 func TestRingBuffer_ByteInterface(t *testing.T) {
-	rb := common.NewRingBuf(2)
+	var rb common.RingBuf
+	rb.Init(2)
 	// write one
 	rb.Write([]byte{'a'})
 	if rb.ReadableBytes() != 1 {

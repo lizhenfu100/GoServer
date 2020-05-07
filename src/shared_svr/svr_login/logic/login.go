@@ -29,8 +29,11 @@
 	· 角色鉴权，获取角色数据（可省去）
 
 * @ 动态分流
-	、无zookeeper的架构，只能重启扩容
-	、取模方式的，不能动态分流，如：gateway、friend、game
+	· game、center...连同个db的节点，可视为无状态的，能动态加
+	· gateway：
+		· 取模aid分流的，其它节点也会用
+		· 单次登录中客户端与某个gateway绑定的
+		· 这些强状态，导致不能随便加gateway（部署时就给够~囧）
 
 * @ author zhoumf
 * @ date 2018-3-19

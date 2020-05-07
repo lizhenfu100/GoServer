@@ -4,7 +4,6 @@ import (
 	"common/timer"
 	"common/tool/usage"
 	"conf"
-	"net/http"
 	"nets/tcp"
 	"shared_svr/svr_sdk/msg"
 	"time"
@@ -13,9 +12,6 @@ import (
 func MainLoop() {
 	updateEnterNextDay()
 	timer.AddTimer(usage.Check, 60, 600, -1)
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
 	for timeNow, timeOld, timeElapse := time.Now().UnixNano()/int64(time.Millisecond), int64(0), 0; ; {
 		timeOld = timeNow
 		timeNow = time.Now().UnixNano() / int64(time.Millisecond)

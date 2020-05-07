@@ -57,16 +57,16 @@ import (
 	"strings"
 )
 
-var _csv_map = map[string]reflect.Type{}
+var _csv_typ = map[string]reflect.Type{}
 
 func RegCsvType(path string, v interface{}) {
 	if _, ok := v.(interface{ Init() }); !ok {
 		panic(path + " miss Init()")
 	}
 	if typ := reflect.TypeOf(v); typ.Kind() == reflect.Ptr {
-		_csv_map[path] = typ.Elem()
+		_csv_typ[path] = typ.Elem()
 	} else {
-		_csv_map[path] = typ
+		_csv_typ[path] = typ
 	}
 }
 func LoadAllCsv() {
@@ -79,7 +79,7 @@ func LoadAllCsv() {
 	}
 }
 func ReloadCsv(fullName string) {
-	if typ, ok := _csv_map[fullName]; ok {
+	if typ, ok := _csv_typ[fullName]; ok {
 		LoadCsv(fullName, reflect.New(typ).Interface())
 	}
 }

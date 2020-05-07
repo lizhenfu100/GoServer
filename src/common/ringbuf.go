@@ -1,105 +1,90 @@
 package common
 
 type RingBuf struct {
-	buf    []byte
-	size   int
-	r      int
-	w      int
-	isFull bool
+	buf []byte //长度须为2的幂
+	w   uint32 //只会累加，越界回环
+	r   uint32
 }
 
-func NewRingBuf(size int) *RingBuf {
-	return &RingBuf{
-		buf:  make([]byte, size),
-		size: size,
-	}
+func (b *RingBuf) Init(size uint32) {
+	b.buf = make([]byte, CeilToPowerOfTwo(size))
+	b.w, b.r = 0, 0
 }
 func (b *RingBuf) Read(p []byte) (n int) {
-	if b.w > b.r {
-		if n = b.w - b.r; n > len(p) {
-			n = len(p)
-		}
-		copy(p, b.buf[b.r:b.r+n])
-		b.r += n
-	} else if !b.IsEmpty() {
-		if n = b.size - b.r + b.w; n > len(p) {
-			n = len(p)
-		}
-		copy(p, b.buf[b.r:])
-
-		if left := b.size - b.r; left >= n {
-			b.r += n
-		} else {
-			copy(p[left:], b.buf[:n-left])
-			b.r = n - left
-		}
-		b.isFull = false
+	if b.w == b.r {
+		return 0
 	}
+	head := b.w & uint32(len(b.buf)-1) //取余后的头尾
+	tail := b.r & uint32(len(b.buf)-1)
+	if head > tail {
+		n = copy(p, b.buf[tail:head])
+	} else {
+		if n = copy(p, b.buf[tail:]); n < len(p) {
+			n += copy(p[n:], b.buf[:head])
+		}
+	}
+	b.r += uint32(n)
 	return
 }
 func (b *RingBuf) Write(p []byte) {
-	n := len(p)
-	if left := b.WritableBytes(); left < n {
-		b.malloc(n - left)
+	cnt := uint32(len(p))
+	if left := b.WritableBytes(); cnt > left {
+		b.grow(cnt - left)
 	}
-	copy(b.buf[b.w:], p)
-
-	if left := b.size - b.w; b.w >= b.r && n > left {
-		copy(b.buf, p[left:])
-		b.w = n - left
-	} else {
-		b.w += n
+	head := b.w & uint32(len(b.buf)-1) //取余后的头尾
+	if n := copy(b.buf[head:], p); n < len(p) {
+		copy(b.buf, p[n:])
 	}
-	if b.w == b.size {
-		b.w = 0
-	}
-	if b.w == b.r {
-		b.isFull = true
-	}
+	b.w += cnt
 }
-func (b *RingBuf) Peek() (head []byte, tail []byte) {
-	if b.w > b.r {
-		head = b.buf[b.r:b.w]
-	} else if !b.IsEmpty() {
-		head = b.buf[b.r:]
-		tail = b.buf[:b.w]
+func (b *RingBuf) Peek() (ret1 []byte, ret2 []byte) {
+	if b.w == b.r {
+		return
+	}
+	head := b.w & uint32(len(b.buf)-1) //取余后的头尾
+	tail := b.r & uint32(len(b.buf)-1)
+	if head > tail {
+		ret1 = b.buf[tail:head]
+	} else {
+		ret1 = b.buf[tail:]
+		ret2 = b.buf[:head]
 	}
 	return
 }
-func (b *RingBuf) ReadableBytes() int {
-	if b.r == b.w {
-		if b.isFull {
-			return b.size
-		}
+func (b *RingBuf) ReadableBytes() uint32 {
+	if b.w == b.r {
 		return 0
 	}
-	if b.w > b.r {
-		return b.w - b.r
+	kLen := uint32(len(b.buf))
+	head := b.w & (kLen - 1) //取余后的头尾
+	tail := b.r & (kLen - 1)
+	if head > tail {
+		return head - tail
 	}
-	return b.size - b.r + b.w
+	return kLen - tail + head
 }
-func (b *RingBuf) WritableBytes() int {
+func (b *RingBuf) WritableBytes() uint32 {
+	kLen := uint32(len(b.buf))
 	if b.r == b.w {
-		if b.isFull {
-			return 0
-		}
-		return b.size
+		return kLen
 	}
-	if b.r > b.w {
-		return b.r - b.w
+	head := b.w & (kLen - 1) //取余后的头尾
+	tail := b.r & (kLen - 1)
+	if head > tail {
+		return kLen - head + tail
+	} else {
+		return tail - head
 	}
-	return b.size - b.w + b.r
 }
-func (b *RingBuf) malloc(n int) {
-	newLen := CeilToPowerOfTwo(b.size + n)
+func (b *RingBuf) grow(n uint32) {
+	newLen := CeilToPowerOfTwo(uint32(len(b.buf)) + n)
 	newBuf := make([]byte, newLen)
 	oldLen := b.ReadableBytes()
 	b.Read(newBuf)
-	b.r, b.w = 0, oldLen
-	b.size = newLen
 	b.buf = newBuf
+	b.r, b.w = 0, oldLen
 }
-func CeilToPowerOfTwo(n int) int {
+func CeilToPowerOfTwo(n uint32) uint32 {
 	n--
 	n |= n >> 1
 	n |= n >> 2
@@ -110,7 +95,7 @@ func CeilToPowerOfTwo(n int) int {
 	return n
 }
 
-func (b *RingBuf) Cap() int      { return b.size }
-func (b *RingBuf) IsFull() bool  { return b.isFull }
-func (b *RingBuf) IsEmpty() bool { return b.r == b.w && !b.isFull }
-func (b *RingBuf) Clear()        { b.r, b.w, b.isFull = 0, 0, false }
+func (b *RingBuf) Cap() uint32   { return uint32(len(b.buf)) }
+func (b *RingBuf) IsFull() bool  { return b.r+uint32(len(b.buf)) == b.w }
+func (b *RingBuf) IsEmpty() bool { return b.r == b.w }
+func (b *RingBuf) Clear()        { b.r, b.w = 0, 0 }

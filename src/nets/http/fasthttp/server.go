@@ -40,6 +40,9 @@ func NewHttpServer(port uint16, block bool) {
 	HandleFunc("/reg_to_svr", func(ctx *http.RequestCtx) {
 		mhttp.Reg_to_svr(ctx, ctx.Request.Body())
 	})
+	//HandleFunc("/", func(ctx *http.RequestCtx) { //负载均衡心跳
+	//	ctx.Response.Header.SetStatusCode(http.StatusOK)
+	//})
 	if block {
 		_svr.ListenAndServe(fmt.Sprintf(":%d", port))
 	} else {

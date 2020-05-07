@@ -53,12 +53,25 @@ func Shuffle(p []int) {
 }
 
 //生成随机字符串
-var g_strBase = []byte("0123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNOPQRSTUVWXYZ")
+const (
+	_letter = "0123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNOPQRSTUVWXYZ"
+	idxBit  = 6           //字符池子，只有62个，6位(最大64)够覆盖了
+	idxCnt  = 63 / idxBit //63位随机数，可用10次
+	idxMask = 1<<idxBit - 1
+)
 
-func String(length int) string {
-	ret := make([]byte, length)
-	for i := 0; i < length; i++ {
-		ret[i] = g_strBase[rand.Intn(len(g_strBase))]
+func String(n int) string {
+	ret := make([]byte, n)
+	for i, r, cnt := n-1, rand.Int63(), idxCnt; i >= 0; {
+		if cnt == 0 {
+			r, cnt = rand.Int63(), idxCnt
+		}
+		if idx := int(r & idxMask); idx < len(_letter) {
+			ret[i] = _letter[idx]
+			i--
+		}
+		r >>= idxBit
+		cnt--
 	}
 	return common.B2S(ret)
 }

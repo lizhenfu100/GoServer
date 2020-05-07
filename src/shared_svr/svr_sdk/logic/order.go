@@ -11,6 +11,10 @@
 	2、查看路由器界面显示的ip，不能是web返回的本地ip
 	3、将路由器ip、本机端口，发给第三方
 
+* @ 外网安全
+	· A记录负载均衡，节点失效，需手动剔除
+	· 客户端从svr_login取svr_sdk，支付商回调加层LB（外网不可见）
+
 * @ author zhoumf
 * @ date 2017-10-10
 ***********************************************************************/
@@ -35,6 +39,11 @@ import (
 	"sync"
 )
 
+func init() {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK) //负载均衡心跳
+	})
+}
 func Http_pre_buy_request(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	gamelog.Debug("pre_buy: %v", r.Form)

@@ -2,8 +2,8 @@
 * @ Mongodb的API
 * @ brief
 	1、考虑加个异步读接口，传入callback，读到数据后执行
-		支持轻量线程的架构里
-		是否比“同步读-处理-再写回”的方式好呢？
+	2、协程语言里，是否比“同步读-处理-再写回”的方式好呢？
+	3、session.Clone()共用原会话的socket，会彼此阻塞
 
 * @ 研究学习
 	· 缓存穿透(恶意请求db中没有的数据)：布隆过滤器(一定不存在或可能存在)，快速判断是否无效
@@ -69,7 +69,7 @@ func (self *DBInfo) Connect() (ret bool) {
 			}
 		} else {
 			self.Lock()
-			self.db = session.DB(self.Database)
+			self.db = &mgo.Database{session, self.Database}
 			self.Unlock()
 			ret = true
 		}
@@ -183,7 +183,6 @@ and			bson.M{"name": "Jimmy Kuu", "age": 33}
 or			bson.M{"$or": []bson.M{bson.M{"name": "Jimmy Kuu"}, bson.M{"age": 31}}}
 $exists		bson.M{"bindinfo.email": bson.M{ "$exists": false }]
 */
-//【学习研究】Mongo批量查询，比如查一天内的活跃数据，效率很高，即便time字段没建索引
 func FindAll(table string, search bson.M, pSlice interface{}) error {
 	coll := DB().C(table)
 	if err := coll.Find(search).All(pSlice); err != nil && err != mgo.ErrNotFound {

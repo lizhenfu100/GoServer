@@ -5,8 +5,11 @@
     2、不一致则将后台 net_file/patch 目录中的(文件名, md5)下发
     3、客户端据收到的文件列表，逐个同本地比对，不一致的才向后台下载
 
+* @ 下载
+	· HttpUpDn.cs http下载，可cdn加速
+
 * @ Notice
-	1、此类全局性资源，应使用新旧双备份策略，避免热更时引发竞态卡顿
+	· 此类全局性资源，为避免热更引发竞态卡顿，应保持旧资源有效性，新资源生成后交换引用
 
 * @ author zhoumf
 * @ date 2017-8-23
@@ -34,31 +37,15 @@ const (
 )
 
 var (
-	g_file_md5    sync.Map //<fileName, md5Hash>
-	g_file_server http.Handler
+	g_file_md5 sync.Map //<fileName, md5Hash>
 )
 
 func init() {
-	//http.Handle("/", http.FileServer(http.Dir(kFileDirRoot)))
-	//带url路由的文件服务
-	//http.Handle("/chillyroom_res/", http.StripPrefix("/chillyroom_res/", http.FileServer(http.Dir(kFileDirRoot))))
-	//g_file_server = http.StripPrefix("/chillyroom_res/", http.FileServer(http.Dir(kFileDirRoot))）
-	g_file_server = http.FileServer(http.Dir(kFileDirRoot))
-	http.HandleFunc("/", Http_download_file)
-
 	names, _ := file.WalkDir(kFileDirPatch, "")
 	for _, v := range names {
 		g_file_md5.Store(v, file.CalcMd5(v))
 	}
-
 	console.RegCmd("clog", Client_debug_log)
-}
-func Http_download_file(w http.ResponseWriter, r *http.Request) {
-	gamelog.Debug("download path: %s", r.URL.Path)
-	m := GetRWMutex(r.URL.Path)
-	m.RLock()
-	g_file_server.ServeHTTP(w, r)
-	m.RUnlock()
 }
 func Http_upload_patch_file(w http.ResponseWriter, r *http.Request) {
 	if name := _upload_file(r, kFileDirPatch); name != "" {
@@ -88,11 +75,7 @@ func _upload_file(r *http.Request, baseDir string) string {
 		gamelog.Error(err.Error())
 		return ""
 	}
-	// 加锁，用临时文件替代旧文件
-	m := GetRWMutex(strings.TrimPrefix(fullname, kFileDirRoot))
-	m.Lock()
 	os.Rename(fullname+"_2", fullname)
-	m.Unlock()
 	return fullname
 }
 
@@ -124,23 +107,4 @@ func Rpc_file_delete(req, ack *common.NetPack) {
 		g_file_md5.Delete(name)
 		os.Remove(name)
 	}
-}
-
-// ------------------------------------------------------------
-// 细粒度的文件读写锁
-var (
-	_mutex_    sync.Mutex
-	_rw_mutexs = make(map[string]*sync.RWMutex)
-)
-
-func GetRWMutex(name string) (ret *sync.RWMutex) {
-	_mutex_.Lock()
-	if v, ok := _rw_mutexs[name]; ok {
-		ret = v
-	} else {
-		ret = new(sync.RWMutex)
-		_rw_mutexs[name] = ret
-	}
-	_mutex_.Unlock()
-	return
 }
