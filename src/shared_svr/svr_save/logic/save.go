@@ -11,9 +11,9 @@
 		· 前几次绑定，可任意时间
 		· 后续的绑定，一周一次
 
-	4、云存档里打上玩家标识，比如SaveKey
-		· 玩家登录后发现与自己标识不同，禁用
-		· 可防止利用云恶意传播
+	4、防手动拷贝存档
+		· 单机模式：禁止其它设备使用（设备码写存档内）
+		· 云存档模式：禁止其它账号使用（云存档里打上账号标识）
 
 * @ 单机防作弊
 	1、后台不断变更密钥，用于金币、钻石、攻击力...敏感数据，防止用户窜改
@@ -68,7 +68,7 @@ func GetSaveKey(pf_id, uid string) string {
 	}
 	return pf_id + "_" + uid
 }
-func Rpc_save_get_meta_info(req, ack *common.NetPack) { //TODO:待删除
+func Rpc_save_get_meta_info(req, ack *common.NetPack, _ common.Conn) { //TODO:待删除
 	uid := req.ReadString()
 	pf_id := req.ReadString()
 	ptr := &TSaveData{Key: GetSaveKey(pf_id, uid)}
@@ -82,7 +82,7 @@ func Rpc_save_get_meta_info(req, ack *common.NetPack) { //TODO:待删除
 		ack.WriteInt64(0)
 	}
 }
-func Rpc_save_get_time_info(req, ack *common.NetPack) {
+func Rpc_save_get_time_info(req, ack *common.NetPack, _ common.Conn) {
 	uid := req.ReadString()
 	pf_id := req.ReadString()
 	ptr, now := &TSaveData{Key: GetSaveKey(pf_id, uid)}, time.Now().Unix()
@@ -100,7 +100,7 @@ func Rpc_save_get_time_info(req, ack *common.NetPack) {
 		ack.WriteUInt16(err.Record_cannot_find)
 	}
 }
-func Rpc_save_check_mac(req, ack *common.NetPack) {
+func Rpc_save_check_mac(req, ack *common.NetPack, _ common.Conn) {
 	uid := req.ReadString()
 	pf_id := req.ReadString()
 	mac := req.ReadString()
@@ -146,7 +146,7 @@ func checkMac(pf_id, uid, mac string) (*TSaveData, uint16) { //Notice：不可�
 func isWhite(mac string) int8 {
 	ret := int8(0)
 	if p, ok := netConfig.GetRpcRand("gm"); ok {
-		p.CallRpcSafe(enum.Rpc_gm_white_black, func(buf *common.NetPack) {
+		p.CallRpc(enum.Rpc_gm_white_black, func(buf *common.NetPack) {
 			buf.WriteString(conf2.Save_Mac)
 			buf.WriteString(mac)
 		}, func(recvbuf *common.NetPack) {
@@ -226,7 +226,7 @@ func download(pf_id, uid, mac, clientVersion string) (*TSaveData, uint16) {
 
 // ------------------------------------------------------------
 // -- Binary 存档
-func Rpc_save_upload_binary2(req, ack *common.NetPack) { //TODO:待删除
+func Rpc_save_upload_binary2(req, ack *common.NetPack, _ common.Conn) { //TODO:待删除
 	uid := req.ReadString()
 	pf_id := req.ReadString()
 	mac := req.ReadString()
@@ -243,7 +243,7 @@ func Rpc_save_upload_binary2(req, ack *common.NetPack) { //TODO:待删除
 	errcode := upload(pf_id, uid, mac, data, extra, clientVersion)
 	ack.WriteUInt16(errcode)
 }
-func Rpc_save_move(req, ack *common.NetPack) {
+func Rpc_save_move(req, ack *common.NetPack, _ common.Conn) {
 	uid1 := req.ReadString()
 	pf_id1 := req.ReadString()
 	uid2 := req.ReadString()
@@ -251,7 +251,7 @@ func Rpc_save_move(req, ack *common.NetPack) {
 	key1, key2 := GetSaveKey(pf_id1, uid1), GetSaveKey(pf_id2, uid2)
 	dbmgo.UpdateId(KDBSave, key1, bson.M{"$set": bson.M{"_id": key2}})
 }
-func Rpc_save_gm_up(req, ack *common.NetPack) {
+func Rpc_save_gm_up(req, ack *common.NetPack, _ common.Conn) {
 	uid := req.ReadString()
 	pf_id := req.ReadString()
 	extra := req.ReadString()
@@ -268,7 +268,7 @@ func Rpc_save_gm_up(req, ack *common.NetPack) {
 		dbmgo.UpsertId(KDBSave, ptr.Key, ptr)
 	}
 }
-func Rpc_save_gm_dn(req, ack *common.NetPack) {
+func Rpc_save_gm_dn(req, ack *common.NetPack, _ common.Conn) {
 	uid := req.ReadString()
 	pf_id := req.ReadString()
 	ptr := &TSaveData{Key: GetSaveKey(pf_id, uid)}
@@ -281,7 +281,7 @@ func Rpc_save_gm_dn(req, ack *common.NetPack) {
 		ack.WriteUInt16(err.Record_cannot_find)
 	}
 }
-func Rpc_save_upload_binary(req, ack *common.NetPack) {
+func Rpc_save_upload_binary(req, ack *common.NetPack, _ common.Conn) {
 	uid := req.ReadString()
 	pf_id := req.ReadString()
 	mac := req.ReadString()
@@ -293,7 +293,7 @@ func Rpc_save_upload_binary(req, ack *common.NetPack) {
 	errcode := upload(pf_id, uid, mac, data, extra, clientVersion)
 	ack.WriteUInt16(errcode)
 }
-func Rpc_save_download_binary(req, ack *common.NetPack) {
+func Rpc_save_download_binary(req, ack *common.NetPack, _ common.Conn) {
 	uid := req.ReadString()
 	pf_id := req.ReadString()
 	mac := req.ReadString()

@@ -17,7 +17,6 @@ package player
 import (
 	"common"
 	"generate_out/err"
-	"nets/tcp"
 	"sync"
 	"sync/atomic"
 )
@@ -33,7 +32,7 @@ func Rpc_game_player_set_name(req, ack *common.NetPack, this *TPlayer) {
 // -- 后台账号验证
 var g_tokens sync.Map //<accountId, token>
 
-func Rpc_set_identity(req, ack *common.NetPack, conn *tcp.TCPConn) {
+func Rpc_set_identity(req, ack *common.NetPack, conn common.Conn) {
 	token := req.ReadUInt32()
 	accountId := req.ReadUInt32()
 	g_tokens.Store(accountId, token)

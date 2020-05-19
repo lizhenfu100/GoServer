@@ -23,7 +23,6 @@ import (
 	"generate_out/rpc/enum"
 	"netConfig/meta"
 	"nets/http"
-	"nets/tcp"
 	"sync"
 )
 
@@ -32,7 +31,6 @@ import (
 type Rpc interface {
 	IsClose() bool
 	CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack))
-	CallRpcSafe(rid uint16, sendFun, recvFun func(*common.NetPack))
 }
 type rpcHttp struct{ *meta.Meta }
 
@@ -40,9 +38,6 @@ func (p *rpcHttp) IsClose() bool { return p.Closed }
 func (p *rpcHttp) CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	addr := http.Addr(p.IP, p.HttpPort)
 	http.CallRpc(addr, rid, sendFun, recvFun)
-}
-func (p *rpcHttp) CallRpcSafe(rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	p.CallRpc(rid, sendFun, recvFun)
 }
 
 //interface无法"!= nil"判别有效
@@ -105,7 +100,7 @@ func HashGatewayID(accountId uint32) int { //TODO：用一致性hash，取模方
 func CallRpcGateway(accountId uint32, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	svrId := HashGatewayID(accountId)
 	if p, ok := GetGatewayRpc(svrId); ok {
-		p.CallRpcSafe(enum.Rpc_gateway_relay, func(buf *common.NetPack) {
+		p.CallRpc(enum.Rpc_gateway_relay, func(buf *common.NetPack) {
 			buf.WriteUInt16(rid)
 			buf.WriteUInt32(accountId)
 			sendFun(buf)
@@ -144,42 +139,4 @@ func GetGameRpc(svrId int) (ret Rpc, ok bool) {
 		}
 	}
 	return
-}
-
-// ------------------------------------------------------------
-//! cross & battle -- 非线程安全
-var g_cache_cross = make(map[int]*tcp.TCPConn)
-var g_cache_battle = make(map[int]*tcp.TCPConn)
-
-func CallRpcCross(rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	if p := meta.GetByRand("cross"); p != nil {
-		if conn := GetCrossConn(p.SvrID); conn != nil {
-			conn.CallRpc(rid, sendFun, recvFun)
-			return
-		}
-	}
-	gamelog.Error("cross nil: rpcId(%d)", rid)
-}
-func CallRpcBattle(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)) {
-	if conn := GetBattleConn(svrId); conn != nil {
-		conn.CallRpc(rid, sendFun, recvFun)
-	} else {
-		gamelog.Error("battle nil: svrId(%d) rpcId(%d)", svrId, rid)
-	}
-}
-func GetCrossConn(svrId int) *tcp.TCPConn {
-	conn, _ := g_cache_cross[svrId]
-	if conn == nil || conn.IsClose() {
-		conn = GetTcpConn("cross", svrId)
-		g_cache_cross[svrId] = conn
-	}
-	return conn
-}
-func GetBattleConn(svrId int) *tcp.TCPConn {
-	conn, _ := g_cache_battle[svrId]
-	if conn == nil || conn.IsClose() {
-		conn = GetTcpConn("battle", svrId)
-		g_cache_battle[svrId] = conn
-	}
-	return conn
 }

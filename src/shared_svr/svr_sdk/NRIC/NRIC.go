@@ -41,7 +41,6 @@ import (
 	"common/std/sign/aes"
 	"dbmgo"
 	"generate_out/err"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -92,11 +91,9 @@ func Parse(aid_mac string) uint32 {
 }
 
 // ------------------------------------------------------------
-var g_regexp = regexp.MustCompile("^[\u4e00-\u9fa5]{2,32}$")
-
-func Rpc_nric_set(req, ack *common.NetPack) {
+func Rpc_nric_set(req, ack *common.NetPack, _ common.Conn) {
 	id := strings.ToUpper(req.ReadString())
-	name := req.ReadString()
+	name := req.ReadString() //不检查名字格式，少数民族的各种奇葩
 	aid_mac := req.ReadString()
 	v := NRIC{
 		AidMac:     Parse(aid_mac),
@@ -105,9 +102,7 @@ func Rpc_nric_set(req, ack *common.NetPack) {
 		Birthday:   GetBirthDay(id),
 		PersonHash: hash.StrHash(id + name),
 	}
-	if !g_regexp.MatchString(name) { //汉字
-		ack.WriteUInt16(err.Name_format_err)
-	} else if v.AidMac <= 0 || v.Birthday == 0 {
+	if v.AidMac <= 0 || v.Birthday == 0 {
 		ack.WriteUInt16(err.Invalid)
 	} else {
 		old := NRIC{}
@@ -125,7 +120,7 @@ func Rpc_nric_set(req, ack *common.NetPack) {
 		ack.WriteString(name)
 	}
 }
-func Rpc_nric_birthday(req, ack *common.NetPack) {
+func Rpc_nric_birthday(req, ack *common.NetPack, _ common.Conn) {
 	aid_mac := req.ReadString()
 	v := NRIC{AidMac: Parse(aid_mac)}
 	if ok, e := dbmgo.Find(KDBTable, "_id", v.AidMac, &v); ok {
@@ -140,7 +135,7 @@ func Rpc_nric_birthday(req, ack *common.NetPack) {
 		ack.WriteUInt16(err.Unknow_error)
 	}
 }
-func Rpc_nric_copy_to(req, ack *common.NetPack) {
+func Rpc_nric_copy_to(req, ack *common.NetPack, _ common.Conn) {
 	personHash := req.ReadUInt32()
 	aid_mac := req.ReadString()
 	v := NRIC{}

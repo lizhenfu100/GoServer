@@ -35,11 +35,11 @@ func main() {
 func InitConf() {
 	var metaCfg meta.Metas
 	file.RegCsvType("csv/conf_net.csv", metaCfg)
-	file.RegCsvType("csv/conf_svr.csv", conf.SvrCsv())
+	file.RegCsvType("csv/conf_svr.csv", conf.NilSvrCsv())
 	file.LoadAllCsv()
 	console.Init()
 
-	nets.RegHttpRpc(map[uint16]nets.HttpRpc{
+	nets.RegRpc(map[uint16]nets.RpcFunc{
 		116: logic.Rpc_file_update_list, //enum.Rpc_file_update_list
 		119: logic.Rpc_file_update_list, //enum.Rpc_file_update_list
 	})

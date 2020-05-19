@@ -179,8 +179,8 @@ func (self *loginData) LoginGamesvr_http() { //方式一：直接登录Http游�
 }
 func (self *loginData) LoginGamesvr_tcp() { //方式二：直接登录Tcp游戏服
 	gamesvr := new(tcp.TCPClient)
-	gamesvr.ConnectToSvr(tcp.Addr(self.ip, self.port), func(conn *tcp.TCPConn) {
-		conn.CallRpc(enum.Rpc_check_identity, func(buf *common.NetPack) {
+	gamesvr.Connect(tcp.Addr(self.ip, self.port), func(conn *tcp.TCPConn) {
+		conn.CallEx(enum.Rpc_check_identity, func(buf *common.NetPack) {
 			buf.WriteUInt32(self.accountId)
 			buf.WriteUInt32(self.token)
 		}, func(backBuf *common.NetPack) {
@@ -196,8 +196,8 @@ func (self *loginData) LoginGamesvr_tcp() { //方式二：直接登录Tcp游戏�
 }
 func (self *loginData) LoginGateway() { //方式三：Gateway网关转接消息
 	gateway := new(tcp.TCPClient)
-	gateway.ConnectToSvr(tcp.Addr(self.ip, self.port), func(conn *tcp.TCPConn) {
-		conn.CallRpc(enum.Rpc_check_identity, func(buf *common.NetPack) {
+	gateway.Connect(tcp.Addr(self.ip, self.port), func(conn *tcp.TCPConn) {
+		conn.CallEx(enum.Rpc_check_identity, func(buf *common.NetPack) {
 			buf.WriteUInt32(self.accountId)
 			buf.WriteUInt32(self.token)
 		}, func(backBuf *common.NetPack) {

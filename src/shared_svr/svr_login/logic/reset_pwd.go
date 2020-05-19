@@ -63,6 +63,17 @@ func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) { //提示�
 		}
 	}
 }
+func Rpc_login_sms_code(req, ack *common.NetPack) { //发手机验证码
+	phone := req.ReadString()
+	if format.CheckBindValue("phone", phone) {
+		sms.SendCode(phone)
+	}
+}
+func Rpc_login_sms_check(req, ack *common.NetPack) {
+	phone := req.ReadString()
+	code := req.ReadString()
+	ack.WriteBool(sms.CheckCode(phone, code))
+}
 
 // ------------------------------------------------------------
 func Http_timestamp(w http.ResponseWriter, r *http.Request) {

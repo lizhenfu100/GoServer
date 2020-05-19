@@ -70,7 +70,7 @@ func Http_names_view(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Rpc_gm_forbid_check(req, ack *common.NetPack) {
+func Rpc_gm_forbid_check(req, ack *common.NetPack, _ common.Conn) {
 	table := req.ReadString() //哪张表
 	key := req.ReadString()
 	ptr := &Info{}
@@ -87,7 +87,7 @@ func Rpc_gm_forbid_check(req, ack *common.NetPack) {
 	}
 	ack.WriteByte(0)
 }
-func Rpc_gm_forbid_add(req, ack *common.NetPack) {
+func Rpc_gm_forbid_add(req, ack *common.NetPack, _ common.Conn) {
 	table := req.ReadString()
 	key := req.ReadString()
 	day := req.ReadUInt16()
@@ -96,12 +96,12 @@ func Rpc_gm_forbid_add(req, ack *common.NetPack) {
 		dbmgo.UpsertId(table, key, Info{Key: key, Time: timenow, Day: day})
 	}
 }
-func Rpc_gm_forbid_del(req, ack *common.NetPack) {
+func Rpc_gm_forbid_del(req, ack *common.NetPack, _ common.Conn) {
 	table := req.ReadString()
 	key := req.ReadString()
 	dbmgo.Remove(table, bson.M{"_id": key})
 }
-func Rpc_gm_white_black(req, ack *common.NetPack) {
+func Rpc_gm_white_black(req, ack *common.NetPack, _ common.Conn) {
 	var v Info
 	for len(req.LeftBuf()) > 0 {
 		table := req.ReadString()

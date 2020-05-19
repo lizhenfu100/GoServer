@@ -7,11 +7,10 @@ import (
 	"gamelog"
 	"generate_out/rpc/enum"
 	"io"
+	"nets/rpc"
 	"svr_client/test/qps"
 	"sync/atomic"
 )
-
-var G_HandleFunc [enum.RpcEnumCnt]func(req, ack *common.NetPack)
 
 func CallRpc(addr string, rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	req := common.NewNetPackCap(32)
@@ -35,11 +34,11 @@ func HandleRpc(request []byte, w io.Writer, clientIp string) { //G_Intercept==ni
 		return
 	}
 	if msgId := req.GetMsgId(); msgId < enum.RpcEnumCnt {
-		gamelog.Debug("HttpMsg:%d, len:%d", msgId, req.BodySize())
+		//gamelog.Debug("HttpMsg:%d, len:%d", msgId, req.BodySize())
 		ack := common.NewNetPackCap(64)
 		if p := Intercept(); p == nil || !p(req, ack, clientIp) { //拦截器
-			if handler := G_HandleFunc[msgId]; handler != nil {
-				handler(req, ack)
+			if msgFunc := rpc.G_HandleFunc[msgId]; msgFunc != nil {
+				msgFunc(req, ack, nil)
 			} else {
 				gamelog.Error("Msg(%d) Not Regist", msgId)
 			}

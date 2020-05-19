@@ -2,21 +2,10 @@
 
 package logic
 
-import "sync"
+import "sync/atomic"
 
-var (
-	_logins		 logins
-	_loginsMutex sync.Mutex
-)
+var _logins atomic.Value
 
-func Logins() logins {
-	_loginsMutex.Lock()
-	ret := _logins //拷贝到栈上
-	_loginsMutex.Unlock()
-	return ret
-}
-func (v logins) Init() {
-	_loginsMutex.Lock()
-	_logins = v
-	_loginsMutex.Unlock()
-}
+func Logins() logins { return _logins.Load().(logins) }
+func NilLogins() logins { return nil }
+func (v logins) Init() { _logins.Store(v) } //一块全新内存

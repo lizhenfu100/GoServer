@@ -19,7 +19,7 @@ import (
 )
 
 // 邮件解除设备的绑定关系
-func Rpc_save_unbind_mac_by_email(req, ack *common.NetPack) {
+func Rpc_save_unbind_mac_by_email(req, ack *common.NetPack, _ common.Conn) {
 	mac := req.ReadString()
 	emailAddr := req.ReadString()
 	language := req.ReadString()
@@ -77,14 +77,14 @@ func Http_unbind_mac(w http.ResponseWriter, r *http.Request) {
 var g_unbindTime1 sync.Map //<MacInfo.Key, int64>
 var g_unbindTime2 sync.Map //<MacInfo.Mac, int64>
 
-func Rpc_save_unbind_mac(req, ack *common.NetPack) { //TODO:待删除
+func Rpc_save_unbind_mac(req, ack *common.NetPack, _ common.Conn) { //TODO:待删除
 	mac := req.ReadString()
 
 	errcode, timeUnbind := UnbindMac(mac)
 	ack.WriteUInt16(errcode)
 	ack.WriteInt64(timeUnbind)
 }
-func Rpc_save_unbind_mac2(req, ack *common.NetPack) {
+func Rpc_save_unbind_mac2(req, ack *common.NetPack, _ common.Conn) {
 	mac := req.ReadString()
 
 	errcode, timeUnbind := UnbindMac(mac)

@@ -30,12 +30,12 @@ func main() {
 func InitConf() {
 	var metaCfg meta.Metas
 	file.RegCsvType("csv/conf_net.csv", metaCfg)
-	file.RegCsvType("csv/conf_svr.csv", conf.SvrCsv())
-	file.RegCsvType("csv/logins.csv", Logins())
+	file.RegCsvType("csv/conf_svr.csv", conf.NilSvrCsv())
+	file.RegCsvType("csv/logins.csv", NilLogins())
 	file.LoadAllCsv()
 	console.Init()
 
-	nets.RegHttpRpc(map[uint16]nets.HttpRpc{
+	nets.RegRpc(map[uint16]nets.RpcFunc{
 		116:                  Rpc_file_update_list, //enum.Rpc_file_update_list
 		119:                  Rpc_file_update_list, //enum.Rpc_file_update_list
 		enum.Rpc_file_delete: Rpc_file_delete,

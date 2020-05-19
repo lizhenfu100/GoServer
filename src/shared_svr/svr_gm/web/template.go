@@ -188,7 +188,6 @@ func (self *TemplateData) AddrSave(region string) string { //China,America...
 			for _, v := range v.Games {
 				if v.ID < common.KIdMod && len(v.SaveAddrs) > 0 {
 					list = append(list, v.SaveAddrs[0])
-
 				}
 			}
 		}

@@ -59,10 +59,7 @@ import (
 
 var _csv_typ = map[string]reflect.Type{}
 
-func RegCsvType(path string, v interface{}) {
-	if _, ok := v.(interface{ Init() }); !ok {
-		panic(path + " miss Init()")
-	}
+func RegCsvType(path string, v interface{ Init() }) {
 	if typ := reflect.TypeOf(v); typ.Kind() == reflect.Ptr {
 		_csv_typ[path] = typ.Elem()
 	} else {

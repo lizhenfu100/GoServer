@@ -19,7 +19,6 @@ import (
 	"netConfig"
 	"netConfig/meta"
 	"nets/http"
-	"nets/tcp"
 )
 
 func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
@@ -34,7 +33,7 @@ func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
 	//1、向center查询新大区地址
 	newLoginAddr := ""
 	if p, ok := netConfig.GetRpcRand(conf.GameName); ok {
-		p.CallRpcSafe(enum.Rpc_login_to_center_by_str, func(buf *common.NetPack) {
+		p.CallRpc(enum.Rpc_login_to_center_by_str, func(buf *common.NetPack) {
 			buf.WriteUInt16(enum.Rpc_get_meta)
 			buf.WriteString(conf.GameName)
 			buf.WriteString(meta.G_Local.Version)
@@ -76,7 +75,7 @@ func Rpc_game_move_player_db(req, ack *common.NetPack, this *TPlayer) {
 	//7、迁移完成前，玩家不应向新区写数据，有脏写风险（“玩家上传存档”先于“后台节点传来的”，那玩家的新存档会被旧的覆盖掉~）
 }
 
-func Rpc_game_move_player_db2(req, ack *common.NetPack, conn *tcp.TCPConn) {
+func Rpc_game_move_player_db2(req, ack *common.NetPack, conn common.Conn) {
 	accountId := req.ReadUInt32()
 	playerBuf := req.LeftBuf()
 

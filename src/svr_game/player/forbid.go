@@ -7,7 +7,6 @@ import (
 	"gamelog"
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
-	"nets/tcp"
 	"sync"
 	"time"
 )
@@ -24,7 +23,7 @@ func (self *TPlayer) Forbid() bool {
 		return true
 	}
 }
-func Rpc_game_permit_player(req, ack *common.NetPack, conn *tcp.TCPConn) {
+func Rpc_game_permit_player(req, ack *common.NetPack, conn common.Conn) {
 	passwd := req.ReadString()
 	pid := req.ReadUInt32()
 
@@ -91,7 +90,7 @@ func (self *WhiteList) InitDB() {
 }
 
 // ------------------------------------------------------------
-func Rpc_game_whitelist_add(req, ack *common.NetPack, conn *tcp.TCPConn) {
+func Rpc_game_whitelist_add(req, ack *common.NetPack, conn common.Conn) {
 	passwd := req.ReadString()
 	pid := req.ReadUInt32()
 
@@ -103,7 +102,7 @@ func Rpc_game_whitelist_add(req, ack *common.NetPack, conn *tcp.TCPConn) {
 	}
 	gamelog.Info("whitelist_add: %d", pid)
 }
-func Rpc_game_whitelist_del(req, ack *common.NetPack, conn *tcp.TCPConn) {
+func Rpc_game_whitelist_del(req, ack *common.NetPack, conn common.Conn) {
 	passwd := req.ReadString()
 	pid := req.ReadUInt32()
 

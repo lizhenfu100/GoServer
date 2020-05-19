@@ -18,7 +18,7 @@ import (
 	"net/http"
 	"netConfig"
 	http2 "nets/http/http"
-	"nets/tcp"
+	"nets/rpc"
 	"sync/atomic"
 )
 
@@ -31,7 +31,7 @@ func RegPlayerRpc(list map[uint16]PlayerRpc) {
 	for k, v := range list {
 		G_PlayerHandleFunc[k] = v
 	}
-	tcp.RegHandlePlayerRpc(_PlayerRpcTcp)    //tcp 直连
+	rpc.RegHandlePlayerRpc(_PlayerRpcTcp)    //tcp 直连
 	http2.RegHandlePlayerRpc(_PlayerRpcHttp) //http 直连
 }
 func DoPlayerRpc(this *TPlayer, rpcId uint16, req, ack *common.NetPack) bool {
@@ -49,7 +49,7 @@ func DoPlayerRpc(this *TPlayer, rpcId uint16, req, ack *common.NetPack) bool {
 
 // ------------------------------------------------------------
 // - 将原生tcpRpc的 "conn *tcp.TCPConn" 参数转换为 "player *TPlayer"
-func _PlayerRpcTcp(req, ack *common.NetPack, conn *tcp.TCPConn) bool {
+func _PlayerRpcTcp(req, ack *common.NetPack, conn common.Conn) bool {
 	rpcId := req.GetMsgId()
 	if player, ok := conn.GetUser().(*TPlayer); ok {
 		DoPlayerRpc(player, rpcId, req, ack)
@@ -96,7 +96,7 @@ func _PlayerRpcHttp(w http.ResponseWriter, r *http.Request) {
 
 // ------------------------------------------------------------
 // - 网关转发的玩家消息
-func Rpc_recv_player_msg(req, ack *common.NetPack, conn *tcp.TCPConn) {
+func Rpc_recv_player_msg(req, ack *common.NetPack, conn common.Conn) {
 	rpcId := req.ReadUInt16()
 	accountId := req.ReadUInt32()
 	gamelog.Debug("PlayerMsg:%d", rpcId)
@@ -107,7 +107,7 @@ func Rpc_recv_player_msg(req, ack *common.NetPack, conn *tcp.TCPConn) {
 			ack.SetType(common.Err_offline)
 			gamelog.Debug("Player(%d) isn't online", accountId)
 		}
-	} else if msgFunc := tcp.G_HandleFunc[rpcId]; msgFunc != nil {
+	} else if msgFunc := rpc.G_HandleFunc[rpcId]; msgFunc != nil {
 		msgFunc(req, ack, conn)
 	} else {
 		gamelog.Error("PlayerMsg(%d) Not Regist", rpcId)

@@ -43,7 +43,7 @@ import (
 
 func SendByLogin(subject, addr, body, language string) (errcode uint16) {
 	if p, ok := netConfig.GetRpcRand(conf.GameName); ok {
-		p.CallRpcSafe(enum.Rpc_login_send_email, func(buf *common.NetPack) {
+		p.CallRpc(enum.Rpc_login_send_email, func(buf *common.NetPack) {
 			buf.WriteString(subject)
 			buf.WriteString(addr)
 			buf.WriteString(body)

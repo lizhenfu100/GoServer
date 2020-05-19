@@ -153,7 +153,7 @@ func (self *TSaveData) RollBack(filename string) uint16 {
 }
 
 // ------------------------------------------------------------
-func Rpc_save_backup_file(req, ack *common.NetPack) {
+func Rpc_save_backup_file(req, ack *common.NetPack, _ common.Conn) {
 	uid := req.ReadString()
 	pf_id := req.ReadString()
 

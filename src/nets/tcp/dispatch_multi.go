@@ -1,4 +1,4 @@
-// +build tcp_multi
+// +build net_multi
 
 package tcp
 
@@ -7,14 +7,9 @@ import (
 	"encoding/binary"
 	"gamelog"
 	"io"
+	"nets/rpc"
 	"time"
 )
-
-func (self *RpcQueue) Insert(conn *TCPConn, req *common.NetPack) {
-	if msgFunc := G_HandleFunc[req.GetMsgId()]; msgFunc != nil {
-		msgFunc(req, nil, conn)
-	}
-}
 
 type netbuf struct { //替代bufio.Reader，引用同片内存
 	rd  io.Reader
@@ -58,7 +53,7 @@ func (self *TCPConn) readLoop() {
 	//msgBuf := make([]byte, Msg_Size_Max)
 	var req, ack common.NetPack
 	ack.Reset(make([]byte, common.PACK_HEADER_SIZE, 32), common.PACK_HEADER_SIZE)
-	for q, r := &G_RpcQueue, &self.reader; ; {
+	for q, r := &rpc.G_RpcQueue, &self.reader; ; {
 		if self.IsClose() {
 			break
 		}
@@ -78,7 +73,7 @@ func (self *TCPConn) readLoop() {
 		}
 		req.Reset(msgBuf, common.PACK_HEADER_SIZE)
 		//FIXME: 消息加密、验证有效性，pipeline模式优化
-		q._Handle(self, &req, &ack) //io线程直接处理，须考虑竞态
+		q.Handle(self, &req, &ack) //io线程直接处理，须考虑竞态
 	}
 	self.Close()
 	self.writer.Stop() //stop writeLoop

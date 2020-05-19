@@ -20,7 +20,7 @@ func main() {
 	netConfig.RunNetSvr(true)
 }
 func InitConf() {
-	file.RegCsvType("csv/outip.csv", logic.Logins())
+	file.RegCsvType("csv/outip.csv", logic.NilLogins())
 	file.LoadAllCsv()
 	console.Init()
 

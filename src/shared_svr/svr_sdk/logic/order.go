@@ -149,7 +149,7 @@ func Http_confirm_order(w http.ResponseWriter, r *http.Request) {
 func Http_query_order_unfinished(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	third := r.Form.Get("third_account")
-	pf_mac := r.Form.Get("pf_mac")
+	pf_mac := r.Form.Get("pf_mac") //渠道名前缀的设备码，防止同个手机上拉到其它渠道的订单
 	//! 创建回复
 	var ack msg.Order_unfinished_ack
 	defer func() {
@@ -159,10 +159,7 @@ func Http_query_order_unfinished(w http.ResponseWriter, r *http.Request) {
 	if third == "" {
 		return
 	}
-	filter := bson.M{
-		"third_account": third,
-		"can_send":      1,
-	}
+	filter := bson.M{"third_account": third, "can_send": 1}
 	if pf_mac != "" {
 		filter["pf_mac"] = pf_mac
 	}

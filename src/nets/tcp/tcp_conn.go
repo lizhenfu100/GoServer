@@ -62,10 +62,11 @@ package tcp
 
 import (
 	"common"
+	"common/safe"
 	"gamelog"
 	"generate_out/rpc/enum"
 	"net"
-	"sync"
+	"nets/rpc"
 	"sync/atomic"
 	"time"
 )
@@ -73,28 +74,20 @@ import (
 const (
 	kHeadLen          = 2 //头2字节存msgSize
 	Msg_Size_Max      = 1024
-	Msg_Queue_Cap     = 10240
 	Writer_Cap        = 8 * 1024
 	Delay_Delete_Conn = 60 * time.Second
 )
 
-var (
-	G_HandleFunc = [enum.RpcEnumCnt]func(*common.NetPack, *common.NetPack, *TCPConn){
-		enum.Rpc_regist:     _Rpc_regist,
-		enum.Rpc_unregist:   _Rpc_unregist,
-		enum.Rpc_svr_accept: _Rpc_svr_accept,
-	}
-	G_RpcQueue RpcQueue
-)
-
 func init() {
-	G_RpcQueue.Init()
+	rpc.G_HandleFunc[enum.Rpc_regist] = _Rpc_regist
+	rpc.G_HandleFunc[enum.Rpc_unregist] = _Rpc_unregist
+	rpc.G_HandleFunc[enum.Rpc_svr_accept] = _Rpc_svr_accept
 }
 
 type TCPConn struct {
 	conn         net.Conn
 	reader       netbuf //包装conn减少conn.Read的io次数【client/test/net.go】
-	writer       Chan
+	writer       safe.ChanByte
 	_isClose     bool
 	delayDel     *time.Timer
 	onDisConnect func()
@@ -111,7 +104,7 @@ func newTCPConn(conn net.Conn) *TCPConn {
 func (self *TCPConn) resetConn(conn net.Conn) {
 	self.conn = conn
 	self.reader.Reset(conn)
-	self.writer.stop = false
+	self.writer.IsStop = false
 	self._isClose = false
 	if self.delayDel != nil {
 		self.delayDel.Stop()
@@ -130,20 +123,25 @@ func (self *TCPConn) IsClose() bool { return self._isClose }
 func (self *TCPConn) GetUser() interface{}  { return self.user.Load() }
 func (self *TCPConn) SetUser(v interface{}) { self.user.Store(v) }
 
+func (self *TCPConn) CallRpc(msgId uint16, sendFun, recvFun func(*common.NetPack)) {
+	req := common.NewNetPackCap(32)
+	rpc.MakeReq(req, msgId, sendFun, recvFun)
+	self.WriteMsg(req)
+	req.Free()
+}
 func (self *TCPConn) WriteMsg(msg *common.NetPack) {
 	w := &self.writer
-	w.Lock()
-	if len(w.cur) > Writer_Cap {
-		self.Close()
+	if w.Lock(); len(w.Cur) < Writer_Cap {
+		w.Cur = append(w.Cur, byte(msg.Size()), byte(msg.Size()>>8))
+		w.Cur = append(w.Cur, msg.Data()...)
+		w.Unlock()
+		w.Signal()
 	} else {
-		w.cur = append(w.cur, byte(msg.Size()), byte(msg.Size()>>8))
-		w.cur = append(w.cur, msg.Data()...)
+		w.Unlock()
+		self.Close()
 	}
-	w.Unlock()
-	w.Signal()
 }
 func (self *TCPConn) WriteBuf(buf []byte) { self.writer.Add(buf) }
-
 func (self *TCPConn) writeLoop() {
 loop:
 	for {
@@ -159,46 +157,4 @@ loop:
 		}
 	}
 	self.Close()
-}
-
-// ------------------------------------------------------------
-type Chan struct { //阻塞，单消费者
-	sync.Mutex
-	sync.Cond
-	multi [2][]byte
-	cur   []byte
-	cycle uint8
-	stop  bool
-}
-
-func (p *Chan) Init(cap uint32) {
-	for i := 0; i < len(p.multi); i++ {
-		p.multi[i] = make([]byte, 0, cap)
-	}
-	p.cur = p.multi[0]
-	p.Cond.L = &p.Mutex
-}
-func (p *Chan) Add(v []byte) {
-	p.Lock()
-	p.cur = append(p.cur, v...)
-	p.Unlock()
-	p.Signal()
-}
-func (p *Chan) Get() (ret []byte) {
-	p.Lock()
-	for len(p.cur) == 0 && !p.stop {
-		p.Wait()
-	}
-	ret = p.cur
-	p.cycle = (p.cycle + 1) % uint8(len(p.multi))
-	p.cur = p.multi[p.cycle]
-	p.cur = p.cur[:0]
-	p.Unlock()
-	return
-}
-func (p *Chan) Stop() {
-	p.Lock()
-	p.stop = true
-	p.Unlock()
-	p.Signal()
 }

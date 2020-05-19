@@ -42,19 +42,19 @@ type TFriend struct { //Optimize：hash aid分表分库
 
 // ------------------------------------------------------------
 // - rpc
-func Rpc_friend_add(req, ack *common.NetPack) {
+func Rpc_friend_add(req, ack *common.NetPack, _ common.Conn) {
 	myId := req.ReadUInt32()
 	dstId := req.ReadUInt32()
 	AddFriend(myId, dstId)
 	AddFriend(dstId, myId)
 }
-func Rpc_friend_del(req, ack *common.NetPack) {
+func Rpc_friend_del(req, ack *common.NetPack, _ common.Conn) {
 	myId := req.ReadUInt32()
 	dstId := req.ReadUInt32()
 	DelFriend(myId, dstId)
 	DelFriend(dstId, myId)
 }
-func Rpc_friend_list(req, ack *common.NetPack) {
+func Rpc_friend_list(req, ack *common.NetPack, _ common.Conn) {
 	myId := req.ReadUInt32()
 	if p := FindWithDB(myId); p != nil {
 		//删除上报的，剩余即新增

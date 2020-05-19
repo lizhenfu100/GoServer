@@ -19,28 +19,19 @@ package nets
 import (
 	"common"
 	"net/http"
-	mhttp "nets/http"
-	"nets/tcp"
+	"nets/rpc"
 )
 
 type (
 	// 与player强绑定的rpc，见player_rpc.go
 	// PlayerRpc func(req, ack *common.NetPack, this *Type)
-	TcpRpc     func(req, ack *common.NetPack, conn *tcp.TCPConn)
-	HttpRpc    func(req, ack *common.NetPack)
+	RpcFunc    func(req, ack *common.NetPack, conn common.Conn)
 	HttpHandle http.HandlerFunc
 )
 
-func RegTcpRpc(tcpLst map[uint16]TcpRpc) {
-	for k, v := range tcpLst {
-		tcp.G_HandleFunc[k] = v
-	}
-}
-
-//! 封装成NetPack的模块间通信；若需要其它传输格式(如Json)直接调http.HandleFunc(rpcname, func)注册
-func RegHttpRpc(httpLst map[uint16]HttpRpc) {
-	for k, v := range httpLst {
-		mhttp.G_HandleFunc[k] = v
+func RegRpc(vs map[uint16]RpcFunc) {
+	for k, v := range vs {
+		rpc.G_HandleFunc[k] = v
 	}
 }
 func RegHttpHandler(httpLst map[string]HttpHandle) {

@@ -18,7 +18,7 @@ import (
 
 // ------------------------------------------------------------
 // 绑定信息到账号
-func Rpc_center_bind_info(req, ack *common.NetPack) {
+func Rpc_center_bind_info(req, ack *common.NetPack, _ common.Conn) {
 	str := req.ReadString()
 	pwd := req.ReadString()
 	k := req.ReadString()
@@ -47,7 +47,7 @@ func Rpc_center_bind_info(req, ack *common.NetPack) {
 	}
 	ack.WriteUInt16(errcode)
 }
-func Rpc_center_isvalid_bind_info(req, ack *common.NetPack) {
+func Rpc_center_isvalid_bind_info(req, ack *common.NetPack, _ common.Conn) {
 	str := req.ReadString()
 	typ := req.ReadString()
 	if e, p := GetAccountByBindInfo(typ, str); p == nil {

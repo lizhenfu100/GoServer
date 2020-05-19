@@ -79,7 +79,7 @@ func IsExist(account string) bool {
 	_, e := g_redis.Get(account).Result()
 	return e == nil
 }
-func Rpc_login_del_account_cache(req, ack *common.NetPack) {
+func Rpc_login_del_account_cache(req, ack *common.NetPack, _ common.Conn) {
 	cnt := req.ReadByte()
 	keys := make([]string, cnt)
 	for i := byte(0); i < cnt; i++ {

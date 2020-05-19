@@ -26,8 +26,7 @@ type Func struct {
 type RpcInfo struct {
 	Module     string          //模块名：game、login、gateway...
 	PackDirs   map[string]bool //import需要：rpc涉及到的包路径
-	TcpRpc     []Func
-	HttpRpc    []Func
+	ConnRpc    []Func
 	PlayerRpc  []Func
 	HttpHandle []Func
 
@@ -47,10 +46,8 @@ func gatherRpcInfo(svr string) *RpcInfo {
 				packdir = path.Dir(fileName)[len(K_SvrDir):]
 				pack = getPackage(packdir)
 				//println(v, packdir, pack)
-			} else if fname = getTcpRpc(line); fname != "" {
-				pinfo.TcpRpc = append(pinfo.TcpRpc, Func{pack, fname})
-			} else if fname = getHttpRpc(line); fname != "" {
-				pinfo.HttpRpc = append(pinfo.HttpRpc, Func{pack, fname})
+			} else if fname = getRpcFunc(line); fname != "" {
+				pinfo.ConnRpc = append(pinfo.ConnRpc, Func{pack, fname})
 			} else if fname = getHttpHandle(line); fname != "" {
 				pinfo.HttpHandle = append(pinfo.HttpHandle, Func{pack, fname})
 			} else if fname = getPlayerRpc(line); fname != "" {
@@ -82,15 +79,8 @@ func getModuleName(svr string) string {
 // -------------------------------------
 // -- 提取 package、RpcFunc
 func getPackage(dir string) string { return path.Base(dir) }
-func getTcpRpc(s string) string {
-	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack, \w+ \*tcp.TCPConn\)`, s); ok {
-		reg := regexp.MustCompile(`Rpc_\w+`)
-		return reg.FindAllString(s, -1)[0]
-	}
-	return ""
-}
-func getHttpRpc(s string) string {
-	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack\)`, s); ok {
+func getRpcFunc(s string) string {
+	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack, \w+ common.Conn\)`, s); ok {
 		reg := regexp.MustCompile(`Rpc_\w+`)
 		return reg.FindAllString(s, -1)[0]
 	}
@@ -129,15 +119,9 @@ import (
 	{{end}}
 )
 func init() {
-	{{if len .TcpRpc}}
-		nets.RegTcpRpc(map[uint16]nets.TcpRpc{
-			{{range .TcpRpc}}enum.{{.Name}}: {{.Pack}}.{{.Name}},
-			{{end}}
-		})
-	{{end}}
-	{{if len .HttpRpc}}
-		nets.RegHttpRpc(map[uint16]nets.HttpRpc{
-			{{range .HttpRpc}}enum.{{.Name}}: {{.Pack}}.{{.Name}},
+	{{if len .ConnRpc}}
+		nets.RegRpc(map[uint16]nets.RpcFunc{
+			{{range .ConnRpc}}enum.{{.Name}}: {{.Pack}}.{{.Name}},
 			{{end}}
 		})
 	{{end}}
@@ -156,4 +140,4 @@ func init() {
 }
 `
 
-func (p *RpcInfo) RpcCnt() int { return len(p.TcpRpc) + len(p.HttpRpc) + len(p.PlayerRpc) }
+func (p *RpcInfo) RpcCnt() int { return len(p.ConnRpc) + len(p.PlayerRpc) }

@@ -11,6 +11,7 @@ import (
 	"io"
 	"net"
 	"netConfig/meta"
+	"nets/rpc"
 	"svr_client/test/qps"
 	"sync"
 	"sync/atomic"
@@ -30,20 +31,20 @@ type TCPServer struct {
 
 var _svr TCPServer
 
-func NewTcpServer(port uint16, maxconn int32, block bool) { //"ip:port"，ip可缺省
+func NewServer(port uint16, maxconn int32, block bool) { //"ip:port"，ip可缺省
 	if conf.TestFlag_CalcQPS {
 		qps.Watch()
 	}
 	_svr.MaxConnNum = maxconn
 	_svr.closer.L = &_svr.Mutex
-	if l, err := net.Listen("tcp", fmt.Sprintf(":%d", port)); err == nil {
-		if _svr.SetListener(l); block {
+	if l, e := net.Listen("tcp", fmt.Sprintf(":%d", port)); e == nil {
+		if _svr.listener = l; block {
 			_svr.run()
 		} else {
 			go _svr.run()
 		}
 	} else {
-		panic("NewTcpServer: %s" + err.Error())
+		panic("NewTcpServer: %s" + e.Error())
 	}
 }
 func CloseServer() { _svr.Close() }
@@ -70,7 +71,9 @@ func (self *TCPServer) run() {
 			break
 		}
 	}
-	self.SetListener(nil)
+	self.Lock()
+	self.listener = nil
+	self.Unlock()
 	self.closer.Signal()
 }
 func (self *TCPServer) _HandleAcceptConn(conn net.Conn) {
@@ -98,21 +101,21 @@ func (self *TCPServer) _AddNewConn(conn net.Conn) {
 	tcpConn := newTCPConn(conn)
 	self.connmap.Store(connId, tcpConn)
 	atomic.AddInt32(&self.connCnt, 1)
-	gamelog.Debug("AddConn(%d) From:%s", connId, conn.RemoteAddr().String())
+	gamelog.Debug("AddConn(%d)", connId)
 
 	tcpConn.onDisConnect = func() { //Notice:回调函数须线程安全
 		self.connmap.Delete(connId)
 		atomic.AddInt32(&self.connCnt, -1)
 		gamelog.Debug("DelConnId(%d) %v", connId, tcpConn.GetUser())
-		if G_HandleFunc[enum.Rpc_net_error] != nil { //先通知逻辑线程，连接断开
+		if rpc.G_HandleFunc[enum.Rpc_net_error] != nil { //先通知逻辑线程，连接断开
 			msg := common.NewNetPackCap(16)
 			msg.SetMsgId(enum.Rpc_net_error)
-			G_RpcQueue.Insert(tcpConn, msg)
+			rpc.G_RpcQueue.Insert(tcpConn, msg)
 		}
 		if _, ok := tcpConn.GetUser().(*meta.Meta); ok { //再注销
 			msg := common.NewNetPackCap(16)
 			msg.SetMsgId(enum.Rpc_unregist)
-			G_RpcQueue.Insert(tcpConn, msg)
+			rpc.G_RpcQueue.Insert(tcpConn, msg)
 		}
 	}
 	//通知client，连接被接收，下发connId、密钥等
@@ -130,7 +133,6 @@ func (self *TCPServer) _ResetOldConn(newconn net.Conn, oldId uint32) {
 		oldconn.resetConn(newconn)
 		self._RunConn(oldconn, oldId)
 	} else {
-		gamelog.Debug("ResetOldConn(%d) to AddNewConn", oldId)
 		self._AddNewConn(newconn)
 	}
 }
@@ -167,17 +169,12 @@ func (self *TCPServer) Close() {
 	self.wgConns.Wait()
 	gamelog.Info("server been closed!!")
 }
-func (self *TCPServer) SetListener(l net.Listener) {
-	self.Lock()
-	self.listener = l
-	self.Unlock()
-}
 
 // ------------------------------------------------------------
 // 模块注册
 var g_reg_conn_map sync.Map //<{module,svrId}, *TCPConn>
 
-func _Rpc_regist(req, _ *common.NetPack, conn *TCPConn) {
+func _Rpc_regist(req, _ *common.NetPack, conn common.Conn) {
 	pMeta := new(meta.Meta)
 	pMeta.BufToData(req)
 	if p := meta.GetMeta(pMeta.Module, pMeta.SvrID); p != nil {
@@ -192,7 +189,7 @@ func _Rpc_regist(req, _ *common.NetPack, conn *TCPConn) {
 	g_reg_conn_map.Store(std.KeyPair{pMeta.Module, pMeta.SvrID}, conn)
 	gamelog.Debug("Regist: %v", pMeta)
 }
-func _Rpc_unregist(req, _ *common.NetPack, conn *TCPConn) {
+func _Rpc_unregist(req, _ *common.NetPack, conn common.Conn) {
 	if pMeta, ok := conn.GetUser().(*meta.Meta); ok {
 		if pConn := FindRegModule(pMeta.Module, pMeta.SvrID); pConn == nil || pConn.IsClose() {
 			gamelog.Debug("UnRegist: %v", pMeta)

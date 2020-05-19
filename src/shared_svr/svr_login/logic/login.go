@@ -59,8 +59,8 @@ import (
 
 var g_token uint32
 
-func Rpc_check_identity(req, ack *common.NetPack) { Rpc_login_account_login(req, ack) }
-func Rpc_login_account_login(req, ack *common.NetPack) {
+func Rpc_check_identity(req, ack *common.NetPack, conn common.Conn) { Rpc_login_account_login(req, ack, conn) }
+func Rpc_login_account_login(req, ack *common.NetPack, _ common.Conn) {
 	version := req.ReadString()
 	gameSvrId := 0
 	if !conf.Auto_GameSvr {
@@ -137,7 +137,7 @@ func accountLogin2(aid uint32, gameSvrId *int, version string, centerId int) uin
 				buf.WriteInt(*gameSvrId)
 			}, func(backBuf *common.NetPack) {
 				errCode = backBuf.ReadUInt16()
-				cache.Rpc_login_del_account_cache(backBuf, nil)
+				cache.Rpc_login_del_account_cache(backBuf, nil, nil)
 			})
 			return errCode
 		} else {
@@ -154,7 +154,7 @@ func accountLogin3(pInfo *gameInfo.TAccountClient, gameSvrId int, version string
 	//生成一个临时token，发给gamesvr、client用以登录验证
 	token, errCode := atomic.AddUint32(&g_token, 1), err.Success
 	if p, ok := netConfig.GetGameRpc(gameSvrId); ok {
-		p.CallRpcSafe(enum.Rpc_set_identity, func(buf *common.NetPack) {
+		p.CallRpc(enum.Rpc_set_identity, func(buf *common.NetPack) {
 			buf.WriteUInt32(token)
 			buf.WriteUInt32(pInfo.AccountID)
 		}, func(backBuf *common.NetPack) {
@@ -168,7 +168,7 @@ func accountLogin3(pInfo *gameInfo.TAccountClient, gameSvrId int, version string
 	var pMetaToClient *meta.Meta
 	if pMetaToClient = meta.GetMeta("gateway", gatewayId); pMetaToClient != nil {
 		if p, ok := netConfig.GetGatewayRpc(gatewayId); ok {
-			p.CallRpcSafe(enum.Rpc_set_identity, func(buf *common.NetPack) {
+			p.CallRpc(enum.Rpc_set_identity, func(buf *common.NetPack) {
 				buf.WriteUInt32(token)
 				buf.WriteUInt32(pInfo.AccountID)
 				buf.WriteInt(gameSvrId)
@@ -195,7 +195,7 @@ func accountLogin3(pInfo *gameInfo.TAccountClient, gameSvrId int, version string
 
 // ------------------------------------------------------------
 // 转发至center
-func Rpc_login_to_center_by_str(req, ack *common.NetPack) {
+func Rpc_login_to_center_by_str(req, ack *common.NetPack, _ common.Conn) {
 	rpcId := req.ReadUInt16() //目标rpc
 	rpcData := req.LeftBuf()
 	str := req.ReadString() //accountName/bindVal
@@ -220,7 +220,7 @@ func Rpc_login_to_center_by_str(req, ack *common.NetPack) {
 
 // ------------------------------------------------------------
 // 大区游戏服列表
-func Rpc_login_get_game_list(req, ack *common.NetPack) {
+func Rpc_login_get_game_list(req, ack *common.NetPack, _ common.Conn) {
 	version := req.ReadString()
 	list := meta.GetMetas("game", version)
 	ack.WriteByte(byte(len(list)))

@@ -16,6 +16,15 @@ const (
 
 type NetPack = ByteBuffer
 
+type Conn interface {
+	CallRpc(msgId uint16, sendFun, recvFun func(*NetPack))
+	WriteMsg(msg *NetPack)
+	GetUser() interface{}
+	SetUser(v interface{})
+	IsClose() bool
+	Close()
+}
+
 func NewNetPackCap(capacity int) *NetPack {
 	self := NewByteBufferCap(capacity)
 	self.ReadPos = PACK_HEADER_SIZE        //len == 0

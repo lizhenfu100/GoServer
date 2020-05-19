@@ -16,8 +16,9 @@ package logic
 
 import (
 	"common"
+	"generate_out/err"
 	"github.com/go-redis/redis"
-	"nets/tcp"
+	"netConfig/meta"
 	"strconv"
 	"sync"
 	"time"
@@ -25,18 +26,45 @@ import (
 
 var g_token sync.Map //<accountId, token>
 
-func Rpc_set_identity(req *common.NetPack) {
+func Rpc_set_identity(req, ack *common.NetPack, _ common.Conn) {
 	token := req.ReadUInt32()
 	accountId := req.ReadUInt32()
 	gameSvrId := req.ReadInt()
 	g_token.Store(accountId, token)
 	AddRouteGame(accountId, gameSvrId) //设置此玩家的game路由
 }
+func Rpc_check_identity(req, ack *common.NetPack, client common.Conn) {
+	accountId := req.ReadUInt32()
+	token := req.ReadUInt32()
+	if CheckToken(accountId, token) {
+		if client != nil { //tcp网关
+			if p := GetClientConn(accountId); p != nil && p != client {
+				p.Close() //防串号
+			}
+			client.SetUser(accountId)
+			AddClientConn(accountId, client)
+		}
+		ack.WriteUInt16(err.Success)
+	} else {
+		ack.WriteUInt16(err.Token_verify_err)
+	}
+}
 func CheckToken(accountId, token uint32) bool {
 	if value, ok := g_token.Load(accountId); ok {
 		return token == value
 	}
 	return false
+}
+func Rpc_net_error(req, ack *common.NetPack, conn common.Conn) {
+	if accountId, ok := conn.GetUser().(uint32); ok { //玩家断线，且没重连
+		if TryDelClientConn(accountId) {
+			DelRouteGame(accountId)
+		}
+	} else if ptr, ok := conn.GetUser().(*meta.Meta); ok {
+		if ptr.Module == "game" { //游戏服断开
+
+		}
+	}
 }
 
 // ------------------------------------------------------------
@@ -67,15 +95,15 @@ func GetGameId(aid uint32) int {
 }
 func DelRouteGame(aid uint32) { g_route_game.Delete(aid) }
 
-func AddClientConn(aid uint32, conn *tcp.TCPConn) { g_clients.Store(aid, conn) }
-func GetClientConn(aid uint32) *tcp.TCPConn {
+func AddClientConn(aid uint32, conn common.Conn) { g_clients.Store(aid, conn) }
+func GetClientConn(aid uint32) common.Conn {
 	if v, ok := g_clients.Load(aid); ok {
-		return v.(*tcp.TCPConn)
+		return v.(common.Conn)
 	}
 	return nil
 }
 func TryDelClientConn(aid uint32) bool {
-	if v, ok := g_clients.Load(aid); ok && v.(*tcp.TCPConn).IsClose() {
+	if v, ok := g_clients.Load(aid); ok && v.(common.Conn).IsClose() {
 		g_clients.Delete(aid)
 		return true
 	}

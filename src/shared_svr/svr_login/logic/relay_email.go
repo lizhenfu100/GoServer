@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func Rpc_login_send_email(req, ack *common.NetPack) {
+func Rpc_login_send_email(req, ack *common.NetPack, _ common.Conn) {
 	subject := req.ReadString()
 	target := req.ReadString()
 	body := req.ReadString()

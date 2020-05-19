@@ -13,9 +13,6 @@ type TBattleModule struct {
 	PlayerID uint32 `bson:"_id"`
 	Heros    []THero
 	Guns     []TGun
-
-	//TODO:zhoumf:玩家抽到的武器池子
-
 	//小写私有数据，不入库
 	owner *TPlayer //可能是nil
 	show  TShowInfo
@@ -36,6 +33,14 @@ type TGun struct {
 // -- 框架接口
 func (self *TBattleModule) InitAndInsert(player *TPlayer) {
 	self.PlayerID = player.PlayerID
+	{ //测试代码，初始英雄、武器
+		self.AddHero(1)
+		self.AddHero(3)
+		self.AddHero(5)
+		self.AddGun(1)
+		self.AddGun(2)
+		self.AddGun(3)
+	}
 	dbmgo.Insert(KDBBattle, self)
 	self._InitTempData(player)
 }
@@ -59,7 +64,8 @@ func (self *TBattleModule) _InitTempData(player *TPlayer) {
 func (self *TBattleModule) BufToData(buf *common.NetPack) {
 	self.show.BufToData(buf)
 	self.svrId = buf.ReadInt()
-	self._BufToData(buf)
+	self._Buf2Hero(buf)
+	self._Buf2Gun(buf)
 }
 func (self *TBattleModule) DataToBuf(buf *common.NetPack) {
 	//1. show info
@@ -71,33 +77,29 @@ func (self *TBattleModule) DataToBuf(buf *common.NetPack) {
 	//2. svr_game id
 	buf.WriteInt(self.svrId)
 	//3. battle data
-	self._DataToBuf(buf)
+	self._Hero2Buf(buf)
+	self._Gun2Buf(buf)
 }
-func (self *TBattleModule) _BufToData(buf *common.NetPack) {
-	//英雄
-	for cnt, i := buf.ReadUInt8(), uint8(0); i < cnt; i++ {
-		id := buf.ReadUInt8()
-		lv := buf.ReadUInt8()
-		exp := buf.ReadUInt16()
-		self.Heros[id] = THero{ID: id, Exp: exp, Level: lv}
-	}
-	//武器
-	for cnt, i := buf.ReadUInt16(), uint16(0); i < cnt; i++ {
-		id := buf.ReadUInt16()
-		lv := buf.ReadUInt8()
-		exp := buf.ReadUInt16()
-		self.Guns[id] = TGun{ID: id, Exp: exp, Level: lv}
-	}
-}
-func (self *TBattleModule) _DataToBuf(buf *common.NetPack) {
-	//英雄数据
+func (self *TBattleModule) _Hero2Buf(buf *common.NetPack) {
 	buf.WriteUInt8(uint8(len(self.Heros)))
 	for _, v := range self.Heros {
 		buf.WriteUInt8(v.ID)
 		buf.WriteUInt8(v.Level)
 		buf.WriteUInt16(v.Exp)
 	}
-	//武器
+}
+func (self *TBattleModule) _Buf2Hero(buf *common.NetPack) {
+	if cnt := buf.ReadUInt8(); cnt >= uint8(len(self.Heros)) { //防bug误删数据
+		self.Heros = self.Heros[:0]
+		for i := uint8(0); i < cnt; i++ {
+			id := buf.ReadUInt8()
+			lv := buf.ReadUInt8()
+			exp := buf.ReadUInt16()
+			self.Heros = append(self.Heros, THero{ID: id, Exp: exp, Level: lv})
+		}
+	}
+}
+func (self *TBattleModule) _Gun2Buf(buf *common.NetPack) {
 	buf.WriteUInt16(uint16(len(self.Guns)))
 	for _, v := range self.Guns {
 		buf.WriteUInt16(v.ID)
@@ -105,11 +107,23 @@ func (self *TBattleModule) _DataToBuf(buf *common.NetPack) {
 		buf.WriteUInt16(v.Exp)
 	}
 }
+func (self *TBattleModule) _Buf2Gun(buf *common.NetPack) {
+	if cnt := buf.ReadUInt16(); cnt >= uint16(len(self.Guns)) { //防bug误删数据
+		self.Guns = self.Guns[:0]
+		for i := uint16(0); i < cnt; i++ {
+			id := buf.ReadUInt16()
+			lv := buf.ReadUInt8()
+			exp := buf.ReadUInt16()
+			self.Guns = append(self.Guns, TGun{ID: id, Exp: exp, Level: lv})
+		}
+	}
+}
 
 // ------------------------------------------------------------
 // --
 func Rpc_game_write_db_battle_info(req, ack *common.NetPack, this *TPlayer) {
-	this.battle._BufToData(req)
+	this.battle._Buf2Hero(req)
+	this.battle._Buf2Gun(req)
 }
 func Rpc_game_on_battle_end(req, ack *common.NetPack, this *TPlayer) {
 	isWin := req.ReadBool()
@@ -141,7 +155,7 @@ func (self *TBattleModule) AddHero(id uint8) bool {
 	return false
 }
 func (self *TBattleModule) AddHeroExp(id uint8, exp uint16) bool {
-	kConf := conf.Const.Hero_LvUp
+	kConf := conf.Csv().Hero_LvUp
 	if p := self.GetHero(id); p != nil {
 		if p.Level < uint8(len(kConf)) {
 			if p.Exp += exp; p.Exp >= kConf[p.Level] {
@@ -171,7 +185,7 @@ func (self *TBattleModule) AddGun(id uint16) bool {
 	return false
 }
 func (self *TBattleModule) AddGunExp(id uint16, exp uint16) bool {
-	kConf := conf.Const.Gun_LvUp
+	kConf := conf.Csv().Gun_LvUp
 	if p := self.GetGun(id); p != nil {
 		if p.Level < uint8(len(kConf)) {
 			if p.Exp += exp; p.Exp >= kConf[p.Level] {
@@ -182,4 +196,13 @@ func (self *TBattleModule) AddGunExp(id uint16, exp uint16) bool {
 		}
 	}
 	return false
+}
+
+// ------------------------------------------------------------
+// -- 客户端
+func Rpc_game_ui_heros(req, ack *common.NetPack, this *TPlayer) {
+	this.battle._Hero2Buf(ack)
+}
+func Rpc_game_ui_guns(req, ack *common.NetPack, this *TPlayer) {
+	this.battle._Gun2Buf(ack)
 }

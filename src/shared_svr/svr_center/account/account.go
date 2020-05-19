@@ -67,7 +67,7 @@ func (self *TAccount) SetPasswd(passwd string) {
 
 // ------------------------------------------------------------
 // 注册、登录
-func Rpc_center_account_login(req, ack *common.NetPack) {
+func Rpc_center_account_login(req, ack *common.NetPack, _ common.Conn) {
 	gameName := req.ReadString()
 	str := req.ReadString()
 	pwd := req.ReadString()
@@ -90,7 +90,7 @@ func Rpc_center_account_login(req, ack *common.NetPack) {
 		}
 	}
 }
-func Rpc_center_account_reg(req, ack *common.NetPack) {
+func Rpc_center_account_reg(req, ack *common.NetPack, _ common.Conn) {
 	str := req.ReadString()
 	pwd := req.ReadString()
 	typ := req.ReadString() //email、name、phone
@@ -105,7 +105,7 @@ func Rpc_center_account_reg(req, ack *common.NetPack) {
 		ack.WriteUInt16(errcode)
 	}
 }
-func Rpc_center_account_reg_force(req, ack *common.NetPack) {
+func Rpc_center_account_reg_force(req, ack *common.NetPack, _ common.Conn) {
 	uuid := req.ReadString()
 	if sign.Decode(&uuid); uuid == "" {
 		ack.WriteUInt16(err.BindInfo_format_err)
@@ -114,7 +114,7 @@ func Rpc_center_account_reg_force(req, ack *common.NetPack) {
 		ack.WriteUInt16(e)
 	}
 }
-func Rpc_center_reg_if(req, ack *common.NetPack) {
+func Rpc_center_reg_if(req, ack *common.NetPack, _ common.Conn) {
 	str := req.ReadString()
 	typ := req.ReadString()
 	sign.Decode(&str)
@@ -124,7 +124,7 @@ func Rpc_center_reg_if(req, ack *common.NetPack) {
 	}
 	ack.WriteUInt16(e)
 }
-func Rpc_center_change_password2(req, ack *common.NetPack) {
+func Rpc_center_change_password2(req, ack *common.NetPack, _ common.Conn) {
 	str := req.ReadString()
 	typ := req.ReadString()
 	oldpwd := req.ReadString()
@@ -147,7 +147,7 @@ func Rpc_center_change_password2(req, ack *common.NetPack) {
 
 // ------------------------------------------------------------
 // 记录于账号上面的游戏信息，一套账号系统可关联多个游戏
-func Rpc_center_set_game_route(req, ack *common.NetPack) {
+func Rpc_center_set_game_route(req, ack *common.NetPack, _ common.Conn) {
 	accountId := req.ReadUInt32()
 	gameName := req.ReadString()
 	loginId := req.ReadInt()
@@ -171,7 +171,7 @@ func Rpc_center_set_game_route(req, ack *common.NetPack) {
 		}
 	}
 }
-func Rpc_center_set_game_json(req, ack *common.NetPack) {
+func Rpc_center_set_game_json(req, ack *common.NetPack, _ common.Conn) {
 	str := req.ReadString()
 	typ := req.ReadString()
 	gameName := req.ReadString()
@@ -192,7 +192,7 @@ func Rpc_center_set_game_json(req, ack *common.NetPack) {
 		}
 	}
 }
-func Rpc_center_get_game_json(req, ack *common.NetPack) { //TODO:待删除
+func Rpc_center_get_game_json(req, ack *common.NetPack, _ common.Conn) { //TODO:待删除
 	str := req.ReadString()
 	typ := req.ReadString()
 	gameName := req.ReadString()
@@ -206,7 +206,7 @@ func Rpc_center_get_game_json(req, ack *common.NetPack) { //TODO:待删除
 
 // ------------------------------------------------------------
 // 玩家在哪个大区登录的
-func Rpc_center_player_login_addr_2(req, ack *common.NetPack) { //TODO:待删除
+func Rpc_center_player_login_addr_2(req, ack *common.NetPack, _ common.Conn) { //TODO:待删除
 	gameName := req.ReadString()
 	str := req.ReadString()
 
@@ -221,7 +221,7 @@ func Rpc_center_player_login_addr_2(req, ack *common.NetPack) { //TODO:待删除
 		p.WriteLoginAddr(gameName, ack)
 	}
 }
-func Rpc_center_player_login_addr(req, ack *common.NetPack) {
+func Rpc_center_player_login_addr(req, ack *common.NetPack, _ common.Conn) {
 	str := req.ReadString()
 	typ := req.ReadString() //email、name、phone
 	gameName := req.ReadString()

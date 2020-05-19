@@ -2,21 +2,10 @@
 
 package email
 
-import "sync"
+import "sync/atomic"
 
-var (
-	_emailCsv		 emailCsv
-	_emailCsvMutex sync.Mutex
-)
+var _emailCsv atomic.Value
 
-func EmailCsv() emailCsv {
-	_emailCsvMutex.Lock()
-	ret := _emailCsv //拷贝到栈上
-	_emailCsvMutex.Unlock()
-	return ret
-}
-func (v emailCsv) Init() {
-	_emailCsvMutex.Lock()
-	_emailCsv = v
-	_emailCsvMutex.Unlock()
-}
+func EmailCsv() emailCsv { return _emailCsv.Load().(emailCsv) }
+func NilEmailCsv() emailCsv { return nil }
+func (v emailCsv) Init() { _emailCsv.Store(v) } //一块全新内存

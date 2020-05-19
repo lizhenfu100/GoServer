@@ -4,7 +4,7 @@ import (
 	"common/timer"
 	"conf"
 	"nets/http"
-	"nets/tcp"
+	"nets/rpc"
 	"time"
 )
 
@@ -17,7 +17,7 @@ func MainLoop() {
 		timeElapse = int(timeNow - timeOld)
 
 		timer.Refresh(timeElapse, timeNow)
-		tcp.G_RpcQueue.Update()
+		rpc.G_RpcQueue.Update()
 
 		if timeElapse < conf.FPS_OtherSvr {
 			time.Sleep(time.Duration(conf.FPS_OtherSvr-timeElapse) * time.Millisecond)

@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func Rpc_check_identity(req, ack *common.NetPack) {
+func Rpc_check_identity(req, ack *common.NetPack, _ common.Conn) {
 	str := req.ReadString()
 	pwd := req.ReadString()
 	typ := req.ReadString() //email、name、phone
@@ -41,8 +41,8 @@ func Rpc_check_identity(req, ack *common.NetPack) {
 		}
 	}
 }
-func Rpc_center_account_reg2(req, ack *common.NetPack) { Rpc_center_account_reg(req, ack) }
-func Rpc_center_platform_reg(req, ack *common.NetPack) {
+func Rpc_center_account_reg2(req, ack *common.NetPack, _ common.Conn) { Rpc_center_account_reg(req, ack, nil) }
+func Rpc_center_platform_reg(req, ack *common.NetPack, _ common.Conn) {
 	uid := req.ReadString()
 	pf_id := req.ReadString()
 	if uid == "" || pf_id == "" {
@@ -53,16 +53,16 @@ func Rpc_center_platform_reg(req, ack *common.NetPack) {
 		ack.WriteUInt16(e)
 	}
 }
-func Rpc_center_reg_if2(req, ack *common.NetPack) {
+func Rpc_center_reg_if2(req, ack *common.NetPack, _ common.Conn) {
 	str := req.ReadString()
 	typ := req.ReadString()
 	sign.Decode(&str)
 	e, _ := GetAccountByBindInfo(typ, str)
 	ack.WriteUInt16(e)
 }
-func Rpc_center_set_game_route2(req, ack *common.NetPack) { Rpc_center_set_game_route(req, ack) }
-func Rpc_center_set_game_json2(req, ack *common.NetPack)  { Rpc_center_set_game_json(req, ack) }
-func Rpc_center_game_info2(req, ack *common.NetPack) {
+func Rpc_center_set_game_route2(req, ack *common.NetPack, _ common.Conn) { Rpc_center_set_game_route(req, ack, nil) }
+func Rpc_center_set_game_json2(req, ack *common.NetPack, _ common.Conn)  { Rpc_center_set_game_json(req, ack, nil) }
+func Rpc_center_game_info2(req, ack *common.NetPack, _ common.Conn) {
 	str := req.ReadString()
 	typ := req.ReadString()
 	gameName := req.ReadString()
@@ -77,8 +77,8 @@ func Rpc_center_game_info2(req, ack *common.NetPack) {
 		}
 	}
 }
-func Rpc_center_player_addr2(req, ack *common.NetPack) { Rpc_center_player_login_addr(req, ack) }
-func Rpc_center_bind_info2(req, ack *common.NetPack) {
+func Rpc_center_player_addr2(req, ack *common.NetPack, _ common.Conn) { Rpc_center_player_login_addr(req, ack, nil) }
+func Rpc_center_bind_info2(req, ack *common.NetPack, _ common.Conn) {
 	str := req.ReadString()
 	pwd := req.ReadString()
 	typ := req.ReadString()
@@ -98,4 +98,4 @@ func Rpc_center_bind_info2(req, ack *common.NetPack) {
 	}
 	ack.WriteUInt16(errcode)
 }
-func Rpc_center_isvalid_bind_info2(req, ack *common.NetPack) { Rpc_center_isvalid_bind_info(req, ack) }
+func Rpc_center_isvalid_bind_info2(req, ack *common.NetPack, _ common.Conn) { Rpc_center_isvalid_bind_info(req, ack, nil) }

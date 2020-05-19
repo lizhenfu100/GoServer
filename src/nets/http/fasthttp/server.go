@@ -28,7 +28,7 @@ var (
 	_map = map[string]http.RequestHandler{}
 )
 
-func NewHttpServer(port uint16, block bool) {
+func NewServer(port uint16, block bool) {
 	_svr.Handler = func(ctx *http.RequestCtx) {
 		if v, ok := _map[common.B2S(ctx.Path())]; ok {
 			v(ctx)

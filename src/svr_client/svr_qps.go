@@ -29,7 +29,7 @@ func test1() {
 	http2.HandleFunc("/echo", func(w http2.ResponseWriter, r *http2.Request) {
 		qps.AddQps()
 	})
-	http.NewHttpServer(7777, false)
+	http.NewServer(7777, false)
 }
 func test2() {
 	fasthttp.HandleFunc("/echo", func(ctx *fasthttp2.RequestCtx) {
@@ -37,22 +37,22 @@ func test2() {
 		//fmt.Println("body: ", common.B2S(ctx.Request.Body()))
 		ctx.Write(ctx.Request.Body())
 	})
-	fasthttp.NewHttpServer(7777, false)
+	fasthttp.NewServer(7777, false)
 }
 
 // ------------------------------------------------------------
 // qps: tcp
 func tcp0() {
 	var client tcp.TCPClient
-	client.ConnectToSvr("192.168.1.111:7777", func(conn *tcp.TCPConn) {
+	client.Connect("192.168.1.111:7777", func(conn *tcp.TCPConn) {
 		fmt.Println("tcp qps begin ...")
 		for {
-			conn.CallRpcSafe(enum.Rpc_gm_cmd, func(buf *common.NetPack) {
+			conn.CallEx(enum.Rpc_gm_cmd, func(buf *common.NetPack) {
 			}, nil)
 		}
 	})
 }
 func tcp_svr() {
 	console.Init()
-	tcp.NewTcpServer(7777, 5000, false)
+	tcp.NewServer(7777, 5000, false)
 }

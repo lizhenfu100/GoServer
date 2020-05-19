@@ -11,28 +11,20 @@ import (
 	"generate_out/rpc/enum"
 	"math/rand"
 	"netConfig/meta"
-	"nets/http"
-	"nets/tcp"
+	"nets/rpc"
 	"os"
 	"time"
 )
 
 func Init() {
 	rand.Seed(time.Now().UnixNano())
-	tcp.G_HandleFunc[enum.Rpc_log] = _Rpc_log1
-	http.G_HandleFunc[enum.Rpc_log] = _Rpc_log
-	tcp.G_HandleFunc[enum.Rpc_gm_cmd] = _Rpc_gm_cmd1
-	http.G_HandleFunc[enum.Rpc_gm_cmd] = _Rpc_gm_cmd
-	tcp.G_HandleFunc[enum.Rpc_meta_list] = _Rpc_meta_list1
-	http.G_HandleFunc[enum.Rpc_meta_list] = _Rpc_meta_list
-	tcp.G_HandleFunc[enum.Rpc_get_meta] = _Rpc_get_meta1
-	http.G_HandleFunc[enum.Rpc_get_meta] = _Rpc_get_meta
-	tcp.G_HandleFunc[enum.Rpc_update_file] = _Rpc_update_file1
-	http.G_HandleFunc[enum.Rpc_update_file] = _Rpc_update_file
-	tcp.G_HandleFunc[enum.Rpc_reload_csv] = _Rpc_reload_csv1
-	http.G_HandleFunc[enum.Rpc_reload_csv] = _Rpc_reload_csv
-	tcp.G_HandleFunc[enum.Rpc_timestamp] = _Rpc_timestamp1
-	http.G_HandleFunc[enum.Rpc_timestamp] = _Rpc_timestamp
+	rpc.G_HandleFunc[enum.Rpc_log] = _Rpc_log
+	rpc.G_HandleFunc[enum.Rpc_gm_cmd] = _Rpc_gm_cmd
+	rpc.G_HandleFunc[enum.Rpc_meta_list] = _Rpc_meta_list
+	rpc.G_HandleFunc[enum.Rpc_get_meta] = _Rpc_get_meta
+	rpc.G_HandleFunc[enum.Rpc_update_file] = _Rpc_update_file
+	rpc.G_HandleFunc[enum.Rpc_reload_csv] = _Rpc_reload_csv
+	rpc.G_HandleFunc[enum.Rpc_timestamp] = _Rpc_timestamp
 	go sigTerm() //监控进程终止信号
 	csv := conf.SvrCsv()
 	wechat.Init( //微信报警
@@ -44,8 +36,7 @@ func Init() {
 		csv.SmsSecret)
 }
 
-func _Rpc_log1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_log(req, ack) }
-func _Rpc_log(req, ack *common.NetPack) {
+func _Rpc_log(req, ack *common.NetPack, _ common.Conn) {
 	log := req.ReadString()
 	uuid := req.ReadString()
 	version := req.ReadString()
@@ -53,8 +44,7 @@ func _Rpc_log(req, ack *common.NetPack) {
 	gamelog.Info("%s, UUID:%s (%s, %s)", log, uuid, version, pf_id)
 }
 
-func _Rpc_meta_list1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_meta_list(req, ack) }
-func _Rpc_meta_list(req, ack *common.NetPack) {
+func _Rpc_meta_list(req, ack *common.NetPack, _ common.Conn) {
 	module := req.ReadString() //game、save、file...
 	version := req.ReadString()
 	list := meta.GetMetas(module, version)
@@ -66,8 +56,7 @@ func _Rpc_meta_list(req, ack *common.NetPack) {
 		ack.WriteString(p.SvrName)
 	}
 }
-func _Rpc_get_meta1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_get_meta(req, ack) }
-func _Rpc_get_meta(req, ack *common.NetPack) {
+func _Rpc_get_meta(req, ack *common.NetPack, _ common.Conn) {
 	module := req.ReadString() //game、save、file...
 	version := req.ReadString()
 	typ := req.ReadByte()
@@ -101,8 +90,7 @@ func _Rpc_get_meta(req, ack *common.NetPack) {
 		ack.WriteUInt16(p.Port())
 	}
 }
-func _Rpc_timestamp1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_timestamp(req, ack) }
-func _Rpc_timestamp(req, ack *common.NetPack) {
+func _Rpc_timestamp(req, ack *common.NetPack, _ common.Conn) {
 	ack.WriteInt64(time.Now().Unix())
 }
 
@@ -116,8 +104,8 @@ Http …… 拦截器？
 将配置变量私有化、引用语义，get|set原子更改，业务使用的都是旧变量的引用拷贝，原始变量可安全的更改
 	· 运行逻辑是：拷贝出shared_ptr给外部使用，内部shared_ptr指向新内存块即可
 */
-func _Rpc_update_file1(req, ack *common.NetPack, _ *tcp.TCPConn) { go _Rpc_update_file(req, ack) }
-func _Rpc_update_file(req, ack *common.NetPack) {
+func _Rpc_update_file(req, ack *common.NetPack, _ common.Conn) { go _Rpc_update_file1(req, ack) }
+func _Rpc_update_file1(req, ack *common.NetPack) {
 	for cnt, i := req.ReadByte(), byte(0); i < cnt; i++ {
 		dir := req.ReadString()
 		name := req.ReadString()
@@ -136,8 +124,8 @@ func _Rpc_update_file(req, ack *common.NetPack) {
 		}
 	}
 }
-func _Rpc_reload_csv1(req, ack *common.NetPack, _ *tcp.TCPConn) { go _Rpc_reload_csv(req, ack) }
-func _Rpc_reload_csv(req, ack *common.NetPack) {
+func _Rpc_reload_csv(req, ack *common.NetPack, _ common.Conn) { go _Rpc_reload_csv1(req, ack) }
+func _Rpc_reload_csv1(req, ack *common.NetPack) {
 	for cnt, i := req.ReadByte(), byte(0); i < cnt; i++ {
 		file.ReloadCsv(req.ReadString())
 	}

@@ -9,6 +9,19 @@ import (
 	"nets/http"
 )
 
+func RelayHttp(req, ack *common.NetPack, _ common.Conn) {
+	Rpc_gateway_relay(req, func(backBuf *common.NetPack) {
+		ack.ResetHead(backBuf)
+		ack.WriteBuf(backBuf.LeftBuf())
+	})
+}
+func RelayTcp(req, _ *common.NetPack, conn common.Conn) {
+	oldReqKey := req.GetReqKey()
+	Rpc_gateway_relay(req, func(backBuf *common.NetPack) {
+		backBuf.SetReqKey(oldReqKey)
+		conn.WriteMsg(backBuf) //异步回调，不能直接用ack
+	})
+}
 func Rpc_gateway_relay(req *common.NetPack, recvFun func(*common.NetPack)) {
 	rpcId := req.ReadUInt16()     //目标rpc
 	accountId := req.ReadUInt32() //目标玩家
@@ -18,7 +31,7 @@ func Rpc_gateway_relay(req *common.NetPack, recvFun func(*common.NetPack)) {
 	switch module := enum.GetRpcModule(rpcId); module {
 	case "client":
 		if p := GetClientConn(accountId); p != nil {
-			p.CallRpcSafe(rpcId, func(buf *common.NetPack) {
+			p.CallRpc(rpcId, func(buf *common.NetPack) {
 				buf.WriteBuf(args)
 			}, recvFun)
 			errcode = 0
@@ -26,7 +39,7 @@ func Rpc_gateway_relay(req *common.NetPack, recvFun func(*common.NetPack)) {
 	case "game":
 		if id := GetGameId(accountId); id > 0 {
 			if p, ok := netConfig.GetGameRpc(id); ok {
-				p.CallRpcSafe(enum.Rpc_recv_player_msg, func(buf *common.NetPack) {
+				p.CallRpc(enum.Rpc_recv_player_msg, func(buf *common.NetPack) {
 					buf.WriteUInt16(rpcId)
 					buf.WriteUInt32(accountId)
 					buf.WriteBuf(args)
@@ -52,7 +65,7 @@ func Rpc_gateway_relay(req *common.NetPack, recvFun func(*common.NetPack)) {
 		}
 		if pMeta != nil {
 			if p, ok := netConfig.GetRpc1(pMeta); ok {
-				p.CallRpcSafe(rpcId, func(buf *common.NetPack) {
+				p.CallRpc(rpcId, func(buf *common.NetPack) {
 					buf.WriteBuf(args)
 				}, recvFun)
 				errcode = 0

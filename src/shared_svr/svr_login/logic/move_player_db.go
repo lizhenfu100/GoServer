@@ -23,7 +23,7 @@ import (
 	"time"
 )
 
-func Rpc_login_move_player_db(req, ack *common.NetPack) {
+func Rpc_login_move_player_db(req, ack *common.NetPack, _ common.Conn) {
 	gameName := req.ReadString()
 	version := req.ReadString()
 	accountName := req.ReadString()
@@ -70,14 +70,14 @@ func Rpc_login_move_player_db(req, ack *common.NetPack) {
 				buf.WriteInt(gameSvrId)
 			}, func(recvBuf *common.NetPack) {
 				errCode = recvBuf.ReadUInt16()
-				cache.Rpc_login_del_account_cache(recvBuf, nil)
+				cache.Rpc_login_del_account_cache(recvBuf, nil, nil)
 			})
 		}
 	}
 }
 func _MovePlayer(pGame netConfig.Rpc, accountId uint32, data []byte) uint16 {
 	c := make(chan uint16, 1)
-	pGame.CallRpcSafe(enum.Rpc_game_move_player_db2, func(buf *common.NetPack) {
+	pGame.CallRpc(enum.Rpc_game_move_player_db2, func(buf *common.NetPack) {
 		buf.WriteUInt32(accountId)
 		buf.WriteBuf(data)
 	}, func(recvBuf *common.NetPack) {
@@ -87,7 +87,7 @@ func _MovePlayer(pGame netConfig.Rpc, accountId uint32, data []byte) uint16 {
 }
 func _MoveSave(pGame netConfig.Rpc, version, uid, pf_id string, data []byte) uint16 {
 	c := make(chan uint16, 1)
-	pGame.CallRpcSafe(enum.Rpc_get_meta, func(buf *common.NetPack) {
+	pGame.CallRpc(enum.Rpc_get_meta, func(buf *common.NetPack) {
 		buf.WriteString("save")
 		buf.WriteString(version)
 		buf.WriteByte(common.Core)

@@ -32,16 +32,16 @@
 package player
 
 import (
+	"common"
 	"common/service"
 	"dbmgo"
 	"gamelog"
-	"nets/tcp"
 	"sync/atomic"
 	"time"
 )
 
 const (
-	kIdleMinuteMax = 5 //须客户端心跳包
+	kIdleMinuteMax = 60 * 24 //须客户端心跳包
 	kDBPlayer      = "Player"
 )
 
@@ -58,7 +58,7 @@ type TPlayerBase struct { //Optimize：hash accountId分库分表
 type TPlayer struct {
 	_isOnlnie int32
 	_idleMin  uint32 //每次收到消息时归零
-	conn      *tcp.TCPConn
+	conn      common.Conn
 
 	/* --- db data --- */
 	TPlayerBase
@@ -129,7 +129,7 @@ func (self *TPlayer) WriteAllToDB() {
 		v.WriteToDB()
 	}
 }
-func (self *TPlayer) Login(conn *tcp.TCPConn) {
+func (self *TPlayer) Login(conn common.Conn) {
 	gamelog.Debug("Login: aid(%d), %s", self.AccountID, self.Name)
 	if atomic.SwapInt32(&self._isOnlnie, 1) == 0 {
 		atomic.AddInt32(&g_online_cnt, 1)

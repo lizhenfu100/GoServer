@@ -57,9 +57,9 @@ func RunNetSvr(block bool) {
 	fmt.Printf("-------%s(%d %d) start-------\n", module, svrId, meta.G_Local.Port())
 	if local := meta.G_Local; local.HttpPort > 0 {
 		http.InitSvr(module, svrId)
-		http2.NewHttpServer(local.HttpPort, block)
+		http2.NewServer(local.HttpPort, block)
 	} else if local.TcpPort > 0 {
-		tcp.NewTcpServer(local.TcpPort, local.Maxconn, block)
+		tcp.NewServer(local.TcpPort, local.Maxconn, block)
 	}
 }
 
@@ -86,7 +86,7 @@ func ConnectModuleTcp(dest *meta.Meta, cb func(*tcp.TCPConn)) {
 		client = new(tcp.TCPClient)
 		g_clients.Store(std.KeyPair{dest.Module, dest.SvrID}, client)
 	}
-	client.ConnectToSvr(tcp.Addr(dest.IP, dest.TcpPort), cb)
+	client.Connect(tcp.Addr(dest.IP, dest.TcpPort), cb)
 }
 
 var g_clients sync.Map //<{module,svrId}, *tcp.TCPClient> //本模块主动连其它模块的tcp

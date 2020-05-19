@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"gamelog"
 	"netConfig/meta"
-	"nets/tcp"
 	zk "shared_svr/zookeeper/logic"
 	"strconv"
 	"strings"
@@ -23,8 +22,7 @@ func RegCmd(key string, f cmdFunc) {
 	}
 	g_cmds[key] = f
 }
-func _Rpc_gm_cmd1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_gm_cmd(req, ack) }
-func _Rpc_gm_cmd(req, ack *common.NetPack) {
+func _Rpc_gm_cmd(req, ack *common.NetPack, _ common.Conn) {
 	cmd := req.ReadString()
 	args_ := req.ReadString()
 	args := strings.Split(args_, " ")

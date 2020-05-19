@@ -114,11 +114,13 @@ func relay_gm_cmd(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 }
-func relay_tcp(w io.Writer, addr string, rpcId uint16, sendFun func(*common.NetPack), recvFun func(chan []byte, *common.NetPack)) {
+func relay_tcp(w io.Writer, addr string, rpcId uint16,
+	sendFun func(*common.NetPack),
+	recvFun func(chan []byte, *common.NetPack)) {
 	c := make(chan []byte, 1)
 	var client tcp.TCPClient
-	client.ConnectToSvr(addr, func(conn *tcp.TCPConn) {
-		conn.CallRpcSafe(rpcId, sendFun, func(recvBuf *common.NetPack) {
+	client.Connect(addr, func(conn *tcp.TCPConn) {
+		conn.CallRpc(rpcId, sendFun, func(recvBuf *common.NetPack) {
 			recvFun(c, recvBuf) //recvBuf生命周期仅限回调函数
 		})
 	})

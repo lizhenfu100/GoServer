@@ -70,7 +70,7 @@ type TGiftPlayer struct { //玩家领取过的礼包
 }
 
 // ------------------------------------------------------------
-func Rpc_gm_gift_get(req, ack *common.NetPack) {
+func Rpc_gm_gift_get(req, ack *common.NetPack, _ common.Conn) {
 	code := req.ReadString() //礼包码
 	uuid := req.ReadString()
 	pf_id := req.ReadString()

@@ -22,7 +22,7 @@ type TCPClient struct {
 
 func Addr(ip string, port uint16) string { return fmt.Sprintf("%s:%d", ip, port) }
 
-func (self *TCPClient) ConnectToSvr(addr string, cb func(*TCPConn)) {
+func (self *TCPClient) Connect(addr string, cb func(*TCPConn)) {
 	if self.addr != addr {
 		self.addr = addr
 		self.onConnect = cb
@@ -79,7 +79,7 @@ func (self *TCPClient) Close() {
 		self.Conn = nil
 	}
 }
-func _Rpc_svr_accept(req, ack *common.NetPack, conn *TCPConn) {
+func _Rpc_svr_accept(req, ack *common.NetPack, conn common.Conn) {
 	self := conn.GetUser().(*TCPClient)
 	self.connId = req.ReadUInt32()
 	if self.onConnect != nil {

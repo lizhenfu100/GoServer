@@ -4,7 +4,7 @@ import (
 	"common/timer"
 	"common/tool/usage"
 	"conf"
-	"nets/tcp"
+	"nets/rpc"
 	"svr_game/player"
 	"time"
 )
@@ -21,7 +21,7 @@ func MainLoop() {
 
 		player.G_ServiceMgr.RunAllService(timeElapse, timeNow)
 		timer.Refresh(timeElapse, timeNow)
-		tcp.G_RpcQueue.Update()
+		rpc.G_RpcQueue.Update()
 
 		if timeElapse < conf.FPS_GameSvr {
 			time.Sleep(time.Duration(conf.FPS_GameSvr-timeElapse) * time.Millisecond)

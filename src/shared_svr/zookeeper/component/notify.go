@@ -2,8 +2,13 @@
 * @ 供其它节点引用的zookeeper组件
 * @ brief
     1、init()中须手动注册Rpc，代码生成器仅捕获模块自己目录下的
-
     2、每个节点连上zookeeper时，下发它要主动连接的节点，再通知要连接它的那些节点
+
+* @ AWS竞价实例【小概率被强制回收】
+	· 绝大多数节点可无状态化，只需要固定的数据库、配置文件存放处即可
+	· 客户端会缓存ip的，不适合：gateway、sdk、login
+	· AWS通知回收，通告该设备的关联节点，删meta
+	· 自动竞价买新的，自动构建csv配置（咋构建？），启动即可
 
 * @ author zhoumf
 * @ date 2018-3-13
@@ -16,14 +21,13 @@ import (
 	"netConfig"
 	"netConfig/meta"
 	"nets/http"
+	"nets/rpc"
 	"nets/tcp"
 )
 
 func init() {
-	tcp.G_HandleFunc[enum.Rpc_node_join] = _Rpc_node_join1
-	http.G_HandleFunc[enum.Rpc_node_join] = _Rpc_node_join
-	tcp.G_HandleFunc[enum.Rpc_node_quit] = _Rpc_node_quit1
-	http.G_HandleFunc[enum.Rpc_node_quit] = _Rpc_node_quit
+	rpc.G_HandleFunc[enum.Rpc_node_join] = _Rpc_node_join
+	rpc.G_HandleFunc[enum.Rpc_node_quit] = _Rpc_node_quit
 }
 func RegisterToZookeeper() {
 	if pZoo := meta.GetMeta(meta.Zookeeper, 0); pZoo != nil {
@@ -50,14 +54,12 @@ func RegisterToZookeeper() {
 }
 
 //有服务节点加入，zoo通告相应客户节点
-func _Rpc_node_join1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_node_join(req, ack) }
-func _Rpc_node_join(req, ack *common.NetPack) {
+func _Rpc_node_join(req, ack *common.NetPack, _ common.Conn) {
 	pMeta := new(meta.Meta)
 	pMeta.BufToData(req)
 	netConfig.ConnectModule(pMeta)
 }
-func _Rpc_node_quit1(req, ack *common.NetPack, _ *tcp.TCPConn) { _Rpc_node_quit(req, ack) }
-func _Rpc_node_quit(req, ack *common.NetPack) {
+func _Rpc_node_quit(req, ack *common.NetPack, _ common.Conn) {
 	module := req.ReadString()
 	svrID := req.ReadInt()
 	meta.DelMeta(module, svrID)

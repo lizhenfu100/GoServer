@@ -2,21 +2,10 @@
 
 package conf
 
-import "sync"
+import "sync/atomic"
 
-var (
-	_csv		 *csv
-	_csvMutex sync.Mutex
-)
+var _csv atomic.Value
 
-func Csv() *csv {
-	_csvMutex.Lock()
-	ret := _csv //拷贝到栈上
-	_csvMutex.Unlock()
-	return ret
-}
-func (v *csv) Init() {
-	_csvMutex.Lock()
-	_csv = v
-	_csvMutex.Unlock()
-}
+func Csv() *csv { return _csv.Load().(*csv) }
+func NilCsv() *csv { return nil }
+func (v *csv) Init() { _csv.Store(v) } //一块全新内存

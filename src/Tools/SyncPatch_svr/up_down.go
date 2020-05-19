@@ -70,7 +70,7 @@ func _upload_file(r *http.Request, baseDir string) string {
 	return fullname
 }
 
-func Rpc_file_update_list(req, ack *common.NetPack) {
+func Rpc_file_update_list(req, ack *common.NetPack, _ common.Conn) {
 	version := req.ReadString()
 	destFolder := req.ReadString()
 
@@ -92,7 +92,7 @@ func Rpc_file_update_list(req, ack *common.NetPack) {
 		ack.SetUInt32(posInBuf, count)
 	}
 }
-func Rpc_file_delete(req, ack *common.NetPack) {
+func Rpc_file_delete(req, ack *common.NetPack, _ common.Conn) {
 	for cnt, i := req.ReadInt(), 0; i < cnt; i++ {
 		name := kFileDirPatch + req.ReadString()
 		g_file_md5.Delete(name)

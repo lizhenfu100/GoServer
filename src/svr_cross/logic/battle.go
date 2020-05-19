@@ -21,7 +21,7 @@ var (
 
 // ------------------------------------------------------------
 // - 将svr_game中的玩家属性数据发到svr_battle
-func Rpc_cross_relay_battle_data(req, _ *common.NetPack, conn *tcp.TCPConn) {
+func Rpc_cross_relay_battle_data(req, _ *common.NetPack, conn common.Conn) {
 	version := req.ReadString()
 	args := req.LeftBuf()
 	svrId := _SelectBattleSvrId(version)
@@ -33,7 +33,7 @@ func Rpc_cross_relay_battle_data(req, _ *common.NetPack, conn *tcp.TCPConn) {
 	gamelog.Debug("select battle: %d", svrId)
 
 	oldReqKey := req.GetReqKey()
-	netConfig.CallRpcBattle(svrId, enum.Rpc_battle_handle_player_data, func(buf *common.NetPack) {
+	CallRpcBattle(svrId, enum.Rpc_battle_handle_player_data, func(buf *common.NetPack) {
 		buf.WriteBuf(args)
 	}, func(backBuf *common.NetPack) {
 		playerCnt := backBuf.ReadUInt32() //选中战斗服的已有人数
@@ -67,9 +67,27 @@ func _SelectBattleSvrId(version string) int {
 	return -1
 }
 
+var g_cache_battle = make(map[int]*tcp.TCPConn)
+
+func CallRpcBattle(svrId int, rid uint16, sendFun, recvFun func(*common.NetPack)) {
+	if conn := GetBattleConn(svrId); conn != nil {
+		conn.CallEx(rid, sendFun, recvFun)
+	} else {
+		gamelog.Error("battle nil: svrId(%d) rpcId(%d)", svrId, rid)
+	}
+}
+func GetBattleConn(svrId int) *tcp.TCPConn {
+	conn, _ := g_cache_battle[svrId]
+	if conn == nil || conn.IsClose() {
+		conn = netConfig.GetTcpConn("battle", svrId)
+		g_cache_battle[svrId] = conn
+	}
+	return conn
+}
+
 // ------------------------------------------------------------
 // - 转至svr_game
-func Rpc_cross_relay_to_game(req, ack *common.NetPack, conn *tcp.TCPConn) {
+func Rpc_cross_relay_to_game(req, ack *common.NetPack, conn common.Conn) {
 	svrId := req.ReadInt()
 	args := req.LeftBuf() //头两字段须是：rid、aid
 	if p, ok := netConfig.GetGameRpc(svrId); ok {

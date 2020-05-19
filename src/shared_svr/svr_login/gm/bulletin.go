@@ -43,7 +43,7 @@ type Bulletins struct {
 	Pf    map[string]Bulletin
 }
 
-func Rpc_login_bulletin(req, ack *common.NetPack) {
+func Rpc_login_bulletin(req, ack *common.NetPack, _ common.Conn) {
 	language := req.ReadString()
 	pf_id := req.ReadString()
 	pAll, ret, timenow := &Bulletins{}, "", time.Now().Unix()

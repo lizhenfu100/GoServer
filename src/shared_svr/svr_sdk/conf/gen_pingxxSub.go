@@ -2,21 +2,10 @@
 
 package conf
 
-import "sync"
+import "sync/atomic"
 
-var (
-	_pingxxSub pingxxSub
-	_mutex	sync.Mutex
-)
+var _pingxxSub atomic.Value
 
-func PingxxSub() pingxxSub {
-	_mutex.Lock()
-	ret := _pingxxSub //拷贝到栈上
-	_mutex.Unlock()
-	return ret
-}
-func (v pingxxSub) Init() {
-	_mutex.Lock()
-	_pingxxSub = v
-	_mutex.Unlock()
-}
+func PingxxSub() pingxxSub { return _pingxxSub.Load().(pingxxSub) }
+func NilPingxxSub() pingxxSub { return nil }
+func (v pingxxSub) Init() { _pingxxSub.Store(v) } //一块全新内存

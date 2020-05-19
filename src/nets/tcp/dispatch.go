@@ -1,34 +1,16 @@
-// +build !tcp_multi
+// +build !net_multi
 
 package tcp
 
 import (
 	"bufio"
 	"common"
+	"common/assert"
 	"encoding/binary"
 	"gamelog"
 	"io"
+	"nets/rpc"
 )
-
-func (self *RpcQueue) Insert(conn *TCPConn, msg *common.NetPack) {
-	select {
-	case self.queue <- objMsg{conn, msg}:
-	default:
-		gamelog.Error("RpcQueue Insert: channel full")
-		conn.Close()
-	}
-}
-func (self *RpcQueue) Update() { //主循环，每帧调一次
-	for {
-		select {
-		case v := <-self.queue:
-			self._Handle(v.conn, v.msg, self.backBuf)
-			v.msg.Free()
-		default:
-			return
-		}
-	}
-}
 
 type netbuf struct{ *bufio.Reader }
 
@@ -37,7 +19,7 @@ func (b *netbuf) Init(r io.Reader) { b.Reader = bufio.NewReader(r) }
 func (self *TCPConn) readLoop() {
 	var err error
 	var msgLen int
-	for msgHead, q, r := make([]byte, kHeadLen), &G_RpcQueue, self.reader.Reader; ; {
+	for msgHead, q, r := make([]byte, kHeadLen), &rpc.G_RpcQueue, self.reader.Reader; ; {
 		if self.IsClose() {
 			break
 		}
@@ -60,4 +42,16 @@ func (self *TCPConn) readLoop() {
 	}
 	self.Close()
 	self.writer.Stop() //stop writeLoop
+}
+
+var _sendBuf = common.NewNetPackCap(64) //单线程CallRpc复用
+
+//Notice：非线程安全的，仅供主逻辑线程调用
+func (self *TCPConn) CallEx(msgId uint16, sendFun, recvFun func(*common.NetPack)) {
+	req := _sendBuf
+	assert.True(req.GetMsgId() == 0) //中途不能再CallRpc，同个sendBuf被覆盖
+	rpc.MakeReq(req, msgId, sendFun, recvFun)
+	self.WriteMsg(req)
+	req.SetMsgId(0)
+	req.ClearBody()
 }

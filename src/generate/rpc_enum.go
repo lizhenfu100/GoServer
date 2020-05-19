@@ -30,10 +30,7 @@ import (
 // -------------------------------------
 // 收集各处的 Rpc 函数名
 func addRpc_Go(funcs map[string]struct{}, info *RpcInfo) {
-	for _, v := range info.TcpRpc {
-		funcs[v.Name] = struct{}{}
-	}
-	for _, v := range info.HttpRpc {
+	for _, v := range info.ConnRpc {
 		funcs[v.Name] = struct{}{}
 	}
 	for _, v := range info.PlayerRpc {

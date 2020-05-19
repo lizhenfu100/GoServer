@@ -22,6 +22,7 @@ import (
 	"generate_out/rpc/enum"
 	"netConfig"
 	"netConfig/meta"
+	"nets/tcp"
 )
 
 type Team struct {
@@ -78,7 +79,7 @@ func Rpc_game_battle_begin(req, ack *common.NetPack, this *TPlayer) {
 	}
 	gameMode := req.ReadUInt8()
 
-	netConfig.CallRpcCross(enum.Rpc_cross_relay_battle_data, func(buf *common.NetPack) {
+	CallRpcCross(enum.Rpc_cross_relay_battle_data, func(buf *common.NetPack) {
 		buf.WriteString(meta.G_Local.Version)
 		buf.WriteUInt8(gameMode)
 		this.team.DataToBuf(buf)
@@ -104,6 +105,27 @@ func Rpc_game_battle_begin(req, ack *common.NetPack, this *TPlayer) {
 		}, nil)
 	}
 }
+
+var g_cache_cross = make(map[int]*tcp.TCPConn)
+
+func CallRpcCross(rid uint16, sendFun, recvFun func(*common.NetPack)) {
+	if p := meta.GetByRand("cross"); p != nil {
+		if conn := GetCrossConn(p.SvrID); conn != nil {
+			conn.CallEx(rid, sendFun, recvFun)
+			return
+		}
+	}
+	gamelog.Error("cross nil: rpcId(%d)", rid)
+}
+func GetCrossConn(svrId int) *tcp.TCPConn {
+	conn, _ := g_cache_cross[svrId]
+	if conn == nil || conn.IsClose() {
+		conn = netConfig.GetTcpConn("cross", svrId)
+		g_cache_cross[svrId] = conn
+	}
+	return conn
+}
+
 func Rpc_game_exit_team(req, ack *common.NetPack, this *TPlayer) {
 	accountId := req.ReadUInt32()
 
