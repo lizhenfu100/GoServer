@@ -88,14 +88,7 @@ func (self *UDPConn) CallRpc(msgId uint16, sendFun, recvFun func(*common.NetPack
 	req.Free()
 }
 func (self *UDPConn) WriteMsg(msg *common.NetPack) {
-	w := &self.writer
-	if w.Lock(); len(w.Cur) < Writer_Cap {
-		w.Cur = append(w.Cur, byte(msg.Size()), byte(msg.Size()>>8))
-		w.Cur = append(w.Cur, msg.Data()...)
-		w.Unlock()
-		w.Signal()
-	} else {
-		w.Unlock()
+	if self.writer.AddMsg(msg.Data(), msg.Size()) > Writer_Cap {
 		self.Close()
 	}
 }
@@ -103,7 +96,7 @@ func (self *UDPConn) WriteBuf(buf []byte) { self.writer.Add(buf) }
 func (self *UDPConn) writeLoop() { //TODO:zhoumf:UDP并包，一次发个MTU大小
 loop:
 	for {
-		b := self.writer.Get() //block
+		b := self.writer.WaitGet() //block
 		for pos, total := 0, len(b); ; {
 			if n, e := self.conn.WriteToUDP(b[pos:], self.addr); e != nil {
 				gamelog.Debug(e.Error())

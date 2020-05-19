@@ -130,14 +130,7 @@ func (self *TCPConn) CallRpc(msgId uint16, sendFun, recvFun func(*common.NetPack
 	req.Free()
 }
 func (self *TCPConn) WriteMsg(msg *common.NetPack) {
-	w := &self.writer
-	if w.Lock(); len(w.Cur) < Writer_Cap {
-		w.Cur = append(w.Cur, byte(msg.Size()), byte(msg.Size()>>8))
-		w.Cur = append(w.Cur, msg.Data()...)
-		w.Unlock()
-		w.Signal()
-	} else {
-		w.Unlock()
+	if self.writer.AddMsg(msg.Data(), msg.Size()) > Writer_Cap {
 		self.Close()
 	}
 }
@@ -145,7 +138,7 @@ func (self *TCPConn) WriteBuf(buf []byte) { self.writer.Add(buf) }
 func (self *TCPConn) writeLoop() {
 loop:
 	for {
-		b := self.writer.Get() //block
+		b := self.writer.WaitGet() //block
 		for pos, total := 0, len(b); ; {
 			if n, e := self.conn.Write(b[pos:]); e != nil {
 				gamelog.Debug(e.Error())

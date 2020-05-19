@@ -48,7 +48,7 @@ func (p *Chan) Add(v interface{}) {
 	p.Unlock()
 	p.Signal()
 }
-func (p *Chan) Get() (ret []interface{}) {
+func (p *Chan) WaitGet() (ret []interface{}) {
 	p.Lock()
 	for len(p.cur) == 0 && !p.IsStop {
 		p.Wait()
@@ -69,7 +69,7 @@ type ChanByte struct { //阻塞，单消费者
 	sync.Mutex
 	sync.Cond
 	multi  [2][]byte
-	Cur    []byte
+	cur    []byte
 	cycle  uint8
 	IsStop bool
 }
@@ -78,24 +78,33 @@ func (p *ChanByte) Init(cap uint32) {
 	for i := 0; i < len(p.multi); i++ {
 		p.multi[i] = make([]byte, 0, cap)
 	}
-	p.Cur = p.multi[0]
+	p.cur = p.multi[0]
 	p.Cond.L = &p.Mutex
 }
 func (p *ChanByte) Add(v []byte) {
 	p.Lock()
-	p.Cur = append(p.Cur, v...)
+	p.cur = append(p.cur, v...)
 	p.Unlock()
 	p.Signal()
 }
-func (p *ChanByte) Get() (ret []byte) {
+func (p *ChanByte) AddMsg(buf []byte, size int) int {
 	p.Lock()
-	for len(p.Cur) == 0 && !p.IsStop {
+	p.cur = append(p.cur, byte(size), byte(size>>8))
+	p.cur = append(p.cur, buf...)
+	ret := len(p.cur)
+	p.Unlock()
+	p.Signal()
+	return ret
+}
+func (p *ChanByte) WaitGet() (ret []byte) {
+	p.Lock()
+	for len(p.cur) == 0 && !p.IsStop {
 		p.Wait()
 	}
-	ret = p.Cur
+	ret = p.cur
 	p.cycle = (p.cycle + 1) % uint8(len(p.multi))
-	p.Cur = p.multi[p.cycle]
-	p.Cur = p.Cur[:0]
+	p.cur = p.multi[p.cycle]
+	p.cur = p.cur[:0]
 	p.Unlock()
 	return
 }
