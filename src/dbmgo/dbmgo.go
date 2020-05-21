@@ -191,18 +191,18 @@ func FindAll(table string, search bson.M, pSlice interface{}) error {
 	}
 	return nil
 }
-func Find_Asc(table, key string, cnt int, pList interface{}) error { //升序
+func Find_Asc(table, key string, search bson.M, cnt int, pSlice interface{}) error { //升序
 	sortKey := "+" + key
-	return _find_sort(table, sortKey, cnt, pList)
+	return _find_sort(table, sortKey, search, cnt, pSlice)
 }
-func Find_Desc(table, key string, cnt int, pList interface{}) error { //降序
+func Find_Desc(table, key string, search bson.M, cnt int, pSlice interface{}) error { //降序
 	sortKey := "-" + key
-	return _find_sort(table, sortKey, cnt, pList)
+	return _find_sort(table, sortKey, search, cnt, pSlice)
 }
-func _find_sort(table, sortKey string, cnt int, pList interface{}) error {
+func _find_sort(table, sortKey string, search bson.M, cnt int, pSlice interface{}) error {
 	coll := DB().C(table)
-	query := coll.Find(nil).Sort(sortKey).Limit(cnt)
-	if err := query.All(pList); err != nil && err != mgo.ErrNotFound {
+	query := coll.Find(search).Sort(sortKey).Limit(cnt)
+	if err := query.All(pSlice); err != nil && err != mgo.ErrNotFound {
 		gamelog.Error("FindSort table[%s] sortKey[%s] limit[%d] Error[%v]", table, sortKey, cnt, err)
 		return err
 	}

@@ -7,10 +7,10 @@ import (
 )
 
 // ------------------------------------------------------------
-// -- 动态开关客户端debug日志
+// -- 动态开关客户端debug日志 TODO:zhoumf:迁移至 客户端命令行
 var g_macs sync.Map
 
-func Client_debug_log(args []string) string { //ClientLog ed6a844be9d7a607 1
+func Client_debug_log(args []string) string { //ed6a844be9d7a607 1
 	mac := args[0]
 	open, _ := strconv.Atoi(args[1])
 	if open > 0 {

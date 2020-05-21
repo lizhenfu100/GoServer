@@ -51,4 +51,5 @@ func InitConf() {
 	file.RegCsvType("csv/email/invalid.csv", email.NilInvalidCsv())
 	file.LoadAllCsv()
 	console.Init()
+	console.RegCmd("FlagSwitch", logic.FlagSwitch)
 }

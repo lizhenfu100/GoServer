@@ -107,3 +107,13 @@ func (self *Bulletins) setPlatform(pf_id string, pVal *Bulletin) {
 		dbmgo.Insert(dbmgo.KTableArgs, self)
 	}
 }
+
+// ------------------------------------------------------------
+// 运营用自增id，客户端邮件id
+func Http_get_inc_id(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	if key := q.Get("key"); key != "" {
+		id := dbmgo.GetNextIncId(key)
+		w.Write(common.S2B(strconv.FormatInt(int64(id), 10)))
+	}
+}

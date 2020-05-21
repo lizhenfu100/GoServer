@@ -145,14 +145,10 @@ func Http_show_backup_file(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	if len(files) > 0 {
+		addr := fmt.Sprintf("http://%s:%d/save_backup", meta.G_Local.OutIP, meta.G_Local.HttpPort)
+		tmp := backupAck{files, pf_id, uid, addr}
 		t, _ := template.New("").Parse(kTemplate)
-		t.Execute(w, &backupAck{
-			files,
-			pf_id,
-			uid,
-			fmt.Sprintf("http://%s:%d/save_backup",
-				meta.G_Local.OutIP, meta.G_Local.HttpPort),
-		})
+		t.Execute(w, &tmp)
 	} else {
 		w.Write([]byte("none backup data"))
 	}

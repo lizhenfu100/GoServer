@@ -105,6 +105,21 @@ func _banToCenter(ack *common.NetPack, ip string) bool {
 	return false
 }
 
+func FlagSwitch(args []string) string { //banLogin 0
+	switch falg, open := args[0], args[1] == "0"; falg {
+	case "banLogin":
+		if G_banLogin = open; !open {
+			timer.AddTimer(func() {
+				logic.G_banLogin = true
+			}, 3600, 0, 0)
+		}
+	default:
+		return "fail"
+	}
+	return args[0] + " " + args[1]
+}
+
+
 // ------------------------------------------------------------
 // -- 邮件注册账户
 func _NeedVerifyEmail(emailAddr, passwd string) (errcode uint16) {

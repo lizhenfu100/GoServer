@@ -53,6 +53,7 @@ func init() {
 		"/backup_conf":     relay_to_save,
 		"/backup_force":    relay_to_save,
 		"/relay_gm_cmd":    relay_gm_cmd,
+		"/client_cmd":      relay_to,
 		"/gift_bag_add":    relay_to,
 		"/gift_bag_set":    relay_to,
 		"/gift_bag_view":   relay_to,

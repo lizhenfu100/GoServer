@@ -58,15 +58,15 @@ var (
 		},
 		"zhmr": {
 			Logins: []TLogin{
-				{Name: "华南", Addrs: []string{"http://52.82.37.128:7030"}},
+				{Name: "China", Addrs: []string{"http://52.82.37.128:7030"}},
 			},
 			pf_id: conf.G_Platform,
 		},
-		//"DungeonOfWeirdos": {
-		//	Logins: []TLogin{
-		//		{Name: "华南", Addrs: []string{"http://52.82.109.217:7030"}},
-		//	},
-		//	Pf_id: conf.G_Platform,
-		//},
+		"DungeonOfWeirdos": {
+			Logins: []TLogin{
+				{Name: "China", Addrs: []string{"http://52.82.37.128:7030"}},
+			},
+			pf_id: conf.G_Platform,
+		},
 	}
 )

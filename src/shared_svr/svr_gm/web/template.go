@@ -175,9 +175,19 @@ func UpdateHtml(fileIn, fileOut string, ptr interface{}) {
 func (*TCommon) LocalAddr() string {
 	return http.Addr(meta.G_Local.OutIP, meta.G_Local.HttpPort)
 }
-func (self *TemplateData) AddrLogin(idx int) string {
-	if idx < len(self.Logins) {
-		return self.Logins[idx].Addrs[0]
+func (self *TemplateData) AddrLogin(region string) string { //China,America...
+	for _, v := range self.Logins {
+		if strings.Index(v.Name, region) >= 0 {
+			return v.Addrs[0]
+		}
+	}
+	return ""
+}
+func (self *TemplateData) AddrGM(region string) string { //China,America...
+	for _, v := range self.Logins {
+		if strings.Index(v.Name, region) >= 0 {
+			return v.GM
+		}
 	}
 	return ""
 }

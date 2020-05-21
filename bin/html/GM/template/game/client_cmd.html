@@ -1,0 +1,32 @@
+<html>
+
+<head>
+    <title>客户端命令行</title>
+    <link rel="stylesheet" href="main.css">
+    <script src="app.js"></script>
+</head>
+
+<body bgcolor="white">
+    <div class="all-wrapper">
+        <h1>客户端命令行</h1>
+        <div class="form-wrapper">
+            <form action="{{.LocalAddr}}/client_cmd" method="get">
+                <label>大区:</label>
+                <select name="_list">
+                    <option value="{{.SplitLogin1}}">China</option>
+                    {{range .SplitLogin2}}
+                        <option value="{{index .Addrs 0}}">{{.Name}}</option>
+                    {{end}}
+                </select>
+                <label>权限密码:</label>
+                <input type="password" name="passwd"><br>
+                <label>命令行:</label>
+                <input type="text" name="cmd" placeholder="客户端自定义解析"><br>
+                <br>
+                <input type="submit" value="确认">
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

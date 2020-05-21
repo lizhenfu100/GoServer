@@ -87,9 +87,9 @@ func (p *ChanByte) Add(v []byte) {
 	p.Unlock()
 	p.Signal()
 }
-func (p *ChanByte) AddMsg(buf []byte, size int) int {
+func (p *ChanByte) AddMsg(buf []byte) int {
 	p.Lock()
-	p.cur = append(p.cur, byte(size), byte(size>>8))
+	p.cur = append(p.cur, byte(len(buf)), byte(len(buf)>>8))
 	p.cur = append(p.cur, buf...)
 	ret := len(p.cur)
 	p.Unlock()

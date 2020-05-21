@@ -130,7 +130,7 @@ func (self *TCPConn) CallRpc(msgId uint16, sendFun, recvFun func(*common.NetPack
 	req.Free()
 }
 func (self *TCPConn) WriteMsg(msg *common.NetPack) {
-	if self.writer.AddMsg(msg.Data(), msg.Size()) > Writer_Cap {
+	if self.writer.AddMsg(msg.Data()) > Writer_Cap {
 		self.Close()
 	}
 }
