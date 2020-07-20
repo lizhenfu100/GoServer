@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gamelog"
+	"generate_out/err"
 	"math/rand"
 	"net/url"
 	"nets/http"
@@ -24,6 +25,8 @@ var (
 	g_code  sync.Map
 	_keyId  string
 	_secret string
+
+	G_Switch = true
 )
 
 type Code struct {
@@ -31,24 +34,30 @@ type Code struct {
 	T int64
 }
 
-func SendCode(phone string) {
+func SendCode(phone string) uint16 {
 	if !g_freq.Check(phone) {
-		return
+		return err.Success
+	}
+	if !G_Switch {
+		return err.Closed_by_gm
 	}
 	code := MakeCode()
 	req, ack := MakeUrl(phone, code.V), smsAck{}
 	if buf := http.Client.Get(req); buf == nil {
-		gamelog.Error("SendSms: failed")
+		return err.Net_err_try_again
 	} else if json.Unmarshal(buf, &ack); ack.Code != "OK" {
 		gamelog.Error("%s : %s", ack.Code, ack.Message)
+		return err.SMS_unreachable
 	} else {
 		g_code.Store(phone, code)
+		return err.Success
 	}
 }
 func MakeCode() Code {
 	s := make([]byte, 6)
-	for i := 0; i < len(s); i++ {
-		s[i] = []byte("0123456789")[rand.Intn(10)]
+	for i, r := 0, rand.Uint32(); i < len(s); i++ {
+		s[i] = []byte("12345678")[r&7]
+		r >>= 3 //3bit覆盖8个数字
 	}
 	return Code{common.B2S(s), time.Now().Unix()}
 }
@@ -66,7 +75,7 @@ func CheckCode(phone, code string) bool {
 // ------------------------------------------------------------
 const (
 	kUrlSend    = "https://dysmsapi.aliyuncs.com/?Signature="
-	kTemplateId = "SMS_184830407"
+	kTemplateId = "SMS_184830407" //chillyroom 账号
 	kName       = "凉屋游戏"
 )
 

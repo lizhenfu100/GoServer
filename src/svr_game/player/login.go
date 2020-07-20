@@ -17,25 +17,12 @@ package player
 import (
 	"common"
 	"generate_out/err"
-	"sync"
 	"sync/atomic"
 )
 
-func Rpc_game_player_info(req, ack *common.NetPack, this *TPlayer) {
-	ack.WriteString(this.Name)
-}
-func Rpc_game_player_set_name(req, ack *common.NetPack, this *TPlayer) {
-	this.Name = req.ReadString()
-}
-
-// -------------------------------------
-// -- 后台账号验证
-var g_tokens sync.Map //<accountId, token>
-
 func Rpc_set_identity(req, ack *common.NetPack, conn common.Conn) {
-	token := req.ReadUInt32()
+	req.ReadUInt32() //token
 	accountId := req.ReadUInt32()
-	g_tokens.Store(accountId, token)
 	cnt := atomic.LoadInt32(&g_online_cnt)
 	ack.WriteInt32(cnt + 1)
 	//单角色的游戏，自动建号、检查
@@ -52,9 +39,9 @@ func Rpc_set_identity(req, ack *common.NetPack, conn common.Conn) {
 		ptr.Login(conn)
 	}
 }
-func CheckLoginToken(accountId, token uint32) bool {
-	if value, ok := g_tokens.Load(accountId); ok {
-		return token == value
-	}
-	return false
+func Rpc_game_player_info(req, ack *common.NetPack, this *TPlayer) {
+	ack.WriteString(this.Name)
+}
+func Rpc_game_player_set_name(req, ack *common.NetPack, this *TPlayer) {
+	this.Name = req.ReadString()
 }

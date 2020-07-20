@@ -135,10 +135,15 @@ func (self *TSeasonModule) Clear() {
 // ------------------------------------------------------------
 // -- rpc
 func Rpc_game_season_info(req, ack *common.NetPack, this *TPlayer) { //客户端界面查看赛季信息
-	if this.season.TimeBegin != season.G_Args.TimeBgein {
-		this.season.Clear()
+	p, g := &this.season, &season.G_Args
+	if p.TimeBegin != g.TimeBgein {
+		p.Clear()
 	}
-	ack.WriteInt(this.season.Score)
-	ack.WriteUInt8(this.season.calcLv())
-	ack.WriteInt(this.season.GetRank()) //仅最高档有排名，其余为-1
+	ack.WriteInt(p.Score)
+	ack.WriteUInt8(p.calcLv())
+	ack.WriteInt(p.GetRank()) //仅最高档有排名，其余为-1
+	cf := conf.Csv().Season_Begin_Month
+	ack.WriteUInt8(g.Idx)
+	ack.WriteUInt8(uint8(cf[g.Idx]))
+	ack.WriteUInt8(uint8(cf[g.Idx+1]))
 }

@@ -75,7 +75,7 @@ func Rpc_login_move_player_db(req, ack *common.NetPack, _ common.Conn) {
 		}
 	}
 }
-func _MovePlayer(pGame netConfig.Rpc, accountId uint32, data []byte) uint16 {
+func _MovePlayer(pGame common.Conn, accountId uint32, data []byte) uint16 {
 	c := make(chan uint16, 1)
 	pGame.CallRpc(enum.Rpc_game_move_player_db2, func(buf *common.NetPack) {
 		buf.WriteUInt32(accountId)
@@ -85,7 +85,7 @@ func _MovePlayer(pGame netConfig.Rpc, accountId uint32, data []byte) uint16 {
 	})
 	return _Wait(c, err.None_game_server)
 }
-func _MoveSave(pGame netConfig.Rpc, version, uid, pf_id string, data []byte) uint16 {
+func _MoveSave(pGame common.Conn, version, uid, pf_id string, data []byte) uint16 {
 	c := make(chan uint16, 1)
 	pGame.CallRpc(enum.Rpc_get_meta, func(buf *common.NetPack) {
 		buf.WriteString("save")

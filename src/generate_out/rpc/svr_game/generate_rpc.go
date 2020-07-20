@@ -11,6 +11,8 @@ import (
 func init() {
 	
 		nets.RegRpc(map[uint16]nets.RpcFunc{
+			enum.Rpc_game_player_agrs_set: player.Rpc_game_player_agrs_set,
+			enum.Rpc_game_player_agrs_get: player.Rpc_game_player_agrs_get,
 			enum.Rpc_game_permit_player: player.Rpc_game_permit_player,
 			enum.Rpc_game_whitelist_add: player.Rpc_game_whitelist_add,
 			enum.Rpc_game_whitelist_del: player.Rpc_game_whitelist_del,

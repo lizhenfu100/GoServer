@@ -25,7 +25,7 @@ func checkReq(s, fileName string, lineNum int) {
 		fmt.Println("Error: upvalue req:", fileName, lineNum)
 	}
 }
-func spaceCnt(line string) (ret int) {
+func spaceCnt(line string) (ret int) { //本行起始，有多少空格
 	for _, v := range line {
 		if v == '	' {
 			ret += 1

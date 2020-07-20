@@ -13,8 +13,8 @@
             <form action="{{.LocalAddr}}/client_cmd" method="get">
                 <label>大区:</label>
                 <select name="_list">
-                    <option value="{{.SplitLogin1}}">China</option>
-                    {{range .SplitLogin2}}
+                    <option value="{{.LoginChina}}">China</option>
+                    {{range .LoginForeign}}
                         <option value="{{index .Addrs 0}}">{{.Name}}</option>
                     {{end}}
                 </select>

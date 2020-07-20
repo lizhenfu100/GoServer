@@ -27,13 +27,8 @@ func Init() {
 	rpc.G_HandleFunc[enum.Rpc_timestamp] = _Rpc_timestamp
 	go sigTerm() //监控进程终止信号
 	csv := conf.SvrCsv()
-	wechat.Init( //微信报警
-		csv.WechatCorpId,
-		csv.WechatSecret,
-		csv.WechatAgentId)
-	sms.Init( //短信
-		csv.SmsKeyId,
-		csv.SmsSecret)
+	wechat.Init(csv.WechatCorpId, csv.WechatSecret, csv.WechatAgentId)
+	sms.Init(csv.SmsKeyId, csv.SmsSecret) //短信
 }
 
 func _Rpc_log(req, ack *common.NetPack, _ common.Conn) {
@@ -94,16 +89,7 @@ func _Rpc_timestamp(req, ack *common.NetPack, _ common.Conn) {
 	ack.WriteInt64(time.Now().Unix())
 }
 
-/* TODO:动态加载配置文件，有多线程访问竞态，竞态木问题，写完最终一致的，关键是会不会宕机？配表里头有map~囧
-载入文件、业务更新，分成两步；载入文件单独处理，“业务更新”只需【交换内存引用】
-主逻辑单线程的架构，于帧循环末尾一并刷新配置 …… 本质是找个StopWorld时机
-Http …… 拦截器？
-	拦截生效时，可能有rpc正在读配置 …… 本质还是要找StopWorld时机
-	c++的话，封装下配置类，让【交换内存引用】线程安全
-
-将配置变量私有化、引用语义，get|set原子更改，业务使用的都是旧变量的引用拷贝，原始变量可安全的更改
-	· 运行逻辑是：拷贝出shared_ptr给外部使用，内部shared_ptr指向新内存块即可
-*/
+// 配置变量私有化、引用语义，Get|Set原子接口，业务使用的都是旧变量的引用，每次更改生成份新内存
 func _Rpc_update_file(req, ack *common.NetPack, _ common.Conn) { go _Rpc_update_file1(req, ack) }
 func _Rpc_update_file1(req, ack *common.NetPack) {
 	for cnt, i := req.ReadByte(), byte(0); i < cnt; i++ {

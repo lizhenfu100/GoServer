@@ -26,6 +26,7 @@ type TemplateData struct {
 	pf_id    []std.StrPair
 }
 type TLogin struct {
+	ID    int
 	Name  string
 	Addrs []string //登录节点同质的
 	Games []TGame
@@ -45,18 +46,19 @@ func (self *TemplateData) GetAddrs() {
 	}, func(recvBuf *common.NetPack) {
 	LOOP:
 		for cnt, i := recvBuf.ReadByte(), byte(0); i < cnt; i++ {
-			recvBuf.ReadInt() //svrId
+			svrId := recvBuf.ReadInt()
 			outip := recvBuf.ReadString()
 			port := recvBuf.ReadUInt16()
 			svrName := recvBuf.ReadString()
 			addr := http.Addr(outip, port)
 			for i := 0; i < len(self.Logins); i++ {
-				if self.Logins[i].Name == svrName {
-					self.Logins[i].Addrs = append(self.Logins[i].Addrs, addr)
+				if p := &self.Logins[i]; p.Name == svrName {
+					p.Addrs, p.ID = append(p.Addrs, addr), svrId
 					continue LOOP
 				}
 			}
 			self.Logins = append(self.Logins, TLogin{
+				ID:    svrId,
 				Name:  svrName,
 				Addrs: []string{addr},
 			})
@@ -183,6 +185,18 @@ func (self *TemplateData) AddrLogin(region string) string { //China,America...
 	}
 	return ""
 }
+func (self *TemplateData) addrGame(loginId, gameId int) string {
+	for _, v := range self.Logins {
+		if v.ID == loginId {
+			for _, x := range v.Games {
+				if x.ID == gameId {
+					return x.GameAddr
+				}
+			}
+		}
+	}
+	return ""
+}
 func (self *TemplateData) AddrGM(region string) string { //China,America...
 	for _, v := range self.Logins {
 		if strings.Index(v.Name, region) >= 0 {
@@ -204,6 +218,17 @@ func (self *TemplateData) AddrSave(region string) string { //China,America...
 	}
 	return strings.Join(list, " ")
 }
+func (p *TemplateData) allSave() (ret []string) {
+	for _, v := range p.Logins {
+		for _, v2 := range v.Games {
+			for _, v3 := range v2.SaveAddrs {
+				ret = append(ret, v3)
+			}
+		}
+	}
+	return
+}
+
 func (self *TemplateData) PfidSave() (ret []std.StrPair) { //存档互通的渠道
 	for _, p := range self.pf_id {
 		p.K = strings.ReplaceAll(p.K, " ", "") //剔除空格
@@ -238,7 +263,7 @@ func (self *TemplateData) PfidAll() (ret []std.StrPair) {
 	}
 	return
 }
-func (self *TemplateData) SplitLogin1() string { //分割国区、海外
+func (self *TemplateData) LoginChina() string { //国区登录服
 	var list []string
 	for _, v := range self.Logins {
 		if strings.Index(v.Name, "China") >= 0 {
@@ -247,7 +272,7 @@ func (self *TemplateData) SplitLogin1() string { //分割国区、海外
 	}
 	return strings.Join(list, " ")
 }
-func (self *TemplateData) SplitLogin2() (ret []TLogin) {
+func (self *TemplateData) LoginForeign() (ret []TLogin) { //海外登录服
 	for _, v := range self.Logins {
 		if strings.Index(v.Name, "China") < 0 {
 			ret = append(ret, v)

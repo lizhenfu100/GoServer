@@ -7,5 +7,9 @@ import "sync/atomic"
 var _emailCsv atomic.Value
 
 func EmailCsv() emailCsv { return _emailCsv.Load().(emailCsv) }
-func NilEmailCsv() emailCsv { return nil }
 func (v emailCsv) Init() { _emailCsv.Store(v) } //一块全新内存
+
+var _invalidCsv atomic.Value
+
+func InvalidCsv() invalidCsv { return _invalidCsv.Load().(invalidCsv) }
+func (v invalidCsv) Init() { _invalidCsv.Store(v) } //一块全新内存

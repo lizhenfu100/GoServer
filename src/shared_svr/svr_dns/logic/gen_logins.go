@@ -7,5 +7,4 @@ import "sync/atomic"
 var _logins atomic.Value
 
 func Logins() logins { return _logins.Load().(logins) }
-func NilLogins() logins { return nil }
 func (v logins) Init() { _logins.Store(v) } //一块全新内存

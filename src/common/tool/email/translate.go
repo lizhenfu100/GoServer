@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-//go:generate D:\server\bin\gen_conf.exe emailCsv email
+//go:generate D:\server\bin\gen_conf.exe email emailCsv invalidCsv
 type emailCsv map[string]*struct { // Notice：用支持UTF-8的编辑器写csv，否则容易乱码
 	Title   string
 	En      string
@@ -21,6 +21,9 @@ type emailCsv map[string]*struct { // Notice：用支持UTF-8的编辑器写csv�
 	De      string //德语
 	Ar      string //阿拉伯语
 	Fa      string //波斯语
+}
+type invalidCsv map[string]*struct {
+	Addr string
 }
 
 func Translate(title, language string) (string, bool) {
@@ -38,12 +41,6 @@ func translate(title, language string) (string, bool) {
 		}
 	}
 	return title, false
-}
-
-// ------------------------------------------------------------
-//go:generate D:\server\bin\gen_conf.exe invalidCsv email
-type invalidCsv map[string]*struct {
-	Addr string
 }
 
 func Invalid(addr string) bool {

@@ -2,13 +2,16 @@ package logic
 
 import (
 	"common"
+	"dbmgo"
 	"encoding/json"
 	"fmt"
 	"generate_out/err"
+	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"netConfig/meta"
 	"shared_svr/svr_center/account"
 	"strconv"
+	"strings"
 )
 
 func Http_show_account(w http.ResponseWriter, r *http.Request) {
@@ -44,4 +47,22 @@ func Http_show_account(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.Write([]byte("none account"))
 	}
+}
+func Http_game_info(w http.ResponseWriter, r *http.Request) {
+	q, p := r.URL.Query(), &account.TAccount{}
+	gameName := q.Get("game")
+	var ret [][3]int // aid, loginId, gameId
+	for _, v := range strings.Split(q.Get("v"), ",") {
+		if ok, _ := dbmgo.FindEx(account.KDBTable, bson.M{"$or": []bson.M{
+			{"bindinfo.email": v},
+			{"bindinfo.phone": v},
+			{"bindinfo.name": v},
+		}}, p); ok {
+			if i, ok := p.GameInfo[gameName]; ok {
+				ret = append(ret, [3]int{int(p.AccountID), i.LoginSvrId, i.GameSvrId})
+			}
+		}
+	}
+	b, _ := json.Marshal(ret)
+	w.Write(b)
 }

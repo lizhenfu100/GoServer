@@ -65,7 +65,7 @@ func (b *RingBuf) ReadableBytes() uint32 {
 }
 func (b *RingBuf) WritableBytes() uint32 {
 	kLen := uint32(len(b.buf))
-	if b.r == b.w {
+	if b.w == b.r {
 		return kLen
 	}
 	head := b.w & (kLen - 1) //取余后的头尾

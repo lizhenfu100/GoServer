@@ -78,30 +78,37 @@ func getModuleName(svr string) string {
 
 // -------------------------------------
 // -- 提取 package、RpcFunc
+var (
+	_rpcFuc       = regexp.MustCompile(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack, \w+ common.Conn\)`)
+	_playerRpc    = regexp.MustCompile(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack, this \*.+\)`)
+	_HttpHandle   = regexp.MustCompile(`^func Http_\w+\(\w+ http.ResponseWriter, \w+ \*http.Request\)`)
+	_RegPlayerRpc = regexp.MustCompile(`^func RegPlayerRpc\(\w+ map\[uint16\]PlayerRpc\)`)
+)
+
 func getPackage(dir string) string { return path.Base(dir) }
 func getRpcFunc(s string) string {
-	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack, \w+ common.Conn\)`, s); ok {
+	if _rpcFuc.MatchString(s) {
 		reg := regexp.MustCompile(`Rpc_\w+`)
 		return reg.FindAllString(s, -1)[0]
 	}
 	return ""
 }
 func getPlayerRpc(s string) string {
-	if ok, _ := regexp.MatchString(`^func Rpc_\w+\(\w+, \w+ \*common.NetPack, this \*.+\)`, s); ok {
+	if _playerRpc.MatchString(s) {
 		reg := regexp.MustCompile(`Rpc_\w+`)
 		return reg.FindAllString(s, -1)[0]
 	}
 	return ""
 }
 func getHttpHandle(s string) string {
-	if ok, _ := regexp.MatchString(`^func Http_\w+\(\w+ http.ResponseWriter, \w+ \*http.Request\)`, s); ok {
+	if _HttpHandle.MatchString(s) {
 		reg := regexp.MustCompile(`Http_\w+`)
 		return reg.FindAllString(s, -1)[0][5:]
 	}
 	return ""
 }
 func getRegPlayerRpc(s string) string {
-	if ok, _ := regexp.MatchString(`^func RegPlayerRpc\(\w+ map\[uint16\]PlayerRpc\)`, s); ok {
+	if _RegPlayerRpc.MatchString(s) {
 		return "RegPlayerRpc"
 	}
 	return ""

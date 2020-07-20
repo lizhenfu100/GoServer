@@ -40,13 +40,30 @@ func main() {
 func InitConf() {
 	var metaCfg meta.Metas
 	file.RegCsvType("csv/conf_net.csv", metaCfg)
-	file.RegCsvType("csv/conf_svr.csv", conf.NilSvrCsv())
+	file.RegCsvType("csv/conf_svr.csv", conf.SvrCsv)
 	file.LoadAllCsv()
 	console.Init()
 }
 
 // ------------------------------------------------------------
 func test() {
+	//fmt.Println(hash.StrHash("18522654051")%4)
+
+	//csv := conf.SvrCsv()
+	//dbmgo.InitWithUser("127.0.0.1", 27017, "gm", csv.DBuser, csv.DBpasswd)
+	//
+	//req, ack := common.NewNetPackCap(16), common.NewNetPackCap(16)
+	//req.WriteString("233")
+	//req.WriteString("test.v2.b.a")
+	////req.WriteString("zhoumf")
+	//req.WriteInt(34567)
+	//
+	//player.Rpc_game_player_agrs_set(req, ack, nil)
+	//req.ReadPos = common.PACK_HEADER_SIZE
+	//player.Rpc_game_player_agrs_get(req, ack, nil)
+	////fmt.Println(ack.ReadString())
+	//fmt.Println(ack.ReadInt())
+
 	//testRedis()
 	//var v interface{}
 	//var p netConfig.Rpc

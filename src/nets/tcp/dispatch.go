@@ -41,7 +41,7 @@ func (self *TCPConn) readLoop() {
 		q.Insert(self, req) //转主线程处理消息，无竞态
 	}
 	self.Close()
-	self.writer.Stop() //stop writeLoop
+	self.writer.StopWait()
 }
 
 var _sendBuf = common.NewNetPackCap(64) //单线程CallRpc复用

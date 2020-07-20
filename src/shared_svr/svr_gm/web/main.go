@@ -40,6 +40,7 @@ func Init() {
 	}
 	UpdateHtmls("account/", "account/", &g_common)
 	UpdateHtml("index", "index", &g_common)
+	UpdateHtml("index1", "index1", &g_common)
 
 	// web入口
 	if !assert.IsDebug {
@@ -50,17 +51,18 @@ func Init() {
 }
 func init() {
 	nets.RegHttpHandler(map[string]nets.HttpHandle{
-		"/backup_conf":     relay_to_save,
-		"/backup_force":    relay_to_save,
+		"/backup_conf":     foreach_save,
+		"/backup_force":    foreach_save,
 		"/relay_gm_cmd":    relay_gm_cmd,
 		"/client_cmd":      relay_to,
-		"/gift_bag_add":    relay_to,
-		"/gift_bag_set":    relay_to,
-		"/gift_bag_view":   relay_to,
-		"/gift_bag_del":    relay_to,
+		"/gift_bag":        relay_to,
 		"/gift_bag_clear":  relay_to,
 		"/bulletin":        relay_to,
 		"/view_bulletin":   relay_to,
+		"/forbid_player":   relay_to_game,
+		"/permit_player":   relay_to_game,
+		"/whitelist_add":   relay_to_game,
+		"/whitelist_del":   relay_to_game,
 		"/find_aid_in_mac": foreach_svr,
 	})
 	_file = http.FileServer(http.Dir(FileDirRoot))

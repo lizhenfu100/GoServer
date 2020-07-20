@@ -57,16 +57,15 @@ var (
 			},
 		},
 		"zhmr": {
-			Logins: []TLogin{
-				{Name: "China", Addrs: []string{"http://52.82.37.128:7030"}},
-			},
-			pf_id: conf.G_Platform,
+			Logins: []TLogin{{Name: "China"}},
+			pf_id:  conf.G_Platform,
 		},
 		"DungeonOfWeirdos": {
-			Logins: []TLogin{
-				{Name: "China", Addrs: []string{"http://52.82.37.128:7030"}},
-			},
-			pf_id: conf.G_Platform,
+			Logins: []TLogin{{Name: "China", Addrs: []string{"http://52.82.37.128:7030"}}},
+			pf_id:  conf.G_Platform,
+		},
+		"Soul5": {
+			pf_id: []std.StrPair{{"Wechat", ""}},
 		},
 	}
 )

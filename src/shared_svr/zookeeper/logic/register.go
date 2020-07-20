@@ -5,14 +5,9 @@ import (
 	"generate_out/rpc/enum"
 	"netConfig"
 	"netConfig/meta"
-	"nets/rpc"
 )
 
-func init() {
-	rpc.G_HandleFunc[enum.Rpc_net_error] = Rpc_net_error
-	rpc.G_HandleFunc[enum.Rpc_zoo_register] = _Rpc_zoo_register
-}
-func _Rpc_zoo_register(req, ack *common.NetPack, _ common.Conn) {
+func Rpc_zoo_register(req, ack *common.NetPack, _ common.Conn) {
 	module := req.ReadString()
 	svrId := req.ReadInt()
 	pNew := meta.GetMeta(module, svrId)

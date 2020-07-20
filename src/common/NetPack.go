@@ -22,7 +22,7 @@ type Conn interface {
 	GetUser() interface{}
 	SetUser(v interface{})
 	IsClose() bool
-	Close()
+	Close() error
 }
 
 func NewNetPackCap(capacity int) *NetPack {

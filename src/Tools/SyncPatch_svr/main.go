@@ -30,8 +30,8 @@ func main() {
 func InitConf() {
 	var metaCfg meta.Metas
 	file.RegCsvType("csv/conf_net.csv", metaCfg)
-	file.RegCsvType("csv/conf_svr.csv", conf.NilSvrCsv())
-	file.RegCsvType("csv/logins.csv", NilLogins())
+	file.RegCsvType("csv/conf_svr.csv", conf.SvrCsv)
+	file.RegCsvType("csv/logins.csv", Logins)
 	file.LoadAllCsv()
 	console.Init()
 

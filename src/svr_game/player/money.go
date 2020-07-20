@@ -2,16 +2,20 @@ package player
 
 import "dbmgo"
 
+type EMoney byte
+
 const (
 	KDBMoney = "money"
 	//货币类型
-	KDiamond = "diamond"
-	KExp     = "exp"
+	Money EMoney = iota
+	KDiamond
+	KExp
+	_token_num
 )
 
 type TMoneyModule struct {
 	PlayerID uint32 `bson:"_id"`
-	Token    map[string]int
+	Token    []int
 
 	//小写私有数据，不入库
 	owner *TPlayer
@@ -31,23 +35,23 @@ func (self *TMoneyModule) LoadFromDB(p *TPlayer) {
 	self._InitTempData(p)
 }
 func (self *TMoneyModule) WriteToDB() { dbmgo.UpdateId(KDBMoney, self.PlayerID, self) }
-func (self *TMoneyModule) OnLogin() {
-}
-func (self *TMoneyModule) OnLogout() {
-}
+func (self *TMoneyModule) OnLogin()   {}
+func (self *TMoneyModule) OnLogout()  {}
 func (self *TMoneyModule) _InitTempData(p *TPlayer) {
 	self.owner = p
+	if n := EMoney(len(self.Token)); n < _token_num {
+		self.Token = append(self.Token, make([]int, _token_num-n)...)
+	}
 }
 
 // ------------------------------------------------------------
 // -- API
-func (self *TMoneyModule) Add(typ string, n int) {
+func (self *TMoneyModule) Add(typ EMoney, n int) {
 	if n > 0 {
-		v := self.Token[typ] + n
-		self.Token[typ] = v
+		self.Token[typ] += n
 	}
 }
-func (self *TMoneyModule) Del(typ string, n int) bool {
+func (self *TMoneyModule) Del(typ EMoney, n int) bool {
 	if n <= 0 {
 		return false
 	}

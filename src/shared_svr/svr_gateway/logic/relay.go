@@ -2,7 +2,6 @@ package logic
 
 import (
 	"common"
-	"common/assert"
 	"generate_out/rpc/enum"
 	"netConfig"
 	"netConfig/meta"
@@ -26,7 +25,6 @@ func Rpc_gateway_relay(req *common.NetPack, recvFun func(*common.NetPack)) {
 	rpcId := req.ReadUInt16()     //目标rpc
 	accountId := req.ReadUInt32() //目标玩家
 	args := req.LeftBuf()
-	assert.True(accountId > 0 && netConfig.HashGatewayID(accountId) == meta.G_Local.SvrID)
 	errcode := byte(common.Err_offline)
 	switch module := enum.GetRpcModule(rpcId); module {
 	case "client":

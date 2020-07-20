@@ -41,8 +41,9 @@ func main() {
 func InitConf() {
 	var metaCfg meta.Metas
 	file.RegCsvType("csv/conf_net.csv", metaCfg)
-	file.RegCsvType("csv/conf_svr.csv", conf.NilSvrCsv())
-	file.RegCsvType("csv/sdk/pingxx.csv", conf2.NilPingxxSub())
+	file.RegCsvType("csv/conf_svr.csv", conf.SvrCsv)
+	file.RegCsvType("csv/sdk/pingxx.csv", conf2.PingxxSub)
+	file.RegCsvType("csv/sdk/thinking.csv", conf2.ThinkingApp)
 	file.LoadAllCsv()
 	console.Init()
 

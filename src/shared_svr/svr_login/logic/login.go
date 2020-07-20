@@ -59,7 +59,9 @@ import (
 
 var g_token uint32
 
-func Rpc_check_identity(req, ack *common.NetPack, conn common.Conn) { Rpc_login_account_login(req, ack, conn) }
+func Rpc_check_identity(req, ack *common.NetPack, conn common.Conn) {
+	Rpc_login_account_login(req, ack, conn)
+}
 func Rpc_login_account_login(req, ack *common.NetPack, _ common.Conn) {
 	version := req.ReadString()
 	gameSvrId := 0
@@ -98,11 +100,15 @@ func accountLogin1(centerId int, gameSvrId *int, account, pwd, typ string, ack *
 			buf.WriteString(account)
 			buf.WriteString(pwd)
 			buf.WriteString(typ)
-			//buf.WriteString(conf.GameName) //Rpc_check_identity
+			//netConfig.CallRpcCenter(centerId, enum.Rpc_check_identity, func(buf *common.NetPack) {
+			//	buf.WriteString(account)
+			//	buf.WriteString(typ)
+			//	buf.WriteString(pwd)
+			//  buf.WriteString(conf.GameName)
 		}, func(recvBuf *common.NetPack) {
 			ack.WriteBuf(recvBuf.LeftBuf())
 		})
-		cache.Add(account, pwd, ack)
+		cache.Add(pwd, ack)
 	}
 	oldPos := ack.ReadPos //临时读取
 	if ack.ReadUInt16() != err.Success {
@@ -190,6 +196,11 @@ func accountLogin3(pInfo *gameInfo.TAccountClient, gameSvrId int, version string
 		ack.WriteUInt16(pMetaToClient.Port())
 		ack.WriteUInt32(token)
 		ack.WriteUInt8(pInfo.IsValidEmail)
+		ack.WriteUInt8(byte(len(pInfo.BindInfo)))
+		for k, v := range pInfo.BindInfo {
+			ack.WriteString(k)
+			ack.WriteString(v)
+		}
 	}
 }
 

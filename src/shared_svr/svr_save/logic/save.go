@@ -122,14 +122,13 @@ func checkMac(pf_id, uid, mac string) (*TSaveData, uint16) { //Notice：不可�
 	if ok, e := dbmgo.Find(KDBSave, "_id", pSave.Key, pSave); e != nil {
 		return pSave, err.Unknow_error
 	} else if !ok {
-		gamelog.Track("Record_cannot_find: %s", pSave.Key)
 		return pSave, err.Record_cannot_find
 	}
-	if csv := conf.Csv(); !oldMac /*新设备*/ && pSave.MacCnt >= csv.MacFreeBindMax {
+	if csv := conf.Csv(); !oldMac /*新设备*/ && pSave.MacCnt >= csv.MacFreeBindMax && needUnbind(pf_id) {
 		now := time.Now().Unix()
 		if pSave.MacCnt >= csv.MacBindMax {
 			if (now-pSave.RaiseTime)/(3600*24) < int64(csv.RaiseBindCntDay) {
-				gamelog.Track("Record_bind_max: %s", pSave.Key)
+				gamelog.Info("Record_bind_max: %s", pSave.Key)
 				return pSave, err.Record_bind_max //绑定次数用尽，月余后重置
 			} else {
 				pSave.MacCnt = 0 //90天，绑定次数重置
@@ -137,7 +136,7 @@ func checkMac(pf_id, uid, mac string) (*TSaveData, uint16) { //Notice：不可�
 			}
 		}
 		if now-pSave.ChTime < int64(csv.MacChangePeriod) {
-			gamelog.Track("Record_bind_limit: %s", pSave.Key)
+			gamelog.Info("Record_bind_limit: %s", pSave.Key)
 			return pSave, err.Record_bind_limit //等几天才能换设备
 		}
 	}

@@ -36,24 +36,17 @@ func Rpc_set_identity(req, ack *common.NetPack, _ common.Conn) {
 func Rpc_check_identity(req, ack *common.NetPack, client common.Conn) {
 	accountId := req.ReadUInt32()
 	token := req.ReadUInt32()
-	if CheckToken(accountId, token) {
-		if client != nil { //tcp网关
+	ret := err.Token_verify_err
+	if v, ok := g_token.Load(accountId); ok && token == v {
+		if ret = err.Success; client != nil { //tcp网关
 			if p := GetClientConn(accountId); p != nil && p != client {
 				p.Close() //防串号
 			}
 			client.SetUser(accountId)
 			AddClientConn(accountId, client)
 		}
-		ack.WriteUInt16(err.Success)
-	} else {
-		ack.WriteUInt16(err.Token_verify_err)
 	}
-}
-func CheckToken(accountId, token uint32) bool {
-	if value, ok := g_token.Load(accountId); ok {
-		return token == value
-	}
-	return false
+	ack.WriteUInt16(ret)
 }
 func Rpc_net_error(req, ack *common.NetPack, conn common.Conn) {
 	if accountId, ok := conn.GetUser().(uint32); ok { //玩家断线，且没重连

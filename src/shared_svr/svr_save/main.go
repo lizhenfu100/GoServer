@@ -42,10 +42,10 @@ func main() {
 func InitConf() {
 	var metaCfg meta.Metas
 	file.RegCsvType("csv/conf_net.csv", metaCfg)
-	file.RegCsvType("csv/conf_svr.csv", conf.NilSvrCsv())
-	file.RegCsvType("csv/save/const.csv", conf2.NilCsv())
-	file.RegCsvType("csv/email/email.csv", email.NilEmailCsv())
-	file.RegCsvType("csv/email/invalid.csv", email.NilInvalidCsv())
+	file.RegCsvType("csv/conf_svr.csv", conf.SvrCsv)
+	file.RegCsvType("csv/save/const.csv", conf2.Csv)
+	file.RegCsvType("csv/email/email.csv", email.EmailCsv)
+	file.RegCsvType("csv/email/invalid.csv", email.InvalidCsv)
 	file.LoadAllCsv()
 	console.Init()
 

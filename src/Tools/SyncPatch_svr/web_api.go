@@ -41,7 +41,7 @@ import (
 
 // ------------------------------------------------------------
 // -- 登录服列表 http://chillyroom.com/api/
-//go:generate D:\server\bin\gen_conf.exe logins main
+//go:generate D:\server\bin\gen_conf.exe main logins
 type logins map[string]*struct {
 	GameName string
 	Logins   map[string][]string //<大区名, 地址>

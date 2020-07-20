@@ -24,6 +24,7 @@ package cache
 import (
 	"common"
 	"conf"
+	"encoding/binary"
 	"gamelog"
 	"generate_out/err"
 	"github.com/go-redis/redis"
@@ -46,34 +47,60 @@ type TCache struct {
 	Password   string
 }
 
-func Add(account, pwd string, ack *common.NetPack) {
-	oldPos, v := ack.ReadPos, TCache{Password: pwd}
+func Add(pwd string, ack *common.NetPack) {
+	p, oldPos := &TCache{Password: pwd}, ack.ReadPos
 	if ack.ReadUInt16() == err.Success {
-		v.BufToData(ack)
-		v.LoginSvrId = ack.ReadInt()
-		v.GameSvrId = ack.ReadInt()
-		if !conf.Auto_GameSvr || v.GameSvrId > 0 {
-			buf, _ := common.T2B(&v)
-			g_redis.Set(account, buf, 48*time.Hour)
+		p.BufToData(ack)
+		p.LoginSvrId = ack.ReadInt()
+		p.GameSvrId = ack.ReadInt()
+		if !conf.Auto_GameSvr || p.GameSvrId > 0 {
+			buf, _ := common.T2B(p)
+			aid := _i2s(p.AccountID)
+			g_redis.Set(aid, buf, 48*time.Hour)
+			for _, v := range p.BindInfo {
+				g_redis.Set(v, aid, 48*time.Hour)
+			}
 		}
 	}
 	ack.ReadPos = oldPos //临时读取
 }
 func Get(account, pwd string, ack *common.NetPack) (ok bool) {
-	if b, e := g_redis.Get(account).Result(); e == nil {
-		var v TCache
-		if common.B2T(common.S2B(b), &v) == nil && v.Password == pwd {
-			ok = true
-			ack.WriteUInt16(err.Success)
-			v.DataToBuf(ack)
-			ack.WriteInt(v.LoginSvrId)
-			ack.WriteInt(v.GameSvrId)
-		}
+	if p := _get(account); p != nil && p.Password == pwd {
+		ok = true
+		ack.WriteUInt16(err.Success)
+		p.DataToBuf(ack)
+		ack.WriteInt(p.LoginSvrId)
+		ack.WriteInt(p.GameSvrId)
 	}
 	gamelog.Track("Cache Login: %s %v", account, ok)
 	return
 }
-func Del(keys ...string) { g_redis.Del(keys...) }
+func _get(account string) *TCache {
+	if aid, e := g_redis.Get(account).Result(); e == nil {
+		if b, e := g_redis.Get(aid).Result(); e == nil {
+			var v TCache
+			if common.B2T(common.S2B(b), &v) == nil {
+				return &v
+			}
+		}
+	}
+	return nil
+}
+func Del(account string) {
+	if p := _get(account); p != nil {
+		keys := []string{_i2s(p.AccountID)}
+		for _, v := range p.BindInfo {
+			keys = append(keys, v)
+		}
+		g_redis.Del(keys...)
+	}
+}
+
+func _i2s(id uint32) string {
+	aid := make([]byte, 4)
+	binary.LittleEndian.PutUint32(aid, id)
+	return common.B2S(aid)
+}
 
 func IsExist(account string) bool {
 	_, e := g_redis.Get(account).Result()

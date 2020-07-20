@@ -23,7 +23,7 @@ const (
 	GM_Passwd = "chillyroom_gm_*"
 )
 
-//go:generate D:\server\bin\gen_conf.exe *svrCsv conf
+//go:generate D:\server\bin\gen_conf.exe conf *svrCsv
 type svrCsv struct {
 	// 数据库
 	DBuser   string
@@ -46,16 +46,17 @@ type svrCsv struct {
 var (
 	SvrList = []string{ //本项目包含哪类节点
 		"shared_svr/svr_center",
-		"shared_svr/svr_dns",
-		"shared_svr/svr_file",
 		"shared_svr/svr_friend",
-		"shared_svr/svr_gateway",
-		"shared_svr/svr_gm",
+		"shared_svr/svr_dns",
+		"shared_svr/svr_relay",
+		"shared_svr/zookeeper",
+		"svr_cross",
+		"shared_svr/svr_gateway", //gate之后的才进路由，之前的节点rpc可自定义序号，让RpcEnumCnt不至太大
+		"shared_svr/svr_file",
 		"shared_svr/svr_login",
 		"shared_svr/svr_sdk",
-		"shared_svr/svr_relay",
 		"shared_svr/svr_nric",
-		"svr_cross",
+		"shared_svr/svr_gm",
 		"svr_game",
 	}
 )

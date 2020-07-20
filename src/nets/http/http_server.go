@@ -36,12 +36,6 @@ import (
 	"sync"
 )
 
-//idx1 := strings.Index(addr, "//") + 2
-//idx2 := strings.LastIndex(addr, ":")
-//ip := addr[idx1:idx2]
-//port := common.Atoi(addr[idx2+1:])
-func Addr(ip string, port uint16) string { return fmt.Sprintf("http://%s:%d", ip, port) }
-
 func InitSvr(module string, svrId int) {
 	if conf.TestFlag_CalcQPS {
 		qps.Watch()

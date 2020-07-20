@@ -31,7 +31,7 @@ func init() {
 }
 func RegisterToZookeeper() {
 	if pZoo := meta.GetMeta(meta.Zookeeper, 0); pZoo != nil {
-		req, ack := func(buf *common.NetPack) {
+		send, recv := func(buf *common.NetPack) {
 			buf.WriteString(meta.G_Local.Module)
 			buf.WriteInt(meta.G_Local.SvrID)
 		}, func(recvBuf *common.NetPack) { //主动连接zoo通告的服务节点
@@ -44,10 +44,10 @@ func RegisterToZookeeper() {
 		if pZoo.HttpPort > 0 {
 			addr := http.Addr(pZoo.IP, pZoo.HttpPort)
 			http.RegistToSvr(addr)
-			http.CallRpc(addr, enum.Rpc_zoo_register, req, ack)
+			http.CallRpc(addr, enum.Rpc_zoo_register, send, recv)
 		} else {
 			netConfig.ConnectModuleTcp(pZoo, func(conn *tcp.TCPConn) {
-				conn.CallRpc(enum.Rpc_zoo_register, req, ack)
+				conn.CallRpc(enum.Rpc_zoo_register, send, recv)
 			})
 		}
 	}

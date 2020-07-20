@@ -7,7 +7,6 @@ import (
 // ------------------------------------------------------------
 // -- 玩家常规显示数据
 type TShowInfo struct {
-	//Uid       common.Uid //跨服用
 	AccountId uint32
 	Name      string
 	Head      string

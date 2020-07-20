@@ -111,8 +111,13 @@ func (self *Backup) OnEnterNextDay() {
 
 // ------------------------------------------------------------
 // 敏感数据（如游戏进度）异动，记录历史存档
+/*
+	元气骑士	通关次数
+	元气H5	进游戏次数
+	大家饿
+*/
 type TSensitive struct {
-	GameSession int //进度，不同游戏含义不一
+	GameSession int //进度，推荐用“进游戏次数”表示
 	//TODO:zhoumf:存档标识SaveKey，不是该账号的档，不能上传
 }
 

@@ -48,11 +48,13 @@ func Rpc_center_bind_info(req, ack *common.NetPack, _ common.Conn) {
 	ack.WriteUInt16(errcode)
 }
 func Rpc_center_isvalid_bind_info(req, ack *common.NetPack, _ common.Conn) {
-	str := req.ReadString()
-	typ := req.ReadString()
-	if e, p := GetAccountByBindInfo(typ, str); p == nil {
+	v := req.ReadString()
+	k := req.ReadString()
+	if e, p := GetAccountByBindInfo(k, v); p == nil {
 		ack.WriteUInt16(e)
-	} else if typ == "email" && p.IsValidEmail <= 0 {
+	} else if k == "email" && p.IsValidEmail <= 0 {
+		ack.WriteUInt16(err.Invalid)
+	} else if k == "phone" && p.BindInfo[k] == "" {
 		ack.WriteUInt16(err.Invalid)
 	} else {
 		ack.WriteUInt16(err.Success)
@@ -68,7 +70,7 @@ func (self *TAccount) bind(typ, newVal string) uint16 {
 		CacheDel(self)
 		dbmgo.Log("Change_"+typ, self.BindInfo[typ], newVal)
 		self.BindInfo[typ] = newVal
-		CacheAdd(typ+newVal, self)
+		CacheAdd(self)
 		dbmgo.UpdateId(KDBTable, self.AccountID, bson.M{"$set": bson.M{"bindinfo." + typ: newVal}})
 		return err.Success
 	} else {

@@ -24,13 +24,25 @@ type TGameInfo struct {
 type TAccountClient struct {
 	AccountID    uint32
 	IsValidEmail uint8
+	BindInfo     map[string]string
 }
 
-func (self *TAccountClient) DataToBuf(buf *common.NetPack) {
-	buf.WriteUInt32(self.AccountID)
-	buf.WriteUInt8(self.IsValidEmail)
+func (p *TAccountClient) DataToBuf(buf *common.NetPack) {
+	buf.WriteUInt32(p.AccountID)
+	buf.WriteUInt8(p.IsValidEmail)
+	buf.WriteUInt8(byte(len(p.BindInfo)))
+	for k, v := range p.BindInfo {
+		buf.WriteString(k)
+		buf.WriteString(v)
+	}
 }
-func (self *TAccountClient) BufToData(buf *common.NetPack) {
-	self.AccountID = buf.ReadUInt32()
-	self.IsValidEmail = buf.ReadUInt8()
+func (p *TAccountClient) BufToData(buf *common.NetPack) {
+	p.AccountID = buf.ReadUInt32()
+	p.IsValidEmail = buf.ReadUInt8()
+	p.BindInfo = make(map[string]string, 2)
+	for cnt, i := buf.ReadUInt8(), byte(0); i < cnt; i++ {
+		k := buf.ReadString()
+		v := buf.ReadString()
+		p.BindInfo[k] = v
+	}
 }

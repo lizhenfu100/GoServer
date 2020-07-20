@@ -86,9 +86,13 @@ func main() {
 	//3、RpcFunc收集完毕，生成RpcEunm
 	isChange := generateRpcEnum(funcs)
 	if isChange {
-		modules := []string{"client"}
+		modules, isAdd := []string{"client"}, false
 		for _, ptr := range rpcInfos {
-			modules = append(modules, ptr.Module)
+			if isAdd {
+				modules = append(modules, ptr.Module)
+			} else if ptr.Module == "gateway" { //gate之后的才进路由
+				isAdd = true
+			}
 		}
 		//4、生成golang服务器的路由信息
 		generateRpcRoute(modules, funcs)
@@ -103,6 +107,9 @@ func main() {
 
 	//生成错误码
 	generateErrCode()
+
+	//生成lua枚举
+	LuaEnum{}.generateLuaEnum()
 
 	println("Generate success...")
 }

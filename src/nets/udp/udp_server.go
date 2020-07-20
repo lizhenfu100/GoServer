@@ -15,7 +15,7 @@ var _svr UDPServer
 func NewServer(port int, maxconn int32, block bool) {
 	_svr.MaxConnNum = maxconn
 	if c, e := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4zero, Port: port}); e == nil {
-		if _svr.conn = c; block {
+		if _svr.UDPConn.UDPConn = c; block {
 			_svr.readLoop()
 		} else {
 			go _svr.readLoop()

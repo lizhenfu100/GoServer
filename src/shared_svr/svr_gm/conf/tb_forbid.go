@@ -18,7 +18,8 @@ var (
 		{"Anzhi", "安智"}, {"Baidu", "百度"}, {"Bazaar", ""},
 		{"Biligame", "b站"}, {"DnLe", "当乐单机"}, {"Douyu", "斗鱼"},
 		{"GamePop", "好游快爆"}, {"Gourd", "葫芦侠"},
-		{"HuaWeiOutseas", "华为海外"}, {"Leap", "微信leap"}, {"Letv", "乐视"},
+		{"HuaWeiOutseas", "华为海外"}, {"Kuaishou", "快手"},
+		{"Leap", "微信leap"}, {"Letv", "乐视"},
 		{"LianYun001", "酷酷跑"},
 		{"LianYun233", "233游戏"},
 		{"LianYunCPS", "咪咕CPS"},
@@ -27,6 +28,7 @@ var (
 		{"PPS", "PPS平台"}, {"Samsung", "三星"}, {"Sogou", "搜狗"},
 		{"Toutiao", "今日头条"}, {"UC", "九游"},
 		{"WDJ", "豌豆荚"}, {"Wo", "联通沃商店"},
+		{"Wechat", ""}, {"QQ", ""},
 		{"Xiao7", "小七游戏"}, {"Xiaomi", "小米"},
 		{"Yixin", "易信"}, {"YYB", "应用宝"}, {"YYH", "应用汇"},
 	}

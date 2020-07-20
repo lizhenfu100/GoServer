@@ -4,6 +4,7 @@ import (
 	"common"
 	"common/console"
 	"common/file"
+	"conf"
 	"encoding/json"
 	"fmt"
 	"gamelog"
@@ -20,7 +21,8 @@ func main() {
 	netConfig.RunNetSvr(true)
 }
 func InitConf() {
-	file.RegCsvType("csv/outip.csv", logic.NilLogins())
+	file.RegCsvType("csv/conf_svr.csv", conf.SvrCsv)
+	file.RegCsvType("csv/outip.csv", logic.Logins)
 	file.LoadAllCsv()
 	console.Init()
 

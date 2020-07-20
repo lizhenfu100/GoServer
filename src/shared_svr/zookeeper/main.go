@@ -20,6 +20,7 @@ import (
 	"common/file"
 	"conf"
 	"gamelog"
+	_ "generate_out/rpc/shared_svr/zookeeper"
 	"netConfig"
 	"netConfig/meta"
 )
@@ -39,7 +40,7 @@ func main() {
 func InitConf() {
 	var metaCfg meta.Metas
 	file.RegCsvType("csv/conf_net.csv", metaCfg)
-	file.RegCsvType("csv/conf_svr.csv", conf.NilSvrCsv())
+	file.RegCsvType("csv/conf_svr.csv", conf.SvrCsv)
 	file.LoadAllCsv()
 	console.Init()
 }

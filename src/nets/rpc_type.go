@@ -31,7 +31,11 @@ type (
 
 func RegRpc(vs map[uint16]RpcFunc) {
 	for k, v := range vs {
-		rpc.G_HandleFunc[k] = v
+		if rpc.G_HandleFunc[k] == nil {
+			rpc.G_HandleFunc[k] = v
+		} else {
+			panic(k)
+		}
 	}
 }
 func RegHttpHandler(httpLst map[string]HttpHandle) {

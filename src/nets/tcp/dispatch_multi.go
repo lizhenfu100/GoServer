@@ -76,5 +76,5 @@ func (self *TCPConn) readLoop() {
 		q.Handle(self, &req, &ack) //io线程直接处理，须考虑竞态
 	}
 	self.Close()
-	self.writer.Stop() //stop writeLoop
+	self.writer.StopWait()
 }

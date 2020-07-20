@@ -7,5 +7,9 @@ import "sync/atomic"
 var _pingxxSub atomic.Value
 
 func PingxxSub() pingxxSub { return _pingxxSub.Load().(pingxxSub) }
-func NilPingxxSub() pingxxSub { return nil }
 func (v pingxxSub) Init() { _pingxxSub.Store(v) } //一块全新内存
+
+var _thinkingApp atomic.Value
+
+func ThinkingApp() thinkingApp { return _thinkingApp.Load().(thinkingApp) }
+func (v thinkingApp) Init() { _thinkingApp.Store(v) } //一块全新内存

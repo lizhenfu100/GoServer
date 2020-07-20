@@ -12,6 +12,37 @@
 		· 须保证注册、改名、改邮箱...事务性修改映射表~囧~研究下saga模式
 		· 先查映射表，再查账号数据
 
+* @ 作业队列
+	· 记录一条任务
+	· 幂等的操作两方，完成后修改任务状态为Done
+	· 只要任务不是Done，重试
+
+* @ 二阶段提交
+	· 在transactions集合中插入转账信息
+		· db.transactions.insert({src:"A", dst:"B", value:100, state:"init"})
+		· state：init，pending，committed，done，canceling，canceled
+	1、找init事务
+		· db.transactions.findOne({state: "init"})
+	2、state更新为pending
+		· db.transactions.update({_id:t._id, state:"init"}, {$set:{state:"pending"}})
+	3、账户应用事务，须记录已应用的事务，防重复执行
+		· db.accounts.update({_id:t.src, pendingTransactions:{$ne:t._id}}, {
+				$inc:{money: -t.value},
+				$push:{pendingTransactions:t._id}})
+		· db.accounts.update({_id:t.dst, pendingTransactions:{$ne:t._id}}, {
+				$inc:{money: t.value},
+				$push:{pendingTransactions:t._id}})
+	4、state更新为committed
+		· db.transactions.update({_id:t._id, state:"pending"}, {$set: {state:"committed"}})
+	5、账户移除事务
+		· db.accounts.update({_id: t.src},{ $pull:{pendingTransactions:t._id}})
+		· db.accounts.update({_id: t.dst},{ $pull:{pendingTransactions:t._id}})
+	6、state更新为done
+		· db.transactions.update({_id:t._id, state:"committed"}, {$set:{state:"done"}})
+	· 故障恢复
+		· 找出pending事务，从步骤3开始恢复
+		· 找出committed事务，从步骤5开始恢复
+
 * @ 要服务全球玩家，访问账号必须加速，各登录节点得有账号redis
 	· 读，先读缓存，没有再读center，成功后写缓存（缓存会过期）
 	· 写，先更db，再删缓存
@@ -28,7 +59,6 @@ import (
 	"crypto/md5"
 	"dbmgo"
 	"fmt"
-	"gamelog"
 	"generate_out/err"
 	"generate_out/rpc/enum"
 	"gopkg.in/mgo.v2/bson"
@@ -54,7 +84,7 @@ type TAccount struct {
 
 func _NewAccount() *TAccount {
 	self := new(TAccount)
-	self.BindInfo = make(map[string]string, 3)
+	self.BindInfo = make(map[string]string, 2)
 	self.GameInfo = make(map[string]gameInfo.TGameInfo)
 	return self
 }
@@ -71,20 +101,17 @@ func Rpc_center_account_login(req, ack *common.NetPack, _ common.Conn) {
 	gameName := req.ReadString()
 	str := req.ReadString()
 	pwd := req.ReadString()
-	gamelog.Debug("Login: %s %s", str, pwd)
 	errcode, p := GetAccount(str, pwd)
 	if ack.WriteUInt16(errcode); p != nil {
 		timeNow := time.Now().Unix()
 		atomic.StoreInt64(&p.LoginTime, timeNow)
 		dbmgo.UpdateId(KDBTable, p.AccountID, bson.M{"$set": bson.M{"logintime": timeNow}})
-		//1、先回复，Client账号信息
-		v := gameInfo.TAccountClient{
+		(&gameInfo.TAccountClient{ //1、先回复，Client账号信息
 			p.AccountID,
 			p.IsValidEmail,
-		}
-		v.DataToBuf(ack)
-		//2、再回复，附带的游戏数据，可能有的游戏空的
-		if v, ok := p.GameInfo[gameName]; ok {
+			p.BindInfo,
+		}).DataToBuf(ack)
+		if v, ok := p.GameInfo[gameName]; ok { //2、附带的游戏数据，可能有的游戏空的
 			ack.WriteInt(v.LoginSvrId)
 			ack.WriteInt(v.GameSvrId)
 		}
@@ -95,7 +122,6 @@ func Rpc_center_account_reg(req, ack *common.NetPack, _ common.Conn) {
 	pwd := req.ReadString()
 	typ := req.ReadString() //email、name、phone
 	sign.Decode(&str, &pwd)
-	gamelog.Track("account_reg: %s %s %s", typ, str, pwd)
 	if !format.CheckPasswd(pwd) {
 		ack.WriteUInt16(err.Passwd_format_err)
 	} else if !format.CheckBindValue(typ, str) {
@@ -105,7 +131,7 @@ func Rpc_center_account_reg(req, ack *common.NetPack, _ common.Conn) {
 		ack.WriteUInt16(errcode)
 	}
 }
-func Rpc_center_account_reg_force(req, ack *common.NetPack, _ common.Conn) {
+func Rpc_center_account_reg_force(req, ack *common.NetPack, _ common.Conn) { //TODO:待删除2020.7.2
 	uuid := req.ReadString()
 	if sign.Decode(&uuid); uuid == "" {
 		ack.WriteUInt16(err.BindInfo_format_err)

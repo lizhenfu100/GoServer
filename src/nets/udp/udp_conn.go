@@ -15,7 +15,7 @@ const (
 )
 
 type UDPConn struct {
-	conn     *net.UDPConn
+	*net.UDPConn
 	addr     *net.UDPAddr
 	writer   safe.ChanByte
 	_isClose bool
@@ -36,11 +36,11 @@ func Session(p *net.UDPAddr, c *net.UDPConn) *UDPConn {
 
 func (self *UDPConn) readLoop() {
 	for req, q := common.NewByteBufferLen(2048), &rpc.G_RpcQueue; ; {
-		if n, addr, e := self.conn.ReadFromUDP(req.Data()); e != nil {
+		if n, addr, e := self.UDPConn.ReadFromUDP(req.Data()); e != nil {
 			gamelog.Debug(e.Error())
 			break
 		} else if n > 0 {
-			q.Insert(Session(addr, self.conn), req)
+			q.Insert(Session(addr, self.UDPConn), req) //TODO:zhoumf:增加多线程消息处理
 		}
 	}
 }
@@ -52,7 +52,7 @@ func (self *UDPConn) Connect(addr string) {
 		return
 	}
 	Session(self.addr, conn)
-	self.conn = conn
+	self.UDPConn = conn
 	go self.readLoop()
 }
 
@@ -64,17 +64,17 @@ func newConn(conn *net.UDPConn, addr *net.UDPAddr) *UDPConn {
 	return self
 }
 func (self *UDPConn) reset(conn *net.UDPConn, addr *net.UDPAddr) {
-	self.conn = conn
+	self.UDPConn = conn
 	self.addr = addr
 	self.writer.IsStop = false
 	self._isClose = false
 }
-func (self *UDPConn) Close() {
-	if self._isClose {
-		return
+func (self *UDPConn) Close() error {
+	if !self._isClose {
+		self._isClose = true
+		return self.UDPConn.Close()
 	}
-	self.conn.Close()
-	self._isClose = true
+	return nil
 }
 func (self *UDPConn) IsClose() bool { return self._isClose }
 
@@ -98,7 +98,7 @@ loop:
 	for {
 		b := self.writer.WaitGet() //block
 		for pos, total := 0, len(b); ; {
-			if n, e := self.conn.WriteToUDP(b[pos:], self.addr); e != nil {
+			if n, e := self.UDPConn.WriteToUDP(b[pos:], self.addr); e != nil {
 				gamelog.Debug(e.Error())
 				break loop
 			} else if pos += n; pos == total {

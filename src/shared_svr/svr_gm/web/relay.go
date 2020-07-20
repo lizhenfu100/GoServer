@@ -4,6 +4,7 @@ import (
 	"common"
 	"common/file"
 	"common/std/sign"
+	"encoding/json"
 	"generate_out/err"
 	"generate_out/rpc/enum"
 	"io"
@@ -30,6 +31,10 @@ func GetAddrs(q url.Values) (ret []string) {
 	return
 }
 func foreach_svr(w http.ResponseWriter, r *http.Request) { //逐一展示所有节点的结果
+	if !CheckCookies(r) {
+		w.Write([]byte("请先登录GM"))
+		return
+	}
 	q := r.URL.Query()
 	for _, v := range GetAddrs(q) {
 		u, _ := url.Parse(v + r.URL.Path)
@@ -38,11 +43,17 @@ func foreach_svr(w http.ResponseWriter, r *http.Request) { //逐一展示所有�
 			w.Write(buf)
 			w.Write([]byte("\n"))
 		} else {
-			w.Write([]byte("http fail\n"))
+			w.Write(common.S2B(v + "http fail\n"))
 		}
 	}
 }
+
 func relay_to(w http.ResponseWriter, r *http.Request) { //合并所有节点的结果
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	if !CheckCookies(r) {
+		w.Write([]byte("请先登录GM"))
+		return
+	}
 	q := r.URL.Query()
 	addrs := GetAddrs(q)
 	mergeAcks(addrs, q.Encode(), r.URL.Path, w)
@@ -77,23 +88,47 @@ func mergeAcks(addrs []string, rawQuery string, path string, w http.ResponseWrit
 		}
 	}
 }
-func relay_to_save(w http.ResponseWriter, r *http.Request) {
+func foreach_save(w http.ResponseWriter, r *http.Request) {
+	if !CheckCookies(r) {
+		w.Write([]byte("请先登录GM"))
+		return
+	}
 	q := r.URL.Query()
 	if p, ok := g_map[q.Get("game")]; !ok {
 		w.Write([]byte("GameName error"))
 	} else {
-		var addrs []string
-		for _, v := range p.Logins {
-			for _, v2 := range v.Games {
-				for _, v3 := range v2.SaveAddrs {
-					addrs = append(addrs, v3)
-				}
+		mergeAcks(p.allSave(), r.URL.RawQuery, r.URL.Path, w)
+	}
+}
+func relay_to_game(w http.ResponseWriter, r *http.Request) {
+	if !CheckCookies(r) {
+		w.Write([]byte("请先登录GM"))
+		return
+	}
+	q := r.URL.Query()
+	if p, ok := g_map[q.Get("game")]; !ok {
+		w.Write([]byte("GameName error"))
+	} else {
+		p.CallGame(q.Get("v"), func(gameAddr string, aids []uint32) {
+			b, _ := json.Marshal(aids)
+			q.Set("v", common.B2S(b))
+			q.Del("game")
+			u, _ := url.Parse(gameAddr + r.URL.Path)
+			u.RawQuery = q.Encode()
+			if b = mhttp.Client.Get(u.String()); b != nil {
+				w.Write(b)
+				w.Write([]byte("\n"))
+			} else {
+				w.Write(common.S2B(gameAddr + "http fail\n"))
 			}
-		}
-		mergeAcks(addrs, r.URL.RawQuery, r.URL.Path, w)
+		})
 	}
 }
 func relay_gm_cmd(w http.ResponseWriter, r *http.Request) {
+	if !CheckCookies(r) {
+		w.Write([]byte("请先登录GM"))
+		return
+	}
 	q := r.URL.Query()
 	addr := q.Get("addr")
 	cmd := q.Get("cmd")
@@ -134,6 +169,10 @@ func relay_tcp(w io.Writer, addr string, rpcId uint16,
 }
 
 func Http_reset_password(w http.ResponseWriter, r *http.Request) {
+	if !CheckCookies(r) {
+		w.Write([]byte("请先登录GM"))
+		return
+	}
 	q := r.URL.Query()
 	k, v := q.Get("k"), q.Get("v")
 	pwd := q.Get("pwd")
@@ -143,6 +182,10 @@ func Http_reset_password(w http.ResponseWriter, r *http.Request) {
 	mergeAcks(g_common.CenterList, q.Encode(), r.URL.Path, w)
 }
 func Http_bind_info_force(w http.ResponseWriter, r *http.Request) {
+	if !CheckCookies(r) {
+		w.Write([]byte("请先登录GM"))
+		return
+	}
 	q := r.URL.Query()
 	aid, k, v := q.Get("aid"), q.Get("k"), q.Get("v")
 	flag := strconv.FormatInt(time.Now().Unix(), 10)
@@ -163,6 +206,10 @@ func Http_bind_info_force(w http.ResponseWriter, r *http.Request) {
 // ------------------------------------------------------------
 // 云存档
 func Http_download_save_data(w http.ResponseWriter, r *http.Request) {
+	if !CheckCookies(r) {
+		w.Write([]byte("请先登录GM"))
+		return
+	}
 	r.ParseMultipartForm(32 << 20)
 	addr := "http://" + r.Form.Get("addr")
 	uid := r.Form.Get("uid")
@@ -179,6 +226,10 @@ func Http_download_save_data(w http.ResponseWriter, r *http.Request) {
 	})
 }
 func Http_upload_save_data(w http.ResponseWriter, r *http.Request) {
+	if !CheckCookies(r) {
+		w.Write([]byte("请先登录GM"))
+		return
+	}
 	r.ParseMultipartForm(32 << 20)
 	addr := "http://" + r.Form.Get("addr")
 	uid := r.Form.Get("uid")
@@ -267,29 +318,4 @@ func testDelay(addr string) (ret string) {
 		ret = time.Now().Sub(temp).String()
 	})
 	return
-}
-
-// ------------------------------------------------------------
-// 批量封号
-func Http_batch_forbid(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
-	game := q.Get("game")
-	data := g_map[game].Logins
-	type RetInfo struct {
-		Name string
-		Addr string
-	}
-	rets := make([]RetInfo, 0, 16)
-	for i := 0; i < len(data); i++ {
-		for _, v := range data[i].Games {
-			if v.ID < common.KIdMod { //排除分流节点
-				rets = append(rets, RetInfo{
-					data[i].Name + strconv.Itoa(v.ID),
-					v.GameAddr})
-			}
-		}
-	}
-	if e := file.TemplateParse(rets, kTemplateDir+"ack/game_meta.html", w); e != nil {
-		w.Write(common.S2B(e.Error()))
-	}
 }

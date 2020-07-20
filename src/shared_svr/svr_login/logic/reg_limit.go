@@ -7,6 +7,7 @@ import (
 	"common/std/sign"
 	"common/timer"
 	"common/tool/email"
+	"common/tool/sms"
 	"conf"
 	"gamelog"
 	"generate_out/err"
@@ -28,7 +29,7 @@ func AccountLimit(req, ack *common.NetPack, ip string) bool {
 			if _banReg(req, ack, ip) {
 				return true
 			}
-		case enum.Rpc_center_reg_if, enum.Rpc_center_reg_if2:
+		case enum.Rpc_center_reg_if, enum.Rpc_center_reg_if2, enum.Rpc_center_isvalid_bind_info:
 			if _banRegif(ack, ip) {
 				return true
 			}
@@ -63,15 +64,12 @@ func _banReg(req, ack *common.NetPack, ip string) bool { //注册
 		ack.WriteUInt16(err.Operate_too_often) //Notice：回复内容须与原rpc一致
 		return true                            //拦截，原rpc函数不会调用了
 	}
-	str := req.ReadString() //渠道走的Rpc_center_account_reg_force
+	str := req.ReadString() //渠道走的Rpc_center_platform_reg
 	pwd := req.ReadString()
-	if len(req.LeftBuf()) == 0 {
+	if len(req.LeftBuf()) == 0 { //TODO:待删除，兼容老客户端
 		req.WriteString("email")
 	}
-	typ := req.ReadString()
-	if typ == "phone" {
-		//TODO:zhoumf:验证码
-	} else if typ == "email" {
+	if typ := req.ReadString(); typ == "email" {
 		if false { //要求验证邮箱
 			errcode := _NeedVerifyEmail(str, pwd)
 			ack.WriteUInt16(errcode)
@@ -105,20 +103,25 @@ func _banToCenter(ack *common.NetPack, ip string) bool {
 	return false
 }
 
-func FlagSwitch(args []string) string { //banLogin 0
-	switch falg, open := args[0], args[1] == "0"; falg {
-	case "banLogin":
-		if G_banLogin = open; !open {
-			timer.AddTimer(func() {
-				logic.G_banLogin = true
-			}, 3600, 0, 0)
-		}
-	default:
-		return "fail"
-	}
-	return args[0] + " " + args[1]
+// ------------------------------------------------------------
+// -- 功能开关
+var _switch = map[string]*bool{
+	"banLogin": &G_banLogin,
+	"sms":      &sms.G_Switch,
+	"email":    &email.G_Switch,
 }
 
+func FlagSwitch(args []string) string { //banLogin 0
+	flag, open := args[0], args[1] == "1"
+	if p, ok := _switch[flag]; ok {
+		if *p = open; !open {
+			timer.AddTimer(func() { *p = true }, 3600, 0, 0)
+		}
+		return args[0] + " " + args[1]
+	} else {
+		return "none: " + flag
+	}
+}
 
 // ------------------------------------------------------------
 // -- 邮件注册账户
@@ -127,11 +130,11 @@ func _NeedVerifyEmail(emailAddr, passwd string) (errcode uint16) {
 		return err.Passwd_format_err
 	}
 	centerAddr := netConfig.GetHttpAddr("center", netConfig.HashCenterID(emailAddr))
-	http.CallRpc(centerAddr, enum.Rpc_center_reg_if, func(buf *common.NetPack) {
+	http.CallRpc(centerAddr, enum.Rpc_center_reg_if2, func(buf *common.NetPack) {
 		buf.WriteString(emailAddr)
 		buf.WriteString("email")
 	}, func(backBuf *common.NetPack) {
-		if errcode = backBuf.ReadUInt16(); errcode == err.Success {
+		if errcode = backBuf.ReadUInt16(); errcode == err.Not_found {
 			//1、创建url
 			u, _ := url.Parse(centerAddr + "/reg_account_by_email")
 			q := u.Query()
@@ -148,6 +151,8 @@ func _NeedVerifyEmail(emailAddr, passwd string) (errcode uint16) {
 			if errcode == err.Success {
 				errcode = err.Email_try_send_please_check
 			}
+		} else if errcode == err.Success {
+			errcode = err.Account_repeat
 		}
 	})
 	return

@@ -27,13 +27,13 @@ func (self *TCPClient) Connect(addr string, cb func(*TCPConn)) {
 		self.addr = addr
 		self.onConnect = cb
 		if self.Conn == nil {
-			go self.connectRoutine() //会断线后自动重连
+			go self.connectLoop() //会断线后自动重连
 		} else {
 			self.Conn.Close() //关老连接，重连新地址
 		}
 	}
 }
-func (self *TCPClient) connectRoutine() {
+func (self *TCPClient) connectLoop() {
 	firstMsg := make([]byte, 4) //connId
 	if meta.G_Local != nil {    //后台节点间的连接，发起注册
 		regMsg := common.NewNetPackCap(128)

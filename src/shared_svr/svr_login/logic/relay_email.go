@@ -5,10 +5,12 @@ import (
 	"common/std/sign"
 	"common/tool/email"
 	"encoding/binary"
+	"fmt"
 	"generate_out/err"
 	"net/http"
 	"net/url"
 	"netConfig"
+	"netConfig/meta"
 	"strconv"
 	"time"
 )
@@ -37,15 +39,16 @@ func Http_verify_email(w http.ResponseWriter, r *http.Request) {
 		w.Write(ack)
 	}()
 	return
-
-	centerAddr := netConfig.GetHttpAddr("center", netConfig.HashCenterID(addr))
-	//1、增加参数
-	flag := strconv.FormatInt(time.Now().Unix(), 10)
-	q.Set("flag", flag)
-	q.Set("sign", sign.CalcSign(addr+flag))
-	//2、创建url
-	u, _ := url.Parse(centerAddr + r.RequestURI)
-	//3、生成完整url
-	u.RawQuery = q.Encode()
-	errCode = email.SendMail("Verify Email", addr, u.String(), language)
+	if pMeta := meta.GetMeta("center", netConfig.HashCenterID(addr)); pMeta != nil {
+		centerAddr := fmt.Sprintf("http://%s:%d", pMeta.OutIP, pMeta.HttpPort)
+		//1、增加参数
+		flag := strconv.FormatInt(time.Now().Unix(), 10)
+		q.Set("flag", flag)
+		q.Set("sign", sign.CalcSign(addr+flag))
+		//2、创建url
+		u, _ := url.Parse(centerAddr + r.RequestURI)
+		//3、生成完整url
+		u.RawQuery = q.Encode()
+		errCode = email.SendMail("Verify Email", addr, u.String(), language)
+	}
 }

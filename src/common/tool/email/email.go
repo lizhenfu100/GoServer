@@ -41,6 +41,8 @@ import (
 	"text/template"
 )
 
+var G_Switch = true
+
 func SendByLogin(subject, addr, body, language string) (errcode uint16) {
 	if p, ok := netConfig.GetRpcRand(conf.GameName); ok {
 		p.CallRpc(enum.Rpc_login_send_email, func(buf *common.NetPack) {
@@ -68,6 +70,9 @@ func SendMail(subject, addr, body, language string) (errcode uint16) {
 	if !assert.IsDebug && !g_freq.Check(subject+addr) { //同内容的，限制发送频率
 		return err.Success
 		//TODO:return err.Email_try_send_please_check
+	}
+	if !G_Switch {
+		return err.Closed_by_gm
 	}
 	packBody(&subject, &body, language) //嵌入模板，并本地化
 

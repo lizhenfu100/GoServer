@@ -14,12 +14,11 @@
                 function setActionAddr(form) {
                     var select = form.getElementsByTagName("select")[0];
                     var uri = select.options[select.selectedIndex].value;
-                    // window.alert(document.getElementById("gameaddr").value)
-                    form.action="http://"+document.getElementById("addr").value+uri;
-                    // window.alert(form.action)
+                    form.action="{{.LocalAddr}}"+uri;
                 }
             </script>
             <form action="" method="get" onsubmit="setActionAddr(this)">
+                <input type="hidden" name="game" value={{.GameName}}>
                 <label>操作类型:</label>
                 <select>
                     <option value="/permit_player">解封</option>
@@ -29,10 +28,8 @@
                 </select>
                 <label title="我们自己约定的操作权限密码，一般不会变">权限密码:</label>
                 <input type="password" name="passwd"><br>
-                <label title="玩家所在GameServer地址，可由“查看账号信息”得到">游戏服:</label>
-                <input type="text" id="addr" placeholder="如 127.0.0.1:7040"><br>
-                <label>PlayerId:</label>
-                <input type="text" name="val"><br>
+                <label title="逗号隔开">账号列表:</label>
+                <input type="text" name="v" placeholder="123@qq.com,15102165079"><br>
                 <br>
                 <input type="submit" value="确认">
             </form>

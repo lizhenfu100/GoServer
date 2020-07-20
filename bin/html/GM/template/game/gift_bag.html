@@ -10,27 +10,20 @@
     <div class="all-wrapper">
         <h1>礼包</h1>
         <div class="form-wrapper">
-            <script>
-                function setActionAddr(form) {
-                    var select = form.getElementsByTagName("select")[1];
-                    var uri = select.options[select.selectedIndex].value;
-                    form.action="{{.LocalAddr}}"+uri;
-                }
-            </script>
-            <form action="" method="get" onsubmit="setActionAddr(this)">
+            <form action="{{.LocalAddr}}/gift_bag" method="get">
                 <label>大区:</label>
                 <select name="_list">
-                    <option value="{{.SplitLogin1}}">China</option>
-                    {{range .SplitLogin2}}
+                    <option value="{{.LoginChina}}">China</option>
+                    {{range .LoginForeign}}
                         <option value="{{index .Addrs 0}}">{{.Name}}</option>
                     {{end}}
                 </select>
                 <label>操作类型:</label>
-                <select>
-                    <option value="/gift_bag_add">投放</option>
-                    <option value="/gift_bag_view">查看</option>
-                    <option value="/gift_bag_set">修改</option>
-                    <option value="/gift_bag_del">删除</option>
+                <select name="operate">
+                    <option value="add">投放</option>
+                    <option value="get">查看</option>
+                    <option value="set">修改</option>
+                    <option value="del">删除</option>
                 </select>
                 <label>限定平台:</label>
                 <select name="pf_id">
@@ -39,7 +32,7 @@
                     {{end}}
                 </select>
                 <label>权限密码:</label>
-                <input type="password" name="passwd" placeholder="查看无需密码"><br>
+                <input type="password" name="passwd"><br>
                 <label>Key:</label>
                 <input type="text" name="key" placeholder="空则自动分配"><br>
                 <label>时间戳始:</label>

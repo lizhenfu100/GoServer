@@ -1,6 +1,6 @@
 package conf
 
-//go:generate D:\server\bin\gen_conf.exe *csv conf
+//go:generate D:\server\bin\gen_conf.exe conf *csv
 type csv struct {
 	// 云存档
 	MacBindMax      byte

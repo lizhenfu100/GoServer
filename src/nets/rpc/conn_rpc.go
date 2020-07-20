@@ -42,6 +42,16 @@ type objMsg struct {
 	msg  *NetPack
 }
 
+func MakeReq(req *NetPack, msgId uint16, sendFun, recvFun func(*NetPack)) {
+	q := &G_RpcQueue
+	req.SetMsgId(msgId)
+	req.SetReqIdx(atomic.AddUint32(&q.reqIdx, 1))
+	if recvFun != nil {
+		q.response.Store(req.GetReqKey(), recvFun)
+	}
+	sendFun(req)
+}
+
 //【单线程：req每次new，ack同一个】【多线程：thread local】
 //Notice：本函数过后，req、ack生命周期结束。check_closure.go 检查req被闭包
 func (self *RpcQueue) Handle(conn Conn, req, ack *NetPack) {
@@ -55,11 +65,11 @@ func (self *RpcQueue) Handle(conn Conn, req, ack *NetPack) {
 	}()
 	if req.GetType() == 0 {
 		if msgId := req.GetMsgId(); msgId < enum.RpcEnumCnt {
+			//gamelog.Debug("Msg:%d, len:%d", msgId, req.BodySize())
 			ack.ResetHead(req)
 			if self._playerRpc != nil && self._playerRpc(req, ack, conn) { //1、先处理玩家rpc(与player指针强关联)
-				//gamelog.Debug("PlayerMsg:%d, len:%d", msgId, req.BodySize())
+
 			} else if msgFunc := G_HandleFunc[msgId]; msgFunc != nil { //2、普通类型rpc(与连接关联的)
-				//gamelog.Debug("TcpMsg:%d, len:%d", msgId, req.BodySize())
 				msgFunc(req, ack, conn)
 			} else {
 				gamelog.Error("Msg(%d) Not Regist", msgId)
@@ -83,14 +93,4 @@ func (self *RpcQueue) Handle(conn Conn, req, ack *NetPack) {
 }
 func RegHandlePlayerRpc(cb func(req, ack *NetPack, conn Conn) bool) {
 	G_RpcQueue._playerRpc = cb // 与玩家强绑定的rpc
-}
-
-func MakeReq(req *NetPack, msgId uint16, sendFun, recvFun func(*NetPack)) {
-	q := &G_RpcQueue
-	req.SetMsgId(msgId)
-	req.SetReqIdx(atomic.AddUint32(&q.reqIdx, 1))
-	if recvFun != nil {
-		q.response.Store(req.GetReqKey(), recvFun)
-	}
-	sendFun(req)
 }

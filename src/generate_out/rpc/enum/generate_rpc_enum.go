@@ -25,7 +25,7 @@ const ( //the top 100 are reserved for system
 	Rpc_center_set_game_route2 uint16 = 20
 	Rpc_center_set_game_json2 uint16 = 21
 	Rpc_center_game_info2 uint16 = 22
-	Rpc_center_player_login_addr2 uint16 = 23
+	Rpc_center_player_addr2 uint16 = 23
 	Rpc_center_bind_info2 uint16 = 24
 	Rpc_center_isvalid_bind_info2 uint16 = 25
 	Rpc_nric_set2 uint16 = 26
@@ -144,6 +144,9 @@ const ( //the top 100 are reserved for system
 	Rpc_client_weapon_fire uint16 = 207
 	Rpc_client_show_wait_ui uint16 = 208
 	Rpc_client_login_battle uint16 = 209
+	Rpc_save_move uint16 = 209
+	Rpc_save_gm_dn uint16 = 210
+	Rpc_save_gm_up uint16 = 211
 	Rpc_client_bullet_netid uint16 = 210
 	Rpc_client_on_other_join_team uint16 = 211
 	Rpc_client_on_self_join_team uint16 = 212
@@ -164,7 +167,6 @@ const ( //the top 100 are reserved for system
 	Rpc_game_move_player_db uint16 = 227
 	Rpc_game_move_player_db2 uint16 = 228
 	Rpc_save_check_mac uint16 = 229
-	Rpc_save_gm_up uint16 = 230
 	Rpc_game_show_player_award uint16 = 231
 	Rpc_game_get_player_award_ok uint16 = 232
 	Rpc_game_gm_add_award uint16 = 233
@@ -173,7 +175,7 @@ const ( //the top 100 are reserved for system
 	Rpc_battle_pick_armor uint16 = 236
 	Rpc_client_sync_pickup_armor uint16 = 237
 	Rpc_client_sync_drop_armor uint16 = 238
-	Rpc_center_get_bind_info uint16 = 239
+	Rpc_center_ uint16 = 239
 	Rpc_center_account_reg_force uint16 = 240
 	Rpc_center_friend_add uint16 = 241
 	Rpc_center_friend_del uint16 = 242
@@ -217,7 +219,7 @@ const ( //the top 100 are reserved for system
 	Rpc_relay_report_input uint16 = 280
 	Rpc_relay_to_other uint16 = 281
 	Rpc_relay_to_others uint16 = 282
-	Rpc_center_player_addr2 uint16 = 283
+	Rpc_relay_kick_out uint16 = 283
 	Rpc_gm_white_black uint16 = 284
 	Rpc_battle_change_hero uint16 = 285
 	Rpc_battle_debug_moba_begin uint16 = 286
@@ -255,54 +257,21 @@ const ( //the top 100 are reserved for system
 	Rpc_game_player_info uint16 = 318
 	Rpc_gm_gift_get uint16 = 319
 	Rpc_svr_node_join uint16 = 320
-	RpcEnumCnt uint16 = 321
+	Rpc_gm_client_hash uint16 = 321
+	Rpc_relay_p2c uint16 = 322
+	Rpc_relay_c2p uint16 = 323
+	Rpc_client_notify_addr uint16 = 324
+	Rpc_login_sms_check uint16 = 325
+	Rpc_login_sms_code uint16 = 326
+	Rpc_relay_lockstep_begin uint16 = 327
+	Rpc_relay_lockstep_end uint16 = 328
+	Rpc_game_player_agrs_get uint16 = 329
+	Rpc_game_player_agrs_set uint16 = 330
+	RpcEnumCnt uint16 = 331
 	
 )
 func GetRpcModule(rpcEnum uint16) string {
 switch rpcEnum {
-case
-	Rpc_gateway_relay: return "gateway"
-case
-	Rpc_gm_forbid_add,
-	Rpc_gm_forbid_check,
-	Rpc_gm_forbid_del,
-	Rpc_gm_gift_get,
-	Rpc_gm_white_black: return "gm"
-case
-	Rpc_nric_birthday,
-	Rpc_nric_copy_to,
-	Rpc_nric_online_time_get,
-	Rpc_nric_online_time_set,
-	Rpc_nric_set: return "sdk"
-case
-	Rpc_relay_exit_room,
-	Rpc_relay_join_room,
-	Rpc_relay_new_room,
-	Rpc_relay_report_input,
-	Rpc_relay_to_other,
-	Rpc_relay_to_others: return "relay"
-case
-	Rpc_center_account_login,
-	Rpc_center_account_reg,
-	Rpc_center_account_reg2,
-	Rpc_center_account_reg_force,
-	Rpc_center_bind_info,
-	Rpc_center_bind_info2,
-	Rpc_center_change_password2,
-	Rpc_center_game_info2,
-	Rpc_center_get_game_json,
-	Rpc_center_isvalid_bind_info,
-	Rpc_center_isvalid_bind_info2,
-	Rpc_center_platform_reg,
-	Rpc_center_player_addr2,
-	Rpc_center_player_login_addr,
-	Rpc_center_player_login_addr_2,
-	Rpc_center_reg_if,
-	Rpc_center_reg_if2,
-	Rpc_center_set_game_json,
-	Rpc_center_set_game_json2,
-	Rpc_center_set_game_route,
-	Rpc_center_set_game_route2: return "center"
 case
 	Rpc_client_battle_end,
 	Rpc_client_be_invited,
@@ -358,9 +327,8 @@ case
 	Rpc_client_use_skill,
 	Rpc_client_weapon_fire: return "client"
 case
-	Rpc_friend_add,
-	Rpc_friend_del,
-	Rpc_friend_list: return "friend"
+	Rpc_file_delete,
+	Rpc_file_update_list: return "file"
 case
 	Rpc_game_agree_invite,
 	Rpc_game_battle_begin,
@@ -381,6 +349,8 @@ case
 	Rpc_game_move_player_db2,
 	Rpc_game_on_battle_end,
 	Rpc_game_permit_player,
+	Rpc_game_player_agrs_get,
+	Rpc_game_player_agrs_set,
 	Rpc_game_player_info,
 	Rpc_game_player_set_name,
 	Rpc_game_read_mail,
@@ -393,6 +363,12 @@ case
 	Rpc_game_whitelist_del,
 	Rpc_game_write_db_battle_info: return "game"
 case
+	Rpc_gm_client_hash,
+	Rpc_gm_forbid_add,
+	Rpc_gm_forbid_check,
+	Rpc_gm_forbid_del,
+	Rpc_gm_white_black: return "gm"
+case
 	Rpc_login_account_login,
 	Rpc_login_bulletin,
 	Rpc_login_del_account_cache,
@@ -400,11 +376,13 @@ case
 	Rpc_login_gift_get,
 	Rpc_login_move_player_db,
 	Rpc_login_send_email,
+	Rpc_login_sms_check,
+	Rpc_login_sms_code,
 	Rpc_login_to_center_by_str: return conf.GameName
 case
-	Rpc_cross_relay_battle_data,
-	Rpc_cross_relay_to_game: return "cross"
-case
-	Rpc_file_delete,
-	Rpc_file_update_list: return "file"}
+	Rpc_nric_birthday,
+	Rpc_nric_copy_to,
+	Rpc_nric_online_time_get,
+	Rpc_nric_online_time_set,
+	Rpc_nric_set: return "sdk"}
 return ""}

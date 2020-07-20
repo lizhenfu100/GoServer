@@ -73,8 +73,8 @@ import (
 
 const (
 	kHeadLen          = 2 //头2字节存msgSize
-	Msg_Size_Max      = 1024
-	Writer_Cap        = 8 * 1024
+	Msg_Size_Max      = 16 * 1024
+	Writer_Cap        = 16 * 1024
 	Delay_Delete_Conn = 60 * time.Second
 )
 
@@ -85,10 +85,10 @@ func init() {
 }
 
 type TCPConn struct {
-	conn         net.Conn
+	net.Conn
 	reader       netbuf //包装conn减少conn.Read的io次数【client/test/net.go】
 	writer       safe.ChanByte
-	_isClose     bool
+	_isClose     uint32 //可设计成标记位
 	delayDel     *time.Timer
 	onDisConnect func()
 	user         atomic.Value
@@ -102,23 +102,23 @@ func newTCPConn(conn net.Conn) *TCPConn {
 	return self
 }
 func (self *TCPConn) resetConn(conn net.Conn) {
-	self.conn = conn
+	self.Conn = conn
+	conn.(*net.TCPConn).SetLinger(0) //关闭即丢弃数据
 	self.reader.Reset(conn)
 	self.writer.IsStop = false
-	self._isClose = false
+	atomic.StoreUint32(&self._isClose, 0)
 	if self.delayDel != nil {
 		self.delayDel.Stop()
 	}
 }
-func (self *TCPConn) Close() {
-	if self._isClose {
-		return
+func (self *TCPConn) Close() error {
+	if !self.IsClose() {
+		atomic.StoreUint32(&self._isClose, 1)
+		return self.Conn.Close()
 	}
-	self.conn.(*net.TCPConn).SetLinger(0) //丢弃数据
-	self.conn.Close()
-	self._isClose = true
+	return nil
 }
-func (self *TCPConn) IsClose() bool { return self._isClose }
+func (self *TCPConn) IsClose() bool { return atomic.LoadUint32(&self._isClose) == 1 }
 
 func (self *TCPConn) GetUser() interface{}  { return self.user.Load() }
 func (self *TCPConn) SetUser(v interface{}) { self.user.Store(v) }
@@ -131,6 +131,7 @@ func (self *TCPConn) CallRpc(msgId uint16, sendFun, recvFun func(*common.NetPack
 }
 func (self *TCPConn) WriteMsg(msg *common.NetPack) {
 	if self.writer.AddMsg(msg.Data()) > Writer_Cap {
+		gamelog.Error("Writer_Cap")
 		self.Close()
 	}
 }
@@ -140,7 +141,7 @@ loop:
 	for {
 		b := self.writer.WaitGet() //block
 		for pos, total := 0, len(b); ; {
-			if n, e := self.conn.Write(b[pos:]); e != nil {
+			if n, e := self.Conn.Write(b[pos:]); e != nil {
 				gamelog.Debug(e.Error())
 				break loop
 			} else if pos += n; pos == total {

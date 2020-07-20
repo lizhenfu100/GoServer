@@ -29,8 +29,8 @@ func generateRpcRoute(modules, funcs []string) {
 	//2、case部分由模板生成
 	if tpl, err := template.New(filename).Parse(funcRouteTemplate); err == nil {
 		var bf bytes.Buffer
-		for k, v := range splitModuleRpcs(modules, funcs) {
-			if err = tpl.Execute(&bf, v); err != nil {
+		for _, v := range splitModuleRpcs(modules, funcs) {
+			if err = tpl.Execute(&bf, v.f); err != nil {
 				panic(err.Error())
 				return
 			}
@@ -39,10 +39,10 @@ func generateRpcRoute(modules, funcs []string) {
 			buf[len(buf)-1] = ' '
 			f.Write([]byte("\ncase"))
 			f.Write(buf)
-			if k == "login" {
+			if v.m == "login" {
 				f.Write([]byte(`return conf.GameName`))
 			} else {
-				f.Write(common.S2B(fmt.Sprintf(`return "%s"`, k)))
+				f.Write(common.S2B(fmt.Sprintf(`return "%s"`, v.m)))
 			}
 			bf.Reset()
 		}
@@ -53,16 +53,26 @@ func generateRpcRoute(modules, funcs []string) {
 	//3、函数收尾
 	f.Write([]byte("}\nreturn \"\"}"))
 }
-func splitModuleRpcs(modules, funcs std.Strings) (ret map[string]std.Strings) {
-	ret = make(map[string]std.Strings)
+func splitModuleRpcs(modules, funcs std.Strings) (ret []struct { //map生成的顺序不稳定~囧
+	m string
+	f std.Strings
+}) {
+Loop:
 	for _, v := range funcs {
 		if m := strings.Split(v, "_")[1]; modules.Index(m) >= 0 { //Rpc_后面的字符即为模块名
 			if m == "nric" {
 				m = "sdk" //TODO:zhoumf:待删除
 			}
-			vs := ret[m]
-			vs.Add(v)
-			ret[m] = vs
+			for i := 0; i < len(ret); i++ {
+				if ret[i].m == m {
+					ret[i].f.Add(v)
+					continue Loop
+				}
+			}
+			ret = append(ret, struct {
+				m string
+				f std.Strings
+			}{m, []string{v}})
 		}
 	}
 	return

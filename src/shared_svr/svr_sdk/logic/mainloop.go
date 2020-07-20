@@ -5,11 +5,13 @@ import (
 	"common/tool/usage"
 	"conf"
 	"nets/rpc"
+	"shared_svr/svr_sdk/logic/thinking"
 	"shared_svr/svr_sdk/msg"
 	"time"
 )
 
 func MainLoop() {
+	thinking.InitApp()
 	updateEnterNextDay()
 	timer.AddTimer(usage.Check, 60, 600, -1)
 	for timeNow, timeOld, timeElapse := time.Now().UnixNano()/int64(time.Millisecond), int64(0), 0; ; {

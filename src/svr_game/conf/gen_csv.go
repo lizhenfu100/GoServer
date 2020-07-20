@@ -7,5 +7,4 @@ import "sync/atomic"
 var _csv atomic.Value
 
 func Csv() *csv { return _csv.Load().(*csv) }
-func NilCsv() *csv { return nil }
 func (v *csv) Init() { _csv.Store(v) } //一块全新内存

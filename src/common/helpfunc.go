@@ -28,6 +28,14 @@ func (u Uid) GetRoute() (loginId, gameId int) {
 	return int(u >> 40), int(0xFF & (u >> 32))
 }
 
+// ------------------------------------------------------------
+func ParseAddr(addr string) (string, uint16) {
+	idx := strings.LastIndex(addr, ":")
+	port, _ := strconv.Atoi(addr[idx+1:])
+	return addr[:idx], uint16(port)
+}
+
+// ------------------------------------------------------------
 func IsMatchVersion(a, b string) bool {
 	if a == "" || b == "" {
 		return true

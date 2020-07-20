@@ -75,7 +75,7 @@ func Rpc_login_gift_get(req, ack *common.NetPack, _ common.Conn) {
 	pf_id := req.ReadString()
 	version := req.ReadString()
 
-	if tail := len(code) - len("cmd"); code[tail:] == "cmd" { //后缀是cmd，命令行
+	if tail := len(code) - len("cmd"); tail >= 0 && code[tail:] == "cmd" { //后缀是cmd，命令行
 		ack.WriteUInt16(err.Name_format_err)
 		ack.WriteString(cmdGet(code[:tail]))
 	} else {

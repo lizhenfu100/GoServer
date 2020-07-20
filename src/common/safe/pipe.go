@@ -57,7 +57,7 @@ func (p *Chan) WaitGet() (ret []interface{}) {
 	p.Unlock()
 	return
 }
-func (p *Chan) Stop() {
+func (p *Chan) StopWait() {
 	p.Lock()
 	p.IsStop = true
 	p.Unlock()
@@ -108,7 +108,7 @@ func (p *ChanByte) WaitGet() (ret []byte) {
 	p.Unlock()
 	return
 }
-func (p *ChanByte) Stop() {
+func (p *ChanByte) StopWait() {
 	p.Lock()
 	p.IsStop = true
 	p.Unlock()

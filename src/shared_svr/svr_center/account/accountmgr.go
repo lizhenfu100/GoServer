@@ -8,15 +8,14 @@ import (
 	"gamelog"
 	"generate_out/err"
 	"gopkg.in/mgo.v2/bson"
-	"strconv"
 	"time"
 )
 
 func NewAccountInDB(passwd, bindTyp, bindVal string) (uint16, *TAccount) {
 	if ok, e := dbmgo.FindEx(KDBTable, bson.M{"$or": []bson.M{
 		{"bindinfo.email": bindVal},
-		{"bindinfo.name": bindVal},
 		{"bindinfo.phone": bindVal},
+		{"bindinfo.name": bindVal},
 	}}, &TAccount{}); ok {
 		return err.Account_repeat, nil
 	} else if e == nil {
@@ -26,19 +25,19 @@ func NewAccountInDB(passwd, bindTyp, bindVal string) (uint16, *TAccount) {
 		p.CreateTime = time.Now().Unix()
 		p.AccountID = dbmgo.GetNextIncId("AccountId")
 		if dbmgo.DB().C(KDBTable).Insert(p) == nil {
-			CacheAdd(bindTyp+bindVal, p)
+			CacheAdd(p)
 			return err.Success, p
 		}
 	}
 	return err.Unknow_error, nil
 }
 func GetAccountByBindInfo(typ, val string) (uint16, *TAccount) { //email、name、phone
-	if p := CacheGet(typ + val); p != nil {
+	if p := CacheGet(val); p != nil {
 		return err.Success, p
 	} else {
 		p = _NewAccount()
 		if ok, e := dbmgo.Find(KDBTable, "bindinfo."+typ, val, p); ok {
-			CacheAdd(typ+val, p)
+			CacheAdd(p)
 			return err.Success, p
 		} else if e == nil {
 			return err.Not_found, nil
@@ -47,13 +46,12 @@ func GetAccountByBindInfo(typ, val string) (uint16, *TAccount) { //email、name�
 	}
 }
 func GetAccountById(id uint32) (uint16, *TAccount) {
-	aid := strconv.FormatInt(int64(id), 10)
-	if p := CacheGet(aid); p != nil {
+	if p := CacheGet(_i2s(id)); p != nil {
 		return err.Success, p
 	} else {
 		p = _NewAccount()
 		if ok, e := dbmgo.Find(KDBTable, "_id", id, p); ok {
-			CacheAdd(aid, p)
+			CacheAdd(p)
 			return err.Success, p
 		} else if e == nil {
 			return err.Not_found, nil
@@ -64,6 +62,13 @@ func GetAccountById(id uint32) (uint16, *TAccount) {
 func GetAccount(v, passwd string) (uint16, *TAccount) {
 	var p1, p2 *TAccount
 	e := err.Unknow_error
+	if format.CheckBindValue("phone", v) {
+		if e, p1 = GetAccountByBindInfo("phone", v); e == err.Unknow_error {
+			return e, nil
+		} else if p1 != nil && p1.CheckPasswd(passwd) {
+			return err.Success, p1
+		}
+	}
 	//1、优先当邮箱处理
 	if format.CheckBindValue("email", v) {
 		if e, p1 = GetAccountByBindInfo("email", v); e == err.Unknow_error {
@@ -80,13 +85,6 @@ func GetAccount(v, passwd string) (uint16, *TAccount) {
 		moveAccountName(p2) //FIXME：删name、bindinfo.name字段，移至bindinfo.email
 		return err.Success, p2
 	}
-	//if p1 == nil && p2 == nil && format.CheckBindValue("phone", v) {
-	//	if e, p1 = GetAccountByBindInfo("phone", v); e == err.Unknow_error {
-	//		return e, nil
-	//	} else if p1 != nil && p1.CheckPasswd(passwd) {
-	//		return err.Success, p1
-	//	}
-	//}
 	if p1 == nil && p2 == nil {
 		return err.Not_found, nil
 	} else {

@@ -3,6 +3,7 @@ package player
 import (
 	"common"
 	"dbmgo"
+	"gamelog"
 	"netConfig/meta"
 	"svr_game/conf"
 )
@@ -130,8 +131,16 @@ func Rpc_game_on_battle_end(req, ack *common.NetPack, this *TPlayer) {
 	killCnt := req.ReadUInt8()   //击杀数
 	assistCnt := req.ReadUInt8() //助攻数
 	reviveCnt := req.ReadUInt8() //拉队友次数
+	heroId := req.ReadUInt8()
+	gamelog.Debug("battle_end: %t %d %d %d %d", isWin, killCnt, assistCnt, reviveCnt, heroId)
 
+	cf := conf.Csv()
 	this.money.Add(KExp, 5)
+	heroExp := cf.HeroExp_Fail
+	if isWin {
+		heroExp = cf.HeroExp_Win
+	}
+	this.battle.AddHeroExp(heroId, uint16(heroExp))
 
 	score := this.season.calcScore(isWin, killCnt, assistCnt, reviveCnt)
 	this.season.AddScore(score)

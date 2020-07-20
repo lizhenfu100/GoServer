@@ -20,19 +20,25 @@ import (
 // http://game.chillyroom.com:7233/svr_list?game=HappyDiner
 
 // ------------------------------------------------------------
-//go:generate D:\server\bin\gen_conf.exe logins logic
+//go:generate D:\server\bin\gen_conf.exe logic logins
 type logins map[string]*struct {
 	Game string
-	IPs  map[string][]string //<大区, 地址>
+	IPs  map[string][]string
+	//大区名：America、Asia、Europe、Brazil、ChinaNorth、ChinaSouth、MiddleEast、Australia
+	//服务名：file、nric
 }
 
 func Http_svr_list(w http.ResponseWriter, r *http.Request) {
-	q, csv := r.URL.Query(), Logins()
-	if v, ok := csv[q.Get("game")]; ok {
-		if v, ok := v.IPs[q.Get("region")]; ok {
-			b, _ := json.Marshal(v)
-			w.Write(b)
+	q := r.URL.Query()
+	if v, ok := Logins()[q.Get("game")]; ok {
+		var ips []string
+		if svr := q.Get("svr"); svr != "" {
+			ips = v.IPs[svr]
+		} else if ips, ok = v.IPs[q.Get("region")]; !ok {
+			ips = v.IPs[""]
 		}
+		b, _ := json.Marshal(ips)
+		w.Write(b)
 	}
 }
 

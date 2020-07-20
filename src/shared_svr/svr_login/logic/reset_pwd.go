@@ -12,8 +12,11 @@ import (
 	"net/http"
 	"net/url"
 	"netConfig"
+	"netConfig/meta"
+	mhttp "nets/http/http"
 	"shared_svr/svr_login/logic/cache"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -34,28 +37,32 @@ func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) { //提示�
 	}()
 	if !format.CheckPasswd(passwd) {
 		errCode = err.Passwd_format_err
-	} else {
-		centerAddr := netConfig.GetHttpAddr("center", netConfig.HashCenterID(v))
+	} else if pMeta := meta.GetMeta("center", netConfig.HashCenterID(v)); pMeta != nil {
+		centerAddr := fmt.Sprintf("http://%s:%d", pMeta.OutIP, pMeta.HttpPort)
 		//1、创建url
 		u, _ := url.Parse(centerAddr + "/reset_password")
-		q := u.Query()
+		q2 := u.Query()
 		//2、写入参数
-		q.Set("k", k)
-		q.Set("v", v)
-		q.Set("pwd", passwd)
+		q2.Set("k", k)
+		q2.Set("v", v)
+		q2.Set("pwd", passwd)
 		flag := strconv.FormatInt(time.Now().Unix(), 10)
-		q.Set("flag", flag)
-		q.Set("language", language)
-		q.Set("sign", sign.CalcSign(k+v+passwd+flag))
+		q2.Set("flag", flag)
+		q2.Set("language", language)
+		q2.Set("sign", sign.CalcSign(k+v+passwd+flag))
 		//3、生成完整url
-		u.RawQuery = q.Encode()
+		u.RawQuery = q2.Encode()
 		switch cache.Del(v); k {
 		case "email":
 			errCode = email.SendMail("Reset Password", v, u.String(), language)
 		case "phone":
 			if code := q.Get("code"); sms.CheckCode(v, code) {
-				if _, e := http.Get(u.String()); e == nil {
-					errCode = err.Success
+				if r, e := http.Get(u.String()); e == nil {
+					if strings.Index(common.B2S(mhttp.ReadBody(r.Body)), "ok") < 0 {
+						errCode = err.Not_found
+					} else {
+						errCode = err.Success
+					}
 				}
 			} else {
 				errCode = err.Token_verify_err
@@ -63,13 +70,15 @@ func Http_ask_reset_password(w http.ResponseWriter, r *http.Request) { //提示�
 		}
 	}
 }
-func Rpc_login_sms_code(req, ack *common.NetPack) { //发手机验证码
+func Rpc_login_sms_code(req, ack *common.NetPack, _ common.Conn) { //发手机验证码
 	phone := req.ReadString()
 	if format.CheckBindValue("phone", phone) {
-		sms.SendCode(phone)
+		ack.WriteUInt16(sms.SendCode(phone))
+	} else {
+		ack.WriteUInt16(err.Phone_format_err)
 	}
 }
-func Rpc_login_sms_check(req, ack *common.NetPack) {
+func Rpc_login_sms_check(req, ack *common.NetPack, _ common.Conn) {
 	phone := req.ReadString()
 	code := req.ReadString()
 	ack.WriteBool(sms.CheckCode(phone, code))

@@ -28,13 +28,13 @@ import (
 
 // ------------------------------------------------------------
 // 统一接口
-type Rpc interface {
-	IsClose() bool
-	CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack))
-}
 type rpcHttp struct{ *meta.Meta }
 
-func (p *rpcHttp) IsClose() bool { return p.Closed }
+func (p *rpcHttp) WriteMsg(msg *common.NetPack) {}
+func (p *rpcHttp) SetUser(v interface{})        {}
+func (p *rpcHttp) GetUser() interface{}         { return p.Meta }
+func (p *rpcHttp) Close() error                 { return nil }
+func (p *rpcHttp) IsClose() bool                { return p.Closed }
 func (p *rpcHttp) CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack)) {
 	addr := http.Addr(p.IP, p.HttpPort)
 	http.CallRpc(addr, rid, sendFun, recvFun)
@@ -44,7 +44,7 @@ func (p *rpcHttp) CallRpc(rid uint16, sendFun, recvFun func(*common.NetPack)) {
 //var p netConfig.Rpc
 //p = netConfig.GetTcpConn("game", 2)
 //fmt.Println(p == nil, p) //false nil
-func GetRpc1(p *meta.Meta) (Rpc, bool) {
+func GetRpc1(p *meta.Meta) (common.Conn, bool) {
 	if p.HttpPort > 0 {
 		return &rpcHttp{p}, true
 	} else {
@@ -52,7 +52,7 @@ func GetRpc1(p *meta.Meta) (Rpc, bool) {
 		return ret, ret != nil
 	}
 }
-func GetRpc2(module string, svrId int) (Rpc, bool) {
+func GetRpc2(module string, svrId int) (common.Conn, bool) {
 	if p := meta.GetMeta(module, svrId); p == nil {
 		return nil, false
 	} else {
@@ -62,7 +62,7 @@ func GetRpc2(module string, svrId int) (Rpc, bool) {
 
 // ------------------------------------------------------------
 //! 无状态节点，随机取 -- login friend sdk save gm
-func GetRpcRand(module string) (Rpc, bool) {
+func GetRpcRand(module string) (common.Conn, bool) {
 	if p := meta.GetByRand(module); p != nil {
 		return GetRpc1(p)
 	}
@@ -109,13 +109,13 @@ func CallRpcGateway(accountId uint32, rid uint16, sendFun, recvFun func(*common.
 		gamelog.Error("gateway nil: svrId(%d) rpcId(%d)", svrId, rid)
 	}
 }
-func GetGatewayRpc(svrId int) (ret Rpc, ok bool) {
+func GetGatewayRpc(svrId int) (ret common.Conn, ok bool) {
 	var v interface{}
 	if v, ok = g_cache_gate.Load(svrId); !ok {
 		if ret, ok = GetRpc2("gateway", svrId); ok {
 			g_cache_gate.Store(svrId, ret)
 		}
-	} else if ret, ok = v.(Rpc); !ok || ret.IsClose() {
+	} else if ret, ok = v.(common.Conn); !ok || ret.IsClose() {
 		if ret, ok = GetRpc2("gateway", svrId); ok {
 			g_cache_gate.Store(svrId, ret)
 		}
@@ -127,13 +127,13 @@ func GetGatewayRpc(svrId int) (ret Rpc, ok bool) {
 //! game tcp|http
 var g_cache_game sync.Map //<int, Rpc>
 
-func GetGameRpc(svrId int) (ret Rpc, ok bool) {
+func GetGameRpc(svrId int) (ret common.Conn, ok bool) {
 	var v interface{}
 	if v, ok = g_cache_game.Load(svrId); !ok {
 		if ret, ok = GetRpc2("game", svrId); ok {
 			g_cache_game.Store(svrId, ret)
 		}
-	} else if ret, ok = v.(Rpc); !ok || ret.IsClose() {
+	} else if ret, ok = v.(common.Conn); !ok || ret.IsClose() {
 		if ret, ok = GetRpc2("game", svrId); ok {
 			g_cache_game.Store(svrId, ret)
 		}

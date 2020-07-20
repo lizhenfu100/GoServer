@@ -19,8 +19,8 @@
         <h1>公告发布</h1>
         <div class="form-wrapper">
             <form action="{{.LocalAddr}}/bulletin" method="get">
-                <label><input name="_list" type="checkbox" value="{{.SplitLogin1}}"/>China</label>
-                {{range .SplitLogin2}}
+                <label><input name="_list" type="checkbox" value="{{.LoginChina}}"/>China</label>
+                {{range .LoginForeign}}
                 <label><input name="_list" type="checkbox" value="{{index .Addrs 0}}"/>{{.Name}}</label>
                 {{end}}
                 <label>平台名:</label>

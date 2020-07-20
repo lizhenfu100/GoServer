@@ -109,7 +109,7 @@ func (self *ByteBuffer) ReadString() (ret string) {
 	return
 }
 func (self *ByteBuffer) ReadBool() bool { return self.ReadUInt8() > 0 }
-func (self *ByteBuffer) ReadByte() byte { return byte(self.ReadUInt8()) }
+func (self *ByteBuffer) ReadByte() byte { return self.ReadUInt8() }
 func (self *ByteBuffer) ReadInt() int   { return int(self.ReadInt32()) }
 func (self *ByteBuffer) ReadInt8() (ret int8) {
 	if self.readableBytes() >= 1 {

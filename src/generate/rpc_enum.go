@@ -39,24 +39,27 @@ func addRpc_Go(funcs map[string]struct{}, info *RpcInfo) {
 }
 func addRpc_C(funcs map[string]struct{}) {
 	reg := regexp.MustCompile(`Rpc_\w+`)
+	filter := regexp.MustCompile(`Rpc_Declare\(Rpc_`)
 	file.ReadLine(K_RpcFuncFile_C, func(line string) {
-		if ok, _ := regexp.MatchString(`Rpc_Declare\(Rpc_`, line); ok {
+		if filter.MatchString(line) {
 			funcs[reg.FindAllString(line, -1)[1]] = struct{}{}
 		}
 	})
 }
 func addRpc_CS(funcs map[string]struct{}) {
 	reg := regexp.MustCompile(`Rpc_\w+`)
+	filter := regexp.MustCompile(`public void Rpc_`)
 	file.ReadLine(K_RpcFuncFile_CS, func(line string) {
-		if ok, _ := regexp.MatchString(`public void Rpc_`, line); ok {
+		if filter.MatchString(line) {
 			funcs[reg.FindAllString(line, -1)[0]] = struct{}{}
 		}
 	})
 }
 func getOldRpc() (enums []std.KeyPair, enumCnt int) {
 	reg := regexp.MustCompile(`Rpc_\w+`)
+	filter := regexp.MustCompile(`Rpc_\w+\s+uint16 =`)
 	file.ReadLine(K_EnumOutDir+K_EnumFileName+".go", func(line string) {
-		if ok, _ := regexp.MatchString(`Rpc_\w+\s+uint16 =`, line); ok {
+		if filter.MatchString(line) {
 			if result := reg.FindAllString(line, -1); result != nil {
 				name := result[0]
 				list := strings.Split(line, " ")
